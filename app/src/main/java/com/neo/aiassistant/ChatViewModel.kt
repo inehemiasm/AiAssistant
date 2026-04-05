@@ -1,6 +1,7 @@
 package com.neo.aiassistant
 
 import android.app.Application
+import android.net.Uri
 import androidx.lifecycle.viewModelScope
 import com.neo.aiassistant.core.BaseViewModel
 import com.neo.aiassistant.core.UiEffect
@@ -31,7 +32,7 @@ data class ChatState(
 
 sealed class ChatIntent : UiIntent {
     data class Initialize(val modelPath: String) : ChatIntent()
-    data class SendMessage(val text: String) : ChatIntent()
+    data class SendMessage(val text: String, val imageUri: Uri? = null) : ChatIntent()
     data class SwitchModel(val modelName: String, val baseDir: String) : ChatIntent()
     data class DownloadModel(val modelName: String, val baseDir: String) : ChatIntent()
     object FetchModels : ChatIntent()
@@ -74,7 +75,7 @@ class ChatViewModel @Inject constructor(
     override suspend fun handleIntent(intent: ChatIntent) {
         when (intent) {
             is ChatIntent.Initialize -> initModel(intent.modelPath)
-            is ChatIntent.SendMessage -> sendMessage(intent.text)
+            is ChatIntent.SendMessage -> sendMessage(intent.text, intent.imageUri)
             is ChatIntent.SwitchModel -> {
                 setState { copy(selectedModel = intent.modelName, messages = emptyList(), isReady = false) }
                 val modelFile = File("${intent.baseDir}/${intent.modelName}")
@@ -112,14 +113,14 @@ class ChatViewModel @Inject constructor(
             }
     }
 
-    private suspend fun sendMessage(text: String) {
-        val userMsg = ChatMessage(text, isUser = true)
+    private suspend fun sendMessage(text: String, imageUri: Uri?) {
+        val userMsg = ChatMessage(text, isUser = true, imageUri = imageUri?.toString())
         setState { copy(messages = messages + userMsg, isLoading = true) }
         sendEffect { ChatEffect.ScrollToBottom }
 
         var responseText = ""
         val time = measureTimeMillis {
-            sendMessageUseCase(text)
+            sendMessageUseCase(text, imageUri)
                 .onSuccess { responseText = it }
                 .onFailure { e ->
                     setState { copy(isLoading = false, error = "Inference failed: ${e.message}") }

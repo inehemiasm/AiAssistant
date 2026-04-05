@@ -1,82 +1,33 @@
 package com.neo.aiassistant
 
+import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.LinearOutSlowInEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Timer
-import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Snackbar
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -84,16 +35,25 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.neo.aiassistant.domain.ChatMessage
 import com.neo.aiassistant.ui.theme.AiAssistantTheme
 import dagger.hilt.android.AndroidEntryPoint
 import java.io.File
 import java.util.Locale
+import java.util.regex.Pattern
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -117,6 +77,13 @@ fun ChatScreen(viewModel: ChatViewModel) {
     val state by viewModel.uiState.collectAsState()
     val listState = rememberLazyListState()
     var inputText by remember { mutableStateOf("") }
+    var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
+
+    val imagePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        selectedImageUri = uri
+    }
 
     val modelFile = File(context.filesDir, state.selectedModel)
 
@@ -155,9 +122,13 @@ fun ChatScreen(viewModel: ChatViewModel) {
                 text = inputText,
                 onTextChange = { inputText = it },
                 onSend = {
-                    viewModel.onIntent(ChatIntent.SendMessage(inputText))
+                    viewModel.onIntent(ChatIntent.SendMessage(inputText, selectedImageUri))
                     inputText = ""
+                    selectedImageUri = null
                 },
+                selectedImageUri = selectedImageUri,
+                onImageClick = { imagePicker.launch("image/*") },
+                onRemoveImage = { selectedImageUri = null },
                 enabled = state.isReady && !state.isLoading && !state.isDownloading
             )
         },
@@ -172,7 +143,7 @@ fun ChatScreen(viewModel: ChatViewModel) {
                 DownloadProgressView(state.selectedModel, state.downloadProgress ?: 0)
             } else if (!modelFile.exists()) {
                 BeautifulModelMissingView(
-                    path = modelFile.absolutePath,
+                    selectedModel = state.selectedModel,
                     isFetching = state.isFetchingModels,
                     error = state.error,
                     onDownloadClick = { modelName ->
@@ -334,7 +305,23 @@ fun FuturisticChatBubble(message: ChatMessage) {
             modifier = Modifier.widthIn(max = 300.dp).border(1.dp, borderColor, RoundedCornerShape(if (isUser) 16.dp else 4.dp, 16.dp, 16.dp, if (isUser) 4.dp else 16.dp))
         ) {
             Column(modifier = Modifier.padding(14.dp)) {
-                Text(text = message.text, style = MaterialTheme.typography.bodyLarge.copy(lineHeight = 22.sp))
+                if (message.imageUri != null) {
+                    AsyncImage(
+                        model = message.imageUri,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .padding(bottom = 8.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .fillMaxWidth(),
+                        contentScale = ContentScale.FillWidth
+                    )
+                }
+                SelectionContainer {
+                    Text(
+                        text = parseMarkdown(message.text),
+                        style = MaterialTheme.typography.bodyLarge.copy(lineHeight = 22.sp)
+                    )
+                }
                 if (!isUser && message.inferenceTimeMs != null) {
                     val seconds = message.inferenceTimeMs / 1000.0
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp).background(Color.Black.copy(0.3f), RoundedCornerShape(4.dp)).padding(horizontal = 6.dp, vertical = 2.dp)) {
@@ -350,18 +337,48 @@ fun FuturisticChatBubble(message: ChatMessage) {
 }
 
 @Composable
-fun ChatInputBar(text: String, onTextChange: (String) -> Unit, onSend: () -> Unit, enabled: Boolean) {
+fun ChatInputBar(
+    text: String,
+    onTextChange: (String) -> Unit,
+    onSend: () -> Unit,
+    selectedImageUri: Uri?,
+    onImageClick: () -> Unit,
+    onRemoveImage: () -> Unit,
+    enabled: Boolean
+) {
     Surface(color = Color(0xFF151921), modifier = Modifier.navigationBarsPadding()) {
-        Row(modifier = Modifier.padding(16.dp).fillMaxWidth().imePadding(), verticalAlignment = Alignment.CenterVertically) {
-            TextField(
-                value = text, onValueChange = onTextChange, modifier = Modifier.weight(1f).clip(RoundedCornerShape(8.dp)).border(1.dp, if (enabled) Color(0xFF37474F) else Color.Transparent, RoundedCornerShape(8.dp)),
-                placeholder = { Text("Enter command...", color = Color.Gray) }, enabled = enabled,
-                colors = TextFieldDefaults.colors(focusedContainerColor = Color(0xFF0B0E14), unfocusedContainerColor = Color(0xFF0B0E14), disabledContainerColor = Color(0xFF0B0E14), focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent, focusedTextColor = Color.White, unfocusedTextColor = Color.White)
-            )
-            Spacer(Modifier.width(12.dp))
-            val isSendEnabled = enabled && text.isNotBlank()
-            IconButton(onClick = { if (isSendEnabled) onSend() }, modifier = Modifier.size(48.dp).clip(RoundedCornerShape(8.dp)).background(if (isSendEnabled) Color(0xFF00E5FF) else Color(0xFF1E242E))) {
-                Icon(Icons.AutoMirrored.Filled.Send, "Send", tint = if (isSendEnabled) Color.Black else Color.Gray)
+        Column {
+            if (selectedImageUri != null) {
+                Box(Modifier.padding(start = 16.dp, top = 8.dp).size(80.dp)) {
+                    AsyncImage(
+                        model = selectedImageUri,
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+                    IconButton(
+                        onClick = onRemoveImage,
+                        modifier = Modifier.align(Alignment.TopEnd).size(24.dp).background(Color.Black.copy(0.6f), CircleShape)
+                    ) {
+                        Icon(Icons.Default.Close, null, tint = Color.White, modifier = Modifier.size(16.dp))
+                    }
+                }
+            }
+            Row(modifier = Modifier.padding(16.dp).fillMaxWidth().imePadding(), verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onImageClick, enabled = enabled) {
+                    Icon(Icons.Default.AddPhotoAlternate, "Attach Image", tint = if (enabled) Color(0xFF00E5FF) else Color.Gray)
+                }
+                Spacer(Modifier.width(8.dp))
+                TextField(
+                    value = text, onValueChange = onTextChange, modifier = Modifier.weight(1f).clip(RoundedCornerShape(8.dp)).border(1.dp, if (enabled) Color(0xFF37474F) else Color.Transparent, RoundedCornerShape(8.dp)),
+                    placeholder = { Text("Enter command...", color = Color.Gray) }, enabled = enabled,
+                    colors = TextFieldDefaults.colors(focusedContainerColor = Color(0xFF0B0E14), unfocusedContainerColor = Color(0xFF0B0E14), disabledContainerColor = Color(0xFF0B0E14), focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent, focusedTextColor = Color.White, unfocusedTextColor = Color.White)
+                )
+                Spacer(Modifier.width(12.dp))
+                val isSendEnabled = enabled && (text.isNotBlank() || selectedImageUri != null)
+                IconButton(onClick = { if (isSendEnabled) onSend() }, modifier = Modifier.size(48.dp).clip(RoundedCornerShape(8.dp)).background(if (isSendEnabled) Color(0xFF00E5FF) else Color(0xFF1E242E))) {
+                    Icon(Icons.AutoMirrored.Filled.Send, "Send", tint = if (isSendEnabled) Color.Black else Color.Gray)
+                }
             }
         }
     }
@@ -369,7 +386,7 @@ fun ChatInputBar(text: String, onTextChange: (String) -> Unit, onSend: () -> Uni
 
 @Composable
 fun BeautifulModelMissingView(
-    path: String, 
+    selectedModel: String,
     isFetching: Boolean, 
     error: String?,
     onDownloadClick: (String) -> Unit,
@@ -410,21 +427,15 @@ fun BeautifulModelMissingView(
             Icon(Icons.Default.AutoAwesome, null, tint = Color(0xFF00E5FF), modifier = Modifier.size(64.dp))
             Spacer(Modifier.height(24.dp))
             Text("CORE MODEL MISSING", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp)
-            Text("Select neural core to download:", color = Color.Gray, fontSize = 14.sp)
+            Text("Download required for: ${selectedModel.replace(".litertlm", "").uppercase()}", color = Color.Gray, fontSize = 14.sp)
             Spacer(Modifier.height(32.dp))
             
-            ModelDownloadOption(
-                name = "E2B (Small)",
-                desc = "Fast inference, lower accuracy",
-                onClick = { onDownloadClick("gemma-4-E2B-it.litertlm") }
-            )
-            
-            Spacer(Modifier.height(16.dp))
+            val isSmall = selectedModel.contains("E2B")
             
             ModelDownloadOption(
-                name = "E4B (Standard)",
-                desc = "Better reasoning, higher resources",
-                onClick = { onDownloadClick("gemma-4-E4B-it.litertlm") }
+                name = if (isSmall) "E2B (Small)" else "E4B (Standard)",
+                desc = if (isSmall) "Fast inference, lower accuracy" else "Better reasoning, higher resources",
+                onClick = { onDownloadClick(selectedModel) }
             )
         }
     }
@@ -437,7 +448,7 @@ fun ModelDownloadOption(name: String, desc: String, onClick: () -> Unit) {
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF00E5FF)),
-        border = ButtonDefaults.outlinedButtonBorder.copy(width = 1.dp)
+        border = ButtonDefaults.outlinedButtonBorder(enabled = true).copy(width = 1.dp)
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -454,5 +465,62 @@ fun ModelDownloadOption(name: String, desc: String, onClick: () -> Unit) {
 fun ErrorSnackbar(message: String, onDismiss: () -> Unit) {
     Box(Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.BottomCenter) {
         Snackbar(action = { TextButton(onClick = onDismiss) { Text("REBOOT", color = Color(0xFF00E5FF)) } }, containerColor = Color(0xFF2C1414), contentColor = Color.Red) { Text(message) }
+    }
+}
+
+/**
+ * Enhanced Markdown parser for bold, italic, and inline code.
+ * Also removes surrounding brackets from AI responses.
+ */
+fun parseMarkdown(text: String): AnnotatedString {
+    // Remove surrounding brackets if they exist
+    var cleanText = text.trim()
+    if (cleanText.startsWith("[") && cleanText.endsWith("]")) {
+        cleanText = cleanText.substring(1, cleanText.length - 1).trim()
+    }
+
+    // Replace multiline bullet points
+    cleanText = cleanText.replace("^\\s*\\*\\s+".toRegex(RegexOption.MULTILINE), " • ")
+    cleanText = cleanText.replace("^\\s*-\\s+".toRegex(RegexOption.MULTILINE), " • ")
+
+    return buildAnnotatedString {
+        val boldRegex = "\\*\\*(.*?)\\*\\*".toRegex()
+        val italicRegex = "(?<!\\*)\\*(?!\\*)(.*?)\\*".toRegex()
+        val codeRegex = "`(.*?)`".toRegex()
+
+        var currentPos = 0
+        
+        // This is a simplified regex-based approach that correctly removes markup
+        // For a perfectly accurate parser, a character-by-character scan is better
+        
+        val allMatches = (boldRegex.findAll(cleanText).map { it to "bold" } +
+                         italicRegex.findAll(cleanText).map { it to "italic" } +
+                         codeRegex.findAll(cleanText).map { it to "code" })
+                         .sortedBy { it.first.range.first }
+
+        allMatches.forEach { (match, type) ->
+            append(cleanText.substring(currentPos, match.range.first))
+            
+            val start = length
+            append(match.groupValues[1])
+            val end = length
+            
+            when (type) {
+                "bold" -> addStyle(SpanStyle(fontWeight = FontWeight.Bold), start, end)
+                "italic" -> addStyle(SpanStyle(fontStyle = FontStyle.Italic), start, end)
+                "code" -> addStyle(
+                    SpanStyle(
+                        fontFamily = FontFamily.Monospace,
+                        background = Color.DarkGray.copy(alpha = 0.3f),
+                        color = Color(0xFF00E5FF)
+                    ), start, end
+                )
+            }
+            currentPos = match.range.last + 1
+        }
+        
+        if (currentPos < cleanText.length) {
+            append(cleanText.substring(currentPos))
+        }
     }
 }

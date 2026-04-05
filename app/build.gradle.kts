@@ -85,6 +85,9 @@ dependencies {
     implementation(libs.ktor.client.core)
     implementation(libs.ktor.client.okhttp)
     
+    // Coil for Image Loading
+    implementation(libs.coil.compose)
+    
     // WorkManager
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.guava.listenablefuture)
