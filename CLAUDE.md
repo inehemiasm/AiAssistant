@@ -5,7 +5,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Common Commands
 - Build project: `./gradlew assembleDebug`
 - Run all tests: `./gradlew test`
-- Run a single test: `./gradlew test --tests "com.neo.aiassistant.ClassName"`
 - Run Android instrumented tests: `./gradlew connectedAndroidTest`
 - Run lint: `./gradlew lint`
 - Clean project: `./gradlew clean`
@@ -14,36 +13,29 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 The project is an Android application following Clean Architecture and MVI (Model-View-Intent) patterns.
 
 ### Architecture Layers
-- **Domain Layer** (`app/src/main/java/com/neo/aiassistant/domain/`): Contains business logic, use cases (e.g., `SendMessageUseCase`), and repository interfaces.
+- **Domain Layer** (`app/src/main/java/com/neo/aiassistant/domain/`): Contains business logic, use cases, and repository interfaces.
 - **Data Layer** (`app/src/main/java/com/neo/aiassistant/data/`): Implements repository interfaces and handles data sourcing.
-- **UI Layer** (`app/src/main/java/com/neo/aiassistant/`):
-  - Uses Jetpack Compose for the UI.
-  - `ChatViewModel.kt` manages UI state and uses Hilt for injection.
-  - `MainActivity.kt` is the `@AndroidEntryPoint`.
-- **Core** (`app/src/main/java/com/neo/aiassistant/core/`): Contains base MVI infrastructure (`BaseMvi.kt`).
+  - `ChatRepositoryImpl.kt`: Manages LiteRT-LM engine lifecycle, initialization fallback (GPU -> CPU), and multimodal message sending.
+- **UI Layer**:
+  - `ChatViewModel.kt`: Manages UI state and MVI logic.
+  - `ChatContract.kt`: Defines `ChatState`, `ChatIntent`, and `ChatEffect`.
+  - `com.neo.aiassistant.ui.ChatComponents.kt`: Contains all Compose UI components and Markdown parser.
+  - `MainActivity.kt`: The main entry point.
+- **Core** (`app/src/main/java/com/neo/aiassistant/core/`):
+  - `BaseMvi.kt`: Base MVI infrastructure.
+  - `ImageUtils.kt`: Utility for processing images (Exif rotation, cropping, scaling).
 
 ### Dependency Injection
 - **Hilt**: Used for dependency injection throughout the app.
-- **AppModule**: Located in `app/src/main/java/com/neo/aiassistant/di/AppModule.kt` for binding interfaces.
-- **HiltWorker**: Used for background task injection in `ModelDownloadWorker`.
+- **AppModule**: Located in `app/src/main/java/com/neo/aiassistant/di/AppModule.kt`.
 
-### Local LLM & Data Transfer
-- **LiteRT-LM**: Used to run local large language models (`.litertlm` files).
-- **Ktor**: Used for reliable model downloads with precise progress tracking.
-- **Firebase Storage**: Source for model files via `gs://` URIs.
-- **WorkManager**: Manages long-running downloads as Foreground Services to survive backgrounding.
+### Local LLM & Multimodal Support
+- **LiteRT-LM (0.10.0)**: Used to run local large language models. Supports text and image input.
+- **Multimodal Message Path**: Use `Message.user(Contents.of(Content.ImageBytes(bytes), Content.Text(prompt)))`.
+- **Initialization Fallback**: GPU + Vision CPU -> CPU + Vision CPU -> Text-Only Mode.
+- **Session Lifecycle**: Engine/Conversation objects are explicitly closed. A fresh conversation is used for each message.
 
 ## Development Guidelines
-- **Kotlin Versions**: Always use the `-Xskip-metadata-version-check` compiler flag to handle library metadata mismatches.
-- **Downloads**: Progress updates are throttled to 500ms intervals to maintain UI performance.
-- **Local Models**: The app auto-detects `gemma-4-E2B-it.litertlm` and `gemma-4-E4B-it.litertlm` files in internal storage to bypass download screens.
-
-## Technical Stack
-- **Language**: Kotlin 2.1.10 (with metadata check bypass)
-- **DI**: Hilt 2.55
-- **Network/Transfer**: Ktor 2.3.12 + OkHttp 4.12.0
-- **Processing**: KSP 2.1.10-1.0.30
-- **UI Framework**: Jetpack Compose
-- **Local AI**: LiteRT-LM (Google AI Edge)
-- **Build System**: Gradle 8.7.3 (KTS)
-- **JDK**: 17
+- **Kotlin Versions**: Always use the `-Xskip-metadata-version-check` compiler flag.
+- **Multimodal**: When sending images, ensure `isVisionSupported()` is checked.
+- **Camera/Gallery**: Implemented via `ActivityResultContracts` in `MainActivity.kt`. Safely sharing URIs via `FileProvider`.

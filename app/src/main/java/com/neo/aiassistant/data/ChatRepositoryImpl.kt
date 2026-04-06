@@ -24,6 +24,8 @@ import com.neo.aiassistant.domain.ModelEntry
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
@@ -40,6 +42,9 @@ class ChatRepositoryImpl @Inject constructor(
     private var engine: Engine? = null
     private var isVisionEnabled = false
     private val workManager = WorkManager.getInstance(context)
+    
+    private val _initStatus = MutableSharedFlow<String>(replay = 1)
+    override fun getInitStatus(): Flow<String> = _initStatus.asSharedFlow()
 
     override fun isVisionSupported(): Boolean = isVisionEnabled
 
@@ -50,11 +55,14 @@ class ChatRepositoryImpl @Inject constructor(
         }
 
         Log.d("ChatRepository", "--- INITIALIZING NEURAL ENGINE ---")
+        _initStatus.emit("RESETTING ENGINE...")
+
+        engine?.close()
+        engine = null
         
         val neuralCache = File(context.cacheDir, "neural_cache")
         if (!neuralCache.exists()) neuralCache.mkdirs()
 
-        // Backend attempt order: GPU+VisionCPU, CPU+VisionCPU, CPU+null
         val attempts = listOf(
             Triple(Backend.GPU(), Backend.CPU(), "GPU + Vision CPU"),
             Triple(Backend.CPU(), Backend.CPU(), "CPU + Vision CPU"),
@@ -64,30 +72,62 @@ class ChatRepositoryImpl @Inject constructor(
         var lastError: Throwable? = null
 
         for ((mainBackend, visionBackend, label) in attempts) {
+            _initStatus.emit("ATTEMPTING: $label")
             val result = runCatching {
-                val engineConfig = EngineConfig(
-                    modelPath = modelPath,
-                    backend = mainBackend,
-                    visionBackend = visionBackend,
-                    maxNumTokens = 4096,
-                    cacheDir = neuralCache.absolutePath
-                )
-                
-                if (visionBackend != null) {
-                    try {
-                        val field = engineConfig.javaClass.getDeclaredField("maxNumImages")
-                        field.isAccessible = true
-                        field.set(engineConfig, 1)
-                    } catch (e: Exception) {
-                        Log.w("ChatRepository", "Could not set maxNumImages: ${e.message}")
-                    }
-                }
-                
-                val newEngine = Engine(engineConfig)
-                newEngine.initialize()
-                
-                // Probe with Content.ImageBytes and do not reuse the conversation
-                val probeConv = newEngine.createConversation()
+                initializeWithConfig(modelPath, mainBackend, visionBackend, neuralCache.absolutePath)
+            }
+            
+            if (result.isSuccess) {
+                Log.i("ChatRepository", "Engine online: $label")
+                engine = result.getOrNull()
+                isVisionEnabled = visionBackend != null
+                _initStatus.emit("SYSTEM READY")
+                return@withContext Result.success(Unit)
+            }
+            
+            lastError = result.exceptionOrNull()
+            Log.e("ChatRepository", "$label failed: ${lastError?.message}")
+            _initStatus.emit("HARDWARE FALLBACK...")
+            neuralCache.deleteRecursively()
+            neuralCache.mkdirs()
+        }
+
+        _initStatus.emit("INITIALIZATION FAILED")
+        Result.failure(lastError ?: Exception("Hardware incompatible."))
+    }
+
+    private suspend fun initializeWithConfig(
+        modelPath: String,
+        mainBackend: Backend,
+        visionBackend: Backend?,
+        cacheDirPath: String
+    ): Engine {
+        val engineConfig = EngineConfig(
+            modelPath = modelPath,
+            backend = mainBackend,
+            visionBackend = visionBackend,
+            maxNumTokens = 4096,
+            cacheDir = cacheDirPath
+        )
+        
+        if (visionBackend != null) {
+            try {
+                val field = engineConfig.javaClass.getDeclaredField("maxNumImages")
+                field.isAccessible = true
+                field.set(engineConfig, 1)
+            } catch (e: Exception) {
+                Log.w("ChatRepository", "Could not set maxNumImages: ${e.message}")
+            }
+        }
+        
+        _initStatus.emit("ALLOCATING NEURAL MEMORY...")
+        val tempEngine = Engine(engineConfig)
+        try {
+            tempEngine.initialize()
+            
+            _initStatus.emit("WARMING UP VISION CORE...")
+            val probeConv = tempEngine.createConversation()
+            try {
                 if (visionBackend != null) {
                     val dummyBitmap = createBitmap(448, 448, Bitmap.Config.ARGB_8888)
                     val bos = ByteArrayOutputStream()
@@ -104,61 +144,54 @@ class ChatRepositoryImpl @Inject constructor(
                 } else {
                     probeConv.sendMessage("warmup")
                 }
-                
-                engine = newEngine
-                isVisionEnabled = visionBackend != null
+            } finally {
+                probeConv.close()
             }
             
-            if (result.isSuccess) {
-                Log.i("ChatRepository", "Engine online: $label")
-                return@withContext Result.success(Unit)
-            }
-            
-            lastError = result.exceptionOrNull()
-            Log.e("ChatRepository", "$label failed: ${lastError?.message}")
-            neuralCache.deleteRecursively()
-            neuralCache.mkdirs()
+            return tempEngine
+        } catch (e: Exception) {
+            tempEngine.close()
+            throw e
         }
-
-        Result.failure(lastError ?: Exception("Hardware incompatible."))
     }
 
     override suspend fun sendMessage(prompt: String, imageUri: Uri?): Result<String> = withContext(Dispatchers.IO) {
         runCatching {
             val activeEngine = engine ?: throw Exception("Engine not ready.")
-            
-            // Create a clean conversation per request
             val activeConversation = activeEngine.createConversation()
             
-            val response = if (imageUri != null) {
-                if (!isVisionEnabled) {
-                    throw Exception("Image provided but vision is disabled in current backend.")
-                }
-                val bitmap = ImageUtils.loadAndProcessImage(context, imageUri, 448)
-                val bos = ByteArrayOutputStream()
-                bitmap.compress(Bitmap.CompressFormat.JPEG, 90, bos)
-                val imageBytes = bos.toByteArray()
-                
-                val message = Message.user(
-                    Contents.of(
-                        Content.ImageBytes(imageBytes),
-                        Content.Text(prompt)
+            try {
+                val response = if (imageUri != null) {
+                    if (!isVisionEnabled) {
+                        throw Exception("Image provided but vision is disabled in current backend.")
+                    }
+                    val bitmap = ImageUtils.loadAndProcessImage(context, imageUri, 448)
+                    val bos = ByteArrayOutputStream()
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, 90, bos)
+                    val imageBytes = bos.toByteArray()
+                    
+                    val message = Message.user(
+                        Contents.of(
+                            Content.ImageBytes(imageBytes),
+                            Content.Text(prompt)
+                        )
                     )
-                )
-                activeConversation.sendMessage(message)
-            } else {
-                activeConversation.sendMessage(prompt)
-            }
-
-            // Extract response text
-            response.contents.contents.joinToString("") { part ->
-                val str = part.toString()
-                if (str.contains("text=")) {
-                    str.substringAfter("text=").substringBeforeLast(")")
+                    activeConversation.sendMessage(message)
                 } else {
-                    str
+                    activeConversation.sendMessage(prompt)
                 }
-            }.trim()
+
+                response.contents.contents.joinToString("") { part ->
+                    val str = part.toString()
+                    if (str.contains("text=")) {
+                        str.substringAfter("text=").substringBeforeLast(")")
+                    } else {
+                        str
+                    }
+                }.trim()
+            } finally {
+                activeConversation.close()
+            }
         }
     }
 

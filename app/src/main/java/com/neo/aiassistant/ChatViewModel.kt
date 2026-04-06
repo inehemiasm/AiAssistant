@@ -10,6 +10,7 @@ import com.neo.aiassistant.domain.DownloadProgress
 import com.neo.aiassistant.domain.InitializeChatUseCase
 import com.neo.aiassistant.domain.SendMessageUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.io.File
 import javax.inject.Inject
@@ -31,6 +32,15 @@ class ChatViewModel @Inject constructor(
     init {
         checkLocalModels()
         onIntent(ChatIntent.FetchModels)
+        observeInitStatus()
+    }
+
+    private fun observeInitStatus() {
+        viewModelScope.launch {
+            repository.getInitStatus().collectLatest { status ->
+                setState { copy(loadingMessage = status) }
+            }
+        }
     }
 
     private fun checkLocalModels() {
@@ -77,16 +87,16 @@ class ChatViewModel @Inject constructor(
         setState { copy(isLoading = true, error = null, isReady = false) }
         initializeChatUseCase(modelPath)
             .onSuccess {
-                setState { copy(isLoading = false, isReady = true) }
+                setState { copy(isLoading = false, isReady = true, loadingMessage = null) }
             }
             .onFailure { e ->
-                setState { copy(isLoading = false, error = "Initialization failed: ${e.message}") }
+                setState { copy(isLoading = false, error = "Initialization failed: ${e.message}", loadingMessage = null) }
             }
     }
 
     private suspend fun sendMessage(text: String, imageUri: Uri?) {
         val userMsg = ChatMessage(text, isUser = true, imageUri = imageUri?.toString())
-        setState { copy(messages = messages + userMsg, isLoading = true) }
+        setState { copy(messages = messages + userMsg, isLoading = true, loadingMessage = "THINKING...") }
         sendEffect { ChatEffect.ScrollToBottom }
 
         var responseText = ""
@@ -94,13 +104,13 @@ class ChatViewModel @Inject constructor(
             sendMessageUseCase(text, imageUri)
                 .onSuccess { responseText = it }
                 .onFailure { e ->
-                    setState { copy(isLoading = false, error = "Inference failed: ${e.message}") }
+                    setState { copy(isLoading = false, error = "Inference failed: ${e.message}", loadingMessage = null) }
                     return
                 }
         }
 
         val aiMsg = ChatMessage(responseText, isUser = false, inferenceTimeMs = time)
-        setState { copy(messages = messages + aiMsg, isLoading = false) }
+        setState { copy(messages = messages + aiMsg, isLoading = false, loadingMessage = null) }
         sendEffect { ChatEffect.ScrollToBottom }
     }
 

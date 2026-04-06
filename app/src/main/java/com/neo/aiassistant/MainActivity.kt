@@ -16,10 +16,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.FileProvider
 import com.neo.aiassistant.ui.*
 import com.neo.aiassistant.ui.theme.AiAssistantTheme
 import dagger.hilt.android.AndroidEntryPoint
 import java.io.File
+import java.util.UUID
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -43,11 +45,20 @@ fun ChatScreen(viewModel: ChatViewModel) {
     val listState = rememberLazyListState()
     var inputText by remember { mutableStateOf("") }
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
+    var tempCameraUri by remember { mutableStateOf<Uri?>(null) }
 
     val imagePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        selectedImageUri = uri
+        if (uri != null) selectedImageUri = uri
+    }
+
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success) {
+            selectedImageUri = tempCameraUri
+        }
     }
 
     val modelFile = File(context.filesDir, state.selectedModel)
@@ -92,7 +103,18 @@ fun ChatScreen(viewModel: ChatViewModel) {
                     selectedImageUri = null
                 },
                 selectedImageUri = selectedImageUri,
-                onImageClick = { imagePicker.launch("image/*") },
+                onGalleryClick = { imagePicker.launch("image/*") },
+                onCameraClick = {
+                    val file = File(context.cacheDir, "images/${UUID.randomUUID()}.jpg")
+                    file.parentFile?.mkdirs()
+                    val uri = FileProvider.getUriForFile(
+                        context,
+                        "${context.packageName}.fileprovider",
+                        file
+                    )
+                    tempCameraUri = uri
+                    cameraLauncher.launch(uri)
+                },
                 onRemoveImage = { selectedImageUri = null },
                 enabled = state.isReady && !state.isLoading && !state.isDownloading
             )
@@ -126,7 +148,10 @@ fun ChatScreen(viewModel: ChatViewModel) {
                         listState = listState
                     )
                     
-                    QuantumThinkingIndicator(state.isLoading)
+                    QuantumThinkingIndicator(
+                        isThinking = state.isLoading,
+                        statusMessage = state.loadingMessage
+                    )
                 }
             }
 

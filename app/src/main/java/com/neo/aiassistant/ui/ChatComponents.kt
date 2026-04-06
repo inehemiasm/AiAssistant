@@ -126,7 +126,7 @@ fun FuturisticTopBar(
 }
 
 @Composable
-fun QuantumThinkingIndicator(isThinking: Boolean) {
+fun QuantumThinkingIndicator(isThinking: Boolean, statusMessage: String? = null) {
     AnimatedVisibility(visible = isThinking, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
         Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Box(contentAlignment = Alignment.Center, modifier = Modifier.size(60.dp)) {
@@ -145,7 +145,7 @@ fun QuantumThinkingIndicator(isThinking: Boolean) {
                 }
                 Icon(Icons.Default.AutoAwesome, null, tint = Color(0xFF00E5FF), modifier = Modifier.size(20.dp))
             }
-            Text("SYNTHESIZING...", color = Color(0xFF00E5FF), letterSpacing = 1.5.sp, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+            Text(statusMessage ?: "SYNTHESIZING...", color = Color(0xFF00E5FF), letterSpacing = 1.5.sp, fontWeight = FontWeight.Bold, fontSize = 12.sp)
         }
     }
 }
@@ -208,7 +208,8 @@ fun ChatInputBar(
     onTextChange: (String) -> Unit,
     onSend: () -> Unit,
     selectedImageUri: Uri?,
-    onImageClick: () -> Unit,
+    onGalleryClick: () -> Unit,
+    onCameraClick: () -> Unit,
     onRemoveImage: () -> Unit,
     enabled: Boolean
 ) {
@@ -231,8 +232,11 @@ fun ChatInputBar(
                 }
             }
             Row(modifier = Modifier.padding(16.dp).fillMaxWidth().imePadding(), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onImageClick, enabled = enabled) {
+                IconButton(onClick = onGalleryClick, enabled = enabled) {
                     Icon(Icons.Default.AddPhotoAlternate, "Attach Image", tint = if (enabled) Color(0xFF00E5FF) else Color.Gray)
+                }
+                IconButton(onClick = onCameraClick, enabled = enabled) {
+                    Icon(Icons.Default.PhotoCamera, "Take Photo", tint = if (enabled) Color(0xFF00E5FF) else Color.Gray)
                 }
                 Spacer(Modifier.width(8.dp))
                 TextField(

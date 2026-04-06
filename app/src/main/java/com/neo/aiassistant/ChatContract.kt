@@ -9,6 +9,7 @@ import com.neo.aiassistant.domain.ChatMessage
 data class ChatState(
     val messages: List<ChatMessage> = emptyList(),
     val isLoading: Boolean = false,
+    val loadingMessage: String? = null,
     val isReady: Boolean = false,
     val error: String? = null,
     val availableModels: Map<String, String> = emptyMap(),
