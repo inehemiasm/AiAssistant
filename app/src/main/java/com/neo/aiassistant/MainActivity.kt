@@ -160,7 +160,7 @@ fun ChatScreen(
     Scaffold(
         topBar = {
             FuturisticTopBar(
-                isInteractionEnabled = state.runtimeState is RuntimeState.Ready,
+                isInteractionEnabled = state.downloadState is DownloadState.Idle && state.catalogState is CatalogState.Idle,
                 selectedModel = state.selectedModel,
                 availableModels = state.availableModels.keys.toList(),
                 onModelSelected = { modelName ->
@@ -202,7 +202,7 @@ fun ChatScreen(
                     }
                 },
                 onRemoveImage = { selectedImageUri = null },
-                enabled = state.runtimeState is RuntimeState.Ready && state.sendState is SendState.Idle && state.downloadState is DownloadState.Idle
+                enabled = state.isReady && state.sendState is SendState.Idle && state.downloadState is DownloadState.Idle
             )
         },
         containerColor = MaterialTheme.colorScheme.background
@@ -212,8 +212,8 @@ fun ChatScreen(
                 .padding(innerPadding)
                 .fillMaxSize()
         ) {
-            if (state.downloadState is DownloadState.Downloading) {
-                DownloadProgressView(state.selectedModel, (state.downloadState as DownloadState.Downloading).progress)
+            if (state.isDownloading) {
+                DownloadProgressView(state.selectedModel, state.downloadProgress ?: 0)
             } else if (!modelFile.exists()) {
                 BeautifulModelMissingView(
                     selectedModel = state.selectedModel,
@@ -233,31 +233,15 @@ fun ChatScreen(
                         listState = listState
                     )
                     
-                    val isThinking = state.sendState is SendState.Sending || state.agentState !is AgentState.Idle
-                    val loadingMessage = when {
-                        state.agentState is AgentState.Planning -> "PLANNING..."
-                        state.agentState is AgentState.ExecutingTool -> "EXECUTING: ${(state.agentState as AgentState.ExecutingTool).toolName.uppercase()}"
-                        state.sendState is SendState.Sending -> "THINKING..."
-                        state.runtimeState is RuntimeState.Initializing -> (state.runtimeState as RuntimeState.Initializing).message
-                        else -> null
-                    }
-
                     QuantumThinkingIndicator(
-                        visible = isThinking || state.runtimeState is RuntimeState.Initializing,
-                        statusMessage = loadingMessage
+                        visible = state.isLoading,
+                        statusMessage = state.loadingMessage
                     )
                 }
             }
 
-            val error = when {
-                state.runtimeState is RuntimeState.Error -> (state.runtimeState as RuntimeState.Error).message
-                state.sendState is SendState.Error -> (state.sendState as SendState.Error).message
-                state.downloadState is DownloadState.Error -> (state.downloadState as DownloadState.Error).message
-                else -> null
-            }
-
-            if (error != null && modelFile.exists()) {
-                ErrorSnackbar(error) {
+            if (state.error != null && modelFile.exists()) {
+                ErrorSnackbar(state.error!!) {
                     viewModel.onIntent(ChatIntent.ClearError)
                 }
             }

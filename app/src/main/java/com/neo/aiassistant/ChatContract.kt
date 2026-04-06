@@ -58,7 +58,7 @@ data class ChatState(
     
     val isLoading: Boolean get() = runtimeState is RuntimeState.Initializing || 
             sendState is SendState.Sending || 
-            agentState !is AgentState.Idle
+            (agentState is AgentState.Planning || agentState is AgentState.ExecutingTool)
             
     val isDownloading: Boolean get() = downloadState is DownloadState.Downloading
     
