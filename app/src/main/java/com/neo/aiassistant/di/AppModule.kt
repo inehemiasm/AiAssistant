@@ -4,6 +4,10 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreSettings
 import com.google.firebase.firestore.PersistentCacheSettings
 import com.neo.aiassistant.data.ChatRepositoryImpl
+import com.neo.aiassistant.data.datasource.FirebaseRemoteModelDataSource
+import com.neo.aiassistant.data.datasource.FirestoreModelCatalogDataSource
+import com.neo.aiassistant.data.datasource.ModelCatalogDataSource
+import com.neo.aiassistant.data.datasource.RemoteModelDataSource
 import com.neo.aiassistant.domain.ChatRepository
 import dagger.Binds
 import dagger.Module
@@ -23,6 +27,18 @@ abstract class AppModule {
     abstract fun bindChatRepository(
         chatRepositoryImpl: ChatRepositoryImpl
     ): ChatRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindRemoteModelDataSource(
+        firebaseRemoteModelDataSource: FirebaseRemoteModelDataSource
+    ): RemoteModelDataSource
+
+    @Binds
+    @Singleton
+    abstract fun bindModelCatalogDataSource(
+        firestoreModelCatalogDataSource: FirestoreModelCatalogDataSource
+    ): ModelCatalogDataSource
 
     companion object {
         @Provides
