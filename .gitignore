@@ -1,32 +1,54 @@
+# Built artifacts
+bin/
+gen/
+out/
+build/
+.gradle/
+
+# Module specific build folders
+app/build/
+ui-designsystem/build/
+
+# IDE files
+.idea/
 *.iml
-.gradle
+*.iws
+*.ipr
 /local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
+.navigation/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# OS files
 .DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
-local.properties
+Thumbs.db
 
 # Firebase configuration (Sensitive)
 google-services.json
 app/google-services.json
 
-# AI Models
+# AI Models (Large files)
 *.bin
 *.litertlm
+*.tflite
+*.onnx
 
-# IDE
-.idea/
+# Keystores & sensitive build files
+*.jks
+*.keystore
+*.pk8
+*.pem
 
 # Gradle
+gradle-app.setting
+!gradle-wrapper.jar
+.gradle
 gradle/gradle-daemon-jvm.properties
+
+# Log files
+*.log
 
 # Claude Code
 .claude/
+.aiexclude

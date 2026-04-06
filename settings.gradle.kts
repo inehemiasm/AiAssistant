@@ -24,4 +24,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "AiAssistant"
 include(":app")
- 
+include(":ui-designsystem")
