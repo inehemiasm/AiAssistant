@@ -34,6 +34,17 @@
             android:name="androidx.work.impl.foreground.SystemForegroundService"
             android:foregroundServiceType="dataSync"
             tools:node="merge" />
+
+        <!-- GPU Acceleration Native Library Declarations -->
+        <uses-native-library
+            android:name="libOpenCL.so"
+            android:required="false" />
+        <uses-native-library
+            android:name="libGLESv3.so"
+            android:required="false" />
+        <uses-native-library
+            android:name="libvulkan.so"
+            android:required="false" />
     </application>
 
 </manifest>

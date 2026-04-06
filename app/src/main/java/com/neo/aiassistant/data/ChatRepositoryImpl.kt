@@ -11,9 +11,11 @@ import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.workDataOf
 import com.google.ai.edge.litertlm.Backend
-import com.google.ai.edge.litertlm.Conversation
+import com.google.ai.edge.litertlm.Content
+import com.google.ai.edge.litertlm.Contents
 import com.google.ai.edge.litertlm.Engine
 import com.google.ai.edge.litertlm.EngineConfig
+import com.google.ai.edge.litertlm.Message
 import com.google.firebase.firestore.FirebaseFirestore
 import com.neo.aiassistant.core.ImageUtils
 import com.neo.aiassistant.domain.ChatRepository
@@ -25,6 +27,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
+import java.io.ByteArrayOutputStream
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -35,7 +38,6 @@ class ChatRepositoryImpl @Inject constructor(
     private val firestore: FirebaseFirestore
 ) : ChatRepository {
     private var engine: Engine? = null
-    private var conversation: Conversation? = null
     private var isVisionEnabled = false
     private val workManager = WorkManager.getInstance(context)
 
@@ -52,9 +54,10 @@ class ChatRepositoryImpl @Inject constructor(
         val neuralCache = File(context.cacheDir, "neural_cache")
         if (!neuralCache.exists()) neuralCache.mkdirs()
 
+        // Backend attempt order: GPU+VisionCPU, CPU+VisionCPU, CPU+null
         val attempts = listOf(
-            Triple(Backend.GPU(), Backend.GPU(), "Multimodal GPU"),
-            Triple(Backend.CPU(), Backend.CPU(), "Multimodal CPU"),
+            Triple(Backend.GPU(), Backend.CPU(), "GPU + Vision CPU"),
+            Triple(Backend.CPU(), Backend.CPU(), "CPU + Vision CPU"),
             Triple(Backend.CPU(), null, "Text-Only Mode")
         )
 
@@ -83,20 +86,26 @@ class ChatRepositoryImpl @Inject constructor(
                 val newEngine = Engine(engineConfig)
                 newEngine.initialize()
                 
+                // Probe with Content.ImageBytes and do not reuse the conversation
                 val probeConv = newEngine.createConversation()
-                
                 if (visionBackend != null) {
                     val dummyBitmap = createBitmap(448, 448, Bitmap.Config.ARGB_8888)
-                    probeConv.sendMessage(
-                        "<image>\nwarmup", 
-                        mapOf("images" to listOf(dummyBitmap))
+                    val bos = ByteArrayOutputStream()
+                    dummyBitmap.compress(Bitmap.CompressFormat.PNG, 100, bos)
+                    val imageBytes = bos.toByteArray()
+                    
+                    val message = Message.user(
+                        Contents.of(
+                            Content.ImageBytes(imageBytes),
+                            Content.Text("warmup")
+                        )
                     )
+                    probeConv.sendMessage(message)
                 } else {
                     probeConv.sendMessage("warmup")
                 }
                 
                 engine = newEngine
-                conversation = probeConv
                 isVisionEnabled = visionBackend != null
             }
             
@@ -116,19 +125,32 @@ class ChatRepositoryImpl @Inject constructor(
 
     override suspend fun sendMessage(prompt: String, imageUri: Uri?): Result<String> = withContext(Dispatchers.IO) {
         runCatching {
-            val activeConversation = conversation ?: throw Exception("Engine not ready.")
-            val extraContext = mutableMapOf<String, Any>()
+            val activeEngine = engine ?: throw Exception("Engine not ready.")
             
-            val finalPrompt = if (isVisionEnabled && imageUri != null) {
+            // Create a clean conversation per request
+            val activeConversation = activeEngine.createConversation()
+            
+            val response = if (imageUri != null) {
+                if (!isVisionEnabled) {
+                    throw Exception("Image provided but vision is disabled in current backend.")
+                }
                 val bitmap = ImageUtils.loadAndProcessImage(context, imageUri, 448)
-                extraContext["images"] = listOf(bitmap)
-                "<image>\n$prompt"
+                val bos = ByteArrayOutputStream()
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 90, bos)
+                val imageBytes = bos.toByteArray()
+                
+                val message = Message.user(
+                    Contents.of(
+                        Content.ImageBytes(imageBytes),
+                        Content.Text(prompt)
+                    )
+                )
+                activeConversation.sendMessage(message)
             } else {
-                prompt
+                activeConversation.sendMessage(prompt)
             }
 
-            val response = activeConversation.sendMessage(finalPrompt, extraContext)
-
+            // Extract response text
             response.contents.contents.joinToString("") { part ->
                 val str = part.toString()
                 if (str.contains("text=")) {
