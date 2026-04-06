@@ -37,20 +37,21 @@ class ModelDownloadWorker @AssistedInject constructor(
 ) : CoroutineWorker(context, workerParams) {
 
     private val lastUpdateMs = AtomicLong(0L)
-    private val throttleIntervalMs = 500L // 2 times per second
+    private val throttleIntervalMs = 500L
     private val notificationId = 1001
     private val channelId = "model_download_channel"
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         val url = inputData.getString("url") ?: return@withContext Result.failure(workDataOf("error" to "Missing URL"))
         val modelName = inputData.getString("modelName") ?: return@withContext Result.failure(workDataOf("error" to "Missing Name"))
+        
         val targetFile = File(applicationContext.filesDir, modelName)
+        val tempFile = File(applicationContext.filesDir, "$modelName.tmp")
 
-        // Promotion to foreground ensures the OS doesn't kill the download
         try {
             setForeground(getForegroundInfo())
         } catch (e: Exception) {
-            Log.e("ModelDownloadWorker", "Failed to set foreground", e)
+            Log.e("ModelDownloadWorker", "Foreground promotion failed", e)
         }
         
         setProgress(workDataOf("progress" to 0))
@@ -73,8 +74,9 @@ class ModelDownloadWorker @AssistedInject constructor(
                 val totalBytes = response.contentLength() ?: 0L
                 var bytesRead = 0L
                 
-                FileOutputStream(targetFile).use { output ->
-                    val buffer = ByteArray(64 * 1024)
+                // CRITICAL: Download to temp file first to prevent the app from loading a partial core
+                FileOutputStream(tempFile).use { output ->
+                    val buffer = ByteArray(128 * 1024)
                     while (!channel.isClosedForRead) {
                         val read = channel.readAvailable(buffer)
                         if (read == -1) break
@@ -85,25 +87,30 @@ class ModelDownloadWorker @AssistedInject constructor(
                         val currentTime = System.currentTimeMillis()
                         if (currentTime - lastUpdateMs.get() >= throttleIntervalMs && totalBytes > 0) {
                             val progress = (bytesRead * 100.0 / totalBytes).toInt()
-                            // Corrected: Use suspending setProgress in CoroutineWorker
                             this@ModelDownloadWorker.setProgress(workDataOf("progress" to progress))
                             lastUpdateMs.set(currentTime)
-                            Log.d("ModelDownloadWorker", "Syncing Core: $progress% ($bytesRead/$totalBytes)")
                         }
                     }
                 }
             }
             
-            Log.d("ModelDownloadWorker", "Download complete: $modelName")
-            setProgress(workDataOf("progress" to 100))
-            Result.success()
+            // ATOMIC SWAP: Only place the real file once it's fully validated
+            if (tempFile.exists() && tempFile.length() > 0) {
+                if (targetFile.exists()) targetFile.delete()
+                if (tempFile.renameTo(targetFile)) {
+                    Log.d("ModelDownloadWorker", "Download successfully finalized: $modelName")
+                    setProgress(workDataOf("progress" to 100))
+                    Result.success()
+                } else {
+                    throw IOException("Failed to rename temporary core file")
+                }
+            } else {
+                throw IOException("Downloaded core is empty")
+            }
         } catch (e: Exception) {
             Log.e("ModelDownloadWorker", "Synthesis failed", e)
-            val errorMsg = when {
-                e.message?.contains("403") == true -> "Access Denied. Check Firebase Storage Rules."
-                e is IOException -> "Uplink unstable. Check your network."
-                else -> e.localizedMessage ?: "Unknown failure"
-            }
+            if (tempFile.exists()) tempFile.delete()
+            val errorMsg = e.localizedMessage ?: "Unknown failure"
             Result.failure(workDataOf("error" to errorMsg))
         }
     }
@@ -126,14 +133,12 @@ class ModelDownloadWorker @AssistedInject constructor(
     }
 
     private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                channelId,
-                "Model Downloads",
-                NotificationManager.IMPORTANCE_LOW
-            )
-            val manager = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            manager.createNotificationChannel(channel)
-        }
+        val channel = NotificationChannel(
+            channelId,
+            "Model Downloads",
+            NotificationManager.IMPORTANCE_LOW
+        )
+        val manager = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        manager.createNotificationChannel(channel)
     }
 }

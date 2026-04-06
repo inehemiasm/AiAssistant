@@ -94,6 +94,12 @@ dependencies {
     
     // LiteRT-LM for .litertlm models
     implementation(libs.google.ai.edge.litertlm)
+    
+    // MediaPipe GenAI for LlmInference
+    implementation(libs.mediapipe.tasks.genai)
+    
+    // EXIF handling
+    implementation(libs.androidx.exifinterface)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
