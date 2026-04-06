@@ -13,6 +13,7 @@ import androidx.work.workDataOf
 import com.google.ai.edge.litertlm.Backend
 import com.google.ai.edge.litertlm.Content
 import com.google.ai.edge.litertlm.Contents
+import com.google.ai.edge.litertlm.Conversation
 import com.google.ai.edge.litertlm.Engine
 import com.google.ai.edge.litertlm.EngineConfig
 import com.google.ai.edge.litertlm.Message
@@ -40,6 +41,7 @@ class ChatRepositoryImpl @Inject constructor(
     private val firestore: FirebaseFirestore
 ) : ChatRepository {
     private var engine: Engine? = null
+    private var activeConversation: Conversation? = null
     private var isVisionEnabled = false
     private val workManager = WorkManager.getInstance(context)
     
@@ -57,6 +59,7 @@ class ChatRepositoryImpl @Inject constructor(
         Log.d("ChatRepository", "--- INITIALIZING NEURAL ENGINE ---")
         _initStatus.emit("RESETTING ENGINE...")
 
+        clearConversation()
         engine?.close()
         engine = null
         
@@ -81,6 +84,7 @@ class ChatRepositoryImpl @Inject constructor(
                 Log.i("ChatRepository", "Engine online: $label")
                 engine = result.getOrNull()
                 isVisionEnabled = visionBackend != null
+                activeConversation = engine?.createConversation()
                 _initStatus.emit("SYSTEM READY")
                 return@withContext Result.success(Unit)
             }
@@ -157,42 +161,42 @@ class ChatRepositoryImpl @Inject constructor(
 
     override suspend fun sendMessage(prompt: String, imageUri: Uri?): Result<String> = withContext(Dispatchers.IO) {
         runCatching {
-            val activeEngine = engine ?: throw Exception("Engine not ready.")
-            val activeConversation = activeEngine.createConversation()
+            val currentConv = activeConversation ?: throw Exception("Conversation not initialized.")
             
-            try {
-                val response = if (imageUri != null) {
-                    if (!isVisionEnabled) {
-                        throw Exception("Image provided but vision is disabled in current backend.")
-                    }
-                    val bitmap = ImageUtils.loadAndProcessImage(context, imageUri, 448)
-                    val bos = ByteArrayOutputStream()
-                    bitmap.compress(Bitmap.CompressFormat.JPEG, 90, bos)
-                    val imageBytes = bos.toByteArray()
-                    
-                    val message = Message.user(
-                        Contents.of(
-                            Content.ImageBytes(imageBytes),
-                            Content.Text(prompt)
-                        )
-                    )
-                    activeConversation.sendMessage(message)
-                } else {
-                    activeConversation.sendMessage(prompt)
+            val response = if (imageUri != null) {
+                if (!isVisionEnabled) {
+                    throw Exception("Image provided but vision is disabled in current backend.")
                 }
-
-                response.contents.contents.joinToString("") { part ->
-                    val str = part.toString()
-                    if (str.contains("text=")) {
-                        str.substringAfter("text=").substringBeforeLast(")")
-                    } else {
-                        str
-                    }
-                }.trim()
-            } finally {
-                activeConversation.close()
+                val bitmap = ImageUtils.loadAndProcessImage(context, imageUri, 448)
+                val bos = ByteArrayOutputStream()
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 90, bos)
+                val imageBytes = bos.toByteArray()
+                
+                val message = Message.user(
+                    Contents.of(
+                        Content.ImageBytes(imageBytes),
+                        Content.Text(prompt)
+                    )
+                )
+                currentConv.sendMessage(message)
+            } else {
+                currentConv.sendMessage(prompt)
             }
+
+            response.contents.contents.joinToString("") { part ->
+                val str = part.toString()
+                if (str.contains("text=")) {
+                    str.substringAfter("text=").substringBeforeLast(")")
+                } else {
+                    str
+                }
+            }.trim()
         }
+    }
+
+    override suspend fun clearConversation() {
+        activeConversation?.close()
+        activeConversation = engine?.createConversation()
     }
 
     override suspend fun fetchAvailableModels(): Result<List<ModelEntry>> = withContext(Dispatchers.IO) {

@@ -49,6 +49,7 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.PhotoCamera
@@ -166,6 +167,7 @@ fun FuturisticTopBar(
     selectedModel: String,
     availableModels: List<String>,
     onModelSelected: (String) -> Unit,
+    onClearChat: () -> Unit,
     onSettingsClick: () -> Unit
 ) {
     var showMenu by remember { mutableStateOf(false) }
@@ -209,6 +211,9 @@ fun FuturisticTopBar(
             }
         },
         actions = {
+            IconButton(onClick = onClearChat, enabled = !isThinking) {
+                Icon(Icons.Default.DeleteSweep, "Clear Chat", tint = MaterialTheme.colorScheme.primary)
+            }
             IconButton(onClick = onSettingsClick) {
                 Icon(Icons.Default.Settings, "Settings", tint = MaterialTheme.colorScheme.primary)
             }

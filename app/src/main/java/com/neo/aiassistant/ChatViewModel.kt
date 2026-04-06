@@ -67,6 +67,14 @@ class ChatViewModel @Inject constructor(
             is ChatIntent.DownloadModel -> downloadModel(intent.modelName, intent.baseDir)
             ChatIntent.FetchModels -> fetchModels()
             ChatIntent.ClearError -> setState { copy(error = null) }
+            ChatIntent.ClearConversation -> clearConversation()
+        }
+    }
+
+    private fun clearConversation() {
+        viewModelScope.launch {
+            repository.clearConversation()
+            setState { copy(messages = emptyList()) }
         }
     }
 

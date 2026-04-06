@@ -165,6 +165,9 @@ fun ChatScreen(
                 onModelSelected = { modelName ->
                     viewModel.onIntent(ChatIntent.SwitchModel(modelName, context.filesDir.absolutePath))
                 },
+                onClearChat = {
+                    viewModel.onIntent(ChatIntent.ClearConversation)
+                },
                 onSettingsClick = onSettingsClick
             )
         },

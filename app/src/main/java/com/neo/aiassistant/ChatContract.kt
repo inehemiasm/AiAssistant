@@ -26,6 +26,7 @@ sealed class ChatIntent : UiIntent {
     data class DownloadModel(val modelName: String, val baseDir: String) : ChatIntent()
     object FetchModels : ChatIntent()
     object ClearError : ChatIntent()
+    object ClearConversation : ChatIntent()
 }
 
 sealed class ChatEffect : UiEffect {

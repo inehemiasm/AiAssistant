@@ -7,6 +7,7 @@ interface ChatRepository {
     fun getInitStatus(): Flow<String>
     suspend fun initializeModel(modelPath: String): Result<Unit>
     suspend fun sendMessage(prompt: String, imageUri: Uri? = null): Result<String>
+    suspend fun clearConversation()
     fun downloadModel(url: String, modelName: String): Flow<DownloadProgress>
     suspend fun fetchAvailableModels(): Result<List<ModelEntry>>
     fun isVisionSupported(): Boolean
