@@ -1,9 +1,12 @@
 package com.neo.aiassistant.domain
 
 import android.net.Uri
+import com.neo.aiassistant.data.agent.AgentState
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
 
 interface ChatRepository {
+    val agentState: StateFlow<AgentState>
     fun getInitStatus(): Flow<String>
     suspend fun initializeModel(modelPath: String): Result<Unit>
     suspend fun sendMessage(prompt: String, imageUri: Uri? = null): Result<String>

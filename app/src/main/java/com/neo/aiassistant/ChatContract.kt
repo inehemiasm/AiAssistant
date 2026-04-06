@@ -4,6 +4,7 @@ import android.net.Uri
 import com.neo.aiassistant.core.UiEffect
 import com.neo.aiassistant.core.UiIntent
 import com.neo.aiassistant.core.UiState
+import com.neo.aiassistant.data.agent.AgentState
 import com.neo.aiassistant.domain.ChatMessage
 
 /**
@@ -50,8 +51,38 @@ data class ChatState(
     val runtimeState: RuntimeState = RuntimeState.Uninitialized,
     val sendState: SendState = SendState.Idle,
     val downloadState: DownloadState = DownloadState.Idle,
-    val catalogState: CatalogState = CatalogState.Idle
-) : UiState
+    val catalogState: CatalogState = CatalogState.Idle,
+    val agentState: AgentState = AgentState.Idle
+) : UiState {
+    val isReady: Boolean get() = runtimeState is RuntimeState.Ready
+    
+    val isLoading: Boolean get() = runtimeState is RuntimeState.Initializing || 
+            sendState is SendState.Sending || 
+            agentState !is AgentState.Idle
+            
+    val isDownloading: Boolean get() = downloadState is DownloadState.Downloading
+    
+    val downloadProgress: Int? get() = (downloadState as? DownloadState.Downloading)?.progress
+    
+    val isFetchingModels: Boolean get() = catalogState is CatalogState.Loading
+    
+    val error: String? get() = when {
+        runtimeState is RuntimeState.Error -> runtimeState.message
+        sendState is SendState.Error -> sendState.message
+        downloadState is DownloadState.Error -> downloadState.message
+        catalogState is CatalogState.Error -> catalogState.message
+        agentState is AgentState.Error -> agentState.message
+        else -> null
+    }
+    
+    val loadingMessage: String? get() = when {
+        agentState is AgentState.Planning -> "PLANNING..."
+        agentState is AgentState.ExecutingTool -> "EXECUTING: ${agentState.toolName.uppercase()}"
+        sendState is SendState.Sending -> "THINKING..."
+        runtimeState is RuntimeState.Initializing -> runtimeState.message
+        else -> null
+    }
+}
 
 sealed class ChatIntent : UiIntent {
     data class Initialize(val modelPath: String) : ChatIntent()

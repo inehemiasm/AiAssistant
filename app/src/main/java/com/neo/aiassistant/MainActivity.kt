@@ -32,6 +32,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import com.neo.aiassistant.data.PreferenceManager
+import com.neo.aiassistant.data.agent.AgentState
 import com.neo.aiassistant.ui.BeautifulModelMissingView
 import com.neo.aiassistant.ui.ChatInputBar
 import com.neo.aiassistant.ui.DownloadProgressView
@@ -138,7 +139,7 @@ fun ChatScreen(
     val modelFile = File(context.filesDir, state.selectedModel)
 
     LaunchedEffect(Unit) {
-        if (!state.isReady && !state.isLoading && modelFile.exists()) {
+        if (state.runtimeState is RuntimeState.Uninitialized && modelFile.exists()) {
             viewModel.onIntent(ChatIntent.Initialize(modelFile.absolutePath))
         }
         
@@ -159,7 +160,7 @@ fun ChatScreen(
     Scaffold(
         topBar = {
             FuturisticTopBar(
-                isThinking = state.isLoading,
+                isInteractionEnabled = state.runtimeState is RuntimeState.Ready,
                 selectedModel = state.selectedModel,
                 availableModels = state.availableModels.keys.toList(),
                 onModelSelected = { modelName ->
@@ -201,7 +202,7 @@ fun ChatScreen(
                     }
                 },
                 onRemoveImage = { selectedImageUri = null },
-                enabled = state.isReady && !state.isLoading && !state.isDownloading
+                enabled = state.runtimeState is RuntimeState.Ready && state.sendState is SendState.Idle && state.downloadState is DownloadState.Idle
             )
         },
         containerColor = MaterialTheme.colorScheme.background
@@ -211,13 +212,12 @@ fun ChatScreen(
                 .padding(innerPadding)
                 .fillMaxSize()
         ) {
-            if (state.isDownloading) {
-                DownloadProgressView(state.selectedModel, state.downloadProgress ?: 0)
+            if (state.downloadState is DownloadState.Downloading) {
+                DownloadProgressView(state.selectedModel, (state.downloadState as DownloadState.Downloading).progress)
             } else if (!modelFile.exists()) {
                 BeautifulModelMissingView(
                     selectedModel = state.selectedModel,
-                    isFetching = state.isFetchingModels,
-                    error = state.error,
+                    catalogState = state.catalogState,
                     onDownloadClick = { modelName ->
                         viewModel.onIntent(ChatIntent.DownloadModel(modelName, context.filesDir.absolutePath))
                     },
@@ -233,15 +233,31 @@ fun ChatScreen(
                         listState = listState
                     )
                     
+                    val isThinking = state.sendState is SendState.Sending || state.agentState !is AgentState.Idle
+                    val loadingMessage = when {
+                        state.agentState is AgentState.Planning -> "PLANNING..."
+                        state.agentState is AgentState.ExecutingTool -> "EXECUTING: ${(state.agentState as AgentState.ExecutingTool).toolName.uppercase()}"
+                        state.sendState is SendState.Sending -> "THINKING..."
+                        state.runtimeState is RuntimeState.Initializing -> (state.runtimeState as RuntimeState.Initializing).message
+                        else -> null
+                    }
+
                     QuantumThinkingIndicator(
-                        isThinking = state.isLoading,
-                        statusMessage = state.loadingMessage
+                        visible = isThinking || state.runtimeState is RuntimeState.Initializing,
+                        statusMessage = loadingMessage
                     )
                 }
             }
 
-            if (state.error != null && modelFile.exists()) {
-                ErrorSnackbar(state.error!!) {
+            val error = when {
+                state.runtimeState is RuntimeState.Error -> (state.runtimeState as RuntimeState.Error).message
+                state.sendState is SendState.Error -> (state.sendState as SendState.Error).message
+                state.downloadState is DownloadState.Error -> (state.downloadState as DownloadState.Error).message
+                else -> null
+            }
+
+            if (error != null && modelFile.exists()) {
+                ErrorSnackbar(error) {
                     viewModel.onIntent(ChatIntent.ClearError)
                 }
             }

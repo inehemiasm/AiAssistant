@@ -33,6 +33,15 @@ class ChatViewModel @Inject constructor(
         checkLocalModels()
         onIntent(ChatIntent.FetchModels)
         observeInitStatus()
+        observeAgentStatus()
+    }
+
+    private fun observeAgentStatus() {
+        viewModelScope.launch {
+            repository.agentState.collectLatest { state ->
+                setState { copy(agentState = state) }
+            }
+        }
     }
 
     private fun observeInitStatus() {
@@ -110,7 +119,6 @@ class ChatViewModel @Inject constructor(
     }
 
     private suspend fun initModel(modelPath: String) {
-        // Initializing state is handled by the repository status observer
         initializeChatUseCase(modelPath)
             .onFailure { e ->
                 setState { copy(runtimeState = RuntimeState.Error("Init failed: ${e.message}")) }
