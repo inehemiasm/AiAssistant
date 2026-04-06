@@ -38,7 +38,13 @@ class ChatViewModel @Inject constructor(
     private fun observeInitStatus() {
         viewModelScope.launch {
             repository.getInitStatus().collectLatest { status ->
-                setState { copy(loadingMessage = status) }
+                if (status == "READY") {
+                    setState { copy(runtimeState = RuntimeState.Ready) }
+                } else if (status.contains("FAILED")) {
+                    setState { copy(runtimeState = RuntimeState.Error(status)) }
+                } else {
+                    setState { copy(runtimeState = RuntimeState.Initializing(status)) }
+                }
             }
         }
     }
@@ -58,7 +64,11 @@ class ChatViewModel @Inject constructor(
             is ChatIntent.Initialize -> initModel(intent.modelPath)
             is ChatIntent.SendMessage -> sendMessage(intent.text, intent.imageUri)
             is ChatIntent.SwitchModel -> {
-                setState { copy(selectedModel = intent.modelName, messages = emptyList(), isReady = false) }
+                setState { copy(
+                    selectedModel = intent.modelName, 
+                    messages = emptyList(), 
+                    runtimeState = RuntimeState.Uninitialized 
+                ) }
                 val modelFile = File("${intent.baseDir}/${intent.modelName}")
                 if (modelFile.exists()) {
                     initModel(modelFile.absolutePath)
@@ -66,7 +76,12 @@ class ChatViewModel @Inject constructor(
             }
             is ChatIntent.DownloadModel -> downloadModel(intent.modelName, intent.baseDir)
             ChatIntent.FetchModels -> fetchModels()
-            ChatIntent.ClearError -> setState { copy(error = null) }
+            ChatIntent.ClearError -> setState { copy(
+                runtimeState = if (currentState.runtimeState is RuntimeState.Error) RuntimeState.Uninitialized else currentState.runtimeState,
+                sendState = SendState.Idle,
+                downloadState = DownloadState.Idle,
+                catalogState = CatalogState.Idle
+            ) }
             ChatIntent.ClearConversation -> clearConversation()
         }
     }
@@ -79,32 +94,32 @@ class ChatViewModel @Inject constructor(
     }
 
     private suspend fun fetchModels() {
-        setState { copy(isFetchingModels = true, error = null) }
+        setState { copy(catalogState = CatalogState.Loading) }
         repository.fetchAvailableModels()
             .onSuccess { models ->
                 val modelMap = models.associate { it.name to it.url }
                 val finalModels = if (modelMap.isEmpty()) fallbackModels else modelMap
-                setState { copy(availableModels = finalModels, isFetchingModels = false) }
+                setState { copy(availableModels = finalModels, catalogState = CatalogState.Idle) }
             }
-            .onFailure {
-                setState { copy(availableModels = fallbackModels, isFetchingModels = false) }
+            .onFailure { e ->
+                setState { copy(
+                    availableModels = fallbackModels, 
+                    catalogState = CatalogState.Error(e.message ?: "Failed to fetch models") 
+                ) }
             }
     }
 
     private suspend fun initModel(modelPath: String) {
-        setState { copy(isLoading = true, error = null, isReady = false) }
+        // Initializing state is handled by the repository status observer
         initializeChatUseCase(modelPath)
-            .onSuccess {
-                setState { copy(isLoading = false, isReady = true, loadingMessage = null) }
-            }
             .onFailure { e ->
-                setState { copy(isLoading = false, error = "Initialization failed: ${e.message}", loadingMessage = null) }
+                setState { copy(runtimeState = RuntimeState.Error("Init failed: ${e.message}")) }
             }
     }
 
     private suspend fun sendMessage(text: String, imageUri: Uri?) {
         val userMsg = ChatMessage(text, isUser = true, imageUri = imageUri?.toString())
-        setState { copy(messages = messages + userMsg, isLoading = true, loadingMessage = "THINKING...") }
+        setState { copy(messages = messages + userMsg, sendState = SendState.Sending) }
         sendEffect { ChatEffect.ScrollToBottom }
 
         var responseText = ""
@@ -112,34 +127,34 @@ class ChatViewModel @Inject constructor(
             sendMessageUseCase(text, imageUri)
                 .onSuccess { responseText = it }
                 .onFailure { e ->
-                    setState { copy(isLoading = false, error = "Inference failed: ${e.message}", loadingMessage = null) }
+                    setState { copy(sendState = SendState.Error(e.message ?: "Inference failed")) }
                     return
                 }
         }
 
         val aiMsg = ChatMessage(responseText, isUser = false, inferenceTimeMs = time)
-        setState { copy(messages = messages + aiMsg, isLoading = false, loadingMessage = null) }
+        setState { copy(messages = messages + aiMsg, sendState = SendState.Idle) }
         sendEffect { ChatEffect.ScrollToBottom }
     }
 
     private fun downloadModel(modelName: String, baseDir: String) {
         val url = currentState.availableModels[modelName] ?: fallbackModels[modelName] ?: return
         
-        setState { copy(selectedModel = modelName, isDownloading = true, downloadProgress = 0, error = null) }
+        setState { copy(selectedModel = modelName, downloadState = DownloadState.Downloading(0)) }
         
         viewModelScope.launch {
             repository.downloadModel(url, modelName).collect { progress ->
                 when (progress) {
                     is DownloadProgress.Progress -> {
-                        setState { copy(isDownloading = true, downloadProgress = progress.percent) }
+                        setState { copy(downloadState = DownloadState.Downloading(progress.percent)) }
                     }
                     DownloadProgress.Finished -> {
-                        setState { copy(isDownloading = false, downloadProgress = null) }
+                        setState { copy(downloadState = DownloadState.Idle) }
                         val targetFile = File(baseDir, modelName)
                         initModel(targetFile.absolutePath)
                     }
                     is DownloadProgress.Error -> {
-                        setState { copy(isDownloading = false, downloadProgress = null, error = progress.message) }
+                        setState { copy(downloadState = DownloadState.Error(progress.message)) }
                     }
                 }
             }

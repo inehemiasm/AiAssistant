@@ -98,6 +98,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.neo.aiassistant.CatalogState
+import com.neo.aiassistant.DownloadState
+import com.neo.aiassistant.RuntimeState
+import com.neo.aiassistant.SendState
 import com.neo.aiassistant.domain.ChatMessage
 import com.neo.aiassistant.ui.designsystem.AmbientGlow
 import com.neo.aiassistant.ui.designsystem.HighTechPrimaryButton
@@ -163,7 +167,7 @@ fun DownloadProgressView(modelName: String, progress: Int) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FuturisticTopBar(
-    isThinking: Boolean,
+    isInteractionEnabled: Boolean,
     selectedModel: String,
     availableModels: List<String>,
     onModelSelected: (String) -> Unit,
@@ -176,7 +180,7 @@ fun FuturisticTopBar(
         title = {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.clickable { if (!isThinking) showMenu = true }
+                modifier = Modifier.clickable { if (isInteractionEnabled) showMenu = true }
             ) {
                 Text(
                     text = selectedModel.replace(".litertlm", "").uppercase(),
@@ -211,7 +215,7 @@ fun FuturisticTopBar(
             }
         },
         actions = {
-            IconButton(onClick = onClearChat, enabled = !isThinking) {
+            IconButton(onClick = onClearChat, enabled = isInteractionEnabled) {
                 Icon(Icons.Default.DeleteSweep, "Clear Chat", tint = MaterialTheme.colorScheme.primary)
             }
             IconButton(onClick = onSettingsClick) {
@@ -227,9 +231,9 @@ fun FuturisticTopBar(
 }
 
 @Composable
-fun QuantumThinkingIndicator(isThinking: Boolean, statusMessage: String? = null) {
+fun QuantumThinkingIndicator(visible: Boolean, statusMessage: String? = null) {
     val primaryColor = MaterialTheme.colorScheme.primary
-    AnimatedVisibility(visible = isThinking, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
+    AnimatedVisibility(visible = visible, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
         Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Box(contentAlignment = Alignment.Center, modifier = Modifier.size(60.dp)) {
                 val infiniteTransition = rememberInfiniteTransition(label = "quantum")
@@ -389,7 +393,7 @@ fun ChatInputBar(
                     modifier = Modifier.weight(1f),
                     placeholder = { 
                         Text(
-                            if (enabled) "Enter command..." else "Download model to start chatting...", 
+                            if (enabled) "Enter command..." else "System offline...", 
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                             style = Typography.bodyMedium.copy(fontStyle = FontStyle.Italic)
                         ) 
@@ -432,15 +436,13 @@ fun ChatInputBar(
 @Composable
 fun BeautifulModelMissingView(
     selectedModel: String,
-    isFetching: Boolean, 
-    error: String?,
+    catalogState: CatalogState,
     onDownloadClick: (String) -> Unit,
     onClearError: () -> Unit
 ) {
     var internalSelectedModel by remember { mutableStateOf(selectedModel) }
 
     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-        // Ambient Glows
         AmbientGlow(MaterialTheme.colorScheme.primary, Modifier.align(Alignment.TopEnd).offset(x = 100.dp, y = (-100).dp).size(400.dp))
         AmbientGlow(MaterialTheme.colorScheme.primaryContainer, Modifier.align(Alignment.BottomStart).offset(x = (-100).dp, y = 100.dp).size(300.dp))
 
@@ -470,112 +472,112 @@ fun BeautifulModelMissingView(
 
             Spacer(Modifier.height(48.dp))
 
-            if (isFetching) {
-                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-                Spacer(Modifier.height(16.dp))
-                Text("SCANNING REPOSITORIES...", color = MaterialTheme.colorScheme.onSurfaceVariant, style = Typography.labelSmall)
-            } else if (error != null) {
-                Icon(Icons.Default.Warning, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(64.dp))
-                Spacer(Modifier.height(24.dp))
-                Text("MISSION FAILURE", color = MaterialTheme.colorScheme.error, style = Typography.headlineMedium)
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    error, 
-                    color = MaterialTheme.colorScheme.onSurfaceVariant, 
-                    fontSize = 14.sp, 
-                    textAlign = TextAlign.Center,
-                    lineHeight = 20.sp
-                )
-                Spacer(Modifier.height(32.dp))
-                HighTechPrimaryButton(
-                    onClick = onClearError, 
-                    text = "RETRY UPLINK"
-                )
-            } else {
-                // Architecture Selector Section
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(Icons.Default.RadioButtonChecked, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
-                    Spacer(Modifier.width(12.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("Architecture", color = MaterialTheme.colorScheme.onSurface, style = Typography.titleLarge)
-                        Text("Selector", color = MaterialTheme.colorScheme.onSurface, style = Typography.titleLarge)
-                    }
-                    
-                    Surface(
-                        color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.4f),
-                        shape = RoundedCornerShape(16.dp),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
-                    ) {
-                        Text(
-                            "2 MODELS AVAILABLE",
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                            style = Typography.labelSmall.copy(fontSize = 10.sp),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+            when (catalogState) {
+                CatalogState.Loading -> {
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                    Spacer(Modifier.height(16.dp))
+                    Text("SCANNING REPOSITORIES...", color = MaterialTheme.colorScheme.onSurfaceVariant, style = Typography.labelSmall)
                 }
-
-                Spacer(Modifier.height(24.dp))
-
-                // Model Options
-                ModelSelectorCard(
-                    title = "GEMMA-4-E4B-IT",
-                    description = "Heavyweight reasoning model. Superior logic performance for complex coding and creative synthesis tasks.",
-                    params = "4.2",
-                    vram = "8.4GB",
-                    isSelected = internalSelectedModel.contains("E4B"),
-                    icon = Icons.Default.Bolt,
-                    onClick = { internalSelectedModel = "gemma-4-E4B-it.litertlm" }
-                )
-
-                Spacer(Modifier.height(16.dp))
-
-                ModelSelectorCard(
-                    title = "GEMMA-4-E2B-IT",
-                    description = "Ultra-fast edge model. Optimized for mobile devices and real-time chat interactions with minimal battery drain.",
-                    params = "2.1",
-                    vram = "3.2GB",
-                    isSelected = internalSelectedModel.contains("E2B"),
-                    icon = Icons.Default.Speed,
-                    onClick = { internalSelectedModel = "gemma-4-E2B-it.litertlm" }
-                )
-
-                Spacer(Modifier.height(48.dp))
-                
-                // Engine Status
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(48.dp).clip(RoundedCornerShape(8.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh), contentAlignment = Alignment.Center) {
-                        Icon(Icons.Default.AutoAwesome, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(24.dp))
-                    }
-                    Spacer(Modifier.width(16.dp))
-                    Column {
-                        Text("ENGINE STATUS", style = Typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(Modifier.size(8.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary))
-                            Spacer(Modifier.width(8.dp))
-                            Text("Core Ready", color = MaterialTheme.colorScheme.onSurface, style = Typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
+                is CatalogState.Error -> {
+                    Icon(Icons.Default.Warning, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(64.dp))
+                    Spacer(Modifier.height(24.dp))
+                    Text("MISSION FAILURE", color = MaterialTheme.colorScheme.error, style = Typography.headlineMedium)
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        catalogState.message, 
+                        color = MaterialTheme.colorScheme.onSurfaceVariant, 
+                        fontSize = 14.sp, 
+                        textAlign = TextAlign.Center,
+                        lineHeight = 20.sp
+                    )
+                    Spacer(Modifier.height(32.dp))
+                    HighTechPrimaryButton(
+                        onClick = onClearError, 
+                        text = "RETRY UPLINK"
+                    )
+                }
+                CatalogState.Idle -> {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.RadioButtonChecked, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
+                        Spacer(Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Architecture", color = MaterialTheme.colorScheme.onSurface, style = Typography.titleLarge)
+                            Text("Selector", color = MaterialTheme.colorScheme.onSurface, style = Typography.titleLarge)
+                        }
+                        
+                        Surface(
+                            color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.4f),
+                            shape = RoundedCornerShape(16.dp),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+                        ) {
+                            Text(
+                                "MODELS DETECTED",
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                style = Typography.labelSmall.copy(fontSize = 10.sp),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
+
+                    Spacer(Modifier.height(24.dp))
+
+                    ModelSelectorCard(
+                        title = "GEMMA-4-E4B-IT",
+                        description = "Heavyweight reasoning model. Superior logic performance for complex coding and creative synthesis tasks.",
+                        params = "4.2",
+                        vram = "8.4GB",
+                        isSelected = internalSelectedModel.contains("E4B"),
+                        icon = Icons.Default.Bolt,
+                        onClick = { internalSelectedModel = "gemma-4-E4B-it.litertlm" }
+                    )
+
+                    Spacer(Modifier.height(16.dp))
+
+                    ModelSelectorCard(
+                        title = "GEMMA-4-E2B-IT",
+                        description = "Ultra-fast edge model. Optimized for mobile devices and real-time chat interactions with minimal battery drain.",
+                        params = "2.1",
+                        vram = "3.2GB",
+                        isSelected = internalSelectedModel.contains("E2B"),
+                        icon = Icons.Default.Speed,
+                        onClick = { internalSelectedModel = "gemma-4-E2B-it.litertlm" }
+                    )
+
+                    Spacer(Modifier.height(48.dp))
+                    
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.size(48.dp).clip(RoundedCornerShape(8.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh), contentAlignment = Alignment.Center) {
+                            Icon(Icons.Default.AutoAwesome, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(24.dp))
+                        }
+                        Spacer(Modifier.width(16.dp))
+                        Column {
+                            Text("ENGINE STATUS", style = Typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(Modifier.size(8.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary))
+                                Spacer(Modifier.width(8.dp))
+                                Text("Core Ready", color = MaterialTheme.colorScheme.onSurface, style = Typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
+                            }
+                        }
+                    }
+
+                    Spacer(Modifier.height(24.dp))
+
+                    HighTechPrimaryButton(
+                        onClick = { onDownloadClick(internalSelectedModel) },
+                        text = "CONFIRM ENGINE SWITCH"
+                    )
+
+                    Spacer(Modifier.height(48.dp))
+
+                    StatCard(label = "Latency", value = "14ms")
+                    Spacer(Modifier.height(12.dp))
+                    StatCard(label = "VRAM Usage", value = "78%")
+                    Spacer(Modifier.height(12.dp))
+                    StatCard(label = "Throughput", value = "62 tk/s")
                 }
-
-                Spacer(Modifier.height(24.dp))
-
-                HighTechPrimaryButton(
-                    onClick = { onDownloadClick(internalSelectedModel) },
-                    text = "CONFIRM ENGINE SWITCH"
-                )
-
-                Spacer(Modifier.height(48.dp))
-
-                // Stats Section
-                StatCard(label = "Latency", value = "14ms")
-                Spacer(Modifier.height(12.dp))
-                StatCard(label = "VRAM Usage", value = "78%")
-                Spacer(Modifier.height(12.dp))
-                StatCard(label = "Throughput", value = "62 tk/s")
             }
         }
     }
