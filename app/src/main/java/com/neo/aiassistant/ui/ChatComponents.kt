@@ -100,6 +100,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.neo.aiassistant.CatalogState
 import com.neo.aiassistant.DownloadState
+import com.neo.aiassistant.PerformanceMetrics
 import com.neo.aiassistant.RuntimeState
 import com.neo.aiassistant.SendState
 import com.neo.aiassistant.domain.ChatMessage
@@ -436,7 +437,9 @@ fun ChatInputBar(
 @Composable
 fun BeautifulModelMissingView(
     selectedModel: String,
+    localModels: List<com.neo.aiassistant.domain.LocalModel>,
     catalogState: CatalogState,
+    metrics: PerformanceMetrics,
     onDownloadClick: (String) -> Unit,
     onClearError: () -> Unit
 ) {
@@ -548,6 +551,8 @@ fun BeautifulModelMissingView(
 
                     Spacer(Modifier.height(48.dp))
                     
+                    val isModelDownloaded = localModels.any { it.name == internalSelectedModel }
+
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(48.dp).clip(RoundedCornerShape(8.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh), contentAlignment = Alignment.Center) {
                             Icon(Icons.Default.AutoAwesome, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(24.dp))
@@ -556,9 +561,9 @@ fun BeautifulModelMissingView(
                         Column {
                             Text("ENGINE STATUS", style = Typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(Modifier.size(8.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary))
+                                Box(Modifier.size(8.dp).clip(CircleShape).background(if (isModelDownloaded) MaterialTheme.colorScheme.primary else Color.Gray))
                                 Spacer(Modifier.width(8.dp))
-                                Text("Core Ready", color = MaterialTheme.colorScheme.onSurface, style = Typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
+                                Text(if (isModelDownloaded) "Core Ready" else "Download Required", color = MaterialTheme.colorScheme.onSurface, style = Typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
                             }
                         }
                     }
@@ -567,16 +572,16 @@ fun BeautifulModelMissingView(
 
                     HighTechPrimaryButton(
                         onClick = { onDownloadClick(internalSelectedModel) },
-                        text = "CONFIRM ENGINE SWITCH"
+                        text = if (isModelDownloaded) "CONFIRM ENGINE SWITCH" else "DOWNLOAD & SYNC CORE"
                     )
 
                     Spacer(Modifier.height(48.dp))
 
-                    StatCard(label = "Latency", value = "14ms")
+                    StatCard(label = "Latency", value = if (metrics.lastLatencyMs > 0) "${metrics.lastLatencyMs}ms" else "--")
                     Spacer(Modifier.height(12.dp))
-                    StatCard(label = "VRAM Usage", value = "78%")
+                    StatCard(label = "VRAM Usage", value = "${metrics.vramUsagePercent}%")
                     Spacer(Modifier.height(12.dp))
-                    StatCard(label = "Throughput", value = "62 tk/s")
+                    StatCard(label = "Throughput", value = if (metrics.throughputTks > 0) "%.1f tk/s".format(metrics.throughputTks) else "--")
                 }
             }
         }
@@ -717,15 +722,15 @@ fun parseMarkdown(text: String): AnnotatedString {
     }
 
     // Replace multiline bullet points
-    cleanText = cleanText.replace("^\\s*\\*\\s+".toRegex(RegexOption.MULTILINE), " • ")
-    cleanText = cleanText.replace("^\\s*-\\s+".toRegex(RegexOption.MULTILINE), " • ")
+    cleanText = cleanText.replace("^\\\\s*\\\\*\\\\s+".toRegex(RegexOption.MULTILINE), " • ")
+    cleanText = cleanText.replace("^\\\\s*-\\\\s+".toRegex(RegexOption.MULTILINE), " • ")
 
     val codeBackground = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.3f)
     val primaryColor = MaterialTheme.colorScheme.primary
 
     return buildAnnotatedString {
-        val boldRegex = "\\*\\*(.*?)\\*\\*".toRegex()
-        val italicRegex = "(?<!\\*)\\*(?!\\*)(.*?)\\*".toRegex()
+        val boldRegex = "\\\\*\\\\*(.*?)\\\\*\\\\*".toRegex()
+        val italicRegex = "(?<!\\\\*)\\\\*(?!\\\\*)(.*?)\\\\*".toRegex()
         val codeRegex = "`(.*?)`".toRegex()
 
         var currentPos = 0

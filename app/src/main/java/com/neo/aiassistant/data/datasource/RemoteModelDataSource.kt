@@ -58,6 +58,8 @@ class FirebaseRemoteModelDataSource @Inject constructor(
             val totalBytes = response.contentLength() ?: 0L
             var bytesRead = 0L
             val buffer = ByteArray(128 * 1024)
+            
+            var lastEmittedProgress = -1
 
             FileOutputStream(file).use { output ->
                 while (!channel.isClosedForRead) {
@@ -69,7 +71,11 @@ class FirebaseRemoteModelDataSource @Inject constructor(
 
                     if (totalBytes > 0) {
                         val progress = (bytesRead * 100.0 / totalBytes).toInt()
-                        emit(DownloadStatus.Progress(progress))
+                        // Only emit if progress has actually changed to avoid overwhelming the flow
+                        if (progress != lastEmittedProgress) {
+                            emit(DownloadStatus.Progress(progress))
+                            lastEmittedProgress = progress
+                        }
                     }
                 }
             }

@@ -46,6 +46,12 @@ sealed interface CatalogState {
     data class Error(val message: String) : CatalogState
 }
 
+data class PerformanceMetrics(
+    val lastLatencyMs: Long = 0,
+    val vramUsagePercent: Int = 0,
+    val throughputTks: Float = 0f
+)
+
 data class ChatState(
     val messages: List<ChatMessage> = emptyList(),
     val availableModels: Map<String, String> = emptyMap(), // Legacy fallback map
@@ -56,7 +62,8 @@ data class ChatState(
     val sendState: SendState = SendState.Idle,
     val downloadState: DownloadState = DownloadState.Idle,
     val catalogState: CatalogState = CatalogState.Idle,
-    val agentState: AgentState = AgentState.Idle
+    val agentState: AgentState = AgentState.Idle,
+    val metrics: PerformanceMetrics = PerformanceMetrics()
 ) : UiState {
     val isReady: Boolean get() = runtimeState is RuntimeState.Ready
     
@@ -97,6 +104,7 @@ sealed class ChatIntent : UiIntent {
     data object FetchModels : ChatIntent()
     data object ClearError : ChatIntent()
     data object ClearConversation : ChatIntent()
+    data object RefreshMetrics : ChatIntent()
 }
 
 sealed class ChatEffect : UiEffect {

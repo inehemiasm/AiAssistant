@@ -1,6 +1,8 @@
 package com.neo.aiassistant
 
+import android.app.ActivityManager
 import android.app.Application
+import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.viewModelScope
 import com.neo.aiassistant.core.BaseViewModel
@@ -34,6 +36,7 @@ class ChatViewModel @Inject constructor(
         onIntent(ChatIntent.FetchModels)
         observeInitStatus()
         observeAgentStatus()
+        refreshMetrics()
     }
 
     private fun observeAgentStatus() {
@@ -102,6 +105,41 @@ class ChatViewModel @Inject constructor(
                 catalogState = CatalogState.Idle
             ) }
             ChatIntent.ClearConversation -> clearConversation()
+            ChatIntent.RefreshMetrics -> refreshMetrics()
+        }
+    }
+
+    private fun refreshMetrics() {
+        val activityManager = application.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        val memoryInfo = ActivityManager.MemoryInfo()
+        activityManager.getMemoryInfo(memoryInfo)
+        
+        val totalMem = memoryInfo.totalMem
+        val availMem = memoryInfo.availMem
+        val usedMem = totalMem - availMem
+        val usagePercent = ((usedMem.toDouble() / totalMem.toDouble()) * 100).toInt()
+
+        // For throughput and latency, we use the last recorded values from the chat session
+        // If no messages yet, we keep defaults.
+        val lastAiMessage = currentState.messages.lastOrNull { !it.isUser }
+        val latency = lastAiMessage?.inferenceTimeMs ?: currentState.metrics.lastLatencyMs
+        
+        // Estimation for throughput: characters / (ms/1000) -> chars per second. 
+        // Token count would be better but requires tokenizer access.
+        val throughput = if (latency > 0 && lastAiMessage != null) {
+            (lastAiMessage.text.length / (latency.toFloat() / 1000f)) / 4f // divide by 4 as rough char-to-token ratio
+        } else {
+            currentState.metrics.throughputTks
+        }
+
+        setState {
+            copy(
+                metrics = PerformanceMetrics(
+                    lastLatencyMs = latency,
+                    vramUsagePercent = usagePercent,
+                    throughputTks = throughput
+                )
+            )
         }
     }
 
@@ -148,7 +186,10 @@ class ChatViewModel @Inject constructor(
         }
 
         val aiMsg = ChatMessage(responseText, isUser = false, inferenceTimeMs = time)
-        setState { copy(messages = messages + aiMsg, sendState = SendState.Idle) }
+        setState { 
+            copy(messages = messages + aiMsg, sendState = SendState.Idle) 
+        }
+        refreshMetrics()
         sendEffect { ChatEffect.ScrollToBottom }
     }
 
