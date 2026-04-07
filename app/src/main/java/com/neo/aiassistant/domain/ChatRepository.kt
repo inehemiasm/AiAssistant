@@ -14,11 +14,23 @@ interface ChatRepository {
     fun downloadModel(url: String, modelName: String): Flow<DownloadProgress>
     suspend fun fetchAvailableModels(): Result<List<ModelEntry>>
     fun isVisionSupported(): Boolean
+    fun getLocalModels(): List<LocalModel>
+    fun deleteModel(modelName: String): Boolean
 }
 
 data class ModelEntry(
     val name: String = "",
-    val url: String = ""
+    val url: String = "",
+    val description: String = "",
+    val provider: String = "Firebase",
+    val sizeBytes: Long = 0,
+    val runtimeType: String = "LiteRT"
+)
+
+data class LocalModel(
+    val name: String,
+    val path: String,
+    val sizeBytes: Long
 )
 
 sealed class DownloadProgress {

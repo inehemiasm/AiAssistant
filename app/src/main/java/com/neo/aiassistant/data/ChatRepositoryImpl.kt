@@ -1,5 +1,6 @@
 package com.neo.aiassistant.data
 
+import android.content.Context
 import android.net.Uri
 import com.neo.aiassistant.data.agent.AgentOrchestrator
 import com.neo.aiassistant.data.agent.AgentState
@@ -10,9 +11,12 @@ import com.neo.aiassistant.data.inference.LlmRuntimeManager
 import com.neo.aiassistant.data.inference.MultimodalMessageFactory
 import com.neo.aiassistant.domain.ChatRepository
 import com.neo.aiassistant.domain.DownloadProgress
+import com.neo.aiassistant.domain.LocalModel
 import com.neo.aiassistant.domain.ModelEntry
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
+import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -22,6 +26,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class ChatRepositoryImpl @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val runtimeManager: LlmRuntimeManager,
     private val messageFactory: MultimodalMessageFactory,
     private val responseMapper: LlmResponseMapper,
@@ -48,9 +53,6 @@ class ChatRepositoryImpl @Inject constructor(
             )
         }
 
-        // We use the AgentOrchestrator to handle the request.
-        // It internally handles the loop if tools are triggered,
-        // or returns a direct response if not.
         return agentOrchestrator.processUserRequest(prompt, imageUri)
     }
 
@@ -65,5 +67,26 @@ class ChatRepositoryImpl @Inject constructor(
 
     override fun downloadModel(url: String, modelName: String): Flow<DownloadProgress> {
         return downloadManager.downloadModel(url, modelName)
+    }
+
+    override fun getLocalModels(): List<LocalModel> {
+        val filesDir = context.filesDir
+        return filesDir.listFiles { file -> 
+            file.isFile && (file.name.endsWith(".litertlm") || file.name.endsWith(".bin"))
+        }?.map { file ->
+            LocalModel(
+                name = file.name,
+                path = file.absolutePath,
+                sizeBytes = file.length()
+            )
+        } ?: emptyList()
+    }
+
+    override fun deleteModel(modelName: String): Boolean {
+        val file = File(context.filesDir, modelName)
+        if (file.exists()) {
+            return file.delete()
+        }
+        return false
     }
 }

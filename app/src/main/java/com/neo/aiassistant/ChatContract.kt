@@ -6,6 +6,8 @@ import com.neo.aiassistant.core.UiIntent
 import com.neo.aiassistant.core.UiState
 import com.neo.aiassistant.data.agent.AgentState
 import com.neo.aiassistant.domain.ChatMessage
+import com.neo.aiassistant.domain.LocalModel
+import com.neo.aiassistant.domain.ModelEntry
 
 /**
  * Represents the initialization and health status of the LiteRT-LM runtime.
@@ -46,7 +48,9 @@ sealed interface CatalogState {
 
 data class ChatState(
     val messages: List<ChatMessage> = emptyList(),
-    val availableModels: Map<String, String> = emptyMap(),
+    val availableModels: Map<String, String> = emptyMap(), // Legacy fallback map
+    val remoteModels: List<ModelEntry> = emptyList(),
+    val localModels: List<LocalModel> = emptyList(),
     val selectedModel: String = "gemma-4-E4B-it.litertlm",
     val runtimeState: RuntimeState = RuntimeState.Uninitialized,
     val sendState: SendState = SendState.Idle,
@@ -89,6 +93,7 @@ sealed class ChatIntent : UiIntent {
     data class SendMessage(val text: String, val imageUri: Uri? = null) : ChatIntent()
     data class SwitchModel(val modelName: String, val baseDir: String) : ChatIntent()
     data class DownloadModel(val modelName: String, val baseDir: String) : ChatIntent()
+    data class DeleteModel(val modelName: String) : ChatIntent()
     data object FetchModels : ChatIntent()
     data object ClearError : ChatIntent()
     data object ClearConversation : ChatIntent()

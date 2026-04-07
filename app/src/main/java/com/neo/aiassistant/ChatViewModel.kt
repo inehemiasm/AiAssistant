@@ -30,7 +30,7 @@ class ChatViewModel @Inject constructor(
     )
 
     init {
-        checkLocalModels()
+        updateLocalModels()
         onIntent(ChatIntent.FetchModels)
         observeInitStatus()
         observeAgentStatus()
@@ -58,13 +58,15 @@ class ChatViewModel @Inject constructor(
         }
     }
 
-    private fun checkLocalModels() {
-        val e4b = File(application.filesDir, "gemma-4-E4B-it.litertlm")
-        val e2b = File(application.filesDir, "gemma-4-E2B-it.litertlm")
+    private fun updateLocalModels() {
+        val models = repository.getLocalModels()
+        setState { copy(localModels = models) }
         
-        when {
-            e4b.exists() -> setState { copy(selectedModel = "gemma-4-E4B-it.litertlm") }
-            e2b.exists() -> setState { copy(selectedModel = "gemma-4-E2B-it.litertlm") }
+        // Auto-select first available model if none selected
+        if (currentState.selectedModel.isEmpty() || !File(application.filesDir, currentState.selectedModel).exists()) {
+            models.firstOrNull()?.let { 
+                setState { copy(selectedModel = it.name) }
+            }
         }
     }
 
@@ -84,6 +86,14 @@ class ChatViewModel @Inject constructor(
                 }
             }
             is ChatIntent.DownloadModel -> downloadModel(intent.modelName, intent.baseDir)
+            is ChatIntent.DeleteModel -> {
+                if (repository.deleteModel(intent.modelName)) {
+                    updateLocalModels()
+                    if (currentState.selectedModel == intent.modelName) {
+                        setState { copy(runtimeState = RuntimeState.Uninitialized) }
+                    }
+                }
+            }
             ChatIntent.FetchModels -> fetchModels()
             ChatIntent.ClearError -> setState { copy(
                 runtimeState = if (currentState.runtimeState is RuntimeState.Error) RuntimeState.Uninitialized else currentState.runtimeState,
@@ -106,13 +116,10 @@ class ChatViewModel @Inject constructor(
         setState { copy(catalogState = CatalogState.Loading) }
         repository.fetchAvailableModels()
             .onSuccess { models ->
-                val modelMap = models.associate { it.name to it.url }
-                val finalModels = if (modelMap.isEmpty()) fallbackModels else modelMap
-                setState { copy(availableModels = finalModels, catalogState = CatalogState.Idle) }
+                setState { copy(remoteModels = models, catalogState = CatalogState.Idle) }
             }
             .onFailure { e ->
                 setState { copy(
-                    availableModels = fallbackModels, 
                     catalogState = CatalogState.Error(e.message ?: "Failed to fetch models") 
                 ) }
             }
@@ -146,7 +153,8 @@ class ChatViewModel @Inject constructor(
     }
 
     private fun downloadModel(modelName: String, baseDir: String) {
-        val url = currentState.availableModels[modelName] ?: fallbackModels[modelName] ?: return
+        val url = currentState.remoteModels.find { it.name == modelName }?.url
+            ?: fallbackModels[modelName] ?: return
         
         setState { copy(selectedModel = modelName, downloadState = DownloadState.Downloading(0)) }
         
@@ -158,6 +166,7 @@ class ChatViewModel @Inject constructor(
                     }
                     DownloadProgress.Finished -> {
                         setState { copy(downloadState = DownloadState.Idle) }
+                        updateLocalModels()
                         val targetFile = File(baseDir, modelName)
                         initModel(targetFile.absolutePath)
                     }
