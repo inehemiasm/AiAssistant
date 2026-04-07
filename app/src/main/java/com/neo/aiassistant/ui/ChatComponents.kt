@@ -25,8 +25,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -173,7 +171,8 @@ fun FuturisticTopBar(
     availableModels: List<String>,
     onModelSelected: (String) -> Unit,
     onClearChat: () -> Unit,
-    onSettingsClick: () -> Unit
+    onSettingsClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     var showMenu by remember { mutableStateOf(false) }
     
@@ -227,7 +226,7 @@ fun FuturisticTopBar(
             containerColor = Color.Transparent,
             titleContentColor = MaterialTheme.colorScheme.onSurface
         ),
-        modifier = Modifier.background(MaterialTheme.colorScheme.surface.copy(alpha = 0.7f))
+        modifier = modifier.background(MaterialTheme.colorScheme.surface.copy(alpha = 0.7f))
     )
 }
 
@@ -235,8 +234,8 @@ fun FuturisticTopBar(
 fun QuantumThinkingIndicator(visible: Boolean, statusMessage: String? = null) {
     val primaryColor = MaterialTheme.colorScheme.primary
     AnimatedVisibility(visible = visible, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
-        Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Box(contentAlignment = Alignment.Center, modifier = Modifier.size(60.dp)) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(contentAlignment = Alignment.Center, modifier = Modifier.size(40.dp)) {
                 val infiniteTransition = rememberInfiniteTransition(label = "quantum")
                 repeat(3) { i ->
                     val scale by infiniteTransition.animateFloat(0f, 1f, infiniteRepeatable(tween(1200, delayMillis = i * 400, easing = LinearOutSlowInEasing)), "scale$i")
@@ -250,9 +249,9 @@ fun QuantumThinkingIndicator(visible: Boolean, statusMessage: String? = null) {
                         ) 
                     }
                 }
-                Icon(Icons.Default.AutoAwesome, null, tint = primaryColor, modifier = Modifier.size(20.dp))
+                Icon(Icons.Default.AutoAwesome, null, tint = primaryColor, modifier = Modifier.size(16.dp))
             }
-            Text(statusMessage ?: "SYNTHESIZING...", color = primaryColor, letterSpacing = 1.5.sp, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+            Text(statusMessage ?: "SYNTHESIZING...", color = primaryColor, letterSpacing = 1.5.sp, fontWeight = FontWeight.Bold, fontSize = 10.sp)
         }
     }
 }
@@ -320,11 +319,12 @@ fun ChatInputBar(
     onGalleryClick: () -> Unit,
     onCameraClick: () -> Unit,
     onRemoveImage: () -> Unit,
-    enabled: Boolean
+    enabled: Boolean,
+    modifier: Modifier = Modifier
 ) {
     var showAttachmentMenu by remember { mutableStateOf(false) }
 
-    Surface(color = Color.Transparent, modifier = Modifier.navigationBarsPadding()) {
+    Surface(color = Color.Transparent, modifier = modifier) {
         Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
             if (selectedImageUri != null) {
                 Box(Modifier.padding(bottom = 8.dp).size(80.dp)) {
@@ -345,7 +345,6 @@ fun ChatInputBar(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .imePadding()
                     .clip(RoundedCornerShape(16.dp))
                     .background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.5f))
                     .border(

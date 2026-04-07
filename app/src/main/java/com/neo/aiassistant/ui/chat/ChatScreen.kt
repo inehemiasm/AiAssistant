@@ -10,9 +10,12 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -86,6 +89,25 @@ fun ChatScreen(
         }
     }
 
+    val onCameraClickAction = {
+        when (PackageManager.PERMISSION_GRANTED) {
+            ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) -> {
+                val file = File(context.cacheDir, "images/${UUID.randomUUID()}.jpg")
+                file.parentFile?.mkdirs()
+                val uri = FileProvider.getUriForFile(
+                    context,
+                    "${context.packageName}.fileprovider",
+                    file
+                )
+                tempCameraUri = uri
+                cameraLauncher.launch(uri)
+            }
+            else -> {
+                permissionLauncher.launch(Manifest.permission.CAMERA)
+            }
+        }
+    }
+
     val modelFile = File(context.filesDir, state.selectedModel)
 
     LaunchedEffect(Unit) {
@@ -107,21 +129,50 @@ fun ChatScreen(
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-        FuturisticTopBar(
-            isInteractionEnabled = state.downloadState is DownloadState.Idle && state.catalogState is CatalogState.Idle,
-            selectedModel = state.selectedModel,
-            availableModels = state.availableModels.keys.toList(),
-            onModelSelected = { modelName ->
-                viewModel.onIntent(ChatIntent.SwitchModel(modelName, context.filesDir.absolutePath))
-            },
-            onClearChat = {
-                viewModel.onIntent(ChatIntent.ClearConversation)
-            },
-            onSettingsClick = onSettingsClick
-        )
-
-        Box(modifier = Modifier.weight(1f)) {
+    Scaffold(
+        topBar = {
+            FuturisticTopBar(
+                isInteractionEnabled = state.downloadState is DownloadState.Idle && state.catalogState is CatalogState.Idle,
+                selectedModel = state.selectedModel,
+                availableModels = state.availableModels.keys.toList(),
+                onModelSelected = { modelName ->
+                    viewModel.onIntent(ChatIntent.SwitchModel(modelName, context.filesDir.absolutePath))
+                },
+                onClearChat = {
+                    viewModel.onIntent(ChatIntent.ClearConversation)
+                },
+                onSettingsClick = onSettingsClick
+            )
+        },
+        bottomBar = {
+            // Only show input bar if model exists and not downloading
+            if (!state.isDownloading && modelFile.exists()) {
+                ChatInputBar(
+                    text = inputText,
+                    onTextChange = { inputText = it },
+                    onSend = {
+                        viewModel.onIntent(ChatIntent.SendMessage(inputText, selectedImageUri))
+                        inputText = ""
+                        selectedImageUri = null
+                    },
+                    selectedImageUri = selectedImageUri,
+                    onGalleryClick = { imagePicker.launch("image/*") },
+                    onCameraClick = onCameraClickAction,
+                    onRemoveImage = { selectedImageUri = null },
+                    enabled = state.isReady && state.sendState is SendState.Idle && state.downloadState is DownloadState.Idle,
+                    modifier = Modifier
+                        .navigationBarsPadding()
+                        .imePadding()
+                )
+            }
+        },
+        containerColor = MaterialTheme.colorScheme.background
+    ) { innerPadding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
             if (state.isDownloading) {
                 DownloadProgressView(state.selectedModel, state.downloadProgress ?: 0)
             } else if (!modelFile.exists()) {
@@ -158,37 +209,5 @@ fun ChatScreen(
                 }
             }
         }
-
-        ChatInputBar(
-            text = inputText,
-            onTextChange = { inputText = it },
-            onSend = {
-                viewModel.onIntent(ChatIntent.SendMessage(inputText, selectedImageUri))
-                inputText = ""
-                selectedImageUri = null
-            },
-            selectedImageUri = selectedImageUri,
-            onGalleryClick = { imagePicker.launch("image/*") },
-            onCameraClick = {
-                when (PackageManager.PERMISSION_GRANTED) {
-                    ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) -> {
-                        val file = File(context.cacheDir, "images/${UUID.randomUUID()}.jpg")
-                        file.parentFile?.mkdirs()
-                        val uri = FileProvider.getUriForFile(
-                            context,
-                            "${context.packageName}.fileprovider",
-                            file
-                        )
-                        tempCameraUri = uri
-                        cameraLauncher.launch(uri)
-                    }
-                    else -> {
-                        permissionLauncher.launch(Manifest.permission.CAMERA)
-                    }
-                }
-            },
-            onRemoveImage = { selectedImageUri = null },
-            enabled = state.isReady && state.sendState is SendState.Idle && state.downloadState is DownloadState.Idle
-        )
     }
 }
