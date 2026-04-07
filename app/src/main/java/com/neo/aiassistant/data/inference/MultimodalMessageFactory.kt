@@ -1,14 +1,9 @@
 package com.neo.aiassistant.data.inference
 
-import android.content.Context
-import android.graphics.Bitmap
 import android.net.Uri
 import com.google.ai.edge.litertlm.Content
 import com.google.ai.edge.litertlm.Contents
 import com.google.ai.edge.litertlm.Message
-import com.neo.aiassistant.core.ImageUtils
-import dagger.hilt.android.qualifiers.ApplicationContext
-import java.io.ByteArrayOutputStream
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -18,11 +13,10 @@ import javax.inject.Singleton
  */
 @Singleton
 class MultimodalMessageFactory @Inject constructor(
-    @ApplicationContext private val context: Context
+    private val imageProcessor: ImageProcessor
 ) {
     companion object {
         private const val TARGET_IMAGE_SIZE = 448
-        private const val JPEG_QUALITY = 90
     }
 
     /**
@@ -30,7 +24,7 @@ class MultimodalMessageFactory @Inject constructor(
      */
     fun createMessage(prompt: String, imageUri: Uri?): Message {
         return if (imageUri != null) {
-            val imageBytes = processImage(imageUri)
+            val imageBytes = imageProcessor.processImage(imageUri, TARGET_IMAGE_SIZE)
             Message.user(
                 Contents.of(
                     Content.ImageBytes(imageBytes),
@@ -53,22 +47,12 @@ class MultimodalMessageFactory @Inject constructor(
      * Creates a warmup message for vision backends.
      */
     fun createWarmupMessage(): Message {
-        val dummyBitmap = Bitmap.createBitmap(TARGET_IMAGE_SIZE, TARGET_IMAGE_SIZE, Bitmap.Config.ARGB_8888)
-        val bos = ByteArrayOutputStream()
-        dummyBitmap.compress(Bitmap.CompressFormat.PNG, 100, bos)
+        val dummyImage = imageProcessor.createDummyImage(TARGET_IMAGE_SIZE)
         return Message.user(
             Contents.of(
-                Content.ImageBytes(bos.toByteArray()),
+                Content.ImageBytes(dummyImage),
                 Content.Text("warmup")
             )
         )
-    }
-
-    private fun processImage(uri: Uri): ByteArray {
-        val bitmap = ImageUtils.loadAndProcessImage(context, uri, TARGET_IMAGE_SIZE)
-        val bos = ByteArrayOutputStream()
-        // Using PNG as it's generally safer for multimodal input across LiteRT versions
-        bitmap.compress(Bitmap.CompressFormat.PNG, 100, bos)
-        return bos.toByteArray()
     }
 }

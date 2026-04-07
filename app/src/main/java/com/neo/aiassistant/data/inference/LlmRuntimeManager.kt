@@ -3,12 +3,10 @@ package com.neo.aiassistant.data.inference
 import android.content.Context
 import android.util.Log
 import com.google.ai.edge.litertlm.Backend
-import com.google.ai.edge.litertlm.Conversation
-import com.google.ai.edge.litertlm.Engine
 import com.google.ai.edge.litertlm.EngineConfig
 import com.google.ai.edge.litertlm.Message
+import com.neo.aiassistant.core.DispatcherProvider
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -26,19 +24,21 @@ import javax.inject.Singleton
 @Singleton
 class LlmRuntimeManager @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val messageFactory: MultimodalMessageFactory
+    private val messageFactory: MultimodalMessageFactory,
+    private val engineWrapper: LlmEngineWrapper,
+    private val dispatcherProvider: DispatcherProvider
 ) {
     private val engineLock = Mutex()
-    private var engine: Engine? = null
-    private var activeConversation: Conversation? = null
+    private var activeConversation: ConversationWrapper? = null
     private var isVisionEnabled = false
+    private var isInitialized = false
 
     private val _initStatus = MutableSharedFlow<String>(replay = 1)
     val initStatus: SharedFlow<String> = _initStatus.asSharedFlow()
 
     fun isVisionSupported(): Boolean = isVisionEnabled
 
-    suspend fun initialize(modelPath: String): Result<Unit> = withContext(Dispatchers.IO) {
+    suspend fun initialize(modelPath: String): Result<Unit> = withContext(dispatcherProvider.io) {
         engineLock.withLock {
             _initStatus.emit("RESETTING RUNTIME...")
             closeCurrentResources()
@@ -73,26 +73,24 @@ class LlmRuntimeManager @Inject constructor(
                         } catch (e: Exception) { /* ignore */ }
                     }
 
-                    val newEngine = Engine(config)
-                    newEngine.initialize()
+                    engineWrapper.initialize(config)
                     
                     _initStatus.emit("WARMING UP $label...")
-                    performWarmup(newEngine, vision != null)
-                    
-                    newEngine
+                    performWarmup(vision != null)
                 }
 
                 if (result.isSuccess) {
                     Log.i("LlmRuntimeManager", "Successfully initialized with $label")
-                    engine = result.getOrThrow()
                     isVisionEnabled = vision != null
-                    activeConversation = engine?.createConversation()
+                    activeConversation = engineWrapper.createConversation()
+                    isInitialized = true
                     _initStatus.emit("READY")
                     return@withContext Result.success(Unit)
                 }
 
                 lastError = result.exceptionOrNull()
                 Log.e("LlmRuntimeManager", "$label failed: ${lastError?.message}")
+                engineWrapper.close()
                 neuralCache.deleteRecursively()
                 neuralCache.mkdirs()
             }
@@ -102,8 +100,8 @@ class LlmRuntimeManager @Inject constructor(
         }
     }
 
-    private suspend fun performWarmup(tempEngine: Engine, vision: Boolean) {
-        val warmupConv = tempEngine.createConversation()
+    private suspend fun performWarmup(vision: Boolean) {
+        val warmupConv = engineWrapper.createConversation()
         try {
             val message = if (vision) {
                 messageFactory.createWarmupMessage()
@@ -118,7 +116,7 @@ class LlmRuntimeManager @Inject constructor(
         }
     }
 
-    suspend fun sendMessage(message: Message): Result<Message> = withContext(Dispatchers.IO) {
+    suspend fun sendMessage(message: Message): Result<Message> = withContext(dispatcherProvider.io) {
         engineLock.withLock {
             val conversation = activeConversation ?: return@withContext Result.failure(IllegalStateException("No active conversation"))
             runCatching { conversation.sendMessage(message) }
@@ -128,7 +126,7 @@ class LlmRuntimeManager @Inject constructor(
     suspend fun clearConversation() {
         engineLock.withLock {
             activeConversation?.close()
-            activeConversation = engine?.createConversation()
+            activeConversation = if (isInitialized) engineWrapper.createConversation() else null
         }
     }
 
@@ -139,8 +137,8 @@ class LlmRuntimeManager @Inject constructor(
     private fun closeCurrentResources() {
         activeConversation?.close()
         activeConversation = null
-        engine?.close()
-        engine = null
+        engineWrapper.close()
         isVisionEnabled = false
+        isInitialized = false
     }
 }
