@@ -713,8 +713,11 @@ fun ErrorSnackbar(message: String, onDismiss: () -> Unit) {
     }
 }
 
-@Composable
-fun parseMarkdown(text: String): AnnotatedString {
+fun parseMarkdownLogic(
+    text: String,
+    codeBackground: Color,
+    primaryColor: Color
+): AnnotatedString {
     // Remove surrounding brackets if they exist
     var cleanText = text.trim()
     if (cleanText.startsWith("[") && cleanText.endsWith("]")) {
@@ -722,47 +725,66 @@ fun parseMarkdown(text: String): AnnotatedString {
     }
 
     // Replace multiline bullet points
-    cleanText = cleanText.replace("^\\\\s*\\\\*\\\\s+".toRegex(RegexOption.MULTILINE), " • ")
-    cleanText = cleanText.replace("^\\\\s*-\\\\s+".toRegex(RegexOption.MULTILINE), " • ")
-
-    val codeBackground = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.3f)
-    val primaryColor = MaterialTheme.colorScheme.primary
+    cleanText = cleanText.replace(Regex("""^\s*[*+]\s+""", RegexOption.MULTILINE), " • ")
+    cleanText = cleanText.replace(Regex("""^\s*-\s+""", RegexOption.MULTILINE), " • ")
 
     return buildAnnotatedString {
-        val boldRegex = "\\\\*\\\\*(.*?)\\\\*\\\\*".toRegex()
-        val italicRegex = "(?<!\\\\*)\\\\*(?!\\\\*)(.*?)\\\\*".toRegex()
-        val codeRegex = "`(.*?)`".toRegex()
+        val boldRegex = Regex("""\*\*(.*?)\*\*""")
+        val italicRegex = Regex("""\*(?!\*)(.*?)\*""")
+        val codeRegex = Regex("""`(.*?)`""")
 
         var currentPos = 0
         
-        val allMatches = (boldRegex.findAll(cleanText).map { it to "bold" } +
-                         italicRegex.findAll(cleanText).map { it to "italic" } +
-                         codeRegex.findAll(cleanText).map { it to "code" })
-                         .sortedBy { it.first.range.first }
+        while (currentPos < cleanText.length) {
+            val bMatch = boldRegex.find(cleanText, currentPos)
+            val iMatch = italicRegex.find(cleanText, currentPos)
+            val cMatch = codeRegex.find(cleanText, currentPos)
 
-        allMatches.forEach { (match, type) ->
-            append(cleanText.substring(currentPos, match.range.first))
-            
-            val start = length
-            append(match.groupValues[1])
-            val end = length
-            
-            when (type) {
-                "bold" -> addStyle(SpanStyle(fontWeight = FontWeight.Bold), start, end)
-                "italic" -> addStyle(SpanStyle(fontStyle = FontStyle.Italic), start, end)
-                "code" -> addStyle(
-                    SpanStyle(
-                        fontFamily = FontFamily.Monospace,
-                        background = codeBackground,
-                        color = primaryColor
-                    ), start, end
-                )
+            val matches = listOfNotNull(bMatch, iMatch, cMatch)
+                .sortedWith(compareBy({ it.range.first }, { -it.value.length }))
+
+            if (matches.isEmpty()) {
+                append(cleanText.substring(currentPos))
+                break
             }
+
+            val match = matches.first()
+            
+            if (match.range.first > currentPos) {
+                append(cleanText.substring(currentPos, match.range.first))
+            }
+
+            val start = length
+            val content = if (match.groupValues.size > 1) match.groupValues[1] else ""
+            append(content)
+            val end = length
+
+            when {
+                match.value.startsWith("**") -> {
+                    addStyle(SpanStyle(fontWeight = FontWeight.Bold), start, end)
+                }
+                match.value.startsWith("`") -> {
+                    addStyle(
+                        SpanStyle(
+                            fontFamily = FontFamily.Monospace,
+                            background = codeBackground,
+                            color = primaryColor
+                        ), start, end
+                    )
+                }
+                match.value.startsWith("*") -> {
+                    addStyle(SpanStyle(fontStyle = FontStyle.Italic), start, end)
+                }
+            }
+            
             currentPos = match.range.last + 1
         }
-        
-        if (currentPos < cleanText.length) {
-            append(cleanText.substring(currentPos))
-        }
     }
+}
+
+@Composable
+fun parseMarkdown(text: String): AnnotatedString {
+    val codeBackground = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.3f)
+    val primaryColor = MaterialTheme.colorScheme.primary
+    return parseMarkdownLogic(text, codeBackground, primaryColor)
 }
