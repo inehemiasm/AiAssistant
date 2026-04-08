@@ -47,7 +47,7 @@ fun AiAssistantNavHost(
             
             SettingsScreen(
                 isDarkMode = isDarkMode,
-                onThemeChange = { scope.launch { preferenceManager.updateTheme(it) } },
+                onThemeChange = { darkMode -> scope.launch { preferenceManager.updateTheme(darkMode) } },
                 onBackClick = { navController.popBackStack() }
             )
         }

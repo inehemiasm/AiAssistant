@@ -38,17 +38,25 @@ class ModelDownloadWorker @AssistedInject constructor(
     private val channelId = "model_download_channel"
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
-        val uri = inputData.getString("url") ?: return@withContext Result.failure(workDataOf("error" to "Missing URL"))
-        val modelName = inputData.getString("modelName") ?: return@withContext Result.failure(workDataOf("error" to "Missing Name"))
+        val uri = inputData.getString("url")
+        val modelName = inputData.getString("modelName")
         val expectedSha256 = inputData.getString("sha256")
+        
+        Log.d("ModelDownloadWorker", "Worker started. Name: $modelName, URL: $uri")
+
+        if (uri == null) return@withContext Result.failure(workDataOf("error" to "Missing URL")).also { Log.e("ModelDownloadWorker", "Failure: Missing URL") }
+        if (modelName == null) return@withContext Result.failure(workDataOf("error" to "Missing Name")).also { Log.e("ModelDownloadWorker", "Failure: Missing Name") }
         
         // Ensure we only download .litertlm files for this feature
         if (!modelName.endsWith(".litertlm") && !modelName.endsWith(".bin")) {
+             Log.e("ModelDownloadWorker", "Failure: Unsupported file type $modelName")
              return@withContext Result.failure(workDataOf("error" to "Unsupported model file type"))
         }
 
         val targetFile = File(applicationContext.filesDir, modelName)
         val tempFile = File(applicationContext.filesDir, "$modelName.tmp")
+        
+        Log.d("ModelDownloadWorker", "Target file: ${targetFile.absolutePath}")
 
         try {
             setForeground(getForegroundInfo())
@@ -59,13 +67,17 @@ class ModelDownloadWorker @AssistedInject constructor(
         setProgress(workDataOf("progress" to 0))
 
         try {
+            Log.d("ModelDownloadWorker", "Resolving download URL for $uri")
             val downloadUrl = remoteModelDataSource.getDownloadUrl(uri)
+            Log.d("ModelDownloadWorker", "Resolved URL: $downloadUrl")
 
             // Flow-based download for cleaner progress updates and decoupling
+            Log.d("ModelDownloadWorker", "Beginning network download to ${tempFile.absolutePath}")
             remoteModelDataSource.downloadToFile(downloadUrl, tempFile).collect { status ->
                 if (status is DownloadStatus.Progress) {
                     val currentTime = System.currentTimeMillis()
                     if (currentTime - lastUpdateMs.get() >= throttleIntervalMs) {
+                        Log.v("ModelDownloadWorker", "Download progress for $modelName: ${status.percent}%")
                         setProgress(workDataOf("progress" to status.percent))
                         lastUpdateMs.set(currentTime)
                     }
@@ -73,27 +85,37 @@ class ModelDownloadWorker @AssistedInject constructor(
             }
             
             if (tempFile.exists() && tempFile.length() > 0) {
+                Log.d("ModelDownloadWorker", "Download complete. Size: ${tempFile.length()} bytes")
                 // Checksum validation
                 if (expectedSha256 != null) {
+                    Log.d("ModelDownloadWorker", "Verifying checksum (SHA-256: $expectedSha256)")
                     val actualSha256 = calculateSha256(tempFile)
                     if (!actualSha256.equals(expectedSha256, ignoreCase = true)) {
+                        Log.e("ModelDownloadWorker", "Checksum mismatch! Actual: $actualSha256")
                         throw IOException("Checksum mismatch. Expected: $expectedSha256, Actual: $actualSha256")
                     }
+                    Log.d("ModelDownloadWorker", "Checksum verified.")
                 }
 
-                if (targetFile.exists()) targetFile.delete()
+                if (targetFile.exists()) {
+                    Log.d("ModelDownloadWorker", "Removing existing file before rename")
+                    targetFile.delete()
+                }
+                
                 if (tempFile.renameTo(targetFile)) {
-                    Log.d("ModelDownloadWorker", "Successfully downloaded: $modelName")
+                    Log.i("ModelDownloadWorker", "Successfully finalized model: $modelName")
                     setProgress(workDataOf("progress" to 100))
                     Result.success()
                 } else {
+                    Log.e("ModelDownloadWorker", "Failed to rename temp file to target")
                     throw IOException("Failed to finalize model core file")
                 }
             } else {
+                Log.e("ModelDownloadWorker", "Temp file is empty or missing after download")
                 throw IOException("Downloaded core file is empty or missing")
             }
         } catch (e: Exception) {
-            Log.e("ModelDownloadWorker", "Model download failed", e)
+            Log.e("ModelDownloadWorker", "Model download failed with exception", e)
             if (tempFile.exists()) tempFile.delete()
             val errorMsg = e.localizedMessage ?: "Unknown download failure"
             Result.failure(workDataOf("error" to errorMsg))

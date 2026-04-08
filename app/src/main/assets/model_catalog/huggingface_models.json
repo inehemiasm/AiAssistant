@@ -1,22 +1,11 @@
 [
   {
-    "id": "gemma-3n-e2b-it",
-    "displayName": "Gemma 3n E2B IT",
-    "source": "HUGGING_FACE",
-    "repoId": "google/gemma-3n-E2B-it-litert-lm",
-    "fileName": "gemma-3n-E2B-it-int4.litertlm",
-    "downloadUrl": "https://huggingface.co/google/gemma-3n-E2B-it-litert-lm/resolve/main/gemma-3n-E2B-it-int4.litertlm",
-    "supportsVision": true
-  },
-  {
     "id": "gemma-4-e2b-it",
     "displayName": "Gemma 4 E2B IT",
     "source": "HUGGING_FACE",
     "repoId": "litert-community/gemma-4-E2B-it-litert-lm",
     "fileName": "gemma-4-E2B-it.litertlm",
     "downloadUrl": "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it.litertlm",
-    "sizeBytes": 2765953024,
-    "sha256": "ab7838cdfc8f77e54d8ca45eadceb20452d9f01e4bfade03e5dce27911b27e42",
     "supportsVision": false
   }
 ]

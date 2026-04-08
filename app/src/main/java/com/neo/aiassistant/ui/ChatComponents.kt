@@ -40,6 +40,7 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.ArrowUpward
@@ -166,7 +167,7 @@ fun DownloadProgressView(modelName: String, progress: Int) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FuturisticTopBar(
+fun ChatTopBar(
     isInteractionEnabled: Boolean,
     selectedModel: String,
     availableModels: List<String>,
@@ -337,7 +338,10 @@ fun FuturisticChatBubble(message: ChatMessage) {
                     
                     if (!isUser) {
                         Row(modifier = Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Badge(text = stringResource(R.string.hardware_accel))
+                            message.inferenceTimeMs?.let { time ->
+                                Badge(text = "${time}ms")
+                            } ?: Badge(text = stringResource(R.string.hardware_accel))
+                            
                             Badge(text = stringResource(R.string.privacy_lock))
                         }
                     }
@@ -493,7 +497,7 @@ fun ChatInputBar(
                 enabled = isSendEnabled
             ) {
                 Icon(
-                    Icons.Default.ArrowUpward,
+                    Icons.AutoMirrored.Filled.Send,
                     stringResource(R.string.send),
                     tint = if (isSendEnabled) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
                     modifier = Modifier.size(20.dp)
@@ -651,7 +655,7 @@ fun BeautifulModelMissingView(
                                 params = if (model.sizeBytes > 0) "%.1fGB".format(model.sizeBytes / 1e9) else "N/A",
                                 vram = if (model.sizeBytes > 0) "%.1fGB".format(model.sizeBytes * 2 / 1e9) else "N/A",
                                 isSelected = internalSelectedModel == model.effectiveFileName,
-                                icon = Icons.Default.CloudDownload,
+                                icon = if (model.name.contains("2b", ignoreCase = true)) Icons.Default.Speed else Icons.Default.CloudDownload,
                                 onClick = { internalSelectedModel = model.effectiveFileName }
                             )
                             Spacer(Modifier.height(16.dp))

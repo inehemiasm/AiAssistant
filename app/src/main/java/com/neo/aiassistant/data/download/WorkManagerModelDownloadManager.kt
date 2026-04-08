@@ -1,5 +1,6 @@
 package com.neo.aiassistant.data.download
 
+import android.util.Log
 import androidx.work.Data
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
@@ -21,6 +22,8 @@ class WorkManagerModelDownloadManager @Inject constructor(
     private val workManager: WorkManager
 ) {
     fun downloadModel(url: String, modelName: String, sha256: String? = null): Flow<DownloadProgress> {
+        Log.d("DownloadManager", "Creating WorkManager request for $modelName from $url")
+        
         val inputData = Data.Builder()
             .putString("url", url)
             .putString("modelName", modelName)
@@ -36,10 +39,13 @@ class WorkManagerModelDownloadManager @Inject constructor(
             .addTag(modelName)
             .build()
         
-        workManager.enqueueUniqueWork(modelName, ExistingWorkPolicy.KEEP, workRequest)
+        val enqueueResult = workManager.enqueueUniqueWork(modelName, ExistingWorkPolicy.KEEP, workRequest)
+        Log.d("DownloadManager", "WorkManager enqueue result for $modelName: ${enqueueResult.result}")
         
         return workManager.getWorkInfoByIdFlow(workRequest.id).map { workInfo ->
-            mapWorkInfoToDownloadProgress(workInfo)
+            val progress = mapWorkInfoToDownloadProgress(workInfo)
+            Log.v("DownloadManager", "WorkInfo status for $modelName: ${workInfo?.state}, progress: $progress")
+            progress
         }
     }
 

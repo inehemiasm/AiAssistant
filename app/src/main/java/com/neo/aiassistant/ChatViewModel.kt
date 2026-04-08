@@ -4,6 +4,7 @@ import android.app.ActivityManager
 import android.app.Application
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import androidx.lifecycle.viewModelScope
 import com.neo.aiassistant.core.BaseViewModel
 import com.neo.aiassistant.domain.ChatMessage
@@ -83,7 +84,10 @@ class ChatViewModel @Inject constructor(
                     initModel(modelFile.absolutePath)
                 }
             }
-            is ChatIntent.DownloadModel -> downloadModel(intent.modelName, intent.baseDir)
+            is ChatIntent.DownloadModel -> {
+                Log.d("ChatViewModel", "Received DownloadModel intent: ${intent.modelName}")
+                downloadModel(intent.modelName, intent.baseDir)
+            }
             is ChatIntent.DeleteModel -> {
                 if (repository.deleteModel(intent.modelName)) {
                     updateLocalModels()
@@ -209,26 +213,38 @@ class ChatViewModel @Inject constructor(
     }
 
     private fun downloadModel(modelName: String, baseDir: String) {
-        val modelEntry = currentState.remoteModels.find { it.name == modelName } ?: return
+        Log.d("ChatViewModel", "Attempting to download model: $modelName")
+        val modelEntry = currentState.remoteModels.find { it.effectiveFileName == modelName || it.name == modelName }
+        if (modelEntry == null) {
+            Log.e("ChatViewModel", "Model not found in remote catalog: $modelName. Available: ${currentState.remoteModels.map { it.name }}")
+            return
+        }
+        
         val url = modelEntry.url
         val fileName = modelEntry.effectiveFileName
         val sha256 = modelEntry.sha256
         
+        Log.d("ChatViewModel", "Resolved model: ${modelEntry.name}, URL: $url, FileName: $fileName")
+        
         setState { copy(selectedModel = fileName, downloadState = DownloadState.Downloading(0)) }
         
         viewModelScope.launch {
+            Log.d("ChatViewModel", "Invoking repository.downloadModel")
             repository.downloadModel(url, fileName, sha256).collect { progress ->
                 when (progress) {
                     is DownloadProgress.Progress -> {
+                        Log.v("ChatViewModel", "Download progress: ${progress.percent}%")
                         setState { copy(downloadState = DownloadState.Downloading(progress.percent)) }
                     }
                     DownloadProgress.Finished -> {
+                        Log.d("ChatViewModel", "Download finished for $fileName")
                         setState { copy(downloadState = DownloadState.Idle) }
                         updateLocalModels()
                         val targetFile = File(baseDir, fileName)
                         initModel(targetFile.absolutePath)
                     }
                     is DownloadProgress.Error -> {
+                        Log.e("ChatViewModel", "Download error: ${progress.message}")
                         setState { copy(downloadState = DownloadState.Error(progress.message)) }
                     }
                 }
