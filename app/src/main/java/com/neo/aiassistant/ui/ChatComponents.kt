@@ -506,6 +506,7 @@ fun ChatInputBar(
 fun BeautifulModelMissingView(
     selectedModel: String,
     localModels: List<com.neo.aiassistant.domain.LocalModel>,
+    remoteModels: List<com.neo.aiassistant.domain.ModelEntry>,
     catalogState: CatalogState,
     metrics: PerformanceMetrics,
     onDownloadClick: (String) -> Unit,
@@ -595,27 +596,42 @@ fun BeautifulModelMissingView(
 
                     Spacer(Modifier.height(24.dp))
 
-                    ModelSelectorCard(
-                        title = stringResource(R.string.gemma_4_e4b_it),
-                        description = stringResource(R.string.gemma_4_e4b_desc),
-                        params = "4.2",
-                        vram = "8.4GB",
-                        isSelected = internalSelectedModel.contains("E4B"),
-                        icon = Icons.Default.Bolt,
-                        onClick = { internalSelectedModel = "gemma-4-E4B-it.litertlm" }
-                    )
+                    if (remoteModels.isNotEmpty()) {
+                        remoteModels.forEach { model ->
+                            ModelSelectorCard(
+                                title = model.name,
+                                description = model.description,
+                                params = if (model.sizeBytes > 0) "%.1fGB".format(model.sizeBytes / 1e9) else "N/A",
+                                vram = if (model.sizeBytes > 0) "%.1fGB".format(model.sizeBytes * 2 / 1e9) else "N/A",
+                                isSelected = internalSelectedModel == model.effectiveFileName,
+                                icon = if (model.name.contains("2b", ignoreCase = true)) Icons.Default.Speed else Icons.Default.Bolt,
+                                onClick = { internalSelectedModel = model.effectiveFileName }
+                            )
+                            Spacer(Modifier.height(16.dp))
+                        }
+                    } else {
+                        ModelSelectorCard(
+                            title = stringResource(R.string.gemma_4_e4b_it),
+                            description = stringResource(R.string.gemma_4_e4b_desc),
+                            params = "4.2",
+                            vram = "8.4GB",
+                            isSelected = internalSelectedModel.contains("E4B"),
+                            icon = Icons.Default.Bolt,
+                            onClick = { internalSelectedModel = "gemma-4-E4B-it.litertlm" }
+                        )
 
-                    Spacer(Modifier.height(16.dp))
+                        Spacer(Modifier.height(16.dp))
 
-                    ModelSelectorCard(
-                        title = stringResource(R.string.gemma_4_e2b_it),
-                        description = stringResource(R.string.gemma_4_e2b_desc),
-                        params = "2.1",
-                        vram = "3.2GB",
-                        isSelected = internalSelectedModel.contains("E2B"),
-                        icon = Icons.Default.Speed,
-                        onClick = { internalSelectedModel = "gemma-4-E2B-it.litertlm" }
-                    )
+                        ModelSelectorCard(
+                            title = stringResource(R.string.gemma_4_e2b_it),
+                            description = stringResource(R.string.gemma_4_e2b_desc),
+                            params = "2.1",
+                            vram = "3.2GB",
+                            isSelected = internalSelectedModel.contains("E2B"),
+                            icon = Icons.Default.Speed,
+                            onClick = { internalSelectedModel = "gemma-4-E2B-it.litertlm" }
+                        )
+                    }
 
                     Spacer(Modifier.height(48.dp))
                     

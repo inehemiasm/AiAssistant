@@ -135,7 +135,7 @@ fun ChatScreen(
             FuturisticTopBar(
                 isInteractionEnabled = state.downloadState is DownloadState.Idle && state.catalogState is CatalogState.Idle,
                 selectedModel = state.selectedModel,
-                availableModels = state.availableModels.keys.toList(),
+                availableModels = if (state.remoteModels.isNotEmpty()) state.remoteModels.map { it.effectiveFileName } else state.availableModels.keys.toList(),
                 onModelSelected = { modelName ->
                     viewModel.onIntent(ChatIntent.SwitchModel(modelName, context.filesDir.absolutePath))
                 },
@@ -163,6 +163,7 @@ fun ChatScreen(
                     BeautifulModelMissingView(
                         selectedModel = state.selectedModel,
                         localModels = state.localModels,
+                        remoteModels = state.remoteModels,
                         catalogState = state.catalogState,
                         metrics = state.metrics,
                         onDownloadClick = { modelName ->

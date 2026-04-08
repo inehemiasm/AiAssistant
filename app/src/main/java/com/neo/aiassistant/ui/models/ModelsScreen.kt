@@ -56,6 +56,7 @@ fun ModelsScreen(
                 BeautifulModelMissingView(
                     selectedModel = state.selectedModel,
                     localModels = state.localModels,
+                    remoteModels = state.remoteModels,
                     catalogState = state.catalogState,
                     metrics = state.metrics,
                     onDownloadClick = { modelName ->
