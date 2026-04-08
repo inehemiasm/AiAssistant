@@ -11,7 +11,7 @@ interface ChatRepository {
     suspend fun initializeModel(modelPath: String): Result<Unit>
     suspend fun sendMessage(prompt: String, imageUri: Uri? = null): Result<String>
     suspend fun clearConversation()
-    fun downloadModel(url: String, modelName: String): Flow<DownloadProgress>
+    fun downloadModel(url: String, modelName: String, sha256: String? = null): Flow<DownloadProgress>
     suspend fun fetchAvailableModels(): Result<List<ModelEntry>>
     fun isVisionSupported(): Boolean
     fun getLocalModels(): List<LocalModel>
@@ -24,8 +24,13 @@ data class ModelEntry(
     val description: String = "",
     val provider: String = "Firebase",
     val sizeBytes: Long = 0,
-    val runtimeType: String = "LiteRT"
-)
+    val runtimeType: String = "LiteRT",
+    val sha256: String? = null,
+    val fileName: String? = null,
+    val supportsVision: Boolean = false
+) {
+    val effectiveFileName: String get() = fileName ?: name.replace(" ", "_").lowercase() + ".litertlm"
+}
 
 data class LocalModel(
     val name: String,

@@ -20,7 +20,9 @@ import dagger.assisted.AssistedInject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.io.FileInputStream
 import java.io.IOException
+import java.security.MessageDigest
 import java.util.concurrent.atomic.AtomicLong
 
 @HiltWorker
@@ -38,7 +40,13 @@ class ModelDownloadWorker @AssistedInject constructor(
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         val uri = inputData.getString("url") ?: return@withContext Result.failure(workDataOf("error" to "Missing URL"))
         val modelName = inputData.getString("modelName") ?: return@withContext Result.failure(workDataOf("error" to "Missing Name"))
+        val expectedSha256 = inputData.getString("sha256")
         
+        // Ensure we only download .litertlm files for this feature
+        if (!modelName.endsWith(".litertlm") && !modelName.endsWith(".bin")) {
+             return@withContext Result.failure(workDataOf("error" to "Unsupported model file type"))
+        }
+
         val targetFile = File(applicationContext.filesDir, modelName)
         val tempFile = File(applicationContext.filesDir, "$modelName.tmp")
 
@@ -65,6 +73,14 @@ class ModelDownloadWorker @AssistedInject constructor(
             }
             
             if (tempFile.exists() && tempFile.length() > 0) {
+                // Checksum validation
+                if (expectedSha256 != null) {
+                    val actualSha256 = calculateSha256(tempFile)
+                    if (!actualSha256.equals(expectedSha256, ignoreCase = true)) {
+                        throw IOException("Checksum mismatch. Expected: $expectedSha256, Actual: $actualSha256")
+                    }
+                }
+
                 if (targetFile.exists()) targetFile.delete()
                 if (tempFile.renameTo(targetFile)) {
                     Log.d("ModelDownloadWorker", "Successfully downloaded: $modelName")
@@ -82,6 +98,18 @@ class ModelDownloadWorker @AssistedInject constructor(
             val errorMsg = e.localizedMessage ?: "Unknown download failure"
             Result.failure(workDataOf("error" to errorMsg))
         }
+    }
+
+    private fun calculateSha256(file: File): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        FileInputStream(file).use { fis ->
+            val buffer = ByteArray(8192)
+            var read: Int
+            while (fis.read(buffer).also { read = it } != -1) {
+                digest.update(buffer, 0, read)
+            }
+        }
+        return digest.digest().joinToString("") { "%02x".format(it) }
     }
 
     override suspend fun getForegroundInfo(): ForegroundInfo {

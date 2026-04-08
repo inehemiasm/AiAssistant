@@ -1,5 +1,6 @@
 package com.neo.aiassistant.data.download
 
+import androidx.work.Data
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkInfo
@@ -19,9 +20,19 @@ import javax.inject.Singleton
 class WorkManagerModelDownloadManager @Inject constructor(
     private val workManager: WorkManager
 ) {
-    fun downloadModel(url: String, modelName: String): Flow<DownloadProgress> {
+    fun downloadModel(url: String, modelName: String, sha256: String? = null): Flow<DownloadProgress> {
+        val inputData = Data.Builder()
+            .putString("url", url)
+            .putString("modelName", modelName)
+            .apply {
+                if (sha256 != null) {
+                    putString("sha256", sha256)
+                }
+            }
+            .build()
+
         val workRequest = OneTimeWorkRequestBuilder<ModelDownloadWorker>()
-            .setInputData(workDataOf("url" to url, "modelName" to modelName))
+            .setInputData(inputData)
             .addTag(modelName)
             .build()
         

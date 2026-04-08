@@ -65,8 +65,8 @@ class ChatRepositoryImpl @Inject constructor(
         return modelCatalog.fetchAvailableModels()
     }
 
-    override fun downloadModel(url: String, modelName: String): Flow<DownloadProgress> {
-        return downloadManager.downloadModel(url, modelName)
+    override fun downloadModel(url: String, modelName: String, sha256: String?): Flow<DownloadProgress> {
+        return downloadManager.downloadModel(url, modelName, sha256)
     }
 
     override fun getLocalModels(): List<LocalModel> {

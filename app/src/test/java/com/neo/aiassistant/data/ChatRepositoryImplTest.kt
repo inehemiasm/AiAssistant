@@ -1,5 +1,6 @@
 package com.neo.aiassistant.data
 
+import android.content.Context
 import android.net.Uri
 import com.neo.aiassistant.data.agent.AgentOrchestrator
 import com.neo.aiassistant.data.agent.AgentState
@@ -23,6 +24,7 @@ import org.mockito.kotlin.whenever
 
 class ChatRepositoryImplTest {
 
+    private lateinit var context: Context
     private lateinit var runtimeManager: LlmRuntimeManager
     private lateinit var messageFactory: MultimodalMessageFactory
     private lateinit var responseMapper: LlmResponseMapper
@@ -33,6 +35,7 @@ class ChatRepositoryImplTest {
 
     @Before
     fun setup() {
+        context = mock()
         runtimeManager = mock()
         messageFactory = mock()
         responseMapper = mock()
@@ -43,6 +46,7 @@ class ChatRepositoryImplTest {
         }
         
         repository = ChatRepositoryImpl(
+            context,
             runtimeManager,
             messageFactory,
             responseMapper,

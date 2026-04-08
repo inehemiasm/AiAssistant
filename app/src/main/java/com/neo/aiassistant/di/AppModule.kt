@@ -8,6 +8,7 @@ import com.google.firebase.firestore.PersistentCacheSettings
 import com.neo.aiassistant.core.DefaultDispatcherProvider
 import com.neo.aiassistant.core.DispatcherProvider
 import com.neo.aiassistant.data.ChatRepositoryImpl
+import com.neo.aiassistant.data.datasource.CompositeModelCatalogDataSource
 import com.neo.aiassistant.data.datasource.FirebaseRemoteModelDataSource
 import com.neo.aiassistant.data.datasource.FirestoreModelCatalogDataSource
 import com.neo.aiassistant.data.datasource.ModelCatalogDataSource
@@ -47,7 +48,7 @@ abstract class AppModule {
     @Binds
     @Singleton
     abstract fun bindModelCatalogDataSource(
-        firestoreModelCatalogDataSource: FirestoreModelCatalogDataSource
+        compositeModelCatalogDataSource: CompositeModelCatalogDataSource
     ): ModelCatalogDataSource
 
     @Binds

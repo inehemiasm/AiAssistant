@@ -26,11 +26,6 @@ class ChatViewModel @Inject constructor(
     private val sendMessageUseCase: SendMessageUseCase
 ) : BaseViewModel<ChatState, ChatIntent, ChatEffect>(application, ChatState()) {
 
-    private val fallbackModels = mapOf(
-        "gemma-4-E2B-it.litertlm" to "gs://aiassistant-88f75.firebasestorage.app/gemma-4-E2B-it.litertlm",
-        "gemma-4-E4B-it.litertlm" to "gs://aiassistant-88f75.firebasestorage.app/gemma-4-E4B-it.litertlm"
-    )
-
     init {
         updateLocalModels()
         onIntent(ChatIntent.FetchModels)
@@ -214,13 +209,15 @@ class ChatViewModel @Inject constructor(
     }
 
     private fun downloadModel(modelName: String, baseDir: String) {
-        val url = currentState.remoteModels.find { it.name == modelName }?.url
-            ?: fallbackModels[modelName] ?: return
+        val modelEntry = currentState.remoteModels.find { it.name == modelName } ?: return
+        val url = modelEntry.url
+        val fileName = modelEntry.effectiveFileName
+        val sha256 = modelEntry.sha256
         
-        setState { copy(selectedModel = modelName, downloadState = DownloadState.Downloading(0)) }
+        setState { copy(selectedModel = fileName, downloadState = DownloadState.Downloading(0)) }
         
         viewModelScope.launch {
-            repository.downloadModel(url, modelName).collect { progress ->
+            repository.downloadModel(url, fileName, sha256).collect { progress ->
                 when (progress) {
                     is DownloadProgress.Progress -> {
                         setState { copy(downloadState = DownloadState.Downloading(progress.percent)) }
@@ -228,7 +225,7 @@ class ChatViewModel @Inject constructor(
                     DownloadProgress.Finished -> {
                         setState { copy(downloadState = DownloadState.Idle) }
                         updateLocalModels()
-                        val targetFile = File(baseDir, modelName)
+                        val targetFile = File(baseDir, fileName)
                         initModel(targetFile.absolutePath)
                     }
                     is DownloadProgress.Error -> {

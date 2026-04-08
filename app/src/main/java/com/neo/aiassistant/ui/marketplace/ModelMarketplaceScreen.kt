@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Storage
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -149,8 +150,8 @@ fun DiscoverModelsList(state: ChatState, onIntent: (ChatIntent) -> Unit) {
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             items(state.remoteModels) { model ->
-                val isInstalled = state.localModels.any { it.name == model.name }
-                val isDownloading = state.isDownloading && state.selectedModel == model.name
+                val isInstalled = state.localModels.any { it.name == model.effectiveFileName }
+                val isDownloading = state.isDownloading && state.selectedModel == model.effectiveFileName
                 
                 RemoteModelCard(
                     model = model,
@@ -229,6 +230,11 @@ fun RemoteModelCard(
                 InfoItem(Icons.Default.Storage, formatFileSize(model.sizeBytes))
                 Spacer(Modifier.width(16.dp))
                 InfoItem(Icons.Default.Memory, model.runtimeType)
+                
+                if (model.supportsVision) {
+                    Spacer(Modifier.width(16.dp))
+                    InfoItem(Icons.Default.Visibility, "Vision")
+                }
                 
                 Spacer(Modifier.weight(1f))
                 
