@@ -46,3 +46,4 @@ The project is an Android application following Clean Architecture and MVI (Mode
 - **Image Handling**: Use `MultimodalMessageFactory` to ensure consistent bitmap processing.
 - **Error Handling**: Surface specific exceptions (e.g., `IllegalArgumentException` for unsupported vision) to the UI via `Result` wrappers.
 - **Kotlin Versions**: Always use the `-Xskip-metadata-version-check` compiler flag.
+- **Commit Attribution**: Do not add 'Co-Authored-By' or any other AI/agent attribution to git commit messages.

@@ -16,9 +16,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.sp
 import com.neo.aiassistant.ChatIntent
 import com.neo.aiassistant.ChatViewModel
+import com.neo.aiassistant.R
 import com.neo.aiassistant.ui.BeautifulModelMissingView
 import com.neo.aiassistant.ui.DownloadProgressView
 import com.neo.aiassistant.ui.designsystem.Typography
@@ -34,7 +36,7 @@ fun ModelsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("NEURAL CORES", style = Typography.titleLarge, letterSpacing = 2.sp) },
+                title = { Text(stringResource(R.string.neural_cores), style = Typography.titleLarge, letterSpacing = 2.sp) },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color.Transparent,
                     titleContentColor = MaterialTheme.colorScheme.onSurface

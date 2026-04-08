@@ -52,6 +52,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -59,6 +60,7 @@ import androidx.compose.ui.unit.sp
 import com.neo.aiassistant.CatalogState
 import com.neo.aiassistant.ChatIntent
 import com.neo.aiassistant.ChatState
+import com.neo.aiassistant.R
 import com.neo.aiassistant.domain.LocalModel
 import com.neo.aiassistant.domain.ModelEntry
 import com.neo.aiassistant.ui.designsystem.AmbientGlow
@@ -78,15 +80,15 @@ fun ModelMarketplaceScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("NEURAL REPOSITORY", style = Typography.titleLarge, letterSpacing = 2.sp) },
+                title = { Text(stringResource(R.string.neural_repository), style = Typography.titleLarge, letterSpacing = 2.sp) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = MaterialTheme.colorScheme.primary)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back), tint = MaterialTheme.colorScheme.primary)
                     }
                 },
                 actions = {
                     IconButton(onClick = { onIntent(ChatIntent.FetchModels) }) {
-                        Icon(Icons.Default.Refresh, "Refresh", tint = MaterialTheme.colorScheme.primary)
+                        Icon(Icons.Default.Refresh, stringResource(R.string.refresh), tint = MaterialTheme.colorScheme.primary)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -117,12 +119,12 @@ fun ModelMarketplaceScreen(
                     Tab(
                         selected = selectedTab == 0,
                         onClick = { selectedTab = 0 },
-                        text = { Text("DISCOVER", style = Typography.labelSmall) }
+                        text = { Text(stringResource(R.string.discover), style = Typography.labelSmall) }
                     )
                     Tab(
                         selected = selectedTab == 1,
                         onClick = { selectedTab = 1 },
-                        text = { Text("INSTALLED", style = Typography.labelSmall) }
+                        text = { Text(stringResource(R.string.installed), style = Typography.labelSmall) }
                     )
                 }
 
@@ -169,7 +171,7 @@ fun InstalledModelsList(state: ChatState, onIntent: (ChatIntent) -> Unit, baseDi
     if (state.localModels.isEmpty()) {
         Box(Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
             Text(
-                "NO LOCAL MODELS DETECTED",
+                stringResource(R.string.no_local_models),
                 style = Typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -231,7 +233,7 @@ fun RemoteModelCard(
                 Spacer(Modifier.weight(1f))
                 
                 if (isInstalled) {
-                    Icon(Icons.Default.FileDownloadDone, "Installed", tint = Color.Green.copy(alpha = 0.7f))
+                    Icon(Icons.Default.FileDownloadDone, stringResource(R.string.installed), tint = Color.Green.copy(alpha = 0.7f))
                 } else if (isDownloading) {
                     CircularProgressIndicator(
                         progress = { (downloadProgress ?: 0) / 100f },
@@ -240,7 +242,7 @@ fun RemoteModelCard(
                     )
                 } else {
                     IconButton(onClick = onDownload, modifier = Modifier.size(32.dp)) {
-                        Icon(Icons.Default.Download, "Download", tint = MaterialTheme.colorScheme.primary)
+                        Icon(Icons.Default.Download, stringResource(R.string.download_required), tint = MaterialTheme.colorScheme.primary)
                     }
                 }
             }
@@ -285,7 +287,7 @@ fun LocalModelCard(
                             .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(4.dp))
                             .padding(horizontal = 6.dp, vertical = 2.dp)
                     ) {
-                        Text("ACTIVE", fontSize = 10.sp, color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.active), fontSize = 10.sp, color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -299,12 +301,12 @@ fun LocalModelCard(
                 
                 if (!isActive) {
                     IconButton(onClick = onSelect) {
-                        Icon(Icons.Default.PlayArrow, "Activate", tint = MaterialTheme.colorScheme.primary)
+                        Icon(Icons.Default.PlayArrow, stringResource(R.string.activate), tint = MaterialTheme.colorScheme.primary)
                     }
                 }
                 
                 IconButton(onClick = onDelete) {
-                    Icon(Icons.Default.Delete, "Delete", tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f))
+                    Icon(Icons.Default.Delete, stringResource(R.string.delete), tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f))
                 }
             }
         }

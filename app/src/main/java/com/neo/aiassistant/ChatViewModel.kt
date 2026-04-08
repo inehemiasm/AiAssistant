@@ -106,6 +106,9 @@ class ChatViewModel @Inject constructor(
             ) }
             ChatIntent.ClearConversation -> clearConversation()
             ChatIntent.RefreshMetrics -> refreshMetrics()
+            is ChatIntent.UpdateInputText -> setState { copy(inputText = intent.text) }
+            is ChatIntent.SelectImage -> setState { copy(selectedImageUri = intent.uri) }
+            is ChatIntent.SetTempCameraUri -> setState { copy(tempCameraUri = intent.uri) }
         }
     }
 
@@ -158,7 +161,9 @@ class ChatViewModel @Inject constructor(
             }
             .onFailure { e ->
                 setState { copy(
-                    catalogState = CatalogState.Error(e.message ?: "Failed to fetch models") 
+                    catalogState = CatalogState.Error(
+                        e.message ?: application.getString(R.string.error_fetch_models)
+                    ) 
                 ) }
             }
     }
@@ -166,13 +171,24 @@ class ChatViewModel @Inject constructor(
     private suspend fun initModel(modelPath: String) {
         initializeChatUseCase(modelPath)
             .onFailure { e ->
-                setState { copy(runtimeState = RuntimeState.Error("Init failed: ${e.message}")) }
+                setState { copy(
+                    runtimeState = RuntimeState.Error(
+                        application.getString(R.string.error_init_failed, e.message ?: "Unknown")
+                    )
+                ) }
             }
     }
 
     private suspend fun sendMessage(text: String, imageUri: Uri?) {
         val userMsg = ChatMessage(text, isUser = true, imageUri = imageUri?.toString())
-        setState { copy(messages = messages + userMsg, sendState = SendState.Sending) }
+        setState { 
+            copy(
+                messages = messages + userMsg, 
+                sendState = SendState.Sending,
+                inputText = "",
+                selectedImageUri = null 
+            ) 
+        }
         sendEffect { ChatEffect.ScrollToBottom }
 
         var responseText = ""
@@ -180,7 +196,11 @@ class ChatViewModel @Inject constructor(
             sendMessageUseCase(text, imageUri)
                 .onSuccess { responseText = it }
                 .onFailure { e ->
-                    setState { copy(sendState = SendState.Error(e.message ?: "Inference failed")) }
+                    setState { copy(
+                        sendState = SendState.Error(
+                            e.message ?: application.getString(R.string.error_inference_failed)
+                        )
+                    ) }
                     return
                 }
         }

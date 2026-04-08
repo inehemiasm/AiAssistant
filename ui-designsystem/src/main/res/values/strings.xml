@@ -1,0 +1,5 @@
+<resources>
+    <string name="selected">SELECTED</string>
+    <string name="billion_params">Billion Params</string>
+    <string name="vram_required">VRAM Required</string>
+</resources>

@@ -63,7 +63,12 @@ data class ChatState(
     val downloadState: DownloadState = DownloadState.Idle,
     val catalogState: CatalogState = CatalogState.Idle,
     val agentState: AgentState = AgentState.Idle,
-    val metrics: PerformanceMetrics = PerformanceMetrics()
+    val metrics: PerformanceMetrics = PerformanceMetrics(),
+    
+    // UI transient state moved to ViewModel
+    val inputText: String = "",
+    val selectedImageUri: Uri? = null,
+    val tempCameraUri: Uri? = null
 ) : UiState {
     val isReady: Boolean get() = runtimeState is RuntimeState.Ready
     
@@ -105,6 +110,11 @@ sealed class ChatIntent : UiIntent {
     data object ClearError : ChatIntent()
     data object ClearConversation : ChatIntent()
     data object RefreshMetrics : ChatIntent()
+    
+    // Intents for UI state updates
+    data class UpdateInputText(val text: String) : ChatIntent()
+    data class SelectImage(val uri: Uri?) : ChatIntent()
+    data class SetTempCameraUri(val uri: Uri?) : ChatIntent()
 }
 
 sealed class ChatEffect : UiEffect {

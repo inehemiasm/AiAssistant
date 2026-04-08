@@ -5,6 +5,7 @@ import androidx.compose.material.icons.filled.ChatBubble
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.neo.aiassistant.R
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -22,9 +23,9 @@ sealed interface Route {
 enum class TopLevelDestination(
     val route: Route,
     val icon: ImageVector,
-    val label: String
+    val labelResId: Int
 ) {
-    CHAT(Route.Chat, Icons.Default.ChatBubble, "Chat"),
-    MODELS(Route.Models, Icons.Default.Storage, "Models"),
-    SETTINGS(Route.Settings, Icons.Default.Settings, "Settings")
+    CHAT(Route.Chat, Icons.Default.ChatBubble, R.string.chat_label),
+    MODELS(Route.Models, Icons.Default.Storage, R.string.models_label),
+    SETTINGS(Route.Settings, Icons.Default.Settings, R.string.settings_label)
 }

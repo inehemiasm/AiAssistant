@@ -1,9 +1,12 @@
 package com.neo.aiassistant.data.inference
 
+import android.content.Context
 import android.net.Uri
 import com.google.ai.edge.litertlm.Content
 import com.google.ai.edge.litertlm.Contents
 import com.google.ai.edge.litertlm.Message
+import com.neo.aiassistant.R
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -13,6 +16,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class MultimodalMessageFactory @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val imageProcessor: ImageProcessor
 ) {
     companion object {
@@ -51,7 +55,7 @@ class MultimodalMessageFactory @Inject constructor(
         return Message.user(
             Contents.of(
                 Content.ImageBytes(dummyImage),
-                Content.Text("warmup")
+                Content.Text(context.getString(R.string.error_warmup))
             )
         )
     }

@@ -12,6 +12,7 @@ import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
+import com.neo.aiassistant.R
 import com.neo.aiassistant.data.datasource.DownloadStatus
 import com.neo.aiassistant.data.datasource.RemoteModelDataSource
 import dagger.assisted.Assisted
@@ -86,8 +87,8 @@ class ModelDownloadWorker @AssistedInject constructor(
     override suspend fun getForegroundInfo(): ForegroundInfo {
         createNotificationChannel()
         val notification = NotificationCompat.Builder(applicationContext, channelId)
-            .setContentTitle("Downloading Neural Core")
-            .setContentText("Acquiring model data...")
+            .setContentTitle(applicationContext.getString(R.string.downloading_neural_core))
+            .setContentText(applicationContext.getString(R.string.acquiring_model_data))
             .setSmallIcon(android.R.drawable.stat_sys_download)
             .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
@@ -103,7 +104,7 @@ class ModelDownloadWorker @AssistedInject constructor(
     private fun createNotificationChannel() {
         val channel = NotificationChannel(
             channelId,
-            "Model Downloads",
+            applicationContext.getString(R.string.model_downloads_channel_name),
             NotificationManager.IMPORTANCE_LOW
         )
         val manager = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager

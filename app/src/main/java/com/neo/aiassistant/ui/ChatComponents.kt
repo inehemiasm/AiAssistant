@@ -40,21 +40,20 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddPhotoAlternate
+import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.DeleteSweep
-import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.RadioButtonChecked
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Speed
-import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -86,6 +85,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -97,16 +97,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.neo.aiassistant.CatalogState
-import com.neo.aiassistant.DownloadState
 import com.neo.aiassistant.PerformanceMetrics
-import com.neo.aiassistant.RuntimeState
-import com.neo.aiassistant.SendState
+import com.neo.aiassistant.R
 import com.neo.aiassistant.domain.ChatMessage
 import com.neo.aiassistant.ui.designsystem.AmbientGlow
 import com.neo.aiassistant.ui.designsystem.HighTechPrimaryButton
 import com.neo.aiassistant.ui.designsystem.ModelSelectorCard
 import com.neo.aiassistant.ui.designsystem.StatCard
 import com.neo.aiassistant.ui.designsystem.Typography
+import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
 
 @Composable
@@ -137,7 +137,7 @@ fun DownloadProgressView(modelName: String, progress: Int) {
             Spacer(Modifier.height(32.dp))
             
             Text(
-                "SYNTHESIZING CORE...", 
+                stringResource(R.string.synthesizing_core), 
                 color = MaterialTheme.colorScheme.onSurface, 
                 style = Typography.labelSmall.copy(letterSpacing = 2.sp, fontWeight = FontWeight.Bold)
             )
@@ -152,7 +152,7 @@ fun DownloadProgressView(modelName: String, progress: Int) {
             Spacer(Modifier.height(24.dp))
             
             Text(
-                "Aligning neural weights for on-device inference. This process is hardware-intensive.",
+                stringResource(R.string.synthesizing_description),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 13.sp,
                 textAlign = TextAlign.Center,
@@ -171,28 +171,34 @@ fun FuturisticTopBar(
     availableModels: List<String>,
     onModelSelected: (String) -> Unit,
     onClearChat: () -> Unit,
+    onModelsClick: () -> Unit,
     onSettingsClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var showMenu by remember { mutableStateOf(false) }
     
     TopAppBar(
+        navigationIcon = {
+            IconButton(onClick = onModelsClick) {
+                Icon(Icons.Default.Menu, stringResource(R.string.menu_library), tint = MaterialTheme.colorScheme.onSurface)
+            }
+        },
         title = {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.clickable { if (isInteractionEnabled) showMenu = true }
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.fillMaxWidth().clickable { if (isInteractionEnabled) showMenu = true }
             ) {
                 Text(
                     text = selectedModel.replace(".litertlm", "").uppercase(),
-                    style = Typography.titleLarge,
+                    style = Typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurface,
-                    letterSpacing = (-0.01).sp
+                    letterSpacing = 1.sp
                 )
-                Icon(
-                    Icons.Default.ExpandMore,
-                    null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(20.dp).padding(start = 4.dp)
+                Text(
+                    text = stringResource(R.string.nebula_core_private_ai),
+                    style = Typography.labelSmall.copy(fontSize = 9.sp, fontWeight = FontWeight.Normal),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                    letterSpacing = 1.sp
                 )
                 
                 DropdownMenu(
@@ -216,10 +222,15 @@ fun FuturisticTopBar(
         },
         actions = {
             IconButton(onClick = onClearChat, enabled = isInteractionEnabled) {
-                Icon(Icons.Default.DeleteSweep, "Clear Chat", tint = MaterialTheme.colorScheme.primary)
+                Icon(Icons.Default.DeleteSweep, stringResource(R.string.clear_chat), tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             IconButton(onClick = onSettingsClick) {
-                Icon(Icons.Default.Settings, "Settings", tint = MaterialTheme.colorScheme.primary)
+                Icon(
+                    Icons.Default.Person, 
+                    stringResource(R.string.profile), 
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(28.dp).background(MaterialTheme.colorScheme.primary.copy(0.1f), CircleShape).padding(4.dp)
+                )
             }
         },
         colors = TopAppBarDefaults.topAppBarColors(
@@ -251,14 +262,14 @@ fun QuantumThinkingIndicator(visible: Boolean, statusMessage: String? = null) {
                 }
                 Icon(Icons.Default.AutoAwesome, null, tint = primaryColor, modifier = Modifier.size(16.dp))
             }
-            Text(statusMessage ?: "SYNTHESIZING...", color = primaryColor, letterSpacing = 1.5.sp, fontWeight = FontWeight.Bold, fontSize = 10.sp)
+            Text(statusMessage ?: stringResource(R.string.synthesizing), color = primaryColor, letterSpacing = 1.5.sp, fontWeight = FontWeight.Bold, fontSize = 10.sp)
         }
     }
 }
 
 @Composable
 fun MessageList(messages: List<ChatMessage>, modifier: Modifier = Modifier, listState: LazyListState) {
-    LazyColumn(state = listState, modifier = modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    LazyColumn(state = listState, modifier = modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(24.dp)) {
         items(messages) { message -> FuturisticChatBubble(message) }
     }
 }
@@ -266,47 +277,103 @@ fun MessageList(messages: List<ChatMessage>, modifier: Modifier = Modifier, list
 @Composable
 fun FuturisticChatBubble(message: ChatMessage) {
     val isUser = message.isUser
-    val alignment = if (isUser) Alignment.End else Alignment.Start
-    val bubbleColor = if (isUser) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow
-    val onBubbleColor = if (isUser) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
-    val borderColor = if (isUser) MaterialTheme.colorScheme.primary.copy(alpha = 0.3f) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)
+    val bubbleColor = if (isUser) MaterialTheme.colorScheme.surfaceContainerHigh else MaterialTheme.colorScheme.surfaceContainerLow
+    val onBubbleColor = MaterialTheme.colorScheme.onSurface
+    val borderColor = if (isUser) Color.Transparent else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
 
-    Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = alignment) {
-        Surface(
-            color = bubbleColor, contentColor = onBubbleColor,
-            shape = RoundedCornerShape(if (isUser) 16.dp else 4.dp, 16.dp, 16.dp, if (isUser) 4.dp else 16.dp),
-            modifier = Modifier.widthIn(max = 300.dp).border(1.dp, borderColor, RoundedCornerShape(if (isUser) 16.dp else 4.dp, 16.dp, 16.dp, if (isUser) 4.dp else 16.dp))
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start,
+        verticalAlignment = Alignment.Top
+    ) {
+        if (!isUser) {
+            Icon(
+                Icons.Default.AutoAwesome,
+                null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier
+                    .padding(end = 12.dp, top = 8.dp)
+                    .size(24.dp)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHighest, CircleShape)
+                    .padding(4.dp)
+            )
+        }
+
+        Column(
+            horizontalAlignment = if (isUser) Alignment.End else Alignment.Start,
+            modifier = Modifier.weight(1f, fill = false)
         ) {
-            Column(modifier = Modifier.padding(14.dp)) {
-                if (message.imageUri != null) {
-                    AsyncImage(
-                        model = message.imageUri,
-                        contentDescription = null,
-                        modifier = Modifier
-                            .padding(bottom = 8.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .fillMaxWidth(),
-                        contentScale = ContentScale.FillWidth
-                    )
-                }
-                SelectionContainer {
-                    val styledText = parseMarkdown(message.text)
-                    Text(
-                        text = styledText,
-                        style = Typography.bodyLarge.copy(lineHeight = 22.sp)
-                    )
-                }
-                if (!isUser && message.inferenceTimeMs != null) {
-                    val seconds = message.inferenceTimeMs / 1000.0
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp).background(MaterialTheme.colorScheme.surface.copy(0.3f), RoundedCornerShape(4.dp)).padding(horizontal = 6.dp, vertical = 2.dp)) {
-                        Icon(Icons.Default.Timer, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(12.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text(String.format(Locale.getDefault(), "%.2fs", seconds), color = MaterialTheme.colorScheme.primary, fontSize = 10.sp)
+            Surface(
+                color = bubbleColor,
+                contentColor = onBubbleColor,
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier
+                    .widthIn(max = 300.dp)
+                    .border(1.dp, borderColor, RoundedCornerShape(16.dp))
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    if (message.imageUri != null) {
+                        AsyncImage(
+                            model = message.imageUri,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .padding(bottom = 8.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .fillMaxWidth(),
+                            contentScale = ContentScale.FillWidth
+                        )
+                    }
+                    SelectionContainer {
+                        val styledText = parseMarkdown(message.text)
+                        Text(
+                            text = styledText,
+                            style = Typography.bodyMedium.copy(
+                                lineHeight = 22.sp,
+                                color = onBubbleColor
+                            )
+                        )
+                    }
+                    
+                    if (!isUser) {
+                        Row(modifier = Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Badge(text = stringResource(R.string.hardware_accel))
+                            Badge(text = stringResource(R.string.privacy_lock))
+                        }
                     }
                 }
             }
+            
+            val footerText = if (isUser) {
+                val time = SimpleDateFormat("h:mm a", Locale.getDefault()).format(Date())
+                "$time • ${stringResource(R.string.sent_status)}"
+            } else {
+                stringResource(R.string.model_optimization_info)
+            }
+            
+            Text(
+                text = footerText.uppercase(),
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                style = Typography.labelSmall.copy(fontSize = 9.sp, fontWeight = FontWeight.Medium),
+                modifier = Modifier.padding(top = 8.dp, start = 4.dp, end = 4.dp)
+            )
         }
-        Text(if (isUser) "OPERATOR" else "GEMMA_UNIT_04", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp, modifier = Modifier.padding(top = 4.dp))
+    }
+}
+
+@Composable
+fun Badge(text: String) {
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainerHighest,
+        shape = RoundedCornerShape(20.dp),
+        modifier = Modifier.height(24.dp)
+    ) {
+        Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(horizontal = 8.dp)) {
+            Text(
+                text = text,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                style = Typography.labelSmall.copy(fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp)
+            )
+        }
     }
 }
 
@@ -324,110 +391,112 @@ fun ChatInputBar(
 ) {
     var showAttachmentMenu by remember { mutableStateOf(false) }
 
-    Surface(color = Color.Transparent, modifier = modifier) {
-        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-            if (selectedImageUri != null) {
-                Box(Modifier.padding(bottom = 8.dp).size(80.dp)) {
-                    AsyncImage(
-                        model = selectedImageUri,
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)),
-                        contentScale = ContentScale.Crop
-                    )
-                    IconButton(
-                        onClick = onRemoveImage,
-                        modifier = Modifier.align(Alignment.TopEnd).size(24.dp).background(Color.Black.copy(0.6f), CircleShape)
-                    ) {
-                        Icon(Icons.Default.Close, null, tint = Color.White, modifier = Modifier.size(16.dp))
-                    }
+    Column(modifier = modifier.padding(horizontal = 16.dp)) {
+        if (selectedImageUri != null) {
+            Box(Modifier.padding(bottom = 8.dp).size(80.dp)) {
+                AsyncImage(
+                    model = selectedImageUri,
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)),
+                    contentScale = ContentScale.Crop
+                )
+                IconButton(
+                    onClick = onRemoveImage,
+                    modifier = Modifier.align(Alignment.TopEnd).size(24.dp).background(Color.Black.copy(0.6f), CircleShape)
+                ) {
+                    Icon(Icons.Default.Close, null, tint = Color.White, modifier = Modifier.size(16.dp))
                 }
             }
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.5f))
-                    .border(
-                        1.dp, 
-                        if (enabled) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.1f), 
-                        RoundedCornerShape(16.dp)
-                    )
-                    .padding(4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box {
-                    IconButton(onClick = { showAttachmentMenu = true }, enabled = enabled) {
-                        Icon(
-                            Icons.Default.Add, 
-                            "Add attachment", 
-                            tint = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    DropdownMenu(
-                        expanded = showAttachmentMenu,
-                        onDismissRequest = { showAttachmentMenu = false },
-                        modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainerHighest)
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text("Gallery", color = MaterialTheme.colorScheme.onSurface) },
-                            leadingIcon = { Icon(Icons.Default.AddPhotoAlternate, null, tint = MaterialTheme.colorScheme.primary) },
-                            onClick = {
-                                onGalleryClick()
-                                showAttachmentMenu = false
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Camera", color = MaterialTheme.colorScheme.onSurface) },
-                            leadingIcon = { Icon(Icons.Default.PhotoCamera, null, tint = MaterialTheme.colorScheme.primary) },
-                            onClick = {
-                                onCameraClick()
-                                showAttachmentMenu = false
-                            }
-                        )
-                    }
-                }
-
-                TextField(
-                    value = text, 
-                    onValueChange = onTextChange, 
-                    modifier = Modifier.weight(1f),
-                    placeholder = { 
-                        Text(
-                            if (enabled) "Enter command..." else "System offline...", 
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                            style = Typography.bodyMedium.copy(fontStyle = FontStyle.Italic)
-                        ) 
-                    }, 
-                    enabled = enabled,
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = Color.Transparent,
-                        unfocusedContainerColor = Color.Transparent,
-                        disabledContainerColor = Color.Transparent,
-                        focusedIndicatorColor = Color.Transparent,
-                        unfocusedIndicatorColor = Color.Transparent,
-                        disabledIndicatorColor = Color.Transparent,
-                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                        disabledTextColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-                    )
-                )
-                Spacer(Modifier.width(4.dp))
-                val isSendEnabled = enabled && (text.isNotBlank() || selectedImageUri != null)
+        }
+        
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+                .clip(RoundedCornerShape(28.dp))
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.8f))
+                .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)), RoundedCornerShape(28.dp))
+                .padding(horizontal = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box {
                 IconButton(
-                    onClick = { if (isSendEnabled) onSend() }, 
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(if (isSendEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHighest),
-                    enabled = isSendEnabled
+                    onClick = { showAttachmentMenu = true },
+                    enabled = enabled,
+                    modifier = Modifier.size(44.dp)
                 ) {
                     Icon(
-                        Icons.AutoMirrored.Filled.Send, 
-                        "Send", 
-                        tint = if (isSendEnabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                        modifier = Modifier.size(20.dp)
+                        Icons.Default.Add,
+                        stringResource(R.string.add_attachment),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(24.dp)
                     )
                 }
+                DropdownMenu(
+                    expanded = showAttachmentMenu,
+                    onDismissRequest = { showAttachmentMenu = false },
+                    modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainerHighest)
+                ) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.gallery), color = MaterialTheme.colorScheme.onSurface) },
+                        leadingIcon = { Icon(Icons.Default.AddPhotoAlternate, null, tint = MaterialTheme.colorScheme.primary) },
+                        onClick = {
+                            onGalleryClick()
+                            showAttachmentMenu = false
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.camera), color = MaterialTheme.colorScheme.onSurface) },
+                        leadingIcon = { Icon(Icons.Default.PhotoCamera, null, tint = MaterialTheme.colorScheme.primary) },
+                        onClick = {
+                            onCameraClick()
+                            showAttachmentMenu = false
+                        }
+                    )
+                }
+            }
+
+            TextField(
+                value = text,
+                onValueChange = onTextChange,
+                modifier = Modifier.weight(1f),
+                placeholder = {
+                    Text(
+                        stringResource(R.string.input_placeholder),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                        style = Typography.bodyMedium
+                    )
+                },
+                enabled = enabled,
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color.Transparent,
+                    unfocusedContainerColor = Color.Transparent,
+                    disabledContainerColor = Color.Transparent,
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent,
+                    disabledIndicatorColor = Color.Transparent,
+                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    disabledTextColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                ),
+                maxLines = 4
+            )
+
+            val isSendEnabled = enabled && (text.isNotBlank() || selectedImageUri != null)
+            IconButton(
+                onClick = { if (isSendEnabled) onSend() },
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .background(if (isSendEnabled) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHighest),
+                enabled = isSendEnabled
+            ) {
+                Icon(
+                    Icons.Default.ArrowUpward,
+                    stringResource(R.string.send),
+                    tint = if (isSendEnabled) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                    modifier = Modifier.size(20.dp)
+                )
             }
         }
     }
@@ -456,7 +525,7 @@ fun BeautifulModelMissingView(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                "Local Compute Engine", 
+                stringResource(R.string.local_compute_engine), 
                 color = MaterialTheme.colorScheme.onSurface, 
                 style = Typography.displaySmall.copy(fontWeight = FontWeight.Bold),
                 textAlign = TextAlign.Center
@@ -465,7 +534,7 @@ fun BeautifulModelMissingView(
             Spacer(Modifier.height(12.dp))
             
             Text(
-                "Select a neural architecture optimized for your local hardware. High-efficiency, zero-latency inference.",
+                stringResource(R.string.engine_description),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = Typography.bodyMedium,
                 textAlign = TextAlign.Center,
@@ -478,12 +547,12 @@ fun BeautifulModelMissingView(
                 CatalogState.Loading -> {
                     CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                     Spacer(Modifier.height(16.dp))
-                    Text("SCANNING REPOSITORIES...", color = MaterialTheme.colorScheme.onSurfaceVariant, style = Typography.labelSmall)
+                    Text(stringResource(R.string.scanning_repositories), color = MaterialTheme.colorScheme.onSurfaceVariant, style = Typography.labelSmall)
                 }
                 is CatalogState.Error -> {
                     Icon(Icons.Default.Warning, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(64.dp))
                     Spacer(Modifier.height(24.dp))
-                    Text("MISSION FAILURE", color = MaterialTheme.colorScheme.error, style = Typography.headlineMedium)
+                    Text(stringResource(R.string.mission_failure), color = MaterialTheme.colorScheme.error, style = Typography.headlineMedium)
                     Spacer(Modifier.height(8.dp))
                     Text(
                         catalogState.message, 
@@ -495,7 +564,7 @@ fun BeautifulModelMissingView(
                     Spacer(Modifier.height(32.dp))
                     HighTechPrimaryButton(
                         onClick = onClearError, 
-                        text = "RETRY UPLINK"
+                        text = stringResource(R.string.retry_uplink)
                     )
                 }
                 CatalogState.Idle -> {
@@ -506,8 +575,8 @@ fun BeautifulModelMissingView(
                         Icon(Icons.Default.RadioButtonChecked, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
                         Spacer(Modifier.width(12.dp))
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("Architecture", color = MaterialTheme.colorScheme.onSurface, style = Typography.titleLarge)
-                            Text("Selector", color = MaterialTheme.colorScheme.onSurface, style = Typography.titleLarge)
+                            Text(stringResource(R.string.architecture), color = MaterialTheme.colorScheme.onSurface, style = Typography.titleLarge)
+                            Text(stringResource(R.string.selector), color = MaterialTheme.colorScheme.onSurface, style = Typography.titleLarge)
                         }
                         
                         Surface(
@@ -516,7 +585,7 @@ fun BeautifulModelMissingView(
                             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
                         ) {
                             Text(
-                                "MODELS DETECTED",
+                                stringResource(R.string.models_detected),
                                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                                 style = Typography.labelSmall.copy(fontSize = 10.sp),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -527,8 +596,8 @@ fun BeautifulModelMissingView(
                     Spacer(Modifier.height(24.dp))
 
                     ModelSelectorCard(
-                        title = "GEMMA-4-E4B-IT",
-                        description = "Heavyweight reasoning model. Superior logic performance for complex coding and creative synthesis tasks.",
+                        title = stringResource(R.string.gemma_4_e4b_it),
+                        description = stringResource(R.string.gemma_4_e4b_desc),
                         params = "4.2",
                         vram = "8.4GB",
                         isSelected = internalSelectedModel.contains("E4B"),
@@ -539,8 +608,8 @@ fun BeautifulModelMissingView(
                     Spacer(Modifier.height(16.dp))
 
                     ModelSelectorCard(
-                        title = "GEMMA-4-E2B-IT",
-                        description = "Ultra-fast edge model. Optimized for mobile devices and real-time chat interactions with minimal battery drain.",
+                        title = stringResource(R.string.gemma_4_e2b_it),
+                        description = stringResource(R.string.gemma_4_e2b_desc),
                         params = "2.1",
                         vram = "3.2GB",
                         isSelected = internalSelectedModel.contains("E2B"),
@@ -558,11 +627,11 @@ fun BeautifulModelMissingView(
                         }
                         Spacer(Modifier.width(16.dp))
                         Column {
-                            Text("ENGINE STATUS", style = Typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(stringResource(R.string.engine_status), style = Typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Box(Modifier.size(8.dp).clip(CircleShape).background(if (isModelDownloaded) MaterialTheme.colorScheme.primary else Color.Gray))
                                 Spacer(Modifier.width(8.dp))
-                                Text(if (isModelDownloaded) "Core Ready" else "Download Required", color = MaterialTheme.colorScheme.onSurface, style = Typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
+                                Text(if (isModelDownloaded) stringResource(R.string.core_ready) else stringResource(R.string.download_required), color = MaterialTheme.colorScheme.onSurface, style = Typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
                             }
                         }
                     }
@@ -571,16 +640,16 @@ fun BeautifulModelMissingView(
 
                     HighTechPrimaryButton(
                         onClick = { onDownloadClick(internalSelectedModel) },
-                        text = if (isModelDownloaded) "CONFIRM ENGINE SWITCH" else "DOWNLOAD & SYNC CORE"
+                        text = if (isModelDownloaded) stringResource(R.string.confirm_engine_switch) else stringResource(R.string.download_sync_core)
                     )
 
                     Spacer(Modifier.height(48.dp))
 
-                    StatCard(label = "Latency", value = if (metrics.lastLatencyMs > 0) "${metrics.lastLatencyMs}ms" else "--")
+                    StatCard(label = stringResource(R.string.latency), value = if (metrics.lastLatencyMs > 0) "${metrics.lastLatencyMs}ms" else "--")
                     Spacer(Modifier.height(12.dp))
-                    StatCard(label = "VRAM Usage", value = "${metrics.vramUsagePercent}%")
+                    StatCard(label = stringResource(R.string.vram_usage), value = "${metrics.vramUsagePercent}%")
                     Spacer(Modifier.height(12.dp))
-                    StatCard(label = "Throughput", value = if (metrics.throughputTks > 0) "%.1f tk/s".format(metrics.throughputTks) else "--")
+                    StatCard(label = stringResource(R.string.throughput), value = if (metrics.throughputTks > 0) "%.1f tk/s".format(metrics.throughputTks) else "--")
                 }
             }
         }
@@ -597,10 +666,10 @@ fun SettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("SYSTEM SETTINGS", style = Typography.titleLarge, letterSpacing = 2.sp) },
+                title = { Text(stringResource(R.string.system_settings), style = Typography.titleLarge, letterSpacing = 2.sp) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = MaterialTheme.colorScheme.primary)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back), tint = MaterialTheme.colorScheme.primary)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -621,7 +690,7 @@ fun SettingsScreen(
                     .padding(24.dp)
             ) {
                 Text(
-                    "INTERFACE CONFIGURATION", 
+                    stringResource(R.string.interface_configuration), 
                     style = Typography.labelSmall, 
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(bottom = 16.dp)
@@ -648,9 +717,9 @@ fun SettingsScreen(
                             )
                             Spacer(Modifier.width(16.dp))
                             Column {
-                                Text("High-Tech Mode", style = Typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                                Text(stringResource(R.string.high_tech_mode), style = Typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
                                 Text(
-                                    if (isDarkMode) "Neural dark interface active" else "Standard light interface active",
+                                    if (isDarkMode) stringResource(R.string.neural_dark_active) else stringResource(R.string.standard_light_active),
                                     style = Typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -672,7 +741,7 @@ fun SettingsScreen(
                 Spacer(Modifier.height(32.dp))
                 
                 Text(
-                    "SYSTEM INFO", 
+                    stringResource(R.string.system_info), 
                     style = Typography.labelSmall, 
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(bottom = 16.dp)
@@ -680,9 +749,9 @@ fun SettingsScreen(
                 
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.1f))
                 
-                SystemInfoRow("Version", "1.0.0-STABLE")
-                SystemInfoRow("Engine", "Gemma 4 Edge")
-                SystemInfoRow("Protocol", "On-Device Inference")
+                SystemInfoRow(stringResource(R.string.version_label), "1.0.0-STABLE")
+                SystemInfoRow(stringResource(R.string.engine_label), stringResource(R.string.gemma_4_edge))
+                SystemInfoRow(stringResource(R.string.protocol_label), stringResource(R.string.on_device_inference))
             }
         }
     }
@@ -705,7 +774,7 @@ fun SystemInfoRow(label: String, value: String) {
 fun ErrorSnackbar(message: String, onDismiss: () -> Unit) {
     Box(Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.BottomCenter) {
         Snackbar(
-            action = { TextButton(onClick = onDismiss) { Text("REBOOT", color = MaterialTheme.colorScheme.primary) } }, 
+            action = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.reboot), color = MaterialTheme.colorScheme.primary) } },
             containerColor = Color(0xFF2C1414), 
             contentColor = MaterialTheme.colorScheme.error
         ) { Text(message) }
@@ -731,6 +800,7 @@ fun parseMarkdownLogic(
         val boldRegex = Regex("""\*\*(.*?)\*\*""")
         val italicRegex = Regex("""\*(?!\*)(.*?)\*""")
         val codeRegex = Regex("""`(.*?)`""")
+        val highlightRegex = Regex("""(Nebula Core)""") // Example of keyword highlighting from design
 
         var currentPos = 0
         
@@ -738,8 +808,9 @@ fun parseMarkdownLogic(
             val bMatch = boldRegex.find(cleanText, currentPos)
             val iMatch = italicRegex.find(cleanText, currentPos)
             val cMatch = codeRegex.find(cleanText, currentPos)
+            val hMatch = highlightRegex.find(cleanText, currentPos)
 
-            val matches = listOfNotNull(bMatch, iMatch, cMatch)
+            val matches = listOfNotNull(bMatch, iMatch, cMatch, hMatch)
                 .sortedWith(compareBy({ it.range.first }, { -it.value.length }))
 
             if (matches.isEmpty()) {
@@ -773,6 +844,9 @@ fun parseMarkdownLogic(
                 }
                 match.value.startsWith("*") -> {
                     addStyle(SpanStyle(fontStyle = FontStyle.Italic), start, end)
+                }
+                match.value == "Nebula Core" -> {
+                    addStyle(SpanStyle(color = primaryColor, fontWeight = FontWeight.Bold), start, end)
                 }
             }
             

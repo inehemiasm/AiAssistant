@@ -1,7 +1,5 @@
 package com.neo.aiassistant.data.model
 
-import kotlinx.coroutines.flow.Flow
-
 /**
  * Interface for different model sources (e.g., Hugging Face, Curated, Local).
  */

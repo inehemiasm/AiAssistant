@@ -6,13 +6,18 @@ import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -20,11 +25,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import com.neo.aiassistant.CatalogState
@@ -32,6 +35,7 @@ import com.neo.aiassistant.ChatEffect
 import com.neo.aiassistant.ChatIntent
 import com.neo.aiassistant.ChatViewModel
 import com.neo.aiassistant.DownloadState
+import com.neo.aiassistant.R
 import com.neo.aiassistant.RuntimeState
 import com.neo.aiassistant.SendState
 import com.neo.aiassistant.ui.BeautifulModelMissingView
@@ -53,21 +57,18 @@ fun ChatScreen(
     val context = LocalContext.current
     val state by viewModel.uiState.collectAsState()
     val listState = rememberLazyListState()
-    var inputText by remember { mutableStateOf("") }
-    var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
-    var tempCameraUri by remember { mutableStateOf<Uri?>(null) }
 
     val imagePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        if (uri != null) selectedImageUri = uri
+        if (uri != null) viewModel.onIntent(ChatIntent.SelectImage(uri))
     }
 
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture()
     ) { success ->
         if (success) {
-            selectedImageUri = tempCameraUri
+            viewModel.onIntent(ChatIntent.SelectImage(state.tempCameraUri))
         }
     }
 
@@ -82,10 +83,10 @@ fun ChatScreen(
                 "${context.packageName}.fileprovider",
                 file
             )
-            tempCameraUri = uri
+            viewModel.onIntent(ChatIntent.SetTempCameraUri(uri))
             cameraLauncher.launch(uri)
         } else {
-            Toast.makeText(context, "Camera permission denied", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, context.getString(R.string.camera_permission_denied), Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -99,7 +100,7 @@ fun ChatScreen(
                     "${context.packageName}.fileprovider",
                     file
                 )
-                tempCameraUri = uri
+                viewModel.onIntent(ChatIntent.SetTempCameraUri(uri))
                 cameraLauncher.launch(uri)
             }
             else -> {
@@ -141,55 +142,37 @@ fun ChatScreen(
                 onClearChat = {
                     viewModel.onIntent(ChatIntent.ClearConversation)
                 },
+                onModelsClick = onModelsClick,
                 onSettingsClick = onSettingsClick
             )
         },
-        bottomBar = {
-            // Only show input bar if model exists and not downloading
-            if (!state.isDownloading && modelFile.exists()) {
-                ChatInputBar(
-                    text = inputText,
-                    onTextChange = { inputText = it },
-                    onSend = {
-                        viewModel.onIntent(ChatIntent.SendMessage(inputText, selectedImageUri))
-                        inputText = ""
-                        selectedImageUri = null
-                    },
-                    selectedImageUri = selectedImageUri,
-                    onGalleryClick = { imagePicker.launch("image/*") },
-                    onCameraClick = onCameraClickAction,
-                    onRemoveImage = { selectedImageUri = null },
-                    enabled = state.isReady && state.sendState is SendState.Idle && state.downloadState is DownloadState.Idle,
-                    modifier = Modifier
-                        .navigationBarsPadding()
-                        .imePadding()
-                )
-            }
-        },
-        containerColor = MaterialTheme.colorScheme.background
+        containerColor = MaterialTheme.colorScheme.background,
+        contentWindowInsets = WindowInsets.systemBars.only(WindowInsetsSides.Top)
     ) { innerPadding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+                .consumeWindowInsets(innerPadding)
+                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom))
         ) {
-            if (state.isDownloading) {
-                DownloadProgressView(state.selectedModel, state.downloadProgress ?: 0)
-            } else if (!modelFile.exists()) {
-                BeautifulModelMissingView(
-                    selectedModel = state.selectedModel,
-                    localModels = state.localModels,
-                    catalogState = state.catalogState,
-                    metrics = state.metrics,
-                    onDownloadClick = { modelName ->
-                        viewModel.onIntent(ChatIntent.DownloadModel(modelName, context.filesDir.absolutePath))
-                    },
-                    onClearError = {
-                        viewModel.onIntent(ChatIntent.ClearError)
-                    }
-                )
-            } else {
-                Column(Modifier.fillMaxSize()) {
+            Column(Modifier.fillMaxSize()) {
+                if (state.isDownloading) {
+                    DownloadProgressView(state.selectedModel, state.downloadProgress ?: 0)
+                } else if (!modelFile.exists()) {
+                    BeautifulModelMissingView(
+                        selectedModel = state.selectedModel,
+                        localModels = state.localModels,
+                        catalogState = state.catalogState,
+                        metrics = state.metrics,
+                        onDownloadClick = { modelName ->
+                            viewModel.onIntent(ChatIntent.DownloadModel(modelName, context.filesDir.absolutePath))
+                        },
+                        onClearError = {
+                            viewModel.onIntent(ChatIntent.ClearError)
+                        }
+                    )
+                } else {
                     MessageList(
                         messages = state.messages,
                         modifier = Modifier.weight(1f),
@@ -199,6 +182,23 @@ fun ChatScreen(
                     QuantumThinkingIndicator(
                         visible = state.isLoading,
                         statusMessage = state.loadingMessage
+                    )
+                }
+
+                // Input bar at the bottom
+                if (!state.isDownloading && modelFile.exists()) {
+                    ChatInputBar(
+                        text = state.inputText,
+                        onTextChange = { viewModel.onIntent(ChatIntent.UpdateInputText(it)) },
+                        onSend = {
+                            viewModel.onIntent(ChatIntent.SendMessage(state.inputText, state.selectedImageUri))
+                        },
+                        selectedImageUri = state.selectedImageUri,
+                        onGalleryClick = { imagePicker.launch("image/*") },
+                        onCameraClick = onCameraClickAction,
+                        onRemoveImage = { viewModel.onIntent(ChatIntent.SelectImage(null)) },
+                        enabled = state.isReady && state.sendState is SendState.Idle && state.downloadState is DownloadState.Idle,
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
             }

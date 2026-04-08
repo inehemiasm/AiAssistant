@@ -1,3 +1,83 @@
 <resources>
     <string name="app_name">AiAssistant</string>
+
+    <!-- Chat Screen & Components -->
+    <string name="synthesizing_core">SYNTHESIZING CORE…</string>
+    <string name="synthesizing_description">Aligning neural weights for on-device inference. This process is hardware-intensive.</string>
+    <string name="menu_library">Library</string>
+    <string name="nebula_core_private_ai">NEBULA CORE PRIVATE AI</string>
+    <string name="clear_chat">Clear Chat</string>
+    <string name="profile">Profile</string>
+    <string name="synthesizing">SYNTHESIZING…</string>
+    <string name="hardware_accel">HARDWARE ACCEL</string>
+    <string name="privacy_lock">PRIVACY LOCK</string>
+    <string name="sent_status">SENT</string>
+    <string name="model_optimization_info">GEMMA • OPTIMIZED FOR M3/RTX</string>
+    <string name="add_attachment">Add attachment</string>
+    <string name="gallery">Gallery</string>
+    <string name="camera">Camera</string>
+    <string name="input_placeholder">Command Nebula Core…</string>
+    <string name="send">Send</string>
+    <string name="local_compute_engine">Local Compute Engine</string>
+    <string name="engine_description">Select a neural architecture optimized for your local hardware. High-efficiency, zero-latency inference.</string>
+    <string name="scanning_repositories">SCANNING REPOSITORIES…</string>
+    <string name="mission_failure">MISSION FAILURE</string>
+    <string name="retry_uplink">RETRY UPLINK</string>
+    <string name="architecture">Architecture</string>
+    <string name="selector">Selector</string>
+    <string name="models_detected">MODELS DETECTED</string>
+    <string name="gemma_4_e4b_it">GEMMA-4-E4B-IT</string>
+    <string name="gemma_4_e4b_desc">Heavyweight reasoning model. Superior logic performance for complex coding and creative synthesis tasks.</string>
+    <string name="gemma_4_e2b_it">GEMMA-4-E2B-IT</string>
+    <string name="gemma_4_e2b_desc">Ultra-fast edge model. Optimized for mobile devices and real-time chat interactions with minimal battery drain.</string>
+    <string name="engine_status">ENGINE STATUS</string>
+    <string name="core_ready">Core Ready</string>
+    <string name="download_required">Download Required</string>
+    <string name="confirm_engine_switch">CONFIRM ENGINE SWITCH</string>
+    <string name="download_sync_core">DOWNLOAD &amp; SYNC CORE</string>
+    <string name="latency">Latency</string>
+    <string name="vram_usage">VRAM Usage</string>
+    <string name="throughput">Throughput</string>
+    <string name="system_settings">SYSTEM SETTINGS</string>
+    <string name="back">Back</string>
+    <string name="interface_configuration">INTERFACE CONFIGURATION</string>
+    <string name="high_tech_mode">High-Tech Mode</string>
+    <string name="neural_dark_active">Neural dark interface active</string>
+    <string name="standard_light_active">Standard light interface active</string>
+    <string name="system_info">SYSTEM INFO</string>
+    <string name="version_label">Version</string>
+    <string name="engine_label">Engine</string>
+    <string name="protocol_label">Protocol</string>
+    <string name="gemma_4_edge">Gemma 4 Edge</string>
+    <string name="on_device_inference">On-Device Inference</string>
+    <string name="reboot">REBOOT</string>
+    <string name="camera_permission_denied">Camera permission denied</string>
+    <string name="neural_cores">NEURAL CORES</string>
+    <string name="chat_label">Chat</string>
+    <string name="models_label">Models</string>
+    <string name="settings_label">Settings</string>
+    <string name="neural_repository">NEURAL REPOSITORY</string>
+    <string name="refresh">Refresh</string>
+    <string name="discover">DISCOVER</string>
+    <string name="installed">INSTALLED</string>
+    <string name="no_local_models">NO LOCAL MODELS DETECTED</string>
+    <string name="active">ACTIVE</string>
+    <string name="activate">Activate</string>
+    <string name="delete">Delete</string>
+
+    <!-- Worker & Notifications -->
+    <string name="downloading_neural_core">Downloading Neural Core</string>
+    <string name="acquiring_model_data">Acquiring model data…</string>
+    <string name="model_downloads_channel_name">Model Downloads</string>
+
+    <!-- Error & Status Messages -->
+    <string name="error_missing_url">Missing URL</string>
+    <string name="error_missing_name">Missing Name</string>
+    <string name="error_finalize_failed">Failed to finalize model core file</string>
+    <string name="error_file_empty">Downloaded core file is empty or missing</string>
+    <string name="error_unknown_download">Unknown download failure</string>
+    <string name="error_fetch_models">Failed to fetch models</string>
+    <string name="error_init_failed">Init failed: %s</string>
+    <string name="error_inference_failed">Inference failed</string>
+    <string name="error_warmup">warmup</string>
 </resources>
