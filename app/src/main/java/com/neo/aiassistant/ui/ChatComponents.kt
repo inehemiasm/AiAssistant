@@ -46,6 +46,7 @@ import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.LightMode
@@ -507,6 +508,7 @@ fun BeautifulModelMissingView(
     selectedModel: String,
     localModels: List<com.neo.aiassistant.domain.LocalModel>,
     remoteModels: List<com.neo.aiassistant.domain.ModelEntry>,
+    availableDownloads: List<com.neo.aiassistant.domain.ModelEntry> = emptyList(),
     catalogState: CatalogState,
     metrics: PerformanceMetrics,
     onDownloadClick: (String) -> Unit,
@@ -631,6 +633,29 @@ fun BeautifulModelMissingView(
                             icon = Icons.Default.Speed,
                             onClick = { internalSelectedModel = "gemma-4-E2B-it.litertlm" }
                         )
+                    }
+
+                    if (availableDownloads.isNotEmpty()) {
+                        Spacer(Modifier.height(32.dp))
+                        Text(
+                            "Available Downloads",
+                            style = Typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(Modifier.height(16.dp))
+                        availableDownloads.forEach { model ->
+                            ModelSelectorCard(
+                                title = model.name,
+                                description = model.description,
+                                params = if (model.sizeBytes > 0) "%.1fGB".format(model.sizeBytes / 1e9) else "N/A",
+                                vram = if (model.sizeBytes > 0) "%.1fGB".format(model.sizeBytes * 2 / 1e9) else "N/A",
+                                isSelected = internalSelectedModel == model.effectiveFileName,
+                                icon = Icons.Default.CloudDownload,
+                                onClick = { internalSelectedModel = model.effectiveFileName }
+                            )
+                            Spacer(Modifier.height(16.dp))
+                        }
                     }
 
                     Spacer(Modifier.height(48.dp))
@@ -809,14 +834,14 @@ fun parseMarkdownLogic(
     }
 
     // Replace multiline bullet points
-    cleanText = cleanText.replace(Regex("""^\s*[*+]\s+""", RegexOption.MULTILINE), " • ")
-    cleanText = cleanText.replace(Regex("""^\s*-\s+""", RegexOption.MULTILINE), " • ")
+    cleanText = cleanText.replace(Regex("^\\s*[*+]\\s+", RegexOption.MULTILINE), " • ")
+    cleanText = cleanText.replace(Regex("^\\s*-\\s+", RegexOption.MULTILINE), " • ")
 
     return buildAnnotatedString {
         val boldRegex = Regex("""\*\*(.*?)\*\*""")
         val italicRegex = Regex("""\*(?!\*)(.*?)\*""")
         val codeRegex = Regex("""`(.*?)`""")
-        val highlightRegex = Regex("""(Nebula Core)""") // Example of keyword highlighting from design
+        val highlightRegex = Regex("(Nebula Core)") // Example of keyword highlighting from design
 
         var currentPos = 0
         

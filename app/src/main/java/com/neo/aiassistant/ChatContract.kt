@@ -1,6 +1,7 @@
 package com.neo.aiassistant
 
 import android.net.Uri
+import android.util.Log
 import com.neo.aiassistant.core.UiEffect
 import com.neo.aiassistant.core.UiIntent
 import com.neo.aiassistant.core.UiState
@@ -81,6 +82,13 @@ data class ChatState(
     val downloadProgress: Int? get() = (downloadState as? DownloadState.Downloading)?.progress
     
     val isFetchingModels: Boolean get() = catalogState is CatalogState.Loading
+
+    val availableDownloads: List<ModelEntry> get() {
+        val downloadedFileNames = localModels.map { it.name }.toSet()
+        val downloads = remoteModels.filter { it.effectiveFileName !in downloadedFileNames }
+        Log.d("ChatState", "available download count: ${downloads.size}")
+        return downloads
+    }
     
     val error: String? get() = when {
         runtimeState is RuntimeState.Error -> runtimeState.message

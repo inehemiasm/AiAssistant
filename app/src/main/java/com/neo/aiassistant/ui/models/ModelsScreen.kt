@@ -57,6 +57,7 @@ fun ModelsScreen(
                     selectedModel = state.selectedModel,
                     localModels = state.localModels,
                     remoteModels = state.remoteModels,
+                    availableDownloads = state.availableDownloads,
                     catalogState = state.catalogState,
                     metrics = state.metrics,
                     onDownloadClick = { modelName ->

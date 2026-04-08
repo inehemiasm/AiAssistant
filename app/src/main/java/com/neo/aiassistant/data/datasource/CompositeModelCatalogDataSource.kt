@@ -1,5 +1,6 @@
 package com.neo.aiassistant.data.datasource
 
+import android.util.Log
 import com.neo.aiassistant.domain.ModelEntry
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -39,7 +40,9 @@ class CompositeModelCatalogDataSource @Inject constructor(
             Result.failure(overallFailure)
         } else {
             // Deduplicate by URL to be safe
-            Result.success(allModels.distinctBy { it.url })
+            val distinctModels = allModels.distinctBy { it.url }
+            Log.d("CompositeCatalog", "merged catalog count: ${distinctModels.size}")
+            Result.success(distinctModels)
         }
     }
 }

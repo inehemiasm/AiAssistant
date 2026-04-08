@@ -1,36 +1,65 @@
 package com.neo.aiassistant.data.datasource
 
+import android.content.Context
+import android.util.Log
 import com.neo.aiassistant.domain.ModelEntry
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import javax.inject.Inject
 import javax.inject.Singleton
+
+@Serializable
+private data class HFModelDto(
+    val id: String,
+    val displayName: String,
+    val source: String,
+    val repoId: String,
+    val fileName: String,
+    val downloadUrl: String,
+    val supportsVision: Boolean = false,
+    val sizeBytes: Long = 0,
+    val sha256: String? = null
+)
 
 /**
  * Implementation of ModelCatalogDataSource that provides curated models from Hugging Face.
  */
 @Singleton
-class HuggingFaceModelCatalogDataSource @Inject constructor() : ModelCatalogDataSource {
-    
+class HuggingFaceModelCatalogDataSource @Inject constructor(
+    @ApplicationContext private val context: Context
+) : ModelCatalogDataSource {
+
+    private val json = Json {
+        ignoreUnknownKeys = true
+        coerceInputValues = true
+    }
+
     override suspend fun fetchAvailableModels(): Result<List<ModelEntry>> {
-        // Curated list of LiteRT models from Hugging Face
-        val curatedModels = listOf(
-            ModelEntry(
-                name = "Gemma 2b IT (LiteRT)",
-                url = "https://huggingface.co/google/gemma-2b-it-litert/resolve/main/gemma-2b-it.litertlm",
-                description = "Google's Gemma 2B instruction-tuned model in LiteRT format.",
-                provider = "Hugging Face",
-                sizeBytes = 1350000000L, // Approx size
-                sha256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", // Example placeholder
-                fileName = "gemma-2b-it.litertlm"
-            ),
-            ModelEntry(
-                name = "Gemma 2 2b IT (LiteRT)",
-                url = "https://huggingface.co/google/gemma-2-2b-it-litert/resolve/main/gemma-2-2b-it.litertlm",
-                description = "Google's Gemma 2 2B instruction-tuned model in LiteRT format.",
-                provider = "Hugging Face",
-                sizeBytes = 1600000000L,
-                fileName = "gemma-2-2b-it.litertlm"
-            )
-        )
-        return Result.success(curatedModels)
+        return try {
+            val assetPath = "model_catalog/huggingface_models.json"
+            val jsonString = context.assets.open(assetPath).bufferedReader().use { it.readText() }
+            Log.d("HFDataSource", "asset file found: $assetPath")
+
+            val hfModels = json.decodeFromString<List<HFModelDto>>(jsonString)
+            Log.d("HFDataSource", "parsed HF count: ${hfModels.size}")
+
+            val entries = hfModels.map { dto ->
+                ModelEntry(
+                    name = dto.displayName,
+                    url = dto.downloadUrl,
+                    description = "Source: ${dto.repoId}",
+                    provider = dto.source,
+                    sizeBytes = dto.sizeBytes,
+                    sha256 = dto.sha256,
+                    fileName = dto.fileName,
+                    supportsVision = dto.supportsVision
+                )
+            }
+            Result.success(entries)
+        } catch (e: Exception) {
+            Log.e("HFDataSource", "Error loading HF models", e)
+            Result.failure(e)
+        }
     }
 }
