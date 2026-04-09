@@ -9,6 +9,8 @@
     <string name="clear_chat">Clear Chat</string>
     <string name="profile">Profile</string>
     <string name="synthesizing">SYNTHESIZING…</string>
+    <string name="thinking">THINKING…</string>
+    <string name="dismiss">DISMISS</string>
     <string name="hardware_accel">HARDWARE ACCEL</string>
     <string name="privacy_lock">PRIVACY LOCK</string>
     <string name="sent_status">SENT</string>

@@ -84,7 +84,7 @@ data class ChatState(
     val isFetchingModels: Boolean get() = catalogState is CatalogState.Loading
 
     val availableDownloads: List<ModelEntry> get() {
-        val downloadedFileNames = localModels.map { it.name }.toSet()
+        val downloadedFileNames = localModels.map { it.fileName }.toSet()
         val downloads = remoteModels.filter { it.effectiveFileName !in downloadedFileNames }
         Log.d("ChatState", "available download count: ${downloads.size}")
         return downloads

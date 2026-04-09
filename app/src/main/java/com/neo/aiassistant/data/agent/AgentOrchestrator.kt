@@ -2,9 +2,9 @@ package com.neo.aiassistant.data.agent
 
 import android.net.Uri
 import android.util.Log
-import com.neo.aiassistant.data.inference.LlmResponseMapper
-import com.neo.aiassistant.data.inference.LlmRuntimeManager
-import com.neo.aiassistant.data.inference.MultimodalMessageFactory
+import com.neo.aiassistant.data.inference.InferenceManager
+import com.neo.aiassistant.domain.InferenceRequest
+import com.neo.aiassistant.domain.InferenceResult
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -17,11 +17,9 @@ import javax.inject.Singleton
  */
 @Singleton
 class AgentOrchestrator @Inject constructor(
-    private val runtimeManager: LlmRuntimeManager,
+    private val inferenceManager: InferenceManager,
     private val toolRegistry: ToolRegistry,
-    private val parser: ToolCallParser,
-    private val responseMapper: LlmResponseMapper,
-    private val messageFactory: MultimodalMessageFactory
+    private val parser: ToolCallParser
 ) {
     private val _agentState = MutableStateFlow<AgentState>(AgentState.Idle)
     val agentState: StateFlow<AgentState> = _agentState.asStateFlow()
@@ -47,16 +45,15 @@ class AgentOrchestrator @Inject constructor(
         while (stepCount < MAX_STEPS) {
             stepCount++
             
-            val message = messageFactory.createMessage(currentPrompt, currentImageUri)
-            val result = runtimeManager.sendMessage(message)
+            val request = InferenceRequest(currentPrompt, currentImageUri)
+            val result = inferenceManager.generate(request)
             
-            if (result.isFailure) {
-                _agentState.value = AgentState.Error("LLM Failure: ${result.exceptionOrNull()?.message}")
-                return Result.failure(result.exceptionOrNull() ?: Exception("Unknown error"))
+            if (result is InferenceResult.Failure) {
+                _agentState.value = AgentState.Error("Inference Failure: ${result.message}")
+                return Result.failure(result.throwable ?: Exception(result.message))
             }
 
-            val responseMessage = result.getOrThrow()
-            val rawText = responseMapper.mapToString(responseMessage)
+            val rawText = (result as InferenceResult.Success).text
             
             val toolCall = parser.parse(rawText)
             if (toolCall == null) {

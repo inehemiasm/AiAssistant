@@ -32,12 +32,6 @@ data class ModelEntry(
     val effectiveFileName: String get() = fileName ?: name.replace(" ", "_").lowercase() + ".litertlm"
 }
 
-data class LocalModel(
-    val name: String,
-    val path: String,
-    val sizeBytes: Long
-)
-
 sealed class DownloadProgress {
     data class Progress(val percent: Int) : DownloadProgress()
     object Finished : DownloadProgress()

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -150,7 +151,7 @@ fun DiscoverModelsList(state: ChatState, onIntent: (ChatIntent) -> Unit) {
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             items(state.remoteModels) { model ->
-                val isInstalled = state.localModels.any { it.name == model.effectiveFileName }
+                val isInstalled = state.localModels.any { it.fileName == model.effectiveFileName }
                 val isDownloading = state.isDownloading && state.selectedModel == model.effectiveFileName
                 
                 RemoteModelCard(
@@ -183,15 +184,15 @@ fun InstalledModelsList(state: ChatState, onIntent: (ChatIntent) -> Unit, baseDi
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             items(state.localModels) { model ->
-                val isActive = state.selectedModel == model.name
+                val isActive = state.selectedModel == model.fileName
                 val isReady = state.isReady && isActive
                 
                 LocalModelCard(
                     model = model,
                     isActive = isActive,
                     isReady = isReady,
-                    onSelect = { onIntent(ChatIntent.SwitchModel(model.name, baseDir)) },
-                    onDelete = { onIntent(ChatIntent.DeleteModel(model.name)) }
+                    onSelect = { onIntent(ChatIntent.SwitchModel(model.fileName, baseDir)) },
+                    onDelete = { onIntent(ChatIntent.DeleteModel(model.fileName)) }
                 )
             }
         }
@@ -284,7 +285,7 @@ fun LocalModelCard(
                     tint = if (isReady) Color.Green else MaterialTheme.colorScheme.primary
                 )
                 Spacer(Modifier.width(8.dp))
-                Text(model.name.uppercase(), style = Typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(model.displayName.uppercase(), style = Typography.titleMedium, fontWeight = FontWeight.Bold)
                 
                 if (isActive) {
                     Spacer(Modifier.width(8.dp))

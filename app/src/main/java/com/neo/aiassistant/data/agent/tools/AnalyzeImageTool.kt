@@ -2,7 +2,7 @@ package com.neo.aiassistant.data.agent.tools
 
 import com.neo.aiassistant.data.agent.AgentTool
 import com.neo.aiassistant.data.agent.ToolResult
-import com.neo.aiassistant.data.inference.LlmRuntimeManager
+import com.neo.aiassistant.data.inference.InferenceManager
 import javax.inject.Inject
 
 /**
@@ -11,14 +11,14 @@ import javax.inject.Inject
  * can be used to trigger specialized 'vision-only' reasoning steps.
  */
 class AnalyzeImageTool @Inject constructor(
-    private val runtimeManager: LlmRuntimeManager
+    private val inferenceManager: InferenceManager
 ) : AgentTool {
     override val name: String = "analyze_image"
     override val description: String = "Performs a deep analysis of the currently attached image."
     override val inputSchema: String = "focus: Specific aspect to look for (e.g., 'text', 'objects', 'mood')."
 
     override suspend fun execute(args: Map<String, String>): ToolResult {
-        if (!runtimeManager.isVisionSupported()) {
+        if (!inferenceManager.isVisionSupported()) {
             return ToolResult.Error("Vision is not supported on this model.")
         }
         

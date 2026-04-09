@@ -46,11 +46,12 @@ class ChatViewModel @Inject constructor(
     private fun observeInitStatus() {
         viewModelScope.launch {
             repository.getInitStatus().collectLatest { status ->
+                Log.d("ChatViewModel", "Received init status: $status")
                 if (status == "READY") {
                     setState { copy(runtimeState = RuntimeState.Ready) }
                 } else if (status.contains("FAILED")) {
                     setState { copy(runtimeState = RuntimeState.Error(status)) }
-                } else {
+                } else if (status.isNotBlank()) {
                     setState { copy(runtimeState = RuntimeState.Initializing(status)) }
                 }
             }
@@ -64,7 +65,7 @@ class ChatViewModel @Inject constructor(
         // Auto-select first available model if none selected
         if (currentState.selectedModel.isEmpty() || !File(application.filesDir, currentState.selectedModel).exists()) {
             models.firstOrNull()?.let { 
-                setState { copy(selectedModel = it.name) }
+                setState { copy(selectedModel = it.fileName) }
             }
         }
     }
@@ -74,6 +75,7 @@ class ChatViewModel @Inject constructor(
             is ChatIntent.Initialize -> initModel(intent.modelPath)
             is ChatIntent.SendMessage -> sendMessage(intent.text, intent.imageUri)
             is ChatIntent.SwitchModel -> {
+                Log.d("ChatViewModel", "Switching model to: ${intent.modelName}")
                 setState { copy(
                     selectedModel = intent.modelName, 
                     messages = emptyList(), 
@@ -82,6 +84,8 @@ class ChatViewModel @Inject constructor(
                 val modelFile = File("${intent.baseDir}/${intent.modelName}")
                 if (modelFile.exists()) {
                     initModel(modelFile.absolutePath)
+                } else {
+                    Log.w("ChatViewModel", "Model file not found for switch: ${modelFile.absolutePath}")
                 }
             }
             is ChatIntent.DownloadModel -> {
@@ -121,15 +125,11 @@ class ChatViewModel @Inject constructor(
         val usedMem = totalMem - availMem
         val usagePercent = ((usedMem.toDouble() / totalMem.toDouble()) * 100).toInt()
 
-        // For throughput and latency, we use the last recorded values from the chat session
-        // If no messages yet, we keep defaults.
         val lastAiMessage = currentState.messages.lastOrNull { !it.isUser }
         val latency = lastAiMessage?.inferenceTimeMs ?: currentState.metrics.lastLatencyMs
         
-        // Estimation for throughput: characters / (ms/1000) -> chars per second. 
-        // Token count would be better but requires tokenizer access.
         val throughput = if (latency > 0 && lastAiMessage != null) {
-            (lastAiMessage.text.length / (latency.toFloat() / 1000f)) / 4f // divide by 4 as rough char-to-token ratio
+            (lastAiMessage.text.length / (latency.toFloat() / 1000f)) / 4f
         } else {
             currentState.metrics.throughputTks
         }
@@ -168,8 +168,12 @@ class ChatViewModel @Inject constructor(
     }
 
     private suspend fun initModel(modelPath: String) {
+        Log.d("ChatViewModel", "Initializing model: $modelPath")
+        setState { copy(runtimeState = RuntimeState.Initializing(application.getString(R.string.synthesizing))) }
+        
         initializeChatUseCase(modelPath)
             .onFailure { e ->
+                Log.e("ChatViewModel", "Model initialization failed", e)
                 setState { copy(
                     runtimeState = RuntimeState.Error(
                         application.getString(R.string.error_init_failed, e.message ?: "Unknown")
@@ -195,6 +199,7 @@ class ChatViewModel @Inject constructor(
             sendMessageUseCase(text, imageUri)
                 .onSuccess { responseText = it }
                 .onFailure { e ->
+                    Log.e("ChatViewModel", "Inference failed", e)
                     setState { copy(
                         sendState = SendState.Error(
                             e.message ?: application.getString(R.string.error_inference_failed)
@@ -216,7 +221,7 @@ class ChatViewModel @Inject constructor(
         Log.d("ChatViewModel", "Attempting to download model: $modelName")
         val modelEntry = currentState.remoteModels.find { it.effectiveFileName == modelName || it.name == modelName }
         if (modelEntry == null) {
-            Log.e("ChatViewModel", "Model not found in remote catalog: $modelName. Available: ${currentState.remoteModels.map { it.name }}")
+            Log.e("ChatViewModel", "Model not found in remote catalog: $modelName")
             return
         }
         
@@ -224,16 +229,12 @@ class ChatViewModel @Inject constructor(
         val fileName = modelEntry.effectiveFileName
         val sha256 = modelEntry.sha256
         
-        Log.d("ChatViewModel", "Resolved model: ${modelEntry.name}, URL: $url, FileName: $fileName")
-        
         setState { copy(selectedModel = fileName, downloadState = DownloadState.Downloading(0)) }
         
         viewModelScope.launch {
-            Log.d("ChatViewModel", "Invoking repository.downloadModel")
             repository.downloadModel(url, fileName, sha256).collect { progress ->
                 when (progress) {
                     is DownloadProgress.Progress -> {
-                        Log.v("ChatViewModel", "Download progress: ${progress.percent}%")
                         setState { copy(downloadState = DownloadState.Downloading(progress.percent)) }
                     }
                     DownloadProgress.Finished -> {

@@ -43,7 +43,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddPhotoAlternate
-import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Close
@@ -102,6 +101,7 @@ import com.neo.aiassistant.CatalogState
 import com.neo.aiassistant.PerformanceMetrics
 import com.neo.aiassistant.R
 import com.neo.aiassistant.domain.ChatMessage
+import com.neo.aiassistant.domain.LocalModel
 import com.neo.aiassistant.ui.designsystem.AmbientGlow
 import com.neo.aiassistant.ui.designsystem.HighTechPrimaryButton
 import com.neo.aiassistant.ui.designsystem.ModelSelectorCard
@@ -160,6 +160,87 @@ fun DownloadProgressView(modelName: String, progress: Int) {
                 textAlign = TextAlign.Center,
                 lineHeight = 20.sp,
                 modifier = Modifier.padding(horizontal = 16.dp)
+            )
+        }
+    }
+}
+
+@Composable
+fun ErrorSnackbar(message: String, onDismiss: () -> Unit) {
+    Snackbar(
+        modifier = Modifier.padding(16.dp),
+        action = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.dismiss), color = MaterialTheme.colorScheme.inversePrimary)
+            }
+        },
+        containerColor = MaterialTheme.colorScheme.errorContainer,
+        contentColor = MaterialTheme.colorScheme.onErrorContainer,
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Default.Warning, null, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(12.dp))
+            Text(message, style = Typography.bodySmall)
+        }
+    }
+}
+
+@Composable
+fun QuantumThinkingIndicator(
+    visible: Boolean,
+    modifier: Modifier = Modifier,
+    statusMessage: String? = null
+) {
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn() + expandVertically(),
+        exit = fadeOut() + shrinkVertically(),
+        modifier = modifier
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            val infiniteTransition = rememberInfiniteTransition(label = "thinking")
+            val alpha by infiniteTransition.animateFloat(
+                initialValue = 0.3f,
+                targetValue = 1f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(1000, easing = LinearOutSlowInEasing),
+                    repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
+                ),
+                label = "alpha"
+            )
+
+            Box(contentAlignment = Alignment.Center) {
+                Canvas(modifier = Modifier.size(24.dp)) {
+                    drawCircle(
+                        color = Color.Cyan.copy(alpha = alpha * 0.2f),
+                        radius = size.minDimension / 1.5f,
+                        style = Stroke(width = 2.dp.toPx())
+                    )
+                }
+                Icon(
+                    Icons.Default.AutoAwesome,
+                    null,
+                    tint = Color.Cyan.copy(alpha = alpha),
+                    modifier = Modifier.size(14.dp)
+                )
+            }
+
+            Spacer(Modifier.width(12.dp))
+
+            Text(
+                text = (statusMessage ?: stringResource(R.string.thinking)).uppercase(),
+                style = Typography.labelSmall.copy(
+                    letterSpacing = 2.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Cyan.copy(alpha = alpha)
+                )
             )
         }
     }
@@ -241,32 +322,6 @@ fun ChatTopBar(
         ),
         modifier = modifier.background(MaterialTheme.colorScheme.surface.copy(alpha = 0.7f))
     )
-}
-
-@Composable
-fun QuantumThinkingIndicator(visible: Boolean, statusMessage: String? = null) {
-    val primaryColor = MaterialTheme.colorScheme.primary
-    AnimatedVisibility(visible = visible, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
-        Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Box(contentAlignment = Alignment.Center, modifier = Modifier.size(40.dp)) {
-                val infiniteTransition = rememberInfiniteTransition(label = "quantum")
-                repeat(3) { i ->
-                    val scale by infiniteTransition.animateFloat(0f, 1f, infiniteRepeatable(tween(1200, delayMillis = i * 400, easing = LinearOutSlowInEasing)), "scale$i")
-                    val alpha by infiniteTransition.animateFloat(1f, 0f, infiniteRepeatable(tween(1200, delayMillis = i * 400, easing = LinearOutSlowInEasing)), "alpha$i")
-                    Canvas(Modifier.fillMaxSize()) { 
-                        drawCircle(
-                            color = primaryColor, 
-                            radius = (size.minDimension / 2) * scale, 
-                            alpha = alpha, 
-                            style = Stroke(width = 2.dp.toPx())
-                        ) 
-                    }
-                }
-                Icon(Icons.Default.AutoAwesome, null, tint = primaryColor, modifier = Modifier.size(16.dp))
-            }
-            Text(statusMessage ?: stringResource(R.string.synthesizing), color = primaryColor, letterSpacing = 1.5.sp, fontWeight = FontWeight.Bold, fontSize = 10.sp)
-        }
-    }
 }
 
 @Composable
@@ -510,7 +565,7 @@ fun ChatInputBar(
 @Composable
 fun BeautifulModelMissingView(
     selectedModel: String,
-    localModels: List<com.neo.aiassistant.domain.LocalModel>,
+    localModels: List<LocalModel>,
     remoteModels: List<com.neo.aiassistant.domain.ModelEntry>,
     availableDownloads: List<com.neo.aiassistant.domain.ModelEntry> = emptyList(),
     catalogState: CatalogState,
@@ -664,7 +719,7 @@ fun BeautifulModelMissingView(
 
                     Spacer(Modifier.height(48.dp))
                     
-                    val isModelDownloaded = localModels.any { it.name == internalSelectedModel }
+                    val isModelDownloaded = localModels.any { it.fileName == internalSelectedModel }
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(48.dp).clip(RoundedCornerShape(8.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh), contentAlignment = Alignment.Center) {
@@ -812,17 +867,6 @@ fun SystemInfoRow(label: String, value: String) {
     ) {
         Text(label, style = Typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text(value, style = Typography.bodyMedium.copy(fontFamily = FontFamily.Monospace), color = MaterialTheme.colorScheme.onSurface)
-    }
-}
-
-@Composable
-fun ErrorSnackbar(message: String, onDismiss: () -> Unit) {
-    Box(Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.BottomCenter) {
-        Snackbar(
-            action = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.reboot), color = MaterialTheme.colorScheme.primary) } },
-            containerColor = Color(0xFF2C1414), 
-            contentColor = MaterialTheme.colorScheme.error
-        ) { Text(message) }
     }
 }
 
