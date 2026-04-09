@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
@@ -96,7 +97,7 @@ fun ChatScreen(
                 onSettingsClick = onSettingsClick
             )
         },
-        snackbarHost = { 
+        snackbarHost = {
             SnackbarHost(hostState = snackbarHostState) { data ->
                 ErrorSnackbar(state.error ?: data.visuals.message) {
                     viewModel.onIntent(ChatIntent.ClearError)
@@ -104,14 +105,13 @@ fun ChatScreen(
             }
         },
         containerColor = MaterialTheme.colorScheme.background,
-        contentWindowInsets = WindowInsets.systemBars.only(WindowInsetsSides.Top)
+        contentWindowInsets = WindowInsets.systemBars
     ) { innerPadding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
                 .consumeWindowInsets(innerPadding)
-                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom))
         ) {
             Column(Modifier.fillMaxSize()) {
                 if (state.isDownloading) {
@@ -127,9 +127,9 @@ fun ChatScreen(
                         onDownloadClick = { modelName ->
                             val isDownloaded = state.localModels.any { it.fileName == modelName }
                             if (isDownloaded) {
-                                viewModel.onIntent(ChatIntent.SwitchModel(modelName, context.filesDir.absolutePath))
+      	     	  	     viewModel.onIntent(ChatIntent.SwitchModel(modelName, context.filesDir.absolutePath))
                             } else {
-                                viewModel.onIntent(ChatIntent.DownloadModel(modelName, context.filesDir.absolutePath))
+      	     	  	     viewModel.onIntent(ChatIntent.DownloadModel(modelName, context.filesDir.absolutePath))
                             }
                         },
                         onClearError = {
@@ -143,7 +143,7 @@ fun ChatScreen(
                             modifier = Modifier.fillMaxSize(),
                             listState = listState
                         )
-                        
+
                         QuantumThinkingIndicator(
                             visible = state.isLoading,
                             statusMessage = state.loadingMessage,
@@ -151,27 +151,34 @@ fun ChatScreen(
                         )
                     }
 
-                    ChatInputBar(
-                        text = state.inputText,
-                        onTextChange = { viewModel.onIntent(ChatIntent.UpdateInputText(it)) },
-                        onSend = { viewModel.onIntent(ChatIntent.SendMessage(state.inputText, state.selectedImageUri)) },
-                        onGalleryClick = { imagePickerLauncher.launch("image/*") },
-                        onCameraClick = {
-                            val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
-                            val storageDir = File(context.cacheDir, "images").apply { mkdirs() }
-                            val photoFile = File(storageDir, "JPEG_${timeStamp}_.jpg")
-                            val photoUri: Uri = FileProvider.getUriForFile(
-                                context,
-                                "${context.packageName}.fileprovider",
-                                photoFile
-                            )
-                            viewModel.onIntent(ChatIntent.SetTempCameraUri(photoUri))
-                            cameraLauncher.launch(photoUri)
-                        },
-                        selectedImageUri = state.selectedImageUri,
-                        onRemoveImage = { viewModel.onIntent(ChatIntent.SelectImage(null)) },
-                        enabled = !state.isLoading && state.isReady
-                    )
+                    // Position input bar at the bottom with proper spacing
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp, vertical = 8.dp)
+                    ) {
+                        ChatInputBar(
+                            text = state.inputText,
+                            onTextChange = { viewModel.onIntent(ChatIntent.UpdateInputText(it)) },
+                            onSend = { viewModel.onIntent(ChatIntent.SendMessage(state.inputText, state.selectedImageUri)) },
+                            onGalleryClick = { imagePickerLauncher.launch("image/*") },
+                            onCameraClick = {
+                                val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
+                                val storageDir = File(context.cacheDir, "images").apply { mkdirs() }
+                                val photoFile = File(storageDir, "JPEG_${timeStamp}_.jpg")
+                                val photoUri: Uri = FileProvider.getUriForFile(
+      	     	  	 	   context,
+      	     	  	 	   "${context.packageName}.fileprovider",
+      	     	  	 	   photoFile
+                                )
+                                viewModel.onIntent(ChatIntent.SetTempCameraUri(photoUri))
+                                cameraLauncher.launch(photoUri)
+                            },
+                            selectedImageUri = state.selectedImageUri,
+                            onRemoveImage = { viewModel.onIntent(ChatIntent.SelectImage(null)) },
+                            enabled = !state.isLoading && state.isReady
+                        )
+                    }
                 }
             }
         }
