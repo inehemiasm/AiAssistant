@@ -111,7 +111,6 @@ fun ChatScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .consumeWindowInsets(innerPadding)
-                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom))
         ) {
             Column(Modifier.fillMaxSize()) {
                 if (state.isDownloading) {
