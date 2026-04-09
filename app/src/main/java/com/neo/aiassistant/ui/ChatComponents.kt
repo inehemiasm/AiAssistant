@@ -451,7 +451,7 @@ fun ChatInputBar(
 ) {
     var showAttachmentMenu by remember { mutableStateOf(false) }
 
-    Column(modifier = modifier.padding(horizontal = 16.dp)) {
+    Column(modifier = modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
         if (selectedImageUri != null) {
             Box(Modifier.padding(bottom = 8.dp).size(80.dp)) {
                 AsyncImage(
@@ -468,7 +468,7 @@ fun ChatInputBar(
                 }
             }
         }
-        
+
         Row(
             modifier = Modifier
                 .fillMaxWidth()
