@@ -15,7 +15,6 @@ interface ChatRepository {
     suspend fun fetchAvailableModels(): Result<List<ModelEntry>>
     fun isVisionSupported(): Boolean
     fun getLocalModels(): List<LocalModel>
-    fun isModelValid(modelName: String): Boolean
     fun deleteModel(modelName: String): Boolean
 }
 
