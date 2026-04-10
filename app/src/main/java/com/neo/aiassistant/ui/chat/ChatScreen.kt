@@ -1,5 +1,7 @@
 package com.neo.aiassistant.ui.chat
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -28,18 +30,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
-import androidx.compose.ui.layout.findRootCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import com.neo.aiassistant.ChatEffect
 import com.neo.aiassistant.ChatIntent
@@ -81,6 +79,16 @@ fun ChatScreen(
     ) { success: Boolean ->
         if (success) {
             viewModel.onIntent(ChatIntent.SelectImage(state.tempCameraUri))
+        }
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            Toast.makeText(context, "Permission granted. Try again.", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(context, "Camera permission is required to take photos.", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -136,9 +144,9 @@ fun ChatScreen(
                         onDownloadClick = { modelName ->
                             val isDownloaded = state.localModels.any { it.fileName == modelName }
                             if (isDownloaded) {
-      	     	  	     viewModel.onIntent(ChatIntent.SwitchModel(modelName, context.filesDir.absolutePath))
+                                viewModel.onIntent(ChatIntent.SwitchModel(modelName, context.filesDir.absolutePath))
                             } else {
-      	     	  	     viewModel.onIntent(ChatIntent.DownloadModel(modelName, context.filesDir.absolutePath))
+                                viewModel.onIntent(ChatIntent.DownloadModel(modelName, context.filesDir.absolutePath))
                             }
                         },
                         onClearError = {
@@ -149,18 +157,18 @@ fun ChatScreen(
                     Box(modifier = Modifier.weight(1f)) {
                         MessageList(
                             messages = state.messages,
-                            modifier = Modifier.fillMaxSize(),
                             listState = listState
                         )
 
                         QuantumThinkingIndicator(
                             visible = state.isLoading,
                             statusMessage = state.loadingMessage,
-                            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 16.dp)
+                            modifier = Modifier
+                                .align(Alignment.BottomStart)
+                                .padding(16.dp)
                         )
                     }
 
-                    // Position input bar at the bottom with proper spacing and position-aware IME padding
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -173,16 +181,23 @@ fun ChatScreen(
                             onSend = { viewModel.onIntent(ChatIntent.SendMessage(state.inputText, state.selectedImageUri)) },
                             onGalleryClick = { imagePickerLauncher.launch("image/*") },
                             onCameraClick = {
-                                val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
-                                val storageDir = File(context.cacheDir, "images").apply { mkdirs() }
-                                val photoFile = File(storageDir, "JPEG_${timeStamp}_.jpg")
-                                val photoUri: Uri = FileProvider.getUriForFile(
-      	     	  	 	   context,
-   	   	     	  	   "${context.packageName}.fileprovider",
-   	   	     	  	   photoFile
-                                )
-                                viewModel.onIntent(ChatIntent.SetTempCameraUri(photoUri))
-                                cameraLauncher.launch(photoUri)
+                                when (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)) {
+                                    PackageManager.PERMISSION_GRANTED -> {
+                                        val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
+                                        val storageDir = File(context.cacheDir, "images").apply { mkdirs() }
+                                        val photoFile = File(storageDir, "JPEG_${timeStamp}_.jpg")
+                                        val photoUri: Uri = FileProvider.getUriForFile(
+                                            context,
+                                            "${context.packageName}.fileprovider",
+                                            photoFile
+                                        )
+                                        viewModel.onIntent(ChatIntent.SetTempCameraUri(photoUri))
+                                        cameraLauncher.launch(photoUri)
+                                    }
+                                    else -> {
+                                        permissionLauncher.launch(Manifest.permission.CAMERA)
+                                    }
+                                }
                             },
                             selectedImageUri = state.selectedImageUri,
                             onRemoveImage = { viewModel.onIntent(ChatIntent.SelectImage(null)) },
@@ -210,24 +225,6 @@ fun ChatScreen(
     }
 }
 
-@Composable
-fun Int.pxToDp() = with(LocalDensity.current) { this@pxToDp.toDp() }
-
-/**
- * A modifier that applies IME padding while accounting for the component's position
- * relative to the bottom of the screen (e.g., when it sits above a NavigationBar).
- * Source - https://stackoverflow.com/a/79048009
- */
 fun Modifier.positionAwareImePadding() = composed {
-    var consumePadding by remember { mutableIntStateOf(0) }
-    this@positionAwareImePadding
-        .onGloballyPositioned { coordinates ->
-            val rootCoordinate = coordinates.findRootCoordinates()
-            val bottom = coordinates.positionInWindow().y + coordinates.size.height + 60
-
-            // Calculate how much space is already between this component and the screen bottom
-            consumePadding = (rootCoordinate.size.height - bottom).toInt().coerceAtLeast(0)
-        }
-        .consumeWindowInsets(PaddingValues(bottom = consumePadding.pxToDp()))
-        .imePadding()
+    this.onGloballyPositioned { _ -> }.imePadding()
 }
