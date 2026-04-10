@@ -11,6 +11,7 @@ import androidx.navigation.compose.composable
 import com.neo.aiassistant.ChatViewModel
 import com.neo.aiassistant.data.PreferenceManager
 import com.neo.aiassistant.ui.chat.ChatScreen
+import com.neo.aiassistant.ui.marketplace.ModelMarketplaceScreen
 import com.neo.aiassistant.ui.models.ModelsScreen
 import com.neo.aiassistant.ui.settings.SettingsScreen
 import kotlinx.coroutines.launch
@@ -37,7 +38,8 @@ fun AiAssistantNavHost(
 
         composable<Route.Models> {
             ModelsScreen(
-                viewModel = chatViewModel
+                viewModel = chatViewModel,
+                onMarketplaceClick = { navController.navigate(Route.ModelMarketplace) }
             )
         }
 
@@ -49,6 +51,15 @@ fun AiAssistantNavHost(
                 isDarkMode = isDarkMode,
                 onThemeChange = { darkMode -> scope.launch { preferenceManager.updateTheme(darkMode) } },
                 onBackClick = { navController.popBackStack() }
+            )
+        }
+
+        composable<Route.ModelMarketplace> {
+            val state by chatViewModel.uiState.collectAsState()
+            ModelMarketplaceScreen(
+                state = state,
+                onIntent = { chatViewModel.onIntent(it) },
+                onBack = { navController.popBackStack() }
             )
         }
     }

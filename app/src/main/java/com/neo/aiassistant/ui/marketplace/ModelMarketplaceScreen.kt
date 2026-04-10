@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -55,7 +54,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -67,7 +65,6 @@ import com.neo.aiassistant.domain.LocalModel
 import com.neo.aiassistant.domain.ModelEntry
 import com.neo.aiassistant.ui.designsystem.AmbientGlow
 import com.neo.aiassistant.ui.designsystem.Typography
-import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -131,7 +128,7 @@ fun ModelMarketplaceScreen(
                 }
 
                 when (selectedTab) {
-                    0 -> DiscoverModelsList(state, onIntent)
+                    0 -> DiscoverModelsList(state, onIntent, context.filesDir.absolutePath)
                     1 -> InstalledModelsList(state, onIntent, context.filesDir.absolutePath)
                 }
             }
@@ -140,7 +137,7 @@ fun ModelMarketplaceScreen(
 }
 
 @Composable
-fun DiscoverModelsList(state: ChatState, onIntent: (ChatIntent) -> Unit) {
+fun DiscoverModelsList(state: ChatState, onIntent: (ChatIntent) -> Unit, baseDir: String) {
     if (state.catalogState is CatalogState.Loading) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
@@ -160,7 +157,7 @@ fun DiscoverModelsList(state: ChatState, onIntent: (ChatIntent) -> Unit) {
                     isDownloading = isDownloading,
                     downloadProgress = if (isDownloading) state.downloadProgress else null,
                     onDownload = {
-                        onIntent(ChatIntent.DownloadModel(model.name, "")) 
+                        onIntent(ChatIntent.DownloadModel(model.name, baseDir)) 
                     }
                 )
             }
@@ -336,13 +333,13 @@ fun InfoItem(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(icon, null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.width(4.dp))
-        Text(text, style = Typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, fontFamily = FontFamily.Monospace)
+        Text(text, style = Typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
-fun formatFileSize(bytes: Long): String {
-    if (bytes <= 0) return "0 B"
+private fun formatFileSize(size: Long): String {
+    if (size <= 0) return "0 B"
     val units = arrayOf("B", "KB", "MB", "GB", "TB")
-    val digitGroups = (Math.log10(bytes.toDouble()) / Math.log10(1024.0)).toInt()
-    return String.format(Locale.US, "%.1f %s", bytes / Math.pow(1024.0, digitGroups.toDouble()), units[digitGroups])
+    val digitGroups = (Math.log10(size.toDouble()) / Math.log10(1024.0)).toInt()
+    return "%.1f %s".format(size / Math.pow(1024.0, digitGroups.toDouble()), units[digitGroups])
 }

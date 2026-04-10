@@ -69,8 +69,6 @@ fun SettingsScreen(
         containerColor = Color.Transparent
     ) { innerPadding ->
         Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(innerPadding)) {
-            AmbientGlow(MaterialTheme.colorScheme.primary, Modifier.align(Alignment.BottomEnd).offset(x = 100.dp, y = 100.dp).size(400.dp))
-            
             Column(
                 modifier = Modifier
                     .fillMaxSize()

@@ -28,11 +28,14 @@ class ChatViewModel @Inject constructor(
 ) : BaseViewModel<ChatState, ChatIntent, ChatEffect>(application, ChatState()) {
 
     init {
-        updateLocalModels()
-        onIntent(ChatIntent.FetchModels)
-        observeInitStatus()
-        observeAgentStatus()
-        refreshMetrics()
+        // Move all initialization to a background coroutine to keep the UI thread responsive
+        viewModelScope.launch {
+            updateLocalModels()
+            fetchModels() // This was onIntent(ChatIntent.FetchModels) before, which launches another coroutine
+            observeInitStatus()
+            observeAgentStatus()
+            refreshMetrics()
+        }
     }
 
     private fun observeAgentStatus() {
@@ -58,7 +61,7 @@ class ChatViewModel @Inject constructor(
         }
     }
 
-    private fun updateLocalModels() {
+    private suspend fun updateLocalModels() {
         val models = repository.getLocalModels()
         setState { copy(localModels = models) }
 

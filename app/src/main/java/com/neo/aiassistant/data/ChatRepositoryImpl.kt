@@ -2,6 +2,7 @@ package com.neo.aiassistant.data
 
 import android.content.Context
 import android.net.Uri
+import com.neo.aiassistant.core.DispatcherProvider
 import com.neo.aiassistant.data.agent.AgentOrchestrator
 import com.neo.aiassistant.data.agent.AgentState
 import com.neo.aiassistant.data.datasource.ModelCatalogDataSource
@@ -18,6 +19,7 @@ import com.neo.aiassistant.domain.ModelSource
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.Locale
 import javax.inject.Inject
@@ -33,7 +35,8 @@ class ChatRepositoryImpl @Inject constructor(
     private val inferenceManager: InferenceManager,
     private val modelCatalog: ModelCatalogDataSource,
     private val downloadManager: WorkManagerModelDownloadManager,
-    private val agentOrchestrator: AgentOrchestrator
+    private val agentOrchestrator: AgentOrchestrator,
+    private val dispatcherProvider: DispatcherProvider
 ) : ChatRepository {
 
     override val agentState: StateFlow<AgentState> = agentOrchestrator.agentState
@@ -78,9 +81,9 @@ class ChatRepositoryImpl @Inject constructor(
         return downloadManager.downloadModel(url, modelName, sha256)
     }
 
-    override fun getLocalModels(): List<LocalModel> {
+    override suspend fun getLocalModels(): List<LocalModel> = withContext(dispatcherProvider.io) {
         val filesDir = context.filesDir
-        return filesDir.listFiles { file ->
+        filesDir.listFiles { file ->
             file.isFile && (file.name.endsWith(".litertlm") || file.name.endsWith(".bin"))
         }?.map { file ->
             classifyModel(file)

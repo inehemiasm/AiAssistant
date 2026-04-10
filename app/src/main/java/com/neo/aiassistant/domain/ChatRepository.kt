@@ -14,7 +14,7 @@ interface ChatRepository {
     fun downloadModel(url: String, modelName: String, sha256: String? = null): Flow<DownloadProgress>
     suspend fun fetchAvailableModels(): Result<List<ModelEntry>>
     fun isVisionSupported(): Boolean
-    fun getLocalModels(): List<LocalModel>
+    suspend fun getLocalModels(): List<LocalModel>
     fun isModelValid(modelName: String): Boolean
     fun deleteModel(modelName: String): Boolean
 }
