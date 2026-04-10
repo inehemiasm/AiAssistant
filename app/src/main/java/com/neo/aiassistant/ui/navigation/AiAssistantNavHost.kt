@@ -10,9 +10,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.neo.aiassistant.ChatViewModel
 import com.neo.aiassistant.data.PreferenceManager
-import com.neo.aiassistant.ui.SettingsScreen
 import com.neo.aiassistant.ui.chat.ChatScreen
 import com.neo.aiassistant.ui.models.ModelsScreen
+import com.neo.aiassistant.ui.settings.SettingsScreen
 import kotlinx.coroutines.launch
 
 @Composable

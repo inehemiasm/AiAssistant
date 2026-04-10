@@ -21,9 +21,9 @@ import androidx.compose.ui.unit.sp
 import com.neo.aiassistant.ChatIntent
 import com.neo.aiassistant.ChatViewModel
 import com.neo.aiassistant.R
-import com.neo.aiassistant.ui.BeautifulModelMissingView
-import com.neo.aiassistant.ui.DownloadProgressView
+import com.neo.aiassistant.ui.common.DownloadProgressView
 import com.neo.aiassistant.ui.designsystem.Typography
+import com.neo.aiassistant.ui.models.components.BeautifulModelMissingView
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
