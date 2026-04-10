@@ -15,6 +15,7 @@ A futuristic, high-performance Android AI assistant powered by **Google AI Edge 
 - **Futuristic UI**: A high-tech, "cyberpunk" inspired interface built with Jetpack Compose.
 - **Shared Design System**: Modular `:ui-designsystem` library containing reusable high-tech components and theme.
 - **Real-time Engine Status**: Detailed feedback during the neural engine initialization and agent planning phases.
+- **Dynamic Tool Management**: Support for adding new agent capabilities at runtime through the ToolRegistry.
 
 ## 🛠 Tech Stack
 
@@ -26,6 +27,7 @@ A futuristic, high-performance Android AI assistant powered by **Google AI Edge 
 - **Database/Storage**: Firebase Firestore (for model metadata) & Firebase Storage (for model files)
 - **Background Tasks**: WorkManager
 - **Image Handling**: Coil & AndroidX Exifinterface
+- **Model Management**: Support for multiple model sources including Firebase and Hugging Face
 
 ## 📋 Architecture & Modules
 
@@ -36,10 +38,15 @@ The project follows a decoupled architecture with an added agentic layer:
     - `AgentOrchestrator`: Manages the iterative reasoning loop.
     - `ToolRegistry`: Manages available local functions the AI can call.
     - `ToolCallParser`: Extracts structured tool requests from raw LLM output.
+    - `AgentTool`: Interface for implementing new agent capabilities.
 - **Inference Layer** (`data/inference/`):
     - `InferenceManager`: High-level manager for model loading and generation.
     - `LlmRuntimeManager`: Manages the LiteRT-LM engine lifecycle, hardware backends, and sessions.
     - `MultimodalMessageFactory`: Centralizes image preprocessing and `Message` construction.
+    - `ModelEngineFactory`: Factory for creating different types of model engines based on runtime requirements.
+- **Data Sources** (`data/datasource/`):
+    - `ModelCatalogDataSource`: Interface for model discovery.
+    - `CompositeModelCatalogDataSource`: Combines multiple data sources for model discovery.
 - **Repository** (`ChatRepositoryImpl.kt`): Orchestrates between the Agent layer, Inference runtime, and Data sources.
 
 ### 2. `:ui-designsystem` (Android Library)
