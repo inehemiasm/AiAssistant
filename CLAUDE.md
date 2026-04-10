@@ -28,9 +28,11 @@ The project is an Android application following Clean Architecture and MVI (Mode
         - `LiteRtEngine`: Implementation of `ModelEngine` for LiteRT-LM.
         - `LlmRuntimeManager`: Manages the low-level LiteRT-LM `Engine` and `Conversation` lifecycles. Handles hardware fallback (GPU -> CPU).
         - `MultimodalMessageFactory`: Encapsulates image processing (448px, PNG) and `Message` creation.
+        - `ModelEngineFactory`: Factory for creating different types of model engines based on runtime requirements.
     - **Data Sources** (`data/datasource/`):
         - `ModelCatalogDataSource`: Interface for model discovery (Firebase Firestore implementation).
         - `RemoteModelDataSource`: Interface for downloading models (Firebase Storage + Ktor implementation).
+        - `CompositeModelCatalogDataSource`: Combines multiple data sources for model discovery.
     - **Repository**: `ChatRepositoryImpl.kt` orchestrates between the `AgentOrchestrator`, `InferenceManager`, and data sources.
 - **UI Layer**:
     - `ChatViewModel.kt`: MVI logic using `ChatState`, `ChatIntent`, and `ChatEffect`.
@@ -45,6 +47,7 @@ The project is an Android application following Clean Architecture and MVI (Mode
 - **Agent Loop**: Supports multi-turn reasoning with local tool execution.
 - **Session Lifecycle**: One active conversation at a time in `LlmRuntimeManager`.
 - **Hardware Fallback**: GPU + Vision -> CPU + Vision -> Text-Only (CPU).
+- **Tool Management**: Dynamic tool registration and execution with support for confirmation flows.
 
 ## Development Guidelines
 - **Agent Extensions**: To add new capabilities, implement `AgentTool` and register it in `ToolRegistry`.
