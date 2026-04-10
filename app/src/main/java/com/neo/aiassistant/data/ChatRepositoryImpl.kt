@@ -80,11 +80,19 @@ class ChatRepositoryImpl @Inject constructor(
 
     override fun getLocalModels(): List<LocalModel> {
         val filesDir = context.filesDir
-        return filesDir.listFiles { file -> 
+        return filesDir.listFiles { file ->
             file.isFile && (file.name.endsWith(".litertlm") || file.name.endsWith(".bin"))
         }?.map { file ->
             classifyModel(file)
         } ?: emptyList()
+    }
+
+    /**
+     * Check if a model file exists and is valid
+     */
+    override fun isModelValid(modelName: String): Boolean {
+        val file = File(context.filesDir, modelName)
+        return file.exists() && file.length() > 0
     }
 
     private fun classifyModel(file: File): LocalModel {
