@@ -12,6 +12,13 @@ import com.neo.aiassistant.ui.navigation.AiAssistantApp
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
+/**
+ * The main activity of the AI Assistant application.
+ *
+ * This activity serves as the entry point for the application, setting up the
+ * user interface with Jetpack Compose and applying the app's theme based on
+ * user preferences.
+ */
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     

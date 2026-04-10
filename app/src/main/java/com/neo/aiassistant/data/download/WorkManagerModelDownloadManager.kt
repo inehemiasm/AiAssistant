@@ -14,12 +14,25 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Manages model downloads using WorkManager.
+ * Manages the background downloading of AI models using Android's WorkManager.
+ *
+ * This manager handles enqueuing download tasks and mapping the WorkManager's
+ * state and progress updates back to a domain-level [DownloadProgress] flow.
+ *
+ * @property workManager The system's WorkManager instance used to schedule tasks.
  */
 @Singleton
 class WorkManagerModelDownloadManager @Inject constructor(
     private val workManager: WorkManager
 ) {
+    /**
+     * Initiates a model download task.
+     *
+     * @param url The URL from which to download the model file.
+     * @param modelName A unique name for the model, also used as the unique work name.
+     * @param sha256 Optional SHA-256 hash to verify the integrity of the downloaded file.
+     * @return A [Flow] of [DownloadProgress] updates for the initiated download.
+     */
     fun downloadModel(url: String, modelName: String, sha256: String? = null): Flow<DownloadProgress> {
         Log.d("DownloadManager", "Creating WorkManager request for $modelName from $url")
         
@@ -48,6 +61,12 @@ class WorkManagerModelDownloadManager @Inject constructor(
         }
     }
 
+    /**
+     * Maps the internal WorkManager [WorkInfo] to the domain-level [DownloadProgress].
+     *
+     * @param workInfo The information about the background work.
+     * @return The corresponding [DownloadProgress] state.
+     */
     internal fun mapWorkInfoToDownloadProgress(workInfo: WorkInfo?): DownloadProgress {
         return when (workInfo?.state) {
             WorkInfo.State.RUNNING -> {

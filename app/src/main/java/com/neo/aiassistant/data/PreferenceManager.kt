@@ -18,11 +18,24 @@ import javax.inject.Singleton
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
+/**
+ * Manages user preferences using Jetpack DataStore.
+ *
+ * This class provides access to and allows modification of application settings,
+ * such as the theme preference and the currently selected AI model.
+ *
+ * @property context The application context used to access DataStore.
+ */
 @Singleton
 class PreferenceManager @Inject constructor(@ApplicationContext context: Context) {
 
     private val dataStore = context.dataStore
 
+    /**
+     * A [Flow] that emits the user's theme preference.
+     * Emits `true` for dark/high-tech theme, `false` for light theme.
+     * Defaults to `false` if no preference is set.
+     */
     val themePreference: Flow<Boolean> = dataStore.data
         .catch { exception ->
             if (exception is IOException) {
@@ -32,9 +45,13 @@ class PreferenceManager @Inject constructor(@ApplicationContext context: Context
             }
         }
         .map { preferences ->
-            preferences[THEME_KEY] ?: false // false for light/default, true for dark/high-tech
+            preferences[THEME_KEY] ?: false
         }
 
+    /**
+     * A [Flow] that emits the identifier of the currently selected AI model.
+     * Emits `null` if no model has been selected yet.
+     */
     val selectedModelPreference: Flow<String?> = dataStore.data
         .catch { exception ->
             if (exception is IOException) {
@@ -47,12 +64,22 @@ class PreferenceManager @Inject constructor(@ApplicationContext context: Context
             preferences[SELECTED_MODEL_KEY]
         }
 
+    /**
+     * Updates the user's theme preference.
+     *
+     * @param isDark `true` to enable dark theme, `false` for light theme.
+     */
     suspend fun updateTheme(isDark: Boolean) {
         dataStore.edit { preferences ->
             preferences[THEME_KEY] = isDark
         }
     }
 
+    /**
+     * Updates the identifier of the selected AI model.
+     *
+     * @param modelName The identifier of the model to select.
+     */
     suspend fun updateSelectedModel(modelName: String) {
         dataStore.edit { preferences ->
             preferences[SELECTED_MODEL_KEY] = modelName

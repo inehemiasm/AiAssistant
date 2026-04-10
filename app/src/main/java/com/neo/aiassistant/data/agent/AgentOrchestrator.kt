@@ -12,8 +12,15 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Orchestrates the Agent loop: Reason -> Act -> Observe.
- * Inspired by the "Agent" pattern in Google AI Edge Gallery.
+ * Orchestrates the Agent reasoning loop: Reason -> Act -> Observe.
+ * 
+ * This class manages the conversation flow between the user, the AI model, and
+ * available tools. It implements a multi-step reasoning process where the model
+ * can decide to use tools to gather information before providing a final response.
+ *
+ * @property inferenceManager The manager for executing model inference.
+ * @property toolRegistry The registry of available tools the agent can use.
+ * @property parser The parser for extracting tool calls from the model's raw output.
  */
 @Singleton
 class AgentOrchestrator @Inject constructor(
@@ -22,10 +29,21 @@ class AgentOrchestrator @Inject constructor(
     private val parser: ToolCallParser
 ) {
     private val _agentState = MutableStateFlow<AgentState>(AgentState.Idle)
+    
+    /**
+     * A [StateFlow] representing the current state of the agent's reasoning loop.
+     */
     val agentState: StateFlow<AgentState> = _agentState.asStateFlow()
 
     private val MAX_STEPS = 3
 
+    /**
+     * Processes a user request through the agent's reasoning loop.
+     *
+     * @param prompt The user's input message.
+     * @param imageUri Optional URI of an image associated with the request.
+     * @return A [Result] containing the final response text or an error.
+     */
     suspend fun processUserRequest(prompt: String, imageUri: Uri? = null): Result<String> {
         _agentState.value = AgentState.Planning
         
@@ -95,6 +113,9 @@ class AgentOrchestrator @Inject constructor(
         return Result.success(finalResponse)
     }
 
+    /**
+     * Resets the agent's state to Idle.
+     */
     fun reset() {
         _agentState.value = AgentState.Idle
     }

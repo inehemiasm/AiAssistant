@@ -18,6 +18,18 @@ import java.io.File
 import javax.inject.Inject
 import kotlin.system.measureTimeMillis
 
+/**
+ * ViewModel for the Chat screen.
+ *
+ * Manages the UI state for the chat interface, handles user intents,
+ * and coordinates with use cases for model initialization and message processing.
+ *
+ * @property application The application context.
+ * @property repository The repository for chat and model data.
+ * @property initializeChatUseCase Use case for initializing the AI model.
+ * @property sendMessageUseCase Use case for sending messages to the AI.
+ * @property preferenceManager Manages user preferences, including the selected model.
+ */
 @HiltViewModel
 class ChatViewModel @Inject constructor(
     private val application: Application,

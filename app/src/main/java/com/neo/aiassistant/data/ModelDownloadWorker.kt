@@ -25,6 +25,19 @@ import java.io.IOException
 import java.security.MessageDigest
 import java.util.concurrent.atomic.AtomicLong
 
+/**
+ * A [CoroutineWorker] responsible for downloading AI model files in the background.
+ *
+ * This worker handles:
+ * 1. Resolving the download URL via [RemoteModelDataSource].
+ * 2. Downloading the file to a temporary location.
+ * 3. Providing progress updates via [setProgress].
+ * 4. Verifying the integrity of the downloaded file using SHA-256 (if provided).
+ * 5. Finalizing the download by moving the file to its target location.
+ * 6. Running as a foreground service to ensure completion.
+ *
+ * @property remoteModelDataSource Data source used to resolve URLs and perform the download.
+ */
 @HiltWorker
 class ModelDownloadWorker @AssistedInject constructor(
     @Assisted context: Context,
@@ -37,6 +50,9 @@ class ModelDownloadWorker @AssistedInject constructor(
     private val notificationId = 1001
     private val channelId = "model_download_channel"
 
+    /**
+     * Executes the download work on a background dispatcher.
+     */
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         val uri = inputData.getString("url")
         val modelName = inputData.getString("modelName")
@@ -122,6 +138,12 @@ class ModelDownloadWorker @AssistedInject constructor(
         }
     }
 
+    /**
+     * Calculates the SHA-256 checksum of a file.
+     *
+     * @param file The file to check.
+     * @return The hex string representation of the checksum.
+     */
     private fun calculateSha256(file: File): String {
         val digest = MessageDigest.getInstance("SHA-256")
         FileInputStream(file).use { fis ->
@@ -134,6 +156,9 @@ class ModelDownloadWorker @AssistedInject constructor(
         return digest.digest().joinToString("") { "%02x".format(it) }
     }
 
+    /**
+     * Creates and returns the [ForegroundInfo] required to run the worker in the foreground.
+     */
     override suspend fun getForegroundInfo(): ForegroundInfo {
         createNotificationChannel()
         val notification = NotificationCompat.Builder(applicationContext, channelId)
@@ -151,6 +176,9 @@ class ModelDownloadWorker @AssistedInject constructor(
         }
     }
 
+    /**
+     * Creates the notification channel for download progress notifications.
+     */
     private fun createNotificationChannel() {
         val channel = NotificationChannel(
             channelId,
