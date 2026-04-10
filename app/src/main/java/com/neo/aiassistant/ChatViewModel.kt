@@ -70,12 +70,6 @@ class ChatViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Check if a model is valid (exists and has content)
-     */
-    fun isModelValid(modelName: String): Boolean {
-        return repository.isModelValid(modelName)
-    }
 
     override suspend fun handleIntent(intent: ChatIntent) {
         when (intent) {
