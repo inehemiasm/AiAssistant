@@ -77,15 +77,23 @@ class ChatViewModel @Inject constructor(
             is ChatIntent.SwitchModel -> {
                 Log.d("ChatViewModel", "Switching model to: ${intent.modelName}")
                 setState { copy(
-                    selectedModel = intent.modelName, 
-                    messages = emptyList(), 
-                    runtimeState = RuntimeState.Uninitialized 
+                    selectedModel = intent.modelName,
+                    messages = emptyList(),
+                    runtimeState = RuntimeState.Uninitialized
                 ) }
                 val modelFile = File("${intent.baseDir}/${intent.modelName}")
                 if (modelFile.exists()) {
+                    Log.d("ChatViewModel", "Model file exists locally, loading directly: ${modelFile.absolutePath}")
                     initModel(modelFile.absolutePath)
                 } else {
-                    Log.w("ChatViewModel", "Model file not found for switch: ${modelFile.absolutePath}")
+                    Log.d("ChatViewModel", "Model file not found locally, initiating download: ${modelFile.absolutePath}")
+                    // Check if model is in remote catalog and download if needed
+                    val modelEntry = currentState.remoteModels.find { it.effectiveFileName == intent.modelName || it.name == intent.modelName }
+                    if (modelEntry != null) {
+                        downloadModel(intent.modelName, intent.baseDir)
+                    } else {
+                        Log.w("ChatViewModel", "Model not found in remote catalog: ${intent.modelName}")
+                    }
                 }
             }
             is ChatIntent.DownloadModel -> {
