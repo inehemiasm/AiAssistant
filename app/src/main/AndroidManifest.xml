@@ -27,7 +27,7 @@
             android:exported="true"
             android:screenOrientation="portrait"
             android:theme="@style/Theme.AiAssistant"
-            android:windowSoftInputMode="adjustResize"
+            android:windowSoftInputMode="adjustNothing"
             tools:ignore="LockedOrientationActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -35,7 +35,6 @@
             </intent-filter>
         </activity>
 
-        <!-- Disable default WorkManager Initializer for Hilt -->
         <provider
             android:name="androidx.startup.InitializationProvider"
             android:authorities="${applicationId}.androidx-startup"
@@ -62,15 +61,9 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
-        <uses-native-library
-            android:name="libOpenCL.so"
-            android:required="false" />
-        <uses-native-library
-            android:name="libGLESv3.so"
-            android:required="false" />
-        <uses-native-library
-            android:name="libvulkan.so"
-            android:required="false" />
+        <uses-native-library android:name="libOpenCL.so" android:required="false" />
+        <uses-native-library android:name="libGLESv3.so" android:required="false" />
+        <uses-native-library android:name="libvulkan.so" android:required="false" />
     </application>
 
 </manifest>

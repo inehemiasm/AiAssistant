@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -88,14 +88,14 @@ fun ChatInputBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(56.dp)
+                .heightIn(min = 56.dp)
                 .clip(RoundedCornerShape(28.dp))
                 .background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.8f))
                 .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)), RoundedCornerShape(28.dp))
-                .padding(horizontal = 4.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(horizontal = 4.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.Bottom // Align items to bottom as input grows
         ) {
-            Box {
+            Box(modifier = Modifier.align(Alignment.CenterVertically)) {
                 IconButton(
                     onClick = { showAttachmentMenu = true },
                     enabled = enabled,
@@ -135,7 +135,7 @@ fun ChatInputBar(
             TextField(
                 value = text,
                 onValueChange = onTextChange,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).padding(vertical = 4.dp),
                 placeholder = {
                     Text(
                         stringResource(R.string.input_placeholder),
@@ -155,12 +155,12 @@ fun ChatInputBar(
                     unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
                     disabledTextColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
                 ),
-                maxLines = 4,
+                maxLines = 6,
                 keyboardOptions = KeyboardOptions(
                     capitalization = KeyboardCapitalization.Sentences,
                     autoCorrectEnabled = true,
                     keyboardType = KeyboardType.Text,
-                    imeAction = ImeAction.Unspecified
+                    imeAction = ImeAction.Default
                 )
             )
 
@@ -168,9 +168,11 @@ fun ChatInputBar(
             IconButton(
                 onClick = { if (isSendEnabled) onSend() },
                 modifier = Modifier
+                    .padding(bottom = 2.dp, end = 2.dp)
                     .size(44.dp)
                     .clip(CircleShape)
-                    .background(if (isSendEnabled) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHighest),
+                    .background(if (isSendEnabled) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHighest)
+                    .align(Alignment.CenterVertically),
                 enabled = isSendEnabled
             ) {
                 Icon(

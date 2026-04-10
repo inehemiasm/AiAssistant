@@ -9,11 +9,17 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -27,6 +33,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -87,19 +94,21 @@ fun ChatScreen(
 
     Scaffold(
         topBar = {
-            ChatTopBar(
-                isInteractionEnabled = state.isReady,
-                selectedModel = state.selectedModel,
-                availableModels = emptyList(),
-                onModelSelected = { modelName ->
-                    viewModel.onIntent(ChatIntent.SwitchModel(modelName, context.filesDir.absolutePath))
-                },
-                onClearChat = {
-                    viewModel.onIntent(ChatIntent.ClearConversation)
-                },
-                onModelsClick = onModelsClick,
-                onSettingsClick = onSettingsClick
-            )
+            Box(modifier = Modifier.padding(WindowInsets.statusBars.asPaddingValues())) {
+                ChatTopBar(
+                    isInteractionEnabled = state.isReady,
+                    selectedModel = state.selectedModel,
+                    availableModels = emptyList(),
+                    onModelSelected = { modelName ->
+                        viewModel.onIntent(ChatIntent.SwitchModel(modelName, context.filesDir.absolutePath))
+                    },
+                    onClearChat = {
+                        viewModel.onIntent(ChatIntent.ClearConversation)
+                    },
+                    onModelsClick = onModelsClick,
+                    onSettingsClick = onSettingsClick
+                )
+            }
         },
         snackbarHost = {
             SnackbarHost(hostState = snackbarHostState) { data ->
@@ -109,65 +118,69 @@ fun ChatScreen(
             }
         },
         containerColor = MaterialTheme.colorScheme.background,
-        contentWindowInsets = WindowInsets.systemBars
+        contentWindowInsets = WindowInsets(0, 0, 0, 0)
     ) { innerPadding ->
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
-                .consumeWindowInsets(innerPadding)
+                .padding(top = innerPadding.calculateTopPadding())
         ) {
-            Column(Modifier.fillMaxSize()) {
-                Box(modifier = Modifier.weight(1f)) {
-                    MessageList(
-                        messages = state.messages,
-                        listState = listState
-                    )
+            Box(modifier = Modifier.weight(1f)) {
+                MessageList(
+                    messages = state.messages,
+                    listState = listState
+                )
 
-                    QuantumThinkingIndicator(
-                        visible = state.isLoading,
-                        statusMessage = state.loadingMessage,
-                        modifier = Modifier
-                            .align(Alignment.BottomStart)
-                            .padding(16.dp)
-                    )
-                }
-
-                Box(
+                QuantumThinkingIndicator(
+                    visible = state.isLoading,
+                    statusMessage = state.loadingMessage,
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .positionAwareImePadding()
-                        .padding(horizontal = 8.dp, vertical = 8.dp)
-                ) {
-                    ChatInputBar(
-                        text = state.inputText,
-                        onTextChange = { viewModel.onIntent(ChatIntent.UpdateInputText(it)) },
-                        onSend = { viewModel.onIntent(ChatIntent.SendMessage(state.inputText, state.selectedImageUri)) },
-                        onGalleryClick = { imagePickerLauncher.launch("image/*") },
-                        onCameraClick = {
-                            when (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)) {
-                                PackageManager.PERMISSION_GRANTED -> {
-                                    val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
-                                    val storageDir = File(context.cacheDir, "images").apply { mkdirs() }
-                                    val photoFile = File(storageDir, "JPEG_${timeStamp}_.jpg")
-                                    val photoUri: Uri = FileProvider.getUriForFile(
-                                        context,
-                                        "${context.packageName}.fileprovider",
-                                        photoFile
-                                    )
-                                    viewModel.onIntent(ChatIntent.SetTempCameraUri(photoUri))
-                                    cameraLauncher.launch(photoUri)
-                                }
-                                else -> {
-                                    permissionLauncher.launch(Manifest.permission.CAMERA)
-                                }
-                            }
-                        },
-                        selectedImageUri = state.selectedImageUri,
-                        onRemoveImage = { viewModel.onIntent(ChatIntent.SelectImage(null)) },
-                        enabled = !state.isLoading && state.isReady
+                        .align(Alignment.BottomStart)
+                        .padding(16.dp)
+                )
+            }
+
+            // THE SMART UNION FIX:
+            // We use the union of ime and navigationBars. 
+            // When the keyboard is up, IME covers navigationBars, so union takes the larger value.
+            // When closed, it takes the navigationBars value.
+            // This prevents adding them together (double padding).
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .windowInsetsPadding(
+                        WindowInsets.ime.union(WindowInsets.navigationBars).only(WindowInsetsSides.Bottom)
                     )
-                }
+                    .padding(horizontal = 8.dp, vertical = 8.dp)
+            ) {
+                ChatInputBar(
+                    text = state.inputText,
+                    onTextChange = { viewModel.onIntent(ChatIntent.UpdateInputText(it)) },
+                    onSend = { viewModel.onIntent(ChatIntent.SendMessage(state.inputText, state.selectedImageUri)) },
+                    onGalleryClick = { imagePickerLauncher.launch("image/*") },
+                    onCameraClick = {
+                        when (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)) {
+                            PackageManager.PERMISSION_GRANTED -> {
+                                val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
+                                val storageDir = File(context.cacheDir, "images").apply { mkdirs() }
+                                val photoFile = File(storageDir, "JPEG_${timeStamp}_.jpg")
+                                val photoUri: Uri = FileProvider.getUriForFile(
+                                    context,
+                                    "${context.packageName}.fileprovider",
+                                    photoFile
+                                )
+                                viewModel.onIntent(ChatIntent.SetTempCameraUri(photoUri))
+                                cameraLauncher.launch(photoUri)
+                            }
+                            else -> {
+                                permissionLauncher.launch(Manifest.permission.CAMERA)
+                            }
+                        }
+                    },
+                    selectedImageUri = state.selectedImageUri,
+                    onRemoveImage = { viewModel.onIntent(ChatIntent.SelectImage(null)) },
+                    enabled = !state.isLoading && state.isReady
+                )
             }
         }
     }
