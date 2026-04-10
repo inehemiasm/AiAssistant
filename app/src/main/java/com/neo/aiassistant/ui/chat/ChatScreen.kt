@@ -6,11 +6,13 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
@@ -26,10 +28,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
+import androidx.compose.ui.layout.findRootCoordinates
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import com.neo.aiassistant.ChatEffect
@@ -151,10 +160,11 @@ fun ChatScreen(
                         )
                     }
 
-                    // Position input bar at the bottom with proper spacing
+                    // Position input bar at the bottom with proper spacing and position-aware IME padding
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .positionAwareImePadding()
                             .padding(horizontal = 8.dp, vertical = 8.dp)
                     ) {
                         ChatInputBar(
@@ -168,8 +178,8 @@ fun ChatScreen(
                                 val photoFile = File(storageDir, "JPEG_${timeStamp}_.jpg")
                                 val photoUri: Uri = FileProvider.getUriForFile(
       	     	  	 	   context,
-      	     	  	 	   "${context.packageName}.fileprovider",
-      	     	  	 	   photoFile
+   	   	     	  	   "${context.packageName}.fileprovider",
+   	   	     	  	   photoFile
                                 )
                                 viewModel.onIntent(ChatIntent.SetTempCameraUri(photoUri))
                                 cameraLauncher.launch(photoUri)
@@ -198,4 +208,26 @@ fun ChatScreen(
             }
         }
     }
+}
+
+@Composable
+fun Int.pxToDp() = with(LocalDensity.current) { this@pxToDp.toDp() }
+
+/**
+ * A modifier that applies IME padding while accounting for the component's position
+ * relative to the bottom of the screen (e.g., when it sits above a NavigationBar).
+ * Source - https://stackoverflow.com/a/79048009
+ */
+fun Modifier.positionAwareImePadding() = composed {
+    var consumePadding by remember { mutableIntStateOf(0) }
+    this@positionAwareImePadding
+        .onGloballyPositioned { coordinates ->
+            val rootCoordinate = coordinates.findRootCoordinates()
+            val bottom = coordinates.positionInWindow().y + coordinates.size.height
+
+            // Calculate how much space is already between this component and the screen bottom
+            consumePadding = (rootCoordinate.size.height - bottom).toInt().coerceAtLeast(0)
+        }
+        .consumeWindowInsets(PaddingValues(bottom = consumePadding.pxToDp()))
+        .imePadding()
 }

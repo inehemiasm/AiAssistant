@@ -36,6 +36,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -93,6 +94,9 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -451,9 +455,9 @@ fun ChatInputBar(
 ) {
     var showAttachmentMenu by remember { mutableStateOf(false) }
 
-    Column(modifier = modifier.padding(bottom = 4.dp)) {
+    Column(modifier = modifier) {
         if (selectedImageUri != null) {
-            Box(Modifier.padding(bottom = 8.dp).size(80.dp)) {
+            Box(Modifier.size(80.dp)) {
                 AsyncImage(
                     model = selectedImageUri,
                     contentDescription = null,
@@ -539,8 +543,9 @@ fun ChatInputBar(
                     unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
                     disabledTextColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
                 ),
-                maxLines = 4
-            )
+                maxLines = 4,
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, autoCorrectEnabled = true, keyboardType = KeyboardType.Text, imeAction = ImeAction.Unspecified, platformImeOptions = null, showKeyboardOnFocus = null, hintLocales = null)
+                )
 
             val isSendEnabled = enabled && (text.isNotBlank() || selectedImageUri != null)
             IconButton(
