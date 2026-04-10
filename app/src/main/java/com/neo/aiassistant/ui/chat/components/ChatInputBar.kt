@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -64,7 +65,7 @@ fun ChatInputBar(
 
     Column(modifier = modifier) {
         if (selectedImageUri != null) {
-            Box(Modifier.size(80.dp)) {
+            Box(Modifier.size(80.dp).padding(bottom = 8.dp, start = 16.dp)) {
                 AsyncImage(
                     model = selectedImageUri,
                     contentDescription = null,
@@ -73,9 +74,13 @@ fun ChatInputBar(
                 )
                 IconButton(
                     onClick = onRemoveImage,
-                    modifier = Modifier.align(Alignment.TopEnd).size(24.dp).background(Color.Black.copy(0.6f), CircleShape)
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .size(20.dp)
+                        .offset(x = 4.dp, y = (-4).dp)
+                        .background(MaterialTheme.colorScheme.error, CircleShape)
                 ) {
-                    Icon(Icons.Default.Close, null, tint = Color.White, modifier = Modifier.size(16.dp))
+                    Icon(Icons.Default.Close, null, tint = MaterialTheme.colorScheme.onError, modifier = Modifier.size(12.dp))
                 }
             }
         }

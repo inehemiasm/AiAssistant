@@ -58,10 +58,10 @@ fun ChatTopBar(
         title = {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.fillMaxWidth().clickable { if (isInteractionEnabled) showMenu = true }
+                modifier = Modifier.fillMaxWidth().clickable { if (isInteractionEnabled && availableModels.isNotEmpty()) showMenu = true }
             ) {
                 Text(
-                    text = selectedModel.replace(".litertlm", "").uppercase(),
+                    text = selectedModel.replace(".litertlm", "").uppercase().ifEmpty { "SELECT MODEL" },
                     style = Typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                     letterSpacing = 1.sp
@@ -73,21 +73,23 @@ fun ChatTopBar(
                     letterSpacing = 1.sp
                 )
                 
-                DropdownMenu(
-                    expanded = showMenu,
-                    onDismissRequest = { showMenu = false },
-                    modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainerHighest)
-                ) {
-                    availableModels.forEach { model ->
-                        DropdownMenuItem(
-                            text = { 
-                                Text(
-                                    model.replace(".litertlm", "").uppercase(), 
-                                    color = if (model == selectedModel) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                                ) 
-                            },
-                            onClick = { onModelSelected(model); showMenu = false }
-                        )
+                if (availableModels.isNotEmpty()) {
+                    DropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false },
+                        modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainerHighest)
+                    ) {
+                        availableModels.forEach { model ->
+                            DropdownMenuItem(
+                                text = { 
+                                    Text(
+                                        model.replace(".litertlm", "").uppercase(), 
+                                        color = if (model == selectedModel) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                    ) 
+                                },
+                                onClick = { onModelSelected(model); showMenu = false }
+                            )
+                        }
                     }
                 }
             }

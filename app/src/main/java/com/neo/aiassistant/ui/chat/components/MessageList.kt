@@ -113,11 +113,16 @@ fun FuturisticChatBubble(message: ChatMessage) {
                     
                     if (!isUser) {
                         Row(modifier = Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            message.inferenceTimeMs?.let { time ->
-                                Badge(text = "${time}ms")
-                            } ?: Badge(text = stringResource(R.string.hardware_accel))
-                            
-                            Badge(text = stringResource(R.string.privacy_lock))
+                            message.inferenceTimeMs?.let { timeMs ->
+                                val seconds = timeMs / 1000.0
+                                val tps = if (seconds > 0) message.text.length / (seconds * 4) else 0.0
+                                
+                                Badge(text = "%.2fs".format(Locale.US, seconds))
+                                Badge(text = "%.1f tk/s".format(Locale.US, tps))
+                            } ?: run {
+                                Badge(text = stringResource(R.string.hardware_accel))
+                                Badge(text = stringResource(R.string.privacy_lock))
+                            }
                         }
                     }
                 }
@@ -127,7 +132,7 @@ fun FuturisticChatBubble(message: ChatMessage) {
                 val time = SimpleDateFormat("h:mm a", Locale.getDefault()).format(Date())
                 "$time • ${stringResource(R.string.sent_status)}"
             } else {
-                stringResource(R.string.model_optimization_info)
+                message.modelName ?: stringResource(R.string.model_optimization_info)
             }
             
             Text(

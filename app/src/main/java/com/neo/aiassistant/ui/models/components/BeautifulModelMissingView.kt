@@ -43,11 +43,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.neo.aiassistant.CatalogState
-import com.neo.aiassistant.PerformanceMetrics
 import com.neo.aiassistant.R
 import com.neo.aiassistant.domain.LocalModel
 import com.neo.aiassistant.domain.ModelEntry
+import com.neo.aiassistant.ui.common.CatalogState
+import com.neo.aiassistant.ui.common.PerformanceMetrics
 import com.neo.aiassistant.ui.designsystem.AmbientGlow
 import com.neo.aiassistant.ui.designsystem.HighTechPrimaryButton
 import com.neo.aiassistant.ui.designsystem.ModelSelectorCard

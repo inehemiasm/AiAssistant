@@ -45,6 +45,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
@@ -57,23 +58,22 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.neo.aiassistant.CatalogState
-import com.neo.aiassistant.ChatIntent
-import com.neo.aiassistant.ChatState
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.neo.aiassistant.R
 import com.neo.aiassistant.domain.LocalModel
 import com.neo.aiassistant.domain.ModelEntry
+import com.neo.aiassistant.ui.common.CatalogState
 import com.neo.aiassistant.ui.designsystem.AmbientGlow
 import com.neo.aiassistant.ui.designsystem.Typography
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ModelMarketplaceScreen(
-    state: ChatState,
-    onIntent: (ChatIntent) -> Unit,
+    viewModel: MarketplaceViewModel = hiltViewModel(),
     onBack: () -> Unit
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
+    val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
     Scaffold(
@@ -86,7 +86,7 @@ fun ModelMarketplaceScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { onIntent(ChatIntent.FetchModels) }) {
+                    IconButton(onClick = { viewModel.onIntent(MarketplaceIntent.FetchModels) }) {
                         Icon(Icons.Default.Refresh, stringResource(R.string.refresh), tint = MaterialTheme.colorScheme.primary)
                     }
                 },
@@ -128,8 +128,8 @@ fun ModelMarketplaceScreen(
                 }
 
                 when (selectedTab) {
-                    0 -> DiscoverModelsList(state, onIntent, context.filesDir.absolutePath)
-                    1 -> InstalledModelsList(state, onIntent, context.filesDir.absolutePath)
+                    0 -> DiscoverModelsList(state, viewModel::onIntent, context.filesDir.absolutePath)
+                    1 -> InstalledModelsList(state, viewModel::onIntent, context.filesDir.absolutePath)
                 }
             }
         }
@@ -137,7 +137,7 @@ fun ModelMarketplaceScreen(
 }
 
 @Composable
-fun DiscoverModelsList(state: ChatState, onIntent: (ChatIntent) -> Unit, baseDir: String) {
+fun DiscoverModelsList(state: MarketplaceState, onIntent: (MarketplaceIntent) -> Unit, baseDir: String) {
     if (state.catalogState is CatalogState.Loading) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
@@ -149,7 +149,7 @@ fun DiscoverModelsList(state: ChatState, onIntent: (ChatIntent) -> Unit, baseDir
         ) {
             items(state.remoteModels) { model ->
                 val isInstalled = state.localModels.any { it.fileName == model.effectiveFileName }
-                val isDownloading = state.isDownloading && state.selectedModel == model.effectiveFileName
+                val isDownloading = state.downloadingModelName == model.effectiveFileName
                 
                 RemoteModelCard(
                     model = model,
@@ -157,7 +157,7 @@ fun DiscoverModelsList(state: ChatState, onIntent: (ChatIntent) -> Unit, baseDir
                     isDownloading = isDownloading,
                     downloadProgress = if (isDownloading) state.downloadProgress else null,
                     onDownload = {
-                        onIntent(ChatIntent.DownloadModel(model.name, baseDir)) 
+                        onIntent(MarketplaceIntent.DownloadModel(model.name, baseDir)) 
                     }
                 )
             }
@@ -166,7 +166,7 @@ fun DiscoverModelsList(state: ChatState, onIntent: (ChatIntent) -> Unit, baseDir
 }
 
 @Composable
-fun InstalledModelsList(state: ChatState, onIntent: (ChatIntent) -> Unit, baseDir: String) {
+fun InstalledModelsList(state: MarketplaceState, onIntent: (MarketplaceIntent) -> Unit, baseDir: String) {
     if (state.localModels.isEmpty()) {
         Box(Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
             Text(
@@ -181,15 +181,12 @@ fun InstalledModelsList(state: ChatState, onIntent: (ChatIntent) -> Unit, baseDi
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             items(state.localModels) { model ->
-                val isActive = state.selectedModel == model.fileName
-                val isReady = state.isReady && isActive
-                
                 LocalModelCard(
                     model = model,
-                    isActive = isActive,
-                    isReady = isReady,
-                    onSelect = { onIntent(ChatIntent.SwitchModel(model.fileName, baseDir)) },
-                    onDelete = { onIntent(ChatIntent.DeleteModel(model.fileName)) }
+                    isActive = false, 
+                    isReady = false,
+                    onSelect = { onIntent(MarketplaceIntent.SwitchModel(model.fileName, baseDir)) },
+                    onDelete = { onIntent(MarketplaceIntent.DeleteModel(model.fileName)) }
                 )
             }
         }

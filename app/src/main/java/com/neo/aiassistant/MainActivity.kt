@@ -4,7 +4,6 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.viewModels
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import com.neo.aiassistant.data.PreferenceManager
@@ -15,7 +14,6 @@ import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
-    private val viewModel: ChatViewModel by viewModels()
     
     @Inject
     lateinit var preferenceManager: PreferenceManager
@@ -27,10 +25,7 @@ class MainActivity : ComponentActivity() {
             val isDarkMode by preferenceManager.themePreference.collectAsState(initial = true)
             
             HighTechAiTheme(darkTheme = isDarkMode) {
-                AiAssistantApp(
-                    chatViewModel = viewModel,
-                    preferenceManager = preferenceManager
-                )
+                AiAssistantApp()
             }
         }
     }

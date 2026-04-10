@@ -3,24 +3,18 @@ package com.neo.aiassistant.ui.navigation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import com.neo.aiassistant.ChatViewModel
-import com.neo.aiassistant.data.PreferenceManager
 import com.neo.aiassistant.ui.chat.ChatScreen
 import com.neo.aiassistant.ui.marketplace.ModelMarketplaceScreen
 import com.neo.aiassistant.ui.models.ModelsScreen
 import com.neo.aiassistant.ui.settings.SettingsScreen
-import kotlinx.coroutines.launch
 
 @Composable
 fun AiAssistantNavHost(
     navController: NavHostController,
-    chatViewModel: ChatViewModel,
-    preferenceManager: PreferenceManager,
     modifier: Modifier = Modifier
 ) {
     NavHost(
@@ -30,7 +24,6 @@ fun AiAssistantNavHost(
     ) {
         composable<Route.Chat> {
             ChatScreen(
-                viewModel = chatViewModel,
                 onSettingsClick = { navController.navigate(Route.Settings) },
                 onModelsClick = { navController.navigate(Route.Models) }
             )
@@ -38,27 +31,18 @@ fun AiAssistantNavHost(
 
         composable<Route.Models> {
             ModelsScreen(
-                viewModel = chatViewModel,
                 onMarketplaceClick = { navController.navigate(Route.ModelMarketplace) }
             )
         }
 
         composable<Route.Settings> {
-            val isDarkMode by preferenceManager.themePreference.collectAsState(initial = true)
-            val scope = rememberCoroutineScope()
-            
             SettingsScreen(
-                isDarkMode = isDarkMode,
-                onThemeChange = { darkMode -> scope.launch { preferenceManager.updateTheme(darkMode) } },
                 onBackClick = { navController.popBackStack() }
             )
         }
 
         composable<Route.ModelMarketplace> {
-            val state by chatViewModel.uiState.collectAsState()
             ModelMarketplaceScreen(
-                state = state,
-                onIntent = { chatViewModel.onIntent(it) },
                 onBack = { navController.popBackStack() }
             )
         }

@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -28,23 +27,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.composed
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
-import com.neo.aiassistant.ChatEffect
-import com.neo.aiassistant.ChatIntent
-import com.neo.aiassistant.ChatViewModel
-import com.neo.aiassistant.RuntimeState
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.neo.aiassistant.ui.chat.components.ChatInputBar
 import com.neo.aiassistant.ui.chat.components.ChatTopBar
 import com.neo.aiassistant.ui.chat.components.MessageList
 import com.neo.aiassistant.ui.chat.components.QuantumThinkingIndicator
-import com.neo.aiassistant.ui.common.DownloadProgressView
 import com.neo.aiassistant.ui.common.ErrorSnackbar
-import com.neo.aiassistant.ui.models.components.BeautifulModelMissingView
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -53,7 +45,7 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatScreen(
-    viewModel: ChatViewModel,
+    viewModel: ChatViewModel = hiltViewModel(),
     onModelsClick: () -> Unit,
     onSettingsClick: () -> Unit
 ) {
@@ -96,9 +88,9 @@ fun ChatScreen(
     Scaffold(
         topBar = {
             ChatTopBar(
-                isInteractionEnabled = !state.isDownloading && modelFile.exists(),
+                isInteractionEnabled = state.isReady,
                 selectedModel = state.selectedModel,
-                availableModels = state.localModels.map { it.fileName },
+                availableModels = emptyList(),
                 onModelSelected = { modelName ->
                     viewModel.onIntent(ChatIntent.SwitchModel(modelName, context.filesDir.absolutePath))
                 },
@@ -126,79 +118,55 @@ fun ChatScreen(
                 .consumeWindowInsets(innerPadding)
         ) {
             Column(Modifier.fillMaxSize()) {
-                if (state.isDownloading) {
-                    DownloadProgressView(state.selectedModel, state.downloadProgress ?: 0)
-                } else if (!modelFile.exists()) {
-                    BeautifulModelMissingView(
-                        selectedModel = state.selectedModel,
-                        localModels = state.localModels,
-                        remoteModels = state.remoteModels,
-                        availableDownloads = state.availableDownloads,
-                        catalogState = state.catalogState,
-                        metrics = state.metrics,
-                        onDownloadClick = { modelName ->
-                            val isDownloaded = state.localModels.any { it.fileName == modelName }
-                            if (isDownloaded) {
-                                viewModel.onIntent(ChatIntent.SwitchModel(modelName, context.filesDir.absolutePath))
-                            } else {
-                                viewModel.onIntent(ChatIntent.DownloadModel(modelName, context.filesDir.absolutePath))
+                Box(modifier = Modifier.weight(1f)) {
+                    MessageList(
+                        messages = state.messages,
+                        listState = listState
+                    )
+
+                    QuantumThinkingIndicator(
+                        visible = state.isLoading,
+                        statusMessage = state.loadingMessage,
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            .padding(16.dp)
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .positionAwareImePadding()
+                        .padding(horizontal = 8.dp, vertical = 8.dp)
+                ) {
+                    ChatInputBar(
+                        text = state.inputText,
+                        onTextChange = { viewModel.onIntent(ChatIntent.UpdateInputText(it)) },
+                        onSend = { viewModel.onIntent(ChatIntent.SendMessage(state.inputText, state.selectedImageUri)) },
+                        onGalleryClick = { imagePickerLauncher.launch("image/*") },
+                        onCameraClick = {
+                            when (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)) {
+                                PackageManager.PERMISSION_GRANTED -> {
+                                    val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
+                                    val storageDir = File(context.cacheDir, "images").apply { mkdirs() }
+                                    val photoFile = File(storageDir, "JPEG_${timeStamp}_.jpg")
+                                    val photoUri: Uri = FileProvider.getUriForFile(
+                                        context,
+                                        "${context.packageName}.fileprovider",
+                                        photoFile
+                                    )
+                                    viewModel.onIntent(ChatIntent.SetTempCameraUri(photoUri))
+                                    cameraLauncher.launch(photoUri)
+                                }
+                                else -> {
+                                    permissionLauncher.launch(Manifest.permission.CAMERA)
+                                }
                             }
                         },
-                        onClearError = {
-                            viewModel.onIntent(ChatIntent.ClearError)
-                        }
+                        selectedImageUri = state.selectedImageUri,
+                        onRemoveImage = { viewModel.onIntent(ChatIntent.SelectImage(null)) },
+                        enabled = !state.isLoading && state.isReady
                     )
-                } else {
-                    Box(modifier = Modifier.weight(1f)) {
-                        MessageList(
-                            messages = state.messages,
-                            listState = listState
-                        )
-
-                        QuantumThinkingIndicator(
-                            visible = state.isLoading,
-                            statusMessage = state.loadingMessage,
-                            modifier = Modifier
-                                .align(Alignment.BottomStart)
-                                .padding(16.dp)
-                        )
-                    }
-
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .positionAwareImePadding()
-                            .padding(horizontal = 8.dp, vertical = 8.dp)
-                    ) {
-                        ChatInputBar(
-                            text = state.inputText,
-                            onTextChange = { viewModel.onIntent(ChatIntent.UpdateInputText(it)) },
-                            onSend = { viewModel.onIntent(ChatIntent.SendMessage(state.inputText, state.selectedImageUri)) },
-                            onGalleryClick = { imagePickerLauncher.launch("image/*") },
-                            onCameraClick = {
-                                when (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)) {
-                                    PackageManager.PERMISSION_GRANTED -> {
-                                        val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
-                                        val storageDir = File(context.cacheDir, "images").apply { mkdirs() }
-                                        val photoFile = File(storageDir, "JPEG_${timeStamp}_.jpg")
-                                        val photoUri: Uri = FileProvider.getUriForFile(
-                                            context,
-                                            "${context.packageName}.fileprovider",
-                                            photoFile
-                                        )
-                                        viewModel.onIntent(ChatIntent.SetTempCameraUri(photoUri))
-                                        cameraLauncher.launch(photoUri)
-                                    }
-                                    else -> {
-                                        permissionLauncher.launch(Manifest.permission.CAMERA)
-                                    }
-                                }
-                            },
-                            selectedImageUri = state.selectedImageUri,
-                            onRemoveImage = { viewModel.onIntent(ChatIntent.SelectImage(null)) },
-                            enabled = !state.isLoading && state.isReady
-                        )
-                    }
                 }
             }
         }
@@ -218,8 +186,4 @@ fun ChatScreen(
             }
         }
     }
-}
-
-fun Modifier.positionAwareImePadding() = composed {
-    this.onGloballyPositioned { _ -> }.imePadding()
 }

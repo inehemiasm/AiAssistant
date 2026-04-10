@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -32,6 +31,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -39,17 +40,18 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.neo.aiassistant.R
-import com.neo.aiassistant.ui.designsystem.AmbientGlow
 import com.neo.aiassistant.ui.designsystem.Typography
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    isDarkMode: Boolean,
-    onThemeChange: (Boolean) -> Unit,
+    viewModel: SettingsViewModel = hiltViewModel(),
     onBackClick: () -> Unit
 ) {
+    val state by viewModel.uiState.collectAsState()
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -95,7 +97,7 @@ fun SettingsScreen(
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
-                                imageVector = if (isDarkMode) Icons.Default.DarkMode else Icons.Default.LightMode,
+                                imageVector = if (state.isDarkMode) Icons.Default.DarkMode else Icons.Default.LightMode,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(24.dp)
@@ -104,15 +106,15 @@ fun SettingsScreen(
                             Column {
                                 Text(stringResource(R.string.high_tech_mode), style = Typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
                                 Text(
-                                    if (isDarkMode) stringResource(R.string.neural_dark_active) else stringResource(R.string.standard_light_active),
+                                    if (state.isDarkMode) stringResource(R.string.neural_dark_active) else stringResource(R.string.standard_light_active),
                                     style = Typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
                         Switch(
-                            checked = isDarkMode,
-                            onCheckedChange = onThemeChange,
+                            checked = state.isDarkMode,
+                            onCheckedChange = { viewModel.onIntent(SettingsIntent.UpdateTheme(it)) },
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = MaterialTheme.colorScheme.primary,
                                 checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
@@ -134,9 +136,9 @@ fun SettingsScreen(
                 
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.1f))
                 
-                SystemInfoRow(stringResource(R.string.version_label), "1.0.0-STABLE")
-                SystemInfoRow(stringResource(R.string.engine_label), stringResource(R.string.gemma_4_edge))
-                SystemInfoRow(stringResource(R.string.protocol_label), stringResource(R.string.on_device_inference))
+                SystemInfoRow(stringResource(R.string.version_label), state.appVersion)
+                SystemInfoRow(stringResource(R.string.engine_label), state.engineInfo)
+                SystemInfoRow(stringResource(R.string.protocol_label), state.protocolInfo)
             }
         }
     }

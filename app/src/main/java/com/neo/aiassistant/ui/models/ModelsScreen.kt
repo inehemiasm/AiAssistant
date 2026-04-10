@@ -22,8 +22,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.sp
-import com.neo.aiassistant.ChatIntent
-import com.neo.aiassistant.ChatViewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.neo.aiassistant.R
 import com.neo.aiassistant.ui.common.DownloadProgressView
 import com.neo.aiassistant.ui.designsystem.Typography
@@ -32,7 +31,7 @@ import com.neo.aiassistant.ui.models.components.BeautifulModelMissingView
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ModelsScreen(
-    viewModel: ChatViewModel,
+    viewModel: ModelsViewModel = hiltViewModel(),
     onMarketplaceClick: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -71,10 +70,10 @@ fun ModelsScreen(
                     catalogState = state.catalogState,
                     metrics = state.metrics,
                     onDownloadClick = { modelName ->
-                        viewModel.onIntent(ChatIntent.DownloadModel(modelName, context.filesDir.absolutePath))
+                        viewModel.onIntent(ModelsIntent.DownloadModel(modelName, context.filesDir.absolutePath))
                     },
                     onClearError = {
-                        viewModel.onIntent(ChatIntent.ClearError)
+                        viewModel.onIntent(ModelsIntent.ClearError)
                     }
                 )
             }

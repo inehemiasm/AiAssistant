@@ -19,14 +19,9 @@ import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.neo.aiassistant.ChatViewModel
-import com.neo.aiassistant.data.PreferenceManager
 
 @Composable
-fun AiAssistantApp(
-    chatViewModel: ChatViewModel,
-    preferenceManager: PreferenceManager
-) {
+fun AiAssistantApp() {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
@@ -78,9 +73,7 @@ fun AiAssistantApp(
                 .padding(innerPadding)
         ) {
             AiAssistantNavHost(
-                navController = navController,
-                chatViewModel = chatViewModel,
-                preferenceManager = preferenceManager
+                navController = navController
             )
         }
     }
