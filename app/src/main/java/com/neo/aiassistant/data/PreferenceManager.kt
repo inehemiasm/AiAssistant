@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
@@ -34,13 +35,32 @@ class PreferenceManager @Inject constructor(@ApplicationContext context: Context
             preferences[THEME_KEY] ?: false // false for light/default, true for dark/high-tech
         }
 
+    val selectedModelPreference: Flow<String?> = dataStore.data
+        .catch { exception ->
+            if (exception is IOException) {
+                emit(emptyPreferences())
+            } else {
+                throw exception
+            }
+        }
+        .map { preferences ->
+            preferences[SELECTED_MODEL_KEY]
+        }
+
     suspend fun updateTheme(isDark: Boolean) {
         dataStore.edit { preferences ->
             preferences[THEME_KEY] = isDark
         }
     }
 
+    suspend fun updateSelectedModel(modelName: String) {
+        dataStore.edit { preferences ->
+            preferences[SELECTED_MODEL_KEY] = modelName
+        }
+    }
+
     companion object {
         private val THEME_KEY = booleanPreferencesKey("theme_preference")
+        private val SELECTED_MODEL_KEY = stringPreferencesKey("selected_model")
     }
 }

@@ -7,6 +7,7 @@ import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.viewModelScope
 import com.neo.aiassistant.core.BaseViewModel
+import com.neo.aiassistant.data.PreferenceManager
 import com.neo.aiassistant.domain.ChatMessage
 import com.neo.aiassistant.domain.ChatRepository
 import com.neo.aiassistant.domain.DownloadProgress
@@ -14,6 +15,7 @@ import com.neo.aiassistant.domain.InitializeChatUseCase
 import com.neo.aiassistant.domain.SendMessageUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.io.File
 import javax.inject.Inject
@@ -24,17 +26,29 @@ class ChatViewModel @Inject constructor(
     private val application: Application,
     private val repository: ChatRepository,
     private val initializeChatUseCase: InitializeChatUseCase,
-    private val sendMessageUseCase: SendMessageUseCase
+    private val sendMessageUseCase: SendMessageUseCase,
+    private val preferenceManager: PreferenceManager
 ) : BaseViewModel<ChatState, ChatIntent, ChatEffect>(application, ChatState()) {
 
     init {
         // Move all initialization to a background coroutine to keep the UI thread responsive
         viewModelScope.launch {
+            observeSelectedModel()
             updateLocalModels()
-            fetchModels() // This was onIntent(ChatIntent.FetchModels) before, which launches another coroutine
+            fetchModels()
             observeInitStatus()
             observeAgentStatus()
             refreshMetrics()
+        }
+    }
+
+    private fun observeSelectedModel() {
+        viewModelScope.launch {
+            preferenceManager.selectedModelPreference.collectLatest { savedModel ->
+                if (savedModel != null && savedModel != currentState.selectedModel) {
+                    setState { copy(selectedModel = savedModel) }
+                }
+            }
         }
     }
 
@@ -65,11 +79,18 @@ class ChatViewModel @Inject constructor(
         val models = repository.getLocalModels()
         setState { copy(localModels = models) }
 
-        // Auto-select first available model if none selected
-        if (currentState.selectedModel.isEmpty() || !File(application.filesDir, currentState.selectedModel).exists()) {
+        // Load saved model or auto-select first available model if none selected
+        val savedModel = preferenceManager.selectedModelPreference.first()
+        val currentSelected = savedModel ?: currentState.selectedModel
+        
+        if (currentSelected.isEmpty() || !File(application.filesDir, currentSelected).exists()) {
             models.firstOrNull()?.let {
-                setState { copy(selectedModel = it.fileName) }
+                val modelName = it.fileName
+                setState { copy(selectedModel = modelName) }
+                preferenceManager.updateSelectedModel(modelName)
             }
+        } else if (savedModel != null) {
+            setState { copy(selectedModel = savedModel) }
         }
     }
 
@@ -79,12 +100,19 @@ class ChatViewModel @Inject constructor(
             is ChatIntent.Initialize -> initModel(intent.modelPath)
             is ChatIntent.SendMessage -> sendMessage(intent.text, intent.imageUri)
             is ChatIntent.SwitchModel -> {
+                if (currentState.selectedModel == intent.modelName && currentState.runtimeState is RuntimeState.Ready) {
+                    Log.d("ChatViewModel", "Model ${intent.modelName} already loaded, skipping init.")
+                    return
+                }
+
                 Log.d("ChatViewModel", "Switching model to: ${intent.modelName}")
                 setState { copy(
                     selectedModel = intent.modelName,
                     messages = emptyList(),
                     runtimeState = RuntimeState.Uninitialized
                 ) }
+                preferenceManager.updateSelectedModel(intent.modelName)
+
                 val modelFile = File("${intent.baseDir}/${intent.modelName}")
                 if (modelFile.exists()) {
                     Log.d("ChatViewModel", "Model file exists locally, loading directly: ${modelFile.absolutePath}")
