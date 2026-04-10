@@ -61,13 +61,20 @@ class ChatViewModel @Inject constructor(
     private fun updateLocalModels() {
         val models = repository.getLocalModels()
         setState { copy(localModels = models) }
-        
+
         // Auto-select first available model if none selected
         if (currentState.selectedModel.isEmpty() || !File(application.filesDir, currentState.selectedModel).exists()) {
-            models.firstOrNull()?.let { 
+            models.firstOrNull()?.let {
                 setState { copy(selectedModel = it.fileName) }
             }
         }
+    }
+
+    /**
+     * Check if a model is valid (exists and has content)
+     */
+    fun isModelValid(modelName: String): Boolean {
+        return repository.isModelValid(modelName)
     }
 
     override suspend fun handleIntent(intent: ChatIntent) {
