@@ -223,7 +223,7 @@ fun Modifier.positionAwareImePadding() = composed {
     this@positionAwareImePadding
         .onGloballyPositioned { coordinates ->
             val rootCoordinate = coordinates.findRootCoordinates()
-            val bottom = coordinates.positionInWindow().y + coordinates.size.height
+            val bottom = coordinates.positionInWindow().y + coordinates.size.height + 60
 
             // Calculate how much space is already between this component and the screen bottom
             consumePadding = (rootCoordinate.size.height - bottom).toInt().coerceAtLeast(0)
