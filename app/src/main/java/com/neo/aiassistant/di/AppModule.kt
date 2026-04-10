@@ -10,7 +10,6 @@ import com.neo.aiassistant.core.DispatcherProvider
 import com.neo.aiassistant.data.ChatRepositoryImpl
 import com.neo.aiassistant.data.datasource.CompositeModelCatalogDataSource
 import com.neo.aiassistant.data.datasource.FirebaseRemoteModelDataSource
-import com.neo.aiassistant.data.datasource.FirestoreModelCatalogDataSource
 import com.neo.aiassistant.data.datasource.ModelCatalogDataSource
 import com.neo.aiassistant.data.datasource.RemoteModelDataSource
 import com.neo.aiassistant.data.inference.LlmEngineWrapper
