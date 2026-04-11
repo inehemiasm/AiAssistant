@@ -112,7 +112,8 @@ data class ModelEntry(
     /**
      * The effective file name to use for this model, derived from [fileName] or [name].
      */
-    val effectiveFileName: String get() = fileName ?: name.replace(" ", "_").lowercase() + ".litertlm"
+    val effectiveFileName: String get() = fileName ?: (name.replace(" ", "_")
+        .lowercase() + ".litertlm")
 }
 
 /**
