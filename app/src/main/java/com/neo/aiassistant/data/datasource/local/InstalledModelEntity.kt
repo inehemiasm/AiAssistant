@@ -18,7 +18,8 @@ data class InstalledModelEntity(
     val installStatus: InstallStatus,
     val sizeBytes: Long?,
     val checksum: String?,
-    val installedAt: Long?
+    val installedAt: Long?,
+    val license: String? = null
 )
 
 fun InstalledModelEntity.toDomain(): InstalledModel {
@@ -35,7 +36,8 @@ fun InstalledModelEntity.toDomain(): InstalledModel {
         installStatus = installStatus,
         sizeBytes = sizeBytes,
         checksum = checksum,
-        installedAt = installedAt
+        installedAt = installedAt,
+        license = license
     )
 }
 
@@ -53,6 +55,7 @@ fun InstalledModel.toEntity(): InstalledModelEntity {
         installStatus = installStatus,
         sizeBytes = sizeBytes,
         checksum = checksum,
-        installedAt = installedAt
+        installedAt = installedAt,
+        license = license
     )
 }

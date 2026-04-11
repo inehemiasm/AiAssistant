@@ -17,7 +17,8 @@ data class InstalledModel(
     val installStatus: InstallStatus,
     val sizeBytes: Long? = null,
     val checksum: String? = null,
-    val installedAt: Long? = null
+    val installedAt: Long? = null,
+    val license: String? = null
 )
 
 /**
@@ -33,7 +34,8 @@ data class LocalModel(
     val format: ModelFormat,
     val runtime: ModelRuntime,
     val capabilities: Set<ModelCapability>,
-    val sizeBytes: Long = 0
+    val sizeBytes: Long = 0,
+    val license: String? = null
 )
 
 /**
@@ -42,6 +44,7 @@ data class LocalModel(
 enum class ModelSource {
     HUGGING_FACE,
     FIREBASE,
+    KAGGLE,
     LOCAL,
     UNKNOWN
 }

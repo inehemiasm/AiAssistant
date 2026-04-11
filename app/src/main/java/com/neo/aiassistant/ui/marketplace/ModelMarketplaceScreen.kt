@@ -25,6 +25,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Balance
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Delete
@@ -303,13 +304,21 @@ fun RemoteModelCard(
                 Spacer(Modifier.height(16.dp))
                 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    InfoItem(Icons.Default.Storage, formatFileSize(model.sizeBytes))
-                    Spacer(Modifier.width(16.dp))
-                    InfoItem(Icons.Default.Memory, model.runtimeType)
-                    
-                    if (model.supportsVision) {
-                        Spacer(Modifier.width(16.dp))
-                        InfoItem(Icons.Default.Visibility, "Vision")
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            InfoItem(Icons.Default.Storage, formatFileSize(model.sizeBytes))
+                            Spacer(Modifier.width(16.dp))
+                            InfoItem(Icons.Default.Memory, model.runtimeType)
+                            
+                            if (model.supportsVision) {
+                                Spacer(Modifier.width(16.dp))
+                                InfoItem(Icons.Default.Visibility, "Vision")
+                            }
+                        }
+                        
+                        model.license?.let { license ->
+                            InfoItem(Icons.Default.Balance, license)
+                        }
                     }
                     
                     Spacer(Modifier.weight(1f))
@@ -425,7 +434,13 @@ fun LocalModelCard(
                 Spacer(Modifier.height(16.dp))
                 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    InfoItem(Icons.Default.Storage, formatFileSize(model.sizeBytes ?: 0))
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        InfoItem(Icons.Default.Storage, formatFileSize(model.sizeBytes ?: 0))
+                        
+                        model.license?.let { license ->
+                            InfoItem(Icons.Default.Balance, license)
+                        }
+                    }
                     
                     Spacer(Modifier.weight(1f))
                     

@@ -14,13 +14,15 @@ import javax.inject.Singleton
 @Singleton
 class CompositeModelCatalogDataSource @Inject constructor(
     private val firestoreCatalog: FirestoreModelCatalogDataSource,
-    private val huggingFaceCatalog: HuggingFaceModelCatalogDataSource
+    private val huggingFaceCatalog: HuggingFaceModelCatalogDataSource,
+    private val kaggleCatalog: KaggleModelCatalogDataSource
 ) : ModelCatalogDataSource {
 
     override suspend fun fetchAvailableModels(): Result<List<ModelEntry>> = coroutineScope {
         val deferreds = listOf(
             async { firestoreCatalog.fetchAvailableModels() },
-            async { huggingFaceCatalog.fetchAvailableModels() }
+            async { huggingFaceCatalog.fetchAvailableModels() },
+            async { kaggleCatalog.fetchAvailableModels() }
         )
 
         val results = deferreds.awaitAll()

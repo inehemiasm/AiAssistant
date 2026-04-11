@@ -1,0 +1,32 @@
+[
+  {
+    "id": "gemma-2b-it-cpu-int8",
+    "displayName": "Gemma 2B IT (Int8)",
+    "modelPageUrl": "https://www.kaggle.com/models/google/gemma/liteRT/gemma-2b-it-cpu-int8",
+    "downloadUrl": "https://www.kaggle.com/models/google/gemma/liteRT/gemma-2b-it-cpu-int8/1/download",
+    "sizeBytes": 2100000000,
+    "supportsVision": false,
+    "description": "Google's Gemma 2B instruction-tuned model, quantized for CPU efficiency.",
+    "license": "Gemma Terms of Use"
+  },
+  {
+    "id": "mobilenet-v3-large-100-224",
+    "displayName": "MobileNet V3 Large",
+    "modelPageUrl": "https://www.kaggle.com/models/google/mobilenet-v3/liteRT/large-100-224-classification",
+    "downloadUrl": "https://www.kaggle.com/models/google/mobilenet-v3/liteRT/large-100-224-classification/1/download",
+    "sizeBytes": 22000000,
+    "supportsVision": true,
+    "description": "High-accuracy image classification model optimized for mobile devices.",
+    "license": "Apache 2.0"
+  },
+  {
+    "id": "efficientnet-lite0-int8",
+    "displayName": "EfficientNet Lite0 (Int8)",
+    "modelPageUrl": "https://www.kaggle.com/models/google/efficientnet/liteRT/lite0-int8",
+    "downloadUrl": "https://www.kaggle.com/models/google/efficientnet/liteRT/lite0-int8/1/download",
+    "sizeBytes": 4000000,
+    "supportsVision": true,
+    "description": "Lightweight vision model for ultra-fast classification on edge devices.",
+    "license": "Apache 2.0"
+  }
+]

@@ -95,7 +95,13 @@ class ChatRepositoryImpl @Inject constructor(
             file.isFile && (file.name.endsWith(".litertlm") || file.name.endsWith(".bin"))
         } ?: emptyArray()
 
-        val models = files.map { classifyModel(it) }
+        // Fetch remote catalog to correlate license info for local files if possible
+        val remoteModels = modelCatalog.fetchAvailableModels().getOrDefault(emptyList())
+
+        val models = files.map { file ->
+            val remoteMatch = remoteModels.find { it.effectiveFileName == file.name }
+            classifyModel(file, remoteMatch?.license)
+        }
         
         // Update registry with what we found on disk
         models.forEach { installedModelRegistry.upsertInstalledModel(it) }
@@ -108,7 +114,7 @@ class ChatRepositoryImpl @Inject constructor(
         return file.exists() && file.length() > 0
     }
 
-    private fun classifyModel(file: File): InstalledModel {
+    private fun classifyModel(file: File, license: String? = null): InstalledModel {
         val extension = file.extension.lowercase()
         val (format, runtime) = when (extension) {
             "litertlm" -> ModelFormat.LITERTLM to ModelRuntime.LITERT
@@ -138,7 +144,8 @@ class ChatRepositoryImpl @Inject constructor(
             capabilities = capabilities,
             installStatus = InstallStatus.INSTALLED,
             sizeBytes = file.length(),
-            installedAt = file.lastModified()
+            installedAt = file.lastModified(),
+            license = license
         )
     }
 

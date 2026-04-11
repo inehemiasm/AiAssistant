@@ -23,7 +23,8 @@ private data class HFModelDto(
     val downloadUrl: String,
     val supportsVision: Boolean = false,
     val sizeBytes: Long = 0,
-    val sha256: String? = null
+    val sha256: String? = null,
+    val license: String? = null
 )
 
 /**
@@ -59,7 +60,8 @@ class HuggingFaceModelCatalogDataSource @Inject constructor(
                     sizeBytes = dto.sizeBytes,
                     sha256 = dto.sha256,
                     fileName = dto.fileName,
-                    supportsVision = dto.supportsVision
+                    supportsVision = dto.supportsVision,
+                    license = dto.license
                 )
             })
         } catch (e: Exception) {

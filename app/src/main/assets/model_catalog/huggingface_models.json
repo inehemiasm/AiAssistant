@@ -7,7 +7,8 @@
     "fileName": "gemma-4-E2B-it.litertlm",
     "downloadUrl": "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it.litertlm",
     "sizeBytes": 2765953024,
-    "supportsVision": false
+    "supportsVision": false,
+    "license": "Gemma Terms of Use"
   },
   {
     "id": "gemma-4-e2b-it-q4",
@@ -17,7 +18,8 @@
     "fileName": "gemma-4-E2B-it-q4.litertlm",
     "downloadUrl": "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it-q4.litertlm",
     "sizeBytes": 1565953024,
-    "supportsVision": false
+    "supportsVision": false,
+    "license": "Gemma Terms of Use"
   },
   {
     "id": "gemma-4-e4b-it",
@@ -27,6 +29,7 @@
     "fileName": "gemma-4-E4B-it.litertlm",
     "downloadUrl": "https://huggingface.co/litert-community/gemma-4-E4B-it-litert-lm/resolve/main/gemma-4-E4B-it.litertlm",
     "sizeBytes": 5165953024,
-    "supportsVision": false
+    "supportsVision": false,
+    "license": "Gemma Terms of Use"
   }
 ]
