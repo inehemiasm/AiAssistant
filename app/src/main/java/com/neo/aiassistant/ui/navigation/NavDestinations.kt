@@ -14,9 +14,6 @@ sealed interface Route {
     data object Chat : Route
 
     @Serializable
-    data object Models : Route
-
-    @Serializable
     data object Settings : Route
 
     @Serializable
@@ -29,6 +26,6 @@ enum class TopLevelDestination(
     val labelResId: Int
 ) {
     CHAT(Route.Chat, Icons.Default.ChatBubble, R.string.chat_label),
-    MODELS(Route.Models, Icons.Default.Storage, R.string.models_label),
+    MODELS(Route.ModelMarketplace, Icons.Default.Storage, R.string.models_label),
     SETTINGS(Route.Settings, Icons.Default.Settings, R.string.settings_label)
 }

@@ -1,6 +1,7 @@
 package com.neo.aiassistant.ui.marketplace
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.viewModelScope
 import com.neo.aiassistant.core.BaseViewModel
 import com.neo.aiassistant.data.PreferenceManager
@@ -8,8 +9,11 @@ import com.neo.aiassistant.domain.ChatRepository
 import com.neo.aiassistant.domain.DownloadProgress
 import com.neo.aiassistant.ui.common.CatalogState
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
+private const val TAG = "MarketplaceViewModel"
 
 /**
  * ViewModel for the Model Marketplace screen.
@@ -32,6 +36,24 @@ class MarketplaceViewModel @Inject constructor(
         viewModelScope.launch {
             fetchRemoteModels()
             loadLocalModels()
+        }
+
+        viewModelScope.launch {
+            preferenceManager.selectedModelPreference.collectLatest { modelId ->
+                Log.d(TAG, "Active model updated in preferences: $modelId")
+                setState { copy(activeModelId = modelId) }
+            }
+        }
+
+        viewModelScope.launch {
+            repository.getInitStatus().collectLatest { status ->
+                if (currentState.switchState is ModelSwitchState.Switching || currentState.switchState is ModelSwitchState.WarmingUp) {
+                    Log.d(TAG, "Warmup state emitted: $status")
+                    setState { 
+                        copy(switchState = ModelSwitchState.WarmingUp(currentState.pendingModelId ?: "", status))
+                    }
+                }
+            }
         }
     }
 
@@ -69,9 +91,51 @@ class MarketplaceViewModel @Inject constructor(
                     loadLocalModels()
                 }
             }
-            is MarketplaceIntent.SwitchModel -> {
-                preferenceManager.updateSelectedModel(intent.modelName)
+            is MarketplaceIntent.SelectModel -> {
+                Log.d(TAG, "Model card tapped: ${intent.modelId}")
+                setState { copy(pendingModelId = intent.modelId) }
+                Log.d(TAG, "Pending model updated: ${intent.modelId}")
             }
+            is MarketplaceIntent.ConfirmSwitch -> {
+                confirmSwitch(intent.modelId, intent.modelPath)
+            }
+        }
+    }
+
+    private fun confirmSwitch(modelId: String, modelPath: String) {
+        Log.d(TAG, "Confirm button pressed for model: $modelId")
+        val fromModelId = currentState.activeModelId
+        
+        setState { 
+            copy(switchState = ModelSwitchState.Switching(fromModelId, modelId)) 
+        }
+        Log.d(TAG, "Switch request started: from $fromModelId to $modelId")
+
+        viewModelScope.launch {
+            Log.d(TAG, "New model load started: $modelId at $modelPath")
+            // Note: repository.initializeModel internally calls orchestrator.reset() which acts as "old model unload"
+            Log.d(TAG, "Old model unload started (via initialization reset)")
+            
+            repository.initializeModel(modelPath)
+                .onSuccess {
+                    Log.d(TAG, "Load success for model: $modelId")
+                    preferenceManager.updateSelectedModel(modelId)
+                    setState { 
+                        copy(
+                            activeModelId = modelId,
+                            pendingModelId = null,
+                            switchState = ModelSwitchState.Ready(modelId)
+                        )
+                    }
+                    Log.d(TAG, "Active model updated to: $modelId")
+                }
+                .onFailure { e ->
+                    Log.e(TAG, "Load failure for model: $modelId", e)
+                    setState { 
+                        copy(switchState = ModelSwitchState.Error(modelId, e.message ?: "Unknown error")) 
+                    }
+                    sendEffect { MarketplaceEffect.ShowToast("Failed to switch model: ${e.message}") }
+                }
         }
     }
 

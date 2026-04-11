@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -48,7 +49,8 @@ fun HighTechPrimaryButton(
     onClick: () -> Unit,
     text: String,
     modifier: Modifier = Modifier,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    isLoading: Boolean = false
 ) {
     val primary = MaterialTheme.colorScheme.primary
     val primaryContainer = MaterialTheme.colorScheme.primaryContainer
@@ -62,12 +64,12 @@ fun HighTechPrimaryButton(
 
     Button(
         onClick = onClick,
-        enabled = enabled,
+        enabled = enabled && !isLoading,
         modifier = modifier
             .fillMaxWidth()
             .height(56.dp)
             .clip(RoundedCornerShape(12.dp))
-            .then(if (enabled) Modifier.background(gradient) else Modifier.background(MaterialTheme.colorScheme.surfaceVariant)),
+            .then(if (enabled && !isLoading) Modifier.background(gradient) else Modifier.background(MaterialTheme.colorScheme.surfaceVariant)),
         colors = ButtonDefaults.buttonColors(
             containerColor = Color.Transparent,
             contentColor = onPrimary,
@@ -76,14 +78,24 @@ fun HighTechPrimaryButton(
         ),
         contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
     ) {
-        Text(
-            text = text.uppercase(),
-            style = Typography.titleMedium.copy(
-                fontWeight = FontWeight.ExtraBold,
-                letterSpacing = 1.sp
-            ),
-            color = if (enabled) onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    strokeWidth = 2.dp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.width(12.dp))
+            }
+            Text(
+                text = text.uppercase(),
+                style = Typography.titleMedium.copy(
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = 1.sp
+                ),
+                color = if (enabled && !isLoading) onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
 
@@ -148,7 +160,7 @@ fun ModelSelectorCard(
                             border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
                         ) {
                             Text(
-                                stringResource(R.string.selected),
+                                "SELECTED",
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                 style = Typography.labelSmall.copy(fontSize = 9.sp, fontWeight = FontWeight.Bold),
                                 color = MaterialTheme.colorScheme.primary
@@ -168,9 +180,9 @@ fun ModelSelectorCard(
                 Spacer(Modifier.height(16.dp))
                 
                 Row {
-                    ModelStatItem(Icons.Default.Storage, params, stringResource(R.string.billion_params))
+                    ModelStatItem(Icons.Default.Storage, params, " Billion Params")
                     Spacer(Modifier.width(16.dp))
-                    ModelStatItem(Icons.Default.Memory, vram, stringResource(R.string.vram_required))
+                    ModelStatItem(Icons.Default.Memory, vram, " VRAM Required")
                 }
             }
             

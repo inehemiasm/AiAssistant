@@ -7,7 +7,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.neo.aiassistant.ui.chat.ChatScreen
 import com.neo.aiassistant.ui.marketplace.ModelMarketplaceScreen
-import com.neo.aiassistant.ui.models.ModelsScreen
 import com.neo.aiassistant.ui.settings.SettingsScreen
 
 @Composable
@@ -23,13 +22,7 @@ fun AiAssistantNavHost(
         composable<Route.Chat> {
             ChatScreen(
                 onSettingsClick = { navController.navigate(Route.Settings) },
-                onModelsClick = { navController.navigate(Route.Models) }
-            )
-        }
-
-        composable<Route.Models> {
-            ModelsScreen(
-                onMarketplaceClick = { navController.navigate(Route.ModelMarketplace) }
+                onModelsClick = { navController.navigate(Route.ModelMarketplace) }
             )
         }
 

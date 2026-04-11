@@ -16,6 +16,7 @@
     "repoId": "litert-community/gemma-4-E2B-it-litert-lm",
     "fileName": "gemma-4-E2B-it-q4.litertlm",
     "downloadUrl": "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it-q4.litertlm",
+    "sizeBytes": 1565953024,
     "supportsVision": false
   },
   {
@@ -25,6 +26,7 @@
     "repoId": "litert-community/gemma-4-E4B-it-litert-lm",
     "fileName": "gemma-4-E4B-it.litertlm",
     "downloadUrl": "https://huggingface.co/litert-community/gemma-4-E4B-it-litert-lm/resolve/main/gemma-4-E4B-it.litertlm",
+    "sizeBytes": 5165953024,
     "supportsVision": false
   }
 ]

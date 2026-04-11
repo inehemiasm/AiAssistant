@@ -1,5 +1,10 @@
 package com.neo.aiassistant.ui.models.components
 
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -23,6 +28,7 @@ import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.RadioButtonChecked
 import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -31,11 +37,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
@@ -53,22 +57,40 @@ import com.neo.aiassistant.ui.designsystem.HighTechPrimaryButton
 import com.neo.aiassistant.ui.designsystem.ModelSelectorCard
 import com.neo.aiassistant.ui.designsystem.StatCard
 import com.neo.aiassistant.ui.designsystem.Typography
+import com.neo.aiassistant.ui.marketplace.ModelSwitchState
 
 /**
  * A visually rich view displayed when no AI model is currently loaded or selected.
  */
 @Composable
 fun BeautifulModelMissingView(
-    selectedModel: String,
+    activeModel: String,
+    pendingModel: String?,
     localModels: List<InstalledModel>,
     remoteModels: List<ModelEntry>,
     availableDownloads: List<ModelEntry> = emptyList(),
     catalogState: CatalogState,
     metrics: PerformanceMetrics,
+    switchState: ModelSwitchState,
+    onModelSelect: (String) -> Unit,
+    onConfirmSwitch: (String, String) -> Unit,
     onDownloadClick: (String) -> Unit,
     onClearError: () -> Unit
 ) {
-    var internalSelectedModel by remember { mutableStateOf(selectedModel) }
+    val displayModel = pendingModel ?: activeModel
+    val isSwitching = switchState is ModelSwitchState.Switching || switchState is ModelSwitchState.WarmingUp
+    val warmupStatus = (switchState as? ModelSwitchState.WarmingUp)?.progress
+
+    val infiniteTransition = rememberInfiniteTransition(label = "warmup")
+    val pulseAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.6f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulse_alpha"
+    )
 
     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         AmbientGlow(MaterialTheme.colorScheme.primary, Modifier.align(Alignment.TopEnd).offset(x = 100.dp, y = (-100).dp).size(400.dp))
@@ -157,23 +179,24 @@ fun BeautifulModelMissingView(
                             ModelSelectorCard(
                                 title = model.name,
                                 description = model.description,
-                                params = if (model.sizeBytes > 0) "%.1fGB".format(model.sizeBytes / 1e9) else "N/A",
+                                params = if (model.sizeBytes > 0) "%.1fB".format(model.sizeBytes / 1e9 * 4) else "N/A", // Approximation for display
                                 vram = if (model.sizeBytes > 0) "%.1fGB".format(model.sizeBytes * 2 / 1e9) else "N/A",
-                                isSelected = internalSelectedModel == model.effectiveFileName,
+                                isSelected = displayModel == model.effectiveFileName,
                                 icon = if (model.name.contains("2b", ignoreCase = true)) Icons.Default.Speed else Icons.Default.Bolt,
-                                onClick = { internalSelectedModel = model.effectiveFileName }
+                                onClick = { if (!isSwitching) onModelSelect(model.effectiveFileName) }
                             )
                             Spacer(Modifier.height(16.dp))
                         }
                     } else {
+                        // Fallback static models if remote list fails
                         ModelSelectorCard(
                             title = stringResource(R.string.gemma_4_e4b_it),
                             description = stringResource(R.string.gemma_4_e4b_desc),
                             params = "4.2",
                             vram = "8.4GB",
-                            isSelected = internalSelectedModel.contains("E4B"),
+                            isSelected = displayModel.contains("E4B"),
                             icon = Icons.Default.Bolt,
-                            onClick = { internalSelectedModel = "gemma-4-E4B-it.litertlm" }
+                            onClick = { if (!isSwitching) onModelSelect("gemma-4-E4B-it.litertlm") }
                         )
 
                         Spacer(Modifier.height(16.dp))
@@ -183,50 +206,48 @@ fun BeautifulModelMissingView(
                             description = stringResource(R.string.gemma_4_e2b_desc),
                             params = "2.1",
                             vram = "3.2GB",
-                            isSelected = internalSelectedModel.contains("E2B"),
+                            isSelected = displayModel.contains("E2B"),
                             icon = Icons.Default.Speed,
-                            onClick = { internalSelectedModel = "gemma-4-E2B-it.litertlm" }
+                            onClick = { if (!isSwitching) onModelSelect("gemma-4-E2B-it.litertlm") }
                         )
-                    }
-
-                    if (availableDownloads.isNotEmpty()) {
-                        Spacer(Modifier.height(32.dp))
-                        Text(
-                            "Available Downloads",
-                            style = Typography.titleMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        Spacer(Modifier.height(16.dp))
-                        availableDownloads.forEach { model ->
-                            ModelSelectorCard(
-                                title = model.name,
-                                description = model.description,
-                                params = if (model.sizeBytes > 0) "%.1fGB".format(model.sizeBytes / 1e9) else "N/A",
-                                vram = if (model.sizeBytes > 0) "%.1fGB".format(model.sizeBytes * 2 / 1e9) else "N/A",
-                                isSelected = internalSelectedModel == model.effectiveFileName,
-                                icon = if (model.name.contains("2b", ignoreCase = true)) Icons.Default.Speed else Icons.Default.CloudDownload,
-                                onClick = { internalSelectedModel = model.effectiveFileName }
-                            )
-                            Spacer(Modifier.height(16.dp))
-                        }
                     }
 
                     Spacer(Modifier.height(48.dp))
                     
-                    val isModelDownloaded = localModels.any { it.fileName == internalSelectedModel }
+                    val currentTargetModel = displayModel
+                    val targetInstalledModel = localModels.find { it.fileName == currentTargetModel }
+                    val isTargetDownloaded = targetInstalledModel != null
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(48.dp).clip(RoundedCornerShape(8.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh), contentAlignment = Alignment.Center) {
-                            Icon(Icons.Default.AutoAwesome, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(24.dp))
+                            if (isSwitching) {
+                                CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.primary)
+                            } else {
+                                Icon(Icons.Default.AutoAwesome, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(24.dp))
+                            }
                         }
                         Spacer(Modifier.width(16.dp))
                         Column {
                             Text(stringResource(R.string.engine_status), style = Typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(Modifier.size(8.dp).clip(CircleShape).background(if (isModelDownloaded) MaterialTheme.colorScheme.primary else Color.Gray))
+                                Box(Modifier.size(8.dp).clip(CircleShape).background(
+                                    when {
+                                        isSwitching -> MaterialTheme.colorScheme.primary.copy(alpha = pulseAlpha)
+                                        isTargetDownloaded -> MaterialTheme.colorScheme.primary
+                                        else -> Color.Gray
+                                    }
+                                ))
                                 Spacer(Modifier.width(8.dp))
-                                Text(if (isModelDownloaded) stringResource(R.string.core_ready) else stringResource(R.string.download_required), color = MaterialTheme.colorScheme.onSurface, style = Typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
+                                Text(
+                                    text = when {
+                                        isSwitching -> warmupStatus ?: "Warming up engine..."
+                                        isTargetDownloaded -> stringResource(R.string.core_ready)
+                                        else -> stringResource(R.string.download_required)
+                                    }, 
+                                    color = if (isSwitching) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface, 
+                                    style = Typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                                    modifier = if (isSwitching) Modifier.alpha(pulseAlpha) else Modifier
+                                )
                             }
                         }
                     }
@@ -234,8 +255,19 @@ fun BeautifulModelMissingView(
                     Spacer(Modifier.height(24.dp))
 
                     HighTechPrimaryButton(
-                        onClick = { onDownloadClick(internalSelectedModel) },
-                        text = if (isModelDownloaded) stringResource(R.string.confirm_engine_switch) else stringResource(R.string.download_sync_core)
+                        onClick = { 
+                            if (isTargetDownloaded && targetInstalledModel != null) {
+                                onConfirmSwitch(targetInstalledModel.id, targetInstalledModel.filePath)
+                            } else {
+                                onDownloadClick(currentTargetModel) 
+                            }
+                        },
+                        enabled = !isSwitching,
+                        text = when {
+                            isSwitching -> "SWITCHING ENGINE..."
+                            isTargetDownloaded -> stringResource(R.string.confirm_engine_switch)
+                            else -> stringResource(R.string.download_sync_core)
+                        }
                     )
 
                     Spacer(Modifier.height(48.dp))
@@ -249,11 +281,4 @@ fun BeautifulModelMissingView(
             }
         }
     }
-}
-
-private fun formatFileSize(size: Long): String {
-    if (size <= 0) return "0 B"
-    val units = arrayOf("B", "KB", "MB", "GB", "TB")
-    val digitGroups = (Math.log10(size.toDouble()) / Math.log10(1024.0)).toInt()
-    return "%.1f %s".format(size / Math.pow(1024.0, digitGroups.toDouble()), units[digitGroups])
 }

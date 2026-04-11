@@ -1,5 +1,11 @@
 package com.neo.aiassistant.ui.marketplace
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -19,15 +25,18 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.FileDownloadDone
 import androidx.compose.material.icons.filled.Memory
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Storage
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -52,10 +61,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -66,6 +77,7 @@ import com.neo.aiassistant.ui.common.CatalogState
 import com.neo.aiassistant.ui.designsystem.AmbientGlow
 import com.neo.aiassistant.ui.designsystem.Typography
 import kotlin.math.log10
+import kotlin.math.pow
 
 /**
  * The screen for the AI Model Marketplace.
@@ -133,7 +145,7 @@ fun ModelMarketplaceScreen(
 
                 when (selectedTab) {
                     0 -> DiscoverModelsList(state, viewModel::onIntent, context.filesDir.absolutePath)
-                    1 -> InstalledModelsList(state, viewModel::onIntent, context.filesDir.absolutePath)
+                    1 -> InstalledModelsList(state, viewModel::onIntent)
                 }
             }
         }
@@ -170,7 +182,7 @@ fun DiscoverModelsList(state: MarketplaceState, onIntent: (MarketplaceIntent) ->
 }
 
 @Composable
-fun InstalledModelsList(state: MarketplaceState, onIntent: (MarketplaceIntent) -> Unit, baseDir: String) {
+fun InstalledModelsList(state: MarketplaceState, onIntent: (MarketplaceIntent) -> Unit) {
     if (state.localModels.isEmpty()) {
         Box(Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
             Text(
@@ -180,18 +192,69 @@ fun InstalledModelsList(state: MarketplaceState, onIntent: (MarketplaceIntent) -
             )
         }
     } else {
-        LazyColumn(
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            items(state.localModels) { model ->
-                LocalModelCard(
-                    model = model,
-                    isActive = false, 
-                    isReady = false,
-                    onSelect = { onIntent(MarketplaceIntent.SwitchModel(model.fileName, baseDir)) },
-                    onDelete = { onIntent(MarketplaceIntent.DeleteModel(model.fileName)) }
-                )
+        Column(modifier = Modifier.fillMaxSize()) {
+            LazyColumn(
+                modifier = Modifier.weight(1f),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                items(state.localModels) { model ->
+                    val isActive = state.activeModelId == model.id
+                    val isPending = state.pendingModelId == model.id
+                    val isSwitching = (state.switchState as? ModelSwitchState.Switching)?.toModelId == model.id ||
+                                     (state.switchState as? ModelSwitchState.WarmingUp)?.modelId == model.id
+                    
+                    LocalModelCard(
+                        model = model,
+                        isActive = isActive,
+                        isPending = isPending,
+                        isSwitching = isSwitching,
+                        warmupStatus = if (isSwitching) (state.switchState as? ModelSwitchState.WarmingUp)?.progress else null,
+                        onSelect = { onIntent(MarketplaceIntent.SelectModel(model.id)) },
+                        onDelete = { onIntent(MarketplaceIntent.DeleteModel(model.fileName)) }
+                    )
+                }
+            }
+
+            // Confirm Button Area
+            AnimatedVisibility(
+                visible = state.pendingModelId != null && state.pendingModelId != state.activeModelId,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                val pendingModel = state.localModels.find { it.id == state.pendingModelId }
+                if (pendingModel != null) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                            .padding(16.dp)
+                    ) {
+                        Button(
+                            onClick = { 
+                                onIntent(MarketplaceIntent.ConfirmSwitch(pendingModel.id, pendingModel.filePath)) 
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = !state.isSwitching,
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                        ) {
+                            if (state.isSwitching) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.onPrimary
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text("Switching Engine...", style = Typography.labelLarge)
+                            } else {
+                                Icon(Icons.Default.Sync, null)
+                                Spacer(Modifier.width(8.dp))
+                                Text("Confirm Engine Switch", style = Typography.labelLarge)
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -211,46 +274,68 @@ fun RemoteModelCard(
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.5f))
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.CloudDownload, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
-                Spacer(Modifier.width(8.dp))
-                Text(model.name.uppercase(), style = Typography.titleMedium, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.weight(1f))
-                ProviderBadge(model.provider)
-            }
-            
-            Spacer(Modifier.height(8.dp))
-            Text(model.description, style = Typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            
-            Spacer(Modifier.height(16.dp))
-            
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                InfoItem(Icons.Default.Storage, formatFileSize(model.sizeBytes))
-                Spacer(Modifier.width(16.dp))
-                InfoItem(Icons.Default.Memory, model.runtimeType)
-                
-                if (model.supportsVision) {
-                    Spacer(Modifier.width(16.dp))
-                    InfoItem(Icons.Default.Visibility, "Vision")
+        Box(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth(0.75f) // Reserve space for badge
+                ) {
+                    Icon(Icons.Default.CloudDownload, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        model.name.uppercase(), 
+                        style = Typography.titleMedium, 
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
                 
-                Spacer(Modifier.weight(1f))
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    model.description, 
+                    style = Typography.bodySmall, 
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
                 
-                if (isInstalled) {
-                    Icon(Icons.Default.FileDownloadDone, stringResource(R.string.installed), tint = Color.Green.copy(alpha = 0.7f))
-                } else if (isDownloading) {
-                    CircularProgressIndicator(
-                        progress = { (downloadProgress ?: 0) / 100f },
-                        modifier = Modifier.size(24.dp),
-                        strokeWidth = 2.dp
-                    )
-                } else {
-                    IconButton(onClick = onDownload, modifier = Modifier.size(32.dp)) {
-                        Icon(Icons.Default.Download, stringResource(R.string.download_required), tint = MaterialTheme.colorScheme.primary)
+                Spacer(Modifier.height(16.dp))
+                
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    InfoItem(Icons.Default.Storage, formatFileSize(model.sizeBytes))
+                    Spacer(Modifier.width(16.dp))
+                    InfoItem(Icons.Default.Memory, model.runtimeType)
+                    
+                    if (model.supportsVision) {
+                        Spacer(Modifier.width(16.dp))
+                        InfoItem(Icons.Default.Visibility, "Vision")
+                    }
+                    
+                    Spacer(Modifier.weight(1f))
+                    
+                    if (isInstalled) {
+                        Icon(Icons.Default.FileDownloadDone, stringResource(R.string.installed), tint = Color.Green.copy(alpha = 0.7f))
+                    } else if (isDownloading) {
+                        CircularProgressIndicator(
+                            progress = { (downloadProgress ?: 0) / 100f },
+                            modifier = Modifier.size(24.dp),
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        IconButton(onClick = onDownload, modifier = Modifier.size(32.dp)) {
+                            Icon(Icons.Default.Download, stringResource(R.string.download_required), tint = MaterialTheme.colorScheme.primary)
+                        }
                     }
                 }
             }
+
+            ProviderBadge(
+                provider = model.provider,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(16.dp)
+            )
         }
     }
 }
@@ -259,73 +344,144 @@ fun RemoteModelCard(
 fun LocalModelCard(
     model: InstalledModel,
     isActive: Boolean,
-    isReady: Boolean,
+    isPending: Boolean,
+    isSwitching: Boolean,
+    warmupStatus: String?,
     onSelect: () -> Unit,
     onDelete: () -> Unit
 ) {
+    val infiniteTransition = rememberInfiniteTransition(label = "warmup")
+    val alpha by infiniteTransition.animateFloat(
+        initialValue = 0.3f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "warmup_alpha"
+    )
+
     Card(
         modifier = Modifier.fillMaxWidth(),
+        onClick = onSelect,
         shape = RoundedCornerShape(12.dp),
         border = BorderStroke(
             1.dp, 
-            if (isActive) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)
+            when {
+                isSwitching -> MaterialTheme.colorScheme.primary.copy(alpha = alpha)
+                isActive -> MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                isPending -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f)
+                else -> MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)
+            }
         ),
         colors = CardDefaults.cardColors(
-            containerColor = if (isActive) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.1f) 
-                             else MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.5f)
+            containerColor = when {
+                isActive -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.1f)
+                isPending -> MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.1f)
+                else -> MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.5f)
+            }
         )
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    if (isReady) Icons.Default.PlayArrow else Icons.Default.FileDownloadDone, 
-                    null, 
-                    tint = if (isReady) Color.Green else MaterialTheme.colorScheme.primary
-                )
-                Spacer(Modifier.width(8.dp))
-                Text(model.displayName.uppercase(), style = Typography.titleMedium, fontWeight = FontWeight.Bold)
-                
-                if (isActive) {
+        Box(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth(0.75f)
+                ) {
+                    Icon(
+                        when {
+                            isSwitching -> Icons.Default.Sync
+                            isActive -> Icons.Default.Check
+                            else -> Icons.Default.FileDownloadDone
+                        }, 
+                        null, 
+                        tint = if (isActive || isSwitching) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                        modifier = if (isSwitching) Modifier.alpha(alpha) else Modifier
+                    )
                     Spacer(Modifier.width(8.dp))
-                    Box(
-                        modifier = Modifier
-                            .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(4.dp))
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
-                    ) {
-                        Text(stringResource(R.string.active), fontSize = 10.sp, color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.Bold)
+                    Text(
+                        model.displayName.uppercase(), 
+                        style = Typography.titleMedium, 
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
+                if (isSwitching) {
+                    Spacer(Modifier.height(8.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        CircularProgressIndicator(modifier = Modifier.size(12.dp), strokeWidth = 1.5.dp)
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            warmupStatus ?: "Warming up engine...", 
+                            style = Typography.labelSmall, 
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.alpha(alpha)
+                        )
+                    }
+                }
+                
+                Spacer(Modifier.height(16.dp))
+                
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    InfoItem(Icons.Default.Storage, formatFileSize(model.sizeBytes ?: 0))
+                    
+                    Spacer(Modifier.weight(1f))
+                    
+                    IconButton(onClick = onDelete, enabled = !isActive && !isSwitching) {
+                        Icon(Icons.Default.Delete, stringResource(R.string.delete), tint = if (!isActive && !isSwitching) MaterialTheme.colorScheme.error.copy(alpha = 0.7f) else MaterialTheme.colorScheme.outline)
                     }
                 }
             }
-            
-            Spacer(Modifier.height(16.dp))
-            
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                InfoItem(Icons.Default.Storage, formatFileSize(model.sizeBytes ?: 0))
-                
-                Spacer(Modifier.weight(1f))
-                
-                if (!isActive) {
-                    IconButton(onClick = onSelect) {
-                        Icon(Icons.Default.PlayArrow, stringResource(R.string.activate), tint = MaterialTheme.colorScheme.primary)
-                    }
-                }
-                
-                IconButton(onClick = onDelete) {
-                    Icon(Icons.Default.Delete, stringResource(R.string.delete), tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f))
-                }
+
+            if (isActive) {
+                Badge(
+                    text = stringResource(R.string.active),
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.align(Alignment.TopEnd).padding(16.dp)
+                )
+            } else if (isPending && !isSwitching) {
+                Badge(
+                    text = "SELECTED",
+                    containerColor = MaterialTheme.colorScheme.secondary,
+                    contentColor = MaterialTheme.colorScheme.onSecondary,
+                    modifier = Modifier.align(Alignment.TopEnd).padding(16.dp)
+                )
             }
         }
     }
 }
 
 @Composable
-fun ProviderBadge(provider: String) {
+fun ProviderBadge(provider: String, modifier: Modifier = Modifier) {
+    Badge(
+        text = provider.uppercase(),
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = modifier
+    )
+}
+
+@Composable
+fun Badge(
+    text: String,
+    containerColor: Color,
+    contentColor: Color,
+    modifier: Modifier = Modifier
+) {
     Box(
-        modifier = Modifier
-            .background(MaterialTheme.colorScheme.surfaceContainerHighest, RoundedCornerShape(4.dp))
+        modifier = modifier
+            .background(containerColor, RoundedCornerShape(4.dp))
             .padding(horizontal = 6.dp, vertical = 2.dp)
     ) {
-        Text(provider.uppercase(), fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold)
+        Text(
+            text = text,
+            fontSize = 10.sp,
+            color = contentColor,
+            fontWeight = FontWeight.Bold
+        )
     }
 }
 
@@ -339,8 +495,8 @@ fun InfoItem(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String
 }
 
 private fun formatFileSize(size: Long): String {
-    if (size <= 0) return "0 B"
+    if (size <= 0) return "Unknown size"
     val units = arrayOf("B", "KB", "MB", "GB", "TB")
-    val digitGroups = (log10(size.toDouble()) / Math.log10(1024.0)).toInt()
-    return "%.1f %s".format(size / Math.pow(1024.0, digitGroups.toDouble()), units[digitGroups])
+    val digitGroups = (log10(size.toDouble()) / log10(1024.0)).toInt()
+    return "%.1f %s".format(size / 1024.0.pow(digitGroups.toDouble()), units[digitGroups])
 }

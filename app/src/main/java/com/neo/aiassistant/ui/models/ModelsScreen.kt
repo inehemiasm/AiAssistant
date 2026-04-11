@@ -63,12 +63,20 @@ fun ModelsScreen(
                 )
             } else {
                 BeautifulModelMissingView(
-                    selectedModel = state.selectedModel,
+                    activeModel = state.selectedModel,
+                    pendingModel = state.pendingModel,
                     localModels = state.localModels,
                     remoteModels = state.remoteModels,
                     availableDownloads = state.availableDownloads,
                     catalogState = state.catalogState,
                     metrics = state.metrics,
+                    switchState = state.switchState,
+                    onModelSelect = { modelName ->
+                        viewModel.onIntent(ModelsIntent.SelectModel(modelName))
+                    },
+                    onConfirmSwitch = { modelName, modelPath ->
+                        viewModel.onIntent(ModelsIntent.ConfirmSwitch(modelName, modelPath))
+                    },
                     onDownloadClick = { modelName ->
                         viewModel.onIntent(ModelsIntent.DownloadModel(modelName, context.filesDir.absolutePath))
                     },

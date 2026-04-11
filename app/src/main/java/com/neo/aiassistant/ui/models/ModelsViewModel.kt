@@ -1,16 +1,20 @@
 package com.neo.aiassistant.ui.models
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.viewModelScope
 import com.neo.aiassistant.core.BaseViewModel
 import com.neo.aiassistant.data.PreferenceManager
 import com.neo.aiassistant.domain.ChatRepository
 import com.neo.aiassistant.domain.DownloadProgress
 import com.neo.aiassistant.ui.common.CatalogState
+import com.neo.aiassistant.ui.marketplace.ModelSwitchState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
+private const val TAG = "ModelsViewModel"
 
 @HiltViewModel
 class ModelsViewModel @Inject constructor(
@@ -30,6 +34,7 @@ class ModelsViewModel @Inject constructor(
     private fun observeSelectedModel() {
         viewModelScope.launch {
             preferenceManager.selectedModelPreference.collectLatest { model ->
+                Log.d(TAG, "Active model updated: $model")
                 if (model != null) setState { copy(selectedModel = model) }
             }
         }
@@ -38,7 +43,12 @@ class ModelsViewModel @Inject constructor(
     private fun observeInitStatus() {
         viewModelScope.launch {
             repository.getInitStatus().collectLatest { status ->
-                // Use status to trigger metric refreshes or UI updates if needed
+                if (currentState.isSwitching) {
+                    Log.d(TAG, "Warmup status: $status")
+                    setState { 
+                        copy(switchState = ModelSwitchState.WarmingUp(currentState.pendingModel ?: currentState.selectedModel, status))
+                    }
+                }
             }
         }
     }
@@ -51,7 +61,15 @@ class ModelsViewModel @Inject constructor(
     override suspend fun handleIntent(intent: ModelsIntent) {
         when (intent) {
             ModelsIntent.FetchModels -> fetchRemoteModels()
+            is ModelsIntent.SelectModel -> {
+                Log.d(TAG, "Model selected in UI: ${intent.modelName}")
+                setState { copy(pendingModel = intent.modelName) }
+            }
+            is ModelsIntent.ConfirmSwitch -> {
+                confirmSwitch(intent.modelName, intent.modelPath)
+            }
             is ModelsIntent.SwitchModel -> {
+                // Legacy support - directly updating preference, but we should use ConfirmSwitch
                 preferenceManager.updateSelectedModel(intent.modelName)
             }
             is ModelsIntent.DownloadModel -> {
@@ -59,6 +77,38 @@ class ModelsViewModel @Inject constructor(
             }
             ModelsIntent.ClearError -> setState { copy(catalogState = CatalogState.Idle) }
             ModelsIntent.RefreshMetrics -> { /* Logic to update metrics */ }
+        }
+    }
+
+    private fun confirmSwitch(modelName: String, modelPath: String) {
+        Log.d(TAG, "Confirming switch to $modelName")
+        val fromModel = currentState.selectedModel
+        
+        setState { 
+            copy(switchState = ModelSwitchState.Switching(fromModel, modelName)) 
+        }
+
+        viewModelScope.launch {
+            Log.d(TAG, "Initializing model at $modelPath")
+            repository.initializeModel(modelPath)
+                .onSuccess {
+                    Log.d(TAG, "Model switch successful: $modelName")
+                    preferenceManager.updateSelectedModel(modelName)
+                    setState { 
+                        copy(
+                            selectedModel = modelName,
+                            pendingModel = null,
+                            switchState = ModelSwitchState.Ready(modelName)
+                        )
+                    }
+                }
+                .onFailure { e ->
+                    Log.e(TAG, "Model switch failed", e)
+                    setState { 
+                        copy(switchState = ModelSwitchState.Error(modelName, e.message ?: "Unknown error")) 
+                    }
+                    sendEffect { ModelsEffect.ShowToast("Switch failed: ${e.message}") }
+                }
         }
     }
 
