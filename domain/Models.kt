@@ -22,7 +22,8 @@ data class InstalledModel(
 
 /**
  * Represents a machine learning model stored locally on the device.
- * (Legacy model, kept for backward compatibility during transition if needed).
+ * (Legacy model, kept for backward compatibility during transition if needed, 
+ * but primarily using InstalledModel now).
  */
 data class LocalModel(
     val id: String,

@@ -69,7 +69,7 @@ interface ChatRepository {
     /**
      * Returns a list of all AI models stored locally on the device.
      */
-    suspend fun getLocalModels(): List<LocalModel>
+    suspend fun getLocalModels(): List<InstalledModel>
 
     /**
      * Checks if a model file with the given name exists and is valid.
@@ -82,7 +82,7 @@ interface ChatRepository {
      * @param modelName The name of the model to delete.
      * @return `true` if the model was successfully deleted, `false` otherwise.
      */
-    fun deleteModel(modelName: String): Boolean
+    suspend fun deleteModel(modelName: String): Boolean
 }
 
 /**

@@ -3,7 +3,7 @@ package com.neo.aiassistant.data.inference
 import com.neo.aiassistant.domain.InferenceRequest
 import com.neo.aiassistant.domain.InferenceResult
 import com.neo.aiassistant.domain.LoadResult
-import com.neo.aiassistant.domain.LocalModel
+import com.neo.aiassistant.domain.InstalledModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,7 +28,7 @@ class InferenceManager @Inject constructor(
     private val engineFactory: ModelEngineFactory
 ) {
     private val mutex = Mutex()
-    private var currentModel: LocalModel? = null
+    private var currentModel: InstalledModel? = null
     
     private val _currentEngine = MutableStateFlow<ModelEngine?>(null)
     
@@ -46,12 +46,12 @@ class InferenceManager @Inject constructor(
     }
 
     /**
-     * Loads the specified [LocalModel] into an appropriate engine.
+     * Loads the specified [InstalledModel] into an appropriate engine.
      *
-     * @param model The local model to load.
+     * @param model The installed model to load.
      * @return [LoadResult.Success] if the model was loaded successfully, or [LoadResult.Failure] otherwise.
      */
-    suspend fun loadModel(model: LocalModel): LoadResult = mutex.withLock {
+    suspend fun loadModel(model: InstalledModel): LoadResult = mutex.withLock {
         if (currentModel?.id == model.id && _currentEngine.value != null) {
             return LoadResult.Success
         }

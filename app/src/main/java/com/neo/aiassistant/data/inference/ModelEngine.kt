@@ -3,7 +3,7 @@ package com.neo.aiassistant.data.inference
 import com.neo.aiassistant.domain.InferenceRequest
 import com.neo.aiassistant.domain.InferenceResult
 import com.neo.aiassistant.domain.LoadResult
-import com.neo.aiassistant.domain.LocalModel
+import com.neo.aiassistant.domain.InstalledModel
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -24,7 +24,7 @@ interface ModelEngine {
      * @param model The model to be loaded.
      * @return [LoadResult.Success] if loaded correctly, or [LoadResult.Failure] otherwise.
      */
-    suspend fun load(model: LocalModel): LoadResult
+    suspend fun load(model: InstalledModel): LoadResult
 
     /**
      * Executes an inference request and returns the result.

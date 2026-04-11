@@ -3,7 +3,7 @@ package com.neo.aiassistant.ui.models
 import com.neo.aiassistant.core.UiEffect
 import com.neo.aiassistant.core.UiIntent
 import com.neo.aiassistant.core.UiState
-import com.neo.aiassistant.domain.LocalModel
+import com.neo.aiassistant.domain.InstalledModel
 import com.neo.aiassistant.domain.ModelEntry
 import com.neo.aiassistant.ui.common.CatalogState
 import com.neo.aiassistant.ui.common.PerformanceMetrics
@@ -20,7 +20,7 @@ import com.neo.aiassistant.ui.common.PerformanceMetrics
  * @property metrics Performance data for the active model (latency, throughput, etc.).
  */
 data class ModelsState(
-    val localModels: List<LocalModel> = emptyList(),
+    val localModels: List<InstalledModel> = emptyList(),
     val remoteModels: List<ModelEntry> = emptyList(),
     val selectedModel: String = "",
     val isDownloading: Boolean = false,

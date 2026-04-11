@@ -44,7 +44,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.neo.aiassistant.R
-import com.neo.aiassistant.domain.LocalModel
+import com.neo.aiassistant.domain.InstalledModel
 import com.neo.aiassistant.domain.ModelEntry
 import com.neo.aiassistant.ui.common.CatalogState
 import com.neo.aiassistant.ui.common.PerformanceMetrics
@@ -56,23 +56,11 @@ import com.neo.aiassistant.ui.designsystem.Typography
 
 /**
  * A visually rich view displayed when no AI model is currently loaded or selected.
- *
- * This screen allows users to view available local and remote models, see their
- * specifications (like size and VRAM requirements), and initiate a download or switch.
- *
- * @param selectedModel The identifier of the currently selected model.
- * @param localModels List of models already present on the device.
- * @param remoteModels List of models available in the remote catalog.
- * @param availableDownloads List of models that are currently being downloaded or ready for download.
- * @param catalogState The current state of the model catalog (Loading, Idle, Error).
- * @param metrics Performance metrics like latency and throughput.
- * @param onDownloadClick Callback triggered when the user wants to download or select a model.
- * @param onClearError Callback to clear any catalog loading errors and retry.
  */
 @Composable
 fun BeautifulModelMissingView(
     selectedModel: String,
-    localModels: List<LocalModel>,
+    localModels: List<InstalledModel>,
     remoteModels: List<ModelEntry>,
     availableDownloads: List<ModelEntry> = emptyList(),
     catalogState: CatalogState,
@@ -261,4 +249,11 @@ fun BeautifulModelMissingView(
             }
         }
     }
+}
+
+private fun formatFileSize(size: Long): String {
+    if (size <= 0) return "0 B"
+    val units = arrayOf("B", "KB", "MB", "GB", "TB")
+    val digitGroups = (Math.log10(size.toDouble()) / Math.log10(1024.0)).toInt()
+    return "%.1f %s".format(size / Math.pow(1024.0, digitGroups.toDouble()), units[digitGroups])
 }
