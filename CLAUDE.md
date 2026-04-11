@@ -50,6 +50,7 @@ The project is an Android application following Clean Architecture and MVI (Mode
 - **Tool Management**: Dynamic tool registration and execution with support for confirmation flows.
 
 ## Development Guidelines
+- **Documentation Standards**: Always generate comprehensive KDoc for all new implementations, including classes, interfaces, and public/internal functions. Document parameters, return values, and exceptions.
 - **Agent Extensions**: To add new capabilities, implement `AgentTool` and register it in `ToolRegistry`.
 - **Lifecycle Safety**: Always use `InferenceManager` or `LlmRuntimeManager` for engine operations; never call LiteRT-LM `Engine` directly from UI or Repositories.
 - **Image Handling**: Use `MultimodalMessageFactory` to ensure consistent bitmap processing (scaling to 448px).

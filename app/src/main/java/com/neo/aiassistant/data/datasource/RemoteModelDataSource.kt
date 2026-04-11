@@ -33,10 +33,10 @@ interface RemoteModelDataSource {
 }
 
 /**
- * Implementation of RemoteModelDataSource using Firebase Storage and Ktor.
+ * Default implementation of RemoteModelDataSource using Ktor and supporting Firebase Storage URIs.
  */
 @Singleton
-class FirebaseRemoteModelDataSource @Inject constructor(
+class DefaultRemoteModelDataSource @Inject constructor(
     private val httpClient: HttpClient
 ) : RemoteModelDataSource {
 

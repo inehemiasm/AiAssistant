@@ -11,23 +11,22 @@ A futuristic, high-performance Android AI assistant powered by **Google AI Edge 
     - `AnalyzeImageTool`: Detailed visual description using multimodal capabilities.
     - `ExtractTasksTool`: Automatically identifies actionable items from text.
     - `SummarizeTextTool`: Condenses long conversations or documents.
+- **Hybrid Model Discovery**: Combines dynamic **Hugging Face Hub** search with curated assets and Firebase Firestore.
+- **Robust Background Downloads**: Uses **WorkManager** and **Ktor** for resilient model downloading with SHA-256 verification.
 - **Hardware Acceleration**: Automatic fallback logic attempting GPU acceleration first, with CPU fallback for stability.
 - **Futuristic UI**: A high-tech, "cyberpunk" inspired interface built with Jetpack Compose.
 - **Shared Design System**: Modular `:ui-designsystem` library containing reusable high-tech components and theme.
-- **Real-time Engine Status**: Detailed feedback during the neural engine initialization and agent planning phases.
-- **Dynamic Tool Management**: Support for adding new agent capabilities at runtime through the ToolRegistry.
 
 ## 🛠 Tech Stack
 
-- **UI**: Jetpack Compose
-- **Local AI**: [LiteRT-LM (Google AI Edge)](https://ai.google.dev/edge/litert)
-- **Architecture**: Clean Architecture + MVI (Model-View-Intent) + Agentic Workflow
+- **UI**: Jetpack Compose (MVI Pattern)
+- **Local AI**: [LiteRT-LM (0.10.0)](https://ai.google.dev/edge/litert)
+- **Architecture**: Clean Architecture + Agentic Workflow
 - **Dependency Injection**: Hilt
 - **Networking**: Ktor + OkHttp
-- **Database/Storage**: Firebase Firestore (for model metadata) & Firebase Storage (for model files)
-- **Background Tasks**: WorkManager
+- **Data Sources**: Hugging Face Hub API, Firebase Firestore, and local JSON assets.
+- **Background Tasks**: WorkManager (Foreground Service for downloads)
 - **Image Handling**: Coil & AndroidX Exifinterface
-- **Model Management**: Support for multiple model sources including Firebase and Hugging Face
 
 ## 📋 Architecture & Modules
 
@@ -38,15 +37,13 @@ The project follows a decoupled architecture with an added agentic layer:
     - `AgentOrchestrator`: Manages the iterative reasoning loop.
     - `ToolRegistry`: Manages available local functions the AI can call.
     - `ToolCallParser`: Extracts structured tool requests from raw LLM output.
-    - `AgentTool`: Interface for implementing new agent capabilities.
 - **Inference Layer** (`data/inference/`):
     - `InferenceManager`: High-level manager for model loading and generation.
     - `LlmRuntimeManager`: Manages the LiteRT-LM engine lifecycle, hardware backends, and sessions.
     - `MultimodalMessageFactory`: Centralizes image preprocessing and `Message` construction.
-    - `ModelEngineFactory`: Factory for creating different types of model engines based on runtime requirements.
 - **Data Sources** (`data/datasource/`):
-    - `ModelCatalogDataSource`: Interface for model discovery.
-    - `CompositeModelCatalogDataSource`: Combines multiple data sources for model discovery.
+    - `ModelCatalogDataSource`: Merges models from **Hugging Face Hub API**, **Firestore**, and local assets.
+    - `DefaultRemoteModelDataSource`: Unified downloader supporting standard HTTPS and `gs://` (Firebase Storage) URIs.
 - **Repository** (`ChatRepositoryImpl.kt`): Orchestrates between the Agent layer, Inference runtime, and Data sources.
 
 ### 2. `:ui-designsystem` (Android Library)
@@ -56,19 +53,13 @@ Centralized source of truth for the app's visual identity:
 
 ## ⚙️ Setup & Configuration
 
-### Option 1: Firebase Integration (Automatic Downloads)
-1. **Firebase Project**: Add an Android app with package `com.neo.aiassistant` and place `google-services.json` in `app/`.
-2. **Firestore**: Create a `models` collection with `name`, `url`, and `supportsVision` (Boolean) fields.
-3. **Storage**: Upload `.litertlm` files.
+### Option 1: Automatic Discovery (Recommended)
+The app is pre-configured to search the **Hugging Face Hub** for compatible LiteRT models (`.litertlm` and `.bin`). Simply navigate to the **Marketplace** (Models tab) to browse and download.
 
-### Option 2: Manual Sideloading
-1. **Prepare Models**: Obtain `.litertlm` files (e.g., `gemma-2b-it-cpu-int4.litertlm`).
-2. **Push to Device**:
-   ```bash
-   adb shell "run-as com.neo.aiassistant mkdir -p /data/data/com.neo.aiassistant/files"
-   adb push your_model.litertlm /data/local/tmp/
-   adb shell "run-as com.neo.aiassistant cp /data/local/tmp/your_model.litertlm /data/data/com.neo.aiassistant/files/"
-   ```
+### Option 2: Firebase Integration
+1. **Firebase Project**: Add an Android app with package `com.neo.aiassistant` and place `google-services.json` in `app/`.
+2. **Firestore**: Add entries to the `models` collection to have them appear in the catalog.
+3. **Storage**: Upload models to Firebase Storage; the app will resolve `gs://` links automatically.
 
 ## ⚙️ Hardware Requirements
 

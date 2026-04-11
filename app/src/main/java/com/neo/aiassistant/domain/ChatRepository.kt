@@ -86,37 +86,6 @@ interface ChatRepository {
 }
 
 /**
- * Represents an entry for an AI model in the model catalog.
- *
- * @property name The name of the model.
- * @property url The download URL for the model.
- * @property description A brief description of the model's capabilities.
- * @property provider The provider of the model (e.g., "Firebase").
- * @property sizeBytes The size of the model file in bytes.
- * @property runtimeType The required runtime for the model (e.g., "LiteRT").
- * @property sha256 Optional SHA-256 hash for file verification.
- * @property fileName The name of the file on disk.
- * @property supportsVision Whether the model supports vision tasks.
- */
-data class ModelEntry(
-    val name: String = "",
-    val url: String = "",
-    val description: String = "",
-    val provider: String = "Firebase",
-    val sizeBytes: Long = 0,
-    val runtimeType: String = "LiteRT",
-    val sha256: String? = null,
-    val fileName: String? = null,
-    val supportsVision: Boolean = false
-) {
-    /**
-     * The effective file name to use for this model, derived from [fileName] or [name].
-     */
-    val effectiveFileName: String get() = fileName ?: (name.replace(" ", "_")
-        .lowercase() + ".litertlm")
-}
-
-/**
  * Represents the progress of a model download operation.
  */
 sealed class DownloadProgress {

@@ -9,7 +9,7 @@ import com.neo.aiassistant.core.DefaultDispatcherProvider
 import com.neo.aiassistant.core.DispatcherProvider
 import com.neo.aiassistant.data.ChatRepositoryImpl
 import com.neo.aiassistant.data.datasource.CompositeModelCatalogDataSource
-import com.neo.aiassistant.data.datasource.FirebaseRemoteModelDataSource
+import com.neo.aiassistant.data.datasource.DefaultRemoteModelDataSource
 import com.neo.aiassistant.data.datasource.ModelCatalogDataSource
 import com.neo.aiassistant.data.datasource.RemoteModelDataSource
 import com.neo.aiassistant.data.inference.LlmEngineWrapper
@@ -41,7 +41,7 @@ abstract class AppModule {
     @Binds
     @Singleton
     abstract fun bindRemoteModelDataSource(
-        firebaseRemoteModelDataSource: FirebaseRemoteModelDataSource
+        defaultRemoteModelDataSource: DefaultRemoteModelDataSource
     ): RemoteModelDataSource
 
     @Binds
