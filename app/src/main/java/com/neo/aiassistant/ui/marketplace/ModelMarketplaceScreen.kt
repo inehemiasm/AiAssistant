@@ -66,6 +66,16 @@ import com.neo.aiassistant.ui.common.CatalogState
 import com.neo.aiassistant.ui.designsystem.AmbientGlow
 import com.neo.aiassistant.ui.designsystem.Typography
 
+/**
+ * The screen for the AI Model Marketplace.
+ *
+ * This screen allows users to discover new AI models from a remote catalog and
+ * manage their locally installed models. It features a tabbed interface for
+ * "Discover" and "Installed" models.
+ *
+ * @param viewModel The ViewModel providing state and handling marketplace actions.
+ * @param onBack Callback for navigating back to the previous screen.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ModelMarketplaceScreen(
@@ -136,6 +146,13 @@ fun ModelMarketplaceScreen(
     }
 }
 
+/**
+ * A list of models available for discovery and download.
+ *
+ * @param state The current marketplace state.
+ * @param onIntent Callback for emitting marketplace intents.
+ * @param baseDir The base directory for model file operations.
+ */
 @Composable
 fun DiscoverModelsList(state: MarketplaceState, onIntent: (MarketplaceIntent) -> Unit, baseDir: String) {
     if (state.catalogState is CatalogState.Loading) {
@@ -165,6 +182,13 @@ fun DiscoverModelsList(state: MarketplaceState, onIntent: (MarketplaceIntent) ->
     }
 }
 
+/**
+ * A list of models already installed on the device.
+ *
+ * @param state The current marketplace state.
+ * @param onIntent Callback for emitting marketplace intents.
+ * @param baseDir The base directory for model file operations.
+ */
 @Composable
 fun InstalledModelsList(state: MarketplaceState, onIntent: (MarketplaceIntent) -> Unit, baseDir: String) {
     if (state.localModels.isEmpty()) {
@@ -193,6 +217,15 @@ fun InstalledModelsList(state: MarketplaceState, onIntent: (MarketplaceIntent) -
     }
 }
 
+/**
+ * A card representing a remote model in the discovery list.
+ *
+ * @param model The model entry from the catalog.
+ * @param isInstalled Whether the model is already downloaded.
+ * @param isDownloading Whether the model is currently being downloaded.
+ * @param downloadProgress The current download progress percentage.
+ * @param onDownload Callback triggered when the download button is clicked.
+ */
 @Composable
 fun RemoteModelCard(
     model: ModelEntry,
@@ -251,6 +284,15 @@ fun RemoteModelCard(
     }
 }
 
+/**
+ * A card representing a locally installed model.
+ *
+ * @param model The local model information.
+ * @param isActive Whether the model is the one currently selected in preferences.
+ * @param isReady Whether the model is currently initialized in memory.
+ * @param onSelect Callback triggered when the activate/play button is clicked.
+ * @param onDelete Callback triggered when the delete button is clicked.
+ */
 @Composable
 fun LocalModelCard(
     model: LocalModel,
@@ -314,6 +356,11 @@ fun LocalModelCard(
     }
 }
 
+/**
+ * A small badge showing the provider of a model.
+ *
+ * @param provider The name of the model provider.
+ */
 @Composable
 fun ProviderBadge(provider: String) {
     Box(
@@ -325,6 +372,12 @@ fun ProviderBadge(provider: String) {
     }
 }
 
+/**
+ * A reusable row item for displaying a single piece of model metadata with an icon.
+ *
+ * @param icon The icon to display.
+ * @param text The metadata text.
+ */
 @Composable
 fun InfoItem(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -334,6 +387,9 @@ fun InfoItem(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String
     }
 }
 
+/**
+ * Formats a file size in bytes into a human-readable string (e.g., "1.2 GB").
+ */
 private fun formatFileSize(size: Long): String {
     if (size <= 0) return "0 B"
     val units = arrayOf("B", "KB", "MB", "GB", "TB")

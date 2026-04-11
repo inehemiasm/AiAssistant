@@ -36,6 +36,16 @@ import androidx.compose.ui.unit.sp
 import com.neo.aiassistant.R
 import com.neo.aiassistant.ui.designsystem.Typography
 
+/**
+ * A visually engaging loading indicator shown when the AI is "thinking" or processing a request.
+ *
+ * This component features a pulsing icon and a text label with an animated alpha effect.
+ *
+ * @param visible Whether the indicator should be shown.
+ * @param modifier The modifier to be applied to the container.
+ * @param statusMessage Optional custom message to display (e.g., "PLANNING", "EXECUTING").
+ *                      Defaults to "THINKING" if null.
+ */
 @Composable
 fun QuantumThinkingIndicator(
     visible: Boolean,

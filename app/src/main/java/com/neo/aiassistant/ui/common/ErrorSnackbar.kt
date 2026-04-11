@@ -21,6 +21,15 @@ import androidx.compose.ui.unit.dp
 import com.neo.aiassistant.R
 import com.neo.aiassistant.ui.designsystem.Typography
 
+/**
+ * A custom snackbar for displaying error messages.
+ *
+ * Features an error icon, the error message, and a dismiss button.
+ * Uses the theme's error container colors for high visibility.
+ *
+ * @param message The error message to display.
+ * @param onDismiss Callback triggered when the dismiss button is clicked.
+ */
 @Composable
 fun ErrorSnackbar(message: String, onDismiss: () -> Unit) {
     Snackbar(

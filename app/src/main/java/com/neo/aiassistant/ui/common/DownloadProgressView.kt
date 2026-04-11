@@ -25,6 +25,15 @@ import com.neo.aiassistant.R
 import com.neo.aiassistant.ui.designsystem.AmbientGlow
 import com.neo.aiassistant.ui.designsystem.Typography
 
+/**
+ * A visually rich view for displaying the progress of a model download.
+ *
+ * It features a large circular progress indicator with the percentage in the
+ * center, the name of the model being downloaded, and a status description.
+ *
+ * @param modelName The name of the AI model being downloaded.
+ * @param progress The current download progress as a percentage (0-100).
+ */
 @Composable
 fun DownloadProgressView(modelName: String, progress: Int) {
     Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {

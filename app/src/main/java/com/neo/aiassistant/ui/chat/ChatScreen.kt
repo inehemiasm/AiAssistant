@@ -42,6 +42,17 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+/**
+ * The main Chat screen of the application.
+ *
+ * This composable manages the chat interface, including the message list,
+ * input field with image/camera support, and the top navigation bar.
+ * It observes the [ChatViewModel] for state changes and emits user intents.
+ *
+ * @param viewModel The ViewModel providing state and handling intents.
+ * @param onModelsClick Callback for navigating to the models selection screen.
+ * @param onSettingsClick Callback for navigating to the settings screen.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatScreen(

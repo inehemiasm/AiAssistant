@@ -11,6 +11,16 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+/**
+ * ViewModel for the Model Marketplace screen.
+ *
+ * Manages the display of available AI models, coordinates model downloads,
+ * and handles deletion of local models.
+ *
+ * @property application The application context.
+ * @property repository The repository for chat and model data.
+ * @property preferenceManager Manages user preferences, including the selected model.
+ */
 @HiltViewModel
 class MarketplaceViewModel @Inject constructor(
     private val application: Application,
@@ -25,11 +35,17 @@ class MarketplaceViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Loads the list of models currently available on the device.
+     */
     private suspend fun loadLocalModels() {
         val models = repository.getLocalModels()
         setState { copy(localModels = models) }
     }
 
+    /**
+     * Fetches the list of available models from the remote catalog.
+     */
     private suspend fun fetchRemoteModels() {
         setState { copy(catalogState = CatalogState.Loading) }
         repository.fetchAvailableModels()
@@ -41,6 +57,9 @@ class MarketplaceViewModel @Inject constructor(
             }
     }
 
+    /**
+     * Handles user intents for the marketplace.
+     */
     override suspend fun handleIntent(intent: MarketplaceIntent) {
         when (intent) {
             MarketplaceIntent.FetchModels -> fetchRemoteModels()
@@ -56,6 +75,12 @@ class MarketplaceViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Initiates the download of a specific model.
+     *
+     * @param modelName The name of the model to download.
+     * @param baseDir The directory where the model should be saved.
+     */
     private fun downloadModel(modelName: String, baseDir: String) {
         val modelEntry = currentState.remoteModels.find { it.effectiveFileName == modelName || it.name == modelName } ?: return
         

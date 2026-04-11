@@ -10,6 +10,15 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 
+/**
+ * Parses a simple markdown string and converts it to an [AnnotatedString] for display in Compose.
+ *
+ * Supports bold (**text**), italic (*text*), and inline code (`text`).
+ * Also provides special styling for the "Nebula Core" keyword.
+ *
+ * @param text The markdown text to parse.
+ * @return An [AnnotatedString] with the appropriate styles applied.
+ */
 @Composable
 fun parseMarkdown(text: String): AnnotatedString {
     val codeBackground = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.3f)
@@ -17,6 +26,14 @@ fun parseMarkdown(text: String): AnnotatedString {
     return parseMarkdownLogic(text, codeBackground, primaryColor)
 }
 
+/**
+ * Internal logic for markdown parsing, decoupled from Compose themes for easier testing.
+ *
+ * @param text The text to parse.
+ * @param codeBackground The background color to use for code spans.
+ * @param primaryColor The primary color to use for highlights and code text.
+ * @return An [AnnotatedString] with the appropriate styles applied.
+ */
 fun parseMarkdownLogic(
     text: String,
     codeBackground: Color,

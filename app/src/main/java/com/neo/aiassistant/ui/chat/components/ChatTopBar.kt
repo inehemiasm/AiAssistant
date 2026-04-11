@@ -35,6 +35,21 @@ import androidx.compose.ui.unit.sp
 import com.neo.aiassistant.R
 import com.neo.aiassistant.ui.designsystem.Typography
 
+/**
+ * A top app bar for the chat screen.
+ *
+ * Displays the currently selected model, provides a menu for model selection,
+ * and actions for clearing the chat and navigating to profile/settings.
+ *
+ * @param isInteractionEnabled Whether user interaction with the bar's elements is allowed.
+ * @param selectedModel The name of the currently selected AI model.
+ * @param availableModels List of model names available for switching.
+ * @param onModelSelected Callback triggered when a model is selected from the dropdown.
+ * @param onClearChat Callback triggered when the "clear chat" button is clicked.
+ * @param onModelsClick Callback triggered when the navigation icon (menu) is clicked.
+ * @param onSettingsClick Callback triggered when the profile icon is clicked.
+ * @param modifier The modifier to be applied to the top app bar.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatTopBar(

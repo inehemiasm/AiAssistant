@@ -49,6 +49,23 @@ import coil.compose.AsyncImage
 import com.neo.aiassistant.R
 import com.neo.aiassistant.ui.designsystem.Typography
 
+/**
+ * A bottom input bar for the chat screen.
+ *
+ * Provides a text field for message input, an attachment menu for selecting
+ * images from the gallery or camera, and a send button. It also displays a
+ * preview of any currently selected image.
+ *
+ * @param text The current text in the input field.
+ * @param onTextChange Callback triggered when the text changes.
+ * @param onSend Callback triggered when the send button is clicked.
+ * @param selectedImageUri The URI of the currently selected image, if any.
+ * @param onGalleryClick Callback triggered when the "gallery" option is selected.
+ * @param onCameraClick Callback triggered when the "camera" option is selected.
+ * @param onRemoveImage Callback triggered when the user wants to remove the selected image.
+ * @param enabled Whether the input bar is enabled for user interaction.
+ * @param modifier The modifier to be applied to the input bar.
+ */
 @Composable
 fun ChatInputBar(
     text: String,

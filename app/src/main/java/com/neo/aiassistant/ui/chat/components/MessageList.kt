@@ -44,6 +44,13 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+/**
+ * A scrollable list of chat messages.
+ *
+ * @param messages The list of [ChatMessage] objects to display.
+ * @param modifier The modifier to be applied to the list.
+ * @param listState The state object to be used to control or observe the list's scroll position.
+ */
 @Composable
 fun MessageList(messages: List<ChatMessage>, modifier: Modifier = Modifier, listState: LazyListState) {
     LazyColumn(state = listState, modifier = modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(24.dp)) {
@@ -51,6 +58,14 @@ fun MessageList(messages: List<ChatMessage>, modifier: Modifier = Modifier, list
     }
 }
 
+/**
+ * A visually styled chat bubble for a single message.
+ *
+ * Displays the message text (with markdown support), any associated image,
+ * and metadata like inference time and model name.
+ *
+ * @param message The [ChatMessage] to display.
+ */
 @Composable
 fun FuturisticChatBubble(message: ChatMessage) {
     val isUser = message.isUser
@@ -145,6 +160,11 @@ fun FuturisticChatBubble(message: ChatMessage) {
     }
 }
 
+/**
+ * A small badge used to display metadata within a chat bubble.
+ *
+ * @param text The text to display in the badge.
+ */
 @Composable
 fun Badge(text: String) {
     Surface(
