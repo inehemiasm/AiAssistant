@@ -13,6 +13,8 @@ import kotlinx.serialization.json.Json
 import javax.inject.Inject
 import javax.inject.Singleton
 
+private const val TAG = "HFDataSource"
+
 @Serializable
 private data class HFModelDto(
     val id: String,
@@ -45,7 +47,7 @@ class HuggingFaceModelCatalogDataSource @Inject constructor(
     override suspend fun fetchAvailableModels(): Result<List<ModelEntry>> {
         val allModels = mutableListOf<ModelEntry>()
         
-        // 1. Load curated models from assets
+        // 1. Load curated models from assets (Highest Priority)
         try {
             val assetPath = "model_catalog/huggingface_models.json"
             val jsonString = context.assets.open(assetPath).bufferedReader().use { it.readText() }
@@ -65,10 +67,10 @@ class HuggingFaceModelCatalogDataSource @Inject constructor(
                 )
             })
         } catch (e: Exception) {
-            Log.e("HFDataSource", "Error loading curated models", e)
+            Log.e(TAG, "Error loading curated models", e)
         }
 
-        // 2. Search Hugging Face Hub for compatible models dynamically
+        // 2. Search Hugging Face Hub for compatible models dynamically (Discovery)
         try {
             val response = httpClient.get("https://huggingface.co/api/models") {
                 parameter("search", "litertlm")
@@ -85,10 +87,19 @@ class HuggingFaceModelCatalogDataSource @Inject constructor(
                     
                     val targetFile = sibling.rfilename
                     
-                    // Avoid duplicates if already in curated list
-                    if (allModels.any { it.url.contains(hubModel.id) }) return@mapNotNull null
+                    // Phase 5: Duplicate handling - skip if already in curated list
+                    if (allModels.any { it.url.contains(hubModel.id) }) {
+                        Log.d(TAG, "Skipping duplicate discovered model: ${hubModel.id}")
+                        return@mapNotNull null
+                    }
 
-                    // Extract license from tags if available (e.g., "license:apache-2.0")
+                    // Phase 2: Aggressive filtering for raw items
+                    if (sibling.size == null || sibling.size < 100 * 1024 * 1024) { // Filter < 100MB
+                        Log.d(TAG, "Filtered out low-quality/invalid model: ${hubModel.id}")
+                        return@mapNotNull null
+                    }
+
+                    // Extract license from tags if available
                     val license = hubModel.tags.find { it.startsWith("license:") }?.removePrefix("license:")
 
                     ModelEntry(
@@ -97,7 +108,7 @@ class HuggingFaceModelCatalogDataSource @Inject constructor(
                         description = "ID: ${hubModel.id} • ${hubModel.likes} likes • ${hubModel.downloads} downloads",
                         provider = "HF Hub",
                         fileName = targetFile,
-                        sizeBytes = sibling.size ?: 0L,
+                        sizeBytes = sibling.size,
                         supportsVision = hubModel.tags.any { it.contains("vision", ignoreCase = true) },
                         license = license,
                         runtimeType = if (targetFile.endsWith(".litertlm")) "LiteRT" else "TFLite/Other"
@@ -106,7 +117,7 @@ class HuggingFaceModelCatalogDataSource @Inject constructor(
                 allModels.addAll(discoveredEntries)
             }
         } catch (e: Exception) {
-            Log.e("HFDataSource", "Error searching HF Hub", e)
+            Log.e(TAG, "Error searching HF Hub", e)
         }
 
         return if (allModels.isEmpty()) {

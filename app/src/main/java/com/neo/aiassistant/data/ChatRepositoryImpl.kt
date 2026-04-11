@@ -2,6 +2,7 @@ package com.neo.aiassistant.data
 
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import com.neo.aiassistant.core.DispatcherProvider
 import com.neo.aiassistant.data.agent.AgentOrchestrator
 import com.neo.aiassistant.data.agent.AgentState
@@ -28,6 +29,8 @@ import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
 
+private const val TAG = "ChatRepositoryImpl"
+
 /**
  * Implementation of [ChatRepository] that orchestrates between different data sources,
  * the inference runtime, and the Agent Orchestrator.
@@ -53,7 +56,8 @@ class ChatRepositoryImpl @Inject constructor(
         val file = File(modelPath)
         if (!file.exists()) return Result.failure(Exception("Model file not found"))
         
-        val installedModel = classifyModel(file)
+        val installedModel = classifyModel(file) ?: return Result.failure(Exception("Invalid model file"))
+        
         // Sync with registry
         installedModelRegistry.upsertInstalledModel(installedModel)
         
@@ -89,37 +93,62 @@ class ChatRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getLocalModels(): List<InstalledModel> = withContext(dispatcherProvider.io) {
-        // Sync registry with actual files on disk occasionally or on request
         val filesDir = context.filesDir
-        val files = filesDir.listFiles { file ->
+        
+        // 1. Scan for potential model files
+        val potentialFiles = filesDir.listFiles { file ->
             file.isFile && (file.name.endsWith(".litertlm") || file.name.endsWith(".bin"))
         } ?: emptyArray()
 
-        // Fetch remote catalog to correlate license info for local files if possible
+        // 2. Fetch remote catalog for metadata enrichment (licenses, canonical names)
         val remoteModels = modelCatalog.fetchAvailableModels().getOrDefault(emptyList())
 
-        val models = files.map { file ->
+        // 3. Process and validate found files
+        val validatedModels = potentialFiles.mapNotNull { file ->
+            if (file.name.endsWith(".tmp") || file.length() < 1024) {
+                // Ignore temp files and tiny files (likely corrupted/interrupted)
+                return@mapNotNull null
+            }
+
             val remoteMatch = remoteModels.find { it.effectiveFileName == file.name }
             classifyModel(file, remoteMatch?.license)
         }
         
-        // Update registry with what we found on disk
-        models.forEach { installedModelRegistry.upsertInstalledModel(it) }
+        // 4. Update the Registry (Source of Truth)
+        // Note: In a real production app, we might check if existing registry entries still exist on disk
+        // and mark them as MISSING/CORRUPTED if not.
+        val currentRegistry = installedModelRegistry.getInstalledModels()
+        
+        // Remove orphans from registry (entries with no file)
+        currentRegistry.forEach { registryModel ->
+            if (!File(registryModel.filePath).exists()) {
+                Log.w(TAG, "Removing orphaned registry entry: ${registryModel.id}")
+                installedModelRegistry.removeInstalledModel(registryModel.id)
+            }
+        }
+
+        // Upsert validated models
+        validatedModels.forEach { model ->
+            installedModelRegistry.upsertInstalledModel(model)
+        }
         
         installedModelRegistry.getInstalledModels()
     }
 
     override fun isModelValid(modelName: String): Boolean {
         val file = File(context.filesDir, modelName)
-        return file.exists() && file.length() > 0
+        // Basic production-grade validation: exists, not a directory, minimum size for a weights file
+        return file.exists() && file.isFile && file.length() > 1024 * 1024 // > 1MB
     }
 
-    private fun classifyModel(file: File, license: String? = null): InstalledModel {
+    private fun classifyModel(file: File, license: String? = null): InstalledModel? {
+        if (!file.exists() || !file.isFile) return null
+
         val extension = file.extension.lowercase()
         val (format, runtime) = when (extension) {
             "litertlm" -> ModelFormat.LITERTLM to ModelRuntime.LITERT
             "bin" -> ModelFormat.BIN to ModelRuntime.LITERT
-            else -> ModelFormat.UNKNOWN to ModelRuntime.UNKNOWN
+            else -> return null
         }
 
         val capabilities = mutableSetOf(ModelCapability.TEXT)
@@ -134,6 +163,7 @@ class ChatRepositoryImpl @Inject constructor(
         return InstalledModel(
             id = file.name,
             displayName = file.nameWithoutExtension.replace("_", " ")
+                .replace("-", " ")
                 .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() },
             filePath = file.absolutePath,
             fileName = file.name,
@@ -157,6 +187,9 @@ class ChatRepositoryImpl @Inject constructor(
                 installedModelRegistry.removeInstalledModel(modelName)
             }
             return deleted
+        } else {
+            // Even if file is missing, clean up registry
+            installedModelRegistry.removeInstalledModel(modelName)
         }
         return false
     }

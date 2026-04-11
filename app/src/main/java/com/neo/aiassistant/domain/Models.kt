@@ -19,24 +19,18 @@ data class InstalledModel(
     val checksum: String? = null,
     val installedAt: Long? = null,
     val license: String? = null
-)
-
-/**
- * Represents a machine learning model stored locally on the device.
- * (Legacy model, kept for backward compatibility during transition if needed).
- */
-data class LocalModel(
-    val id: String,
-    val displayName: String,
-    val filePath: String,
-    val fileName: String,
-    val source: ModelSource,
-    val format: ModelFormat,
-    val runtime: ModelRuntime,
-    val capabilities: Set<ModelCapability>,
-    val sizeBytes: Long = 0,
-    val license: String? = null
-)
+) {
+    /**
+     * Helper to check if the model is in a healthy, usable state.
+     */
+    val isHealthy: Boolean get() = installStatus == InstallStatus.INSTALLED
+    
+    /**
+     * Helper to check if the model is currently undergoing a lifecycle transition.
+     */
+    val isTransitioning: Boolean get() = installStatus == InstallStatus.DOWNLOADING || 
+            installStatus == InstallStatus.VERIFYING
+}
 
 /**
  * Defines the possible sources from which a model can be acquired.
@@ -93,8 +87,12 @@ enum class ModelCapability {
  */
 enum class InstallStatus {
     DOWNLOADING,
+    VERIFYING,
     INSTALLED,
     FAILED,
+    INVALID,
+    CORRUPTED,
+    UNSUPPORTED,
     PENDING_DELETE
 }
 

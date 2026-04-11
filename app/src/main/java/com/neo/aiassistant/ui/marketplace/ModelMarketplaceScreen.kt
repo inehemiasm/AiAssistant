@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.FileDownloadDone
 import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.Refresh
@@ -72,6 +73,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.neo.aiassistant.R
+import com.neo.aiassistant.domain.InstallStatus
 import com.neo.aiassistant.domain.InstalledModel
 import com.neo.aiassistant.domain.ModelEntry
 import com.neo.aiassistant.ui.common.CatalogState
@@ -162,21 +164,32 @@ fun DiscoverModelsList(state: MarketplaceState, onIntent: (MarketplaceIntent) ->
     } else {
         LazyColumn(
             contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            items(state.remoteModels) { model ->
-                val isInstalled = state.localModels.any { it.fileName == model.effectiveFileName }
-                val isDownloading = state.downloadingModelName == model.effectiveFileName
+            state.groupedRemoteModels.forEach { (provider, models) ->
+                item {
+                    Text(
+                        text = provider.uppercase(),
+                        style = Typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp)
+                    )
+                }
                 
-                RemoteModelCard(
-                    model = model,
-                    isInstalled = isInstalled,
-                    isDownloading = isDownloading,
-                    downloadProgress = if (isDownloading) state.downloadProgress else null,
-                    onDownload = {
-                        onIntent(MarketplaceIntent.DownloadModel(model.name, baseDir)) 
-                    }
-                )
+                items(models) { model ->
+                    val installedVersion = state.localModels.find { it.fileName == model.effectiveFileName }
+                    val isDownloading = state.downloadingModelName == model.effectiveFileName
+                    
+                    RemoteModelCard(
+                        model = model,
+                        installedModel = installedVersion,
+                        isDownloading = isDownloading,
+                        downloadProgress = if (isDownloading) state.downloadProgress else null,
+                        onDownload = {
+                            onIntent(MarketplaceIntent.DownloadModel(model, baseDir)) 
+                        }
+                    )
+                }
             }
         }
     }
@@ -212,7 +225,7 @@ fun InstalledModelsList(state: MarketplaceState, onIntent: (MarketplaceIntent) -
                         isSwitching = isSwitching,
                         warmupStatus = if (isSwitching) (state.switchState as? ModelSwitchState.WarmingUp)?.progress else null,
                         onSelect = { onIntent(MarketplaceIntent.SelectModel(model.id)) },
-                        onDelete = { onIntent(MarketplaceIntent.DeleteModel(model.fileName)) }
+                        onDelete = { onIntent(MarketplaceIntent.DeleteModel(model.id)) }
                     )
                 }
             }
@@ -264,7 +277,7 @@ fun InstalledModelsList(state: MarketplaceState, onIntent: (MarketplaceIntent) -
 @Composable
 fun RemoteModelCard(
     model: ModelEntry,
-    isInstalled: Boolean,
+    installedModel: InstalledModel?,
     isDownloading: Boolean,
     downloadProgress: Int?,
     onDownload: () -> Unit
@@ -279,7 +292,7 @@ fun RemoteModelCard(
             Column(modifier = Modifier.padding(16.dp)) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth(0.75f) // Reserve space for badge
+                    modifier = Modifier.fillMaxWidth(0.75f)
                 ) {
                     Icon(Icons.Default.CloudDownload, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(8.dp))
@@ -323,14 +336,16 @@ fun RemoteModelCard(
                     
                     Spacer(Modifier.weight(1f))
                     
-                    if (isInstalled) {
+                    if (installedModel != null && installedModel.isHealthy) {
                         Icon(Icons.Default.FileDownloadDone, stringResource(R.string.installed), tint = Color.Green.copy(alpha = 0.7f))
-                    } else if (isDownloading) {
+                    } else if (isDownloading || installedModel?.installStatus == InstallStatus.DOWNLOADING) {
                         CircularProgressIndicator(
                             progress = { (downloadProgress ?: 0) / 100f },
                             modifier = Modifier.size(24.dp),
                             strokeWidth = 2.dp
                         )
+                    } else if (installedModel?.installStatus == InstallStatus.VERIFYING) {
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
                     } else {
                         IconButton(onClick = onDownload, modifier = Modifier.size(32.dp)) {
                             Icon(Icons.Default.Download, stringResource(R.string.download_required), tint = MaterialTheme.colorScheme.primary)
@@ -378,6 +393,7 @@ fun LocalModelCard(
             1.dp, 
             when {
                 isSwitching -> MaterialTheme.colorScheme.primary.copy(alpha = alpha)
+                !model.isHealthy -> MaterialTheme.colorScheme.error.copy(alpha = 0.5f)
                 isActive -> MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
                 isPending -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f)
                 else -> MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)
@@ -400,11 +416,16 @@ fun LocalModelCard(
                     Icon(
                         when {
                             isSwitching -> Icons.Default.Sync
+                            !model.isHealthy -> Icons.Default.Error
                             isActive -> Icons.Default.Check
                             else -> Icons.Default.FileDownloadDone
                         }, 
                         null, 
-                        tint = if (isActive || isSwitching) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                        tint = when {
+                            !model.isHealthy -> MaterialTheme.colorScheme.error
+                            isActive || isSwitching -> MaterialTheme.colorScheme.primary
+                            else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                        },
                         modifier = if (isSwitching) Modifier.alpha(alpha) else Modifier
                     )
                     Spacer(Modifier.width(8.dp))
@@ -413,17 +434,18 @@ fun LocalModelCard(
                         style = Typography.titleMedium, 
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
+                        color = if (!model.isHealthy) MaterialTheme.colorScheme.error else Color.Unspecified
                     )
                 }
 
-                if (isSwitching) {
+                if (isSwitching || model.isTransitioning) {
                     Spacer(Modifier.height(8.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         CircularProgressIndicator(modifier = Modifier.size(12.dp), strokeWidth = 1.5.dp)
                         Spacer(Modifier.width(8.dp))
                         Text(
-                            warmupStatus ?: "Warming up engine...", 
+                            warmupStatus ?: model.installStatus.name, 
                             style = Typography.labelSmall, 
                             color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.alpha(alpha)
@@ -439,6 +461,14 @@ fun LocalModelCard(
                         
                         model.license?.let { license ->
                             InfoItem(Icons.Default.Balance, license)
+                        }
+                        
+                        if (!model.isHealthy && !model.isTransitioning) {
+                             Text(
+                                "Status: ${model.installStatus}", 
+                                style = Typography.labelSmall, 
+                                color = MaterialTheme.colorScheme.error
+                             )
                         }
                     }
                     

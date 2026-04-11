@@ -33,12 +33,18 @@ data class MarketplaceState(
 ) : UiState {
     val isDownloading: Boolean get() = downloadingModelName != null
     val isSwitching: Boolean get() = switchState is ModelSwitchState.Switching || switchState is ModelSwitchState.WarmingUp
+    
+    /**
+     * Group models by provider for cleaner UI.
+     */
+    val groupedRemoteModels: Map<String, List<ModelEntry>> 
+        get() = remoteModels.groupBy { it.provider }
 }
 
 sealed class MarketplaceIntent : UiIntent {
     data object FetchModels : MarketplaceIntent()
-    data class DownloadModel(val modelName: String, val baseDir: String) : MarketplaceIntent()
-    data class DeleteModel(val modelName: String) : MarketplaceIntent()
+    data class DownloadModel(val model: ModelEntry, val baseDir: String) : MarketplaceIntent()
+    data class DeleteModel(val modelId: String) : MarketplaceIntent()
     data class SelectModel(val modelId: String) : MarketplaceIntent()
     data class ConfirmSwitch(val modelId: String, val modelPath: String) : MarketplaceIntent()
 }
