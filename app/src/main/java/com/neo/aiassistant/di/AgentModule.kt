@@ -2,7 +2,10 @@ package com.neo.aiassistant.di
 
 import com.neo.aiassistant.data.PreferenceManager
 import com.neo.aiassistant.data.agent.AgentTool
+import com.neo.aiassistant.data.agent.tools.GetActiveModelTool
+import com.neo.aiassistant.data.agent.tools.GetModelDetailsTool
 import com.neo.aiassistant.data.agent.tools.ListModelsTool
+import com.neo.aiassistant.data.agent.tools.RecommendModelTool
 import com.neo.aiassistant.data.agent.tools.RuntimeStatusTool
 import com.neo.aiassistant.data.agent.tools.SelectModelTool
 import com.neo.aiassistant.data.agent.tools.SummarizeTextTool
@@ -38,9 +41,28 @@ object AgentModule {
     @Provides
     @IntoSet
     fun provideListModelsTool(
-        registry: InstalledModelRegistry
+        registry: InstalledModelRegistry,
+        preferenceManager: PreferenceManager
     ): AgentTool {
-        return ListModelsTool(registry)
+        return ListModelsTool(registry, preferenceManager)
+    }
+
+    @Provides
+    @IntoSet
+    fun provideGetActiveModelTool(
+        registry: InstalledModelRegistry,
+        preferenceManager: PreferenceManager
+    ): AgentTool {
+        return GetActiveModelTool(registry, preferenceManager)
+    }
+
+    @Provides
+    @IntoSet
+    fun provideGetModelDetailsTool(
+        registry: InstalledModelRegistry,
+        preferenceManager: PreferenceManager
+    ): AgentTool {
+        return GetModelDetailsTool(registry, preferenceManager)
     }
 
     @Provides
@@ -50,6 +72,14 @@ object AgentModule {
         registry: InstalledModelRegistry
     ): AgentTool {
         return SelectModelTool(preferenceManager, registry)
+    }
+
+    @Provides
+    @IntoSet
+    fun provideRecommendModelTool(
+        registry: InstalledModelRegistry
+    ): AgentTool {
+        return RecommendModelTool(registry)
     }
 
     @Provides
