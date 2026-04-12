@@ -1,5 +1,6 @@
 package com.neo.aiassistant.di
 
+import android.content.Context
 import com.neo.aiassistant.data.PreferenceManager
 import com.neo.aiassistant.data.agent.AgentTool
 import com.neo.aiassistant.data.agent.actions.AndroidAppActionExecutor
@@ -11,6 +12,7 @@ import dagger.Binds
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import dagger.multibindings.IntoSet
 import io.ktor.client.HttpClient
@@ -36,10 +38,11 @@ abstract class AgentModule {
         @Provides
         @IntoSet
         fun provideWebSearchTool(
+            @ApplicationContext context: Context,
             httpClient: HttpClient,
             searchCacheDao: SearchCacheDao
         ): AgentTool {
-            return WebSearchTool(httpClient, searchCacheDao)
+            return WebSearchTool(context, httpClient, searchCacheDao)
         }
 
         @Provides
@@ -129,5 +132,35 @@ abstract class AgentModule {
         fun provideCreateCalendarEventTool(
             executor: AndroidAppActionExecutor
         ): AgentTool = CreateCalendarEventTool(executor)
+
+        @Provides
+        @IntoSet
+        fun provideSearchAppsTool(
+            executor: AndroidAppActionExecutor
+        ): AgentTool = SearchAppsTool(executor)
+
+        @Provides
+        @IntoSet
+        fun provideListAppsTool(
+            executor: AndroidAppActionExecutor
+        ): AgentTool = ListAppsTool(executor)
+
+        @Provides
+        @IntoSet
+        fun provideLaunchAppTool(
+            executor: AndroidAppActionExecutor
+        ): AgentTool = LaunchAppTool(executor)
+
+        @Provides
+        @IntoSet
+        fun provideOpenAppTool(
+            executor: AndroidAppActionExecutor
+        ): AgentTool = OpenAppTool(executor)
+
+        @Provides
+        @IntoSet
+        fun provideGetAppCapabilitiesTool(
+            executor: AndroidAppActionExecutor
+        ): AgentTool = GetAppCapabilitiesTool(executor)
     }
 }

@@ -43,10 +43,22 @@ class ChatRepositoryImpl @Inject constructor(
     override fun isVisionSupported(): Boolean = inferenceManager.isVisionSupported()
 
     override suspend fun initializeModel(modelPath: String): Result<Unit> {
+        if (modelPath.isBlank()) {
+            return Result.failure(Exception("Model path is empty"))
+        }
+
         val file = File(modelPath)
-        if (!file.exists()) return Result.failure(Exception("Model file not found"))
+        if (!file.exists()) {
+            return Result.failure(Exception("Model file not found at: $modelPath"))
+        }
         
-        val installedModel = classifyModel(file) ?: return Result.failure(Exception("Invalid model file"))
+        if (!file.isFile) {
+            return Result.failure(Exception("Path is a directory, not a valid model file: ${file.name}"))
+        }
+        
+        val installedModel = classifyModel(file) ?: return Result.failure(
+            Exception("Unsupported or invalid model format. Please ensure the file has a .litertlm or .bin extension.")
+        )
         
         // Sync with registry
         installedModelRegistry.upsertInstalledModel(installedModel)
@@ -98,13 +110,12 @@ class ChatRepositoryImpl @Inject constructor(
             file.isFile && (file.name.endsWith(".litertlm") || file.name.endsWith(".bin"))
         } ?: emptyArray()
 
-        // 2. Fetch remote catalog for metadata enrichment (licenses, canonical names)
+        // 2. Fetch remote catalog for metadata enrichment
         val remoteModels = modelCatalog.fetchAvailableModels().getOrDefault(emptyList())
 
         // 3. Process and validate found files
         val validatedModels = potentialFiles.mapNotNull { file ->
             if (file.name.endsWith(".tmp") || file.length() < 1024) {
-                // Ignore temp files and tiny files (likely corrupted/interrupted)
                 return@mapNotNull null
             }
 
@@ -112,12 +123,9 @@ class ChatRepositoryImpl @Inject constructor(
             classifyModel(file, remoteMatch?.license)
         }
         
-        // 4. Update the Registry (Source of Truth)
-        // Note: In a real production app, we might check if existing registry entries still exist on disk
-        // and mark them as MISSING/CORRUPTED if not.
+        // 4. Update the Registry
         val currentRegistry = installedModelRegistry.getInstalledModels()
         
-        // Remove orphans from registry (entries with no file)
         currentRegistry.forEach { registryModel ->
             if (!File(registryModel.filePath).exists()) {
                 Log.w(TAG, "Removing orphaned registry entry: ${registryModel.id}")
@@ -125,7 +133,6 @@ class ChatRepositoryImpl @Inject constructor(
             }
         }
 
-        // Upsert validated models
         validatedModels.forEach { model ->
             installedModelRegistry.upsertInstalledModel(model)
         }
@@ -134,9 +141,9 @@ class ChatRepositoryImpl @Inject constructor(
     }
 
     override fun isModelValid(modelName: String): Boolean {
+        if (modelName.isBlank()) return false
         val file = File(context.filesDir, modelName)
-        // Basic production-grade validation: exists, not a directory, minimum size for a weights file
-        return file.exists() && file.isFile && file.length() > 1024 * 1024 // > 1MB
+        return file.exists() && file.isFile && file.length() > 1024 * 1024
     }
 
     private fun classifyModel(file: File, license: String? = null): InstalledModel? {
@@ -178,6 +185,7 @@ class ChatRepositoryImpl @Inject constructor(
     }
 
     override suspend fun deleteModel(modelName: String): Boolean {
+        if (modelName.isBlank()) return false
         val file = File(context.filesDir, modelName)
         if (file.exists()) {
             val deleted = file.delete()
@@ -186,7 +194,6 @@ class ChatRepositoryImpl @Inject constructor(
             }
             return deleted
         } else {
-            // Even if file is missing, clean up registry
             installedModelRegistry.removeInstalledModel(modelName)
         }
         return false

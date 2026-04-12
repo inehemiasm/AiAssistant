@@ -5,6 +5,7 @@ import android.util.Log
 import com.google.ai.edge.litertlm.Backend
 import com.google.ai.edge.litertlm.EngineConfig
 import com.google.ai.edge.litertlm.Message
+import com.neo.aiassistant.core.Constants
 import com.neo.aiassistant.core.DispatcherProvider
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -43,7 +44,9 @@ class LlmRuntimeManager @Inject constructor(
             _initStatus.emit("RESETTING RUNTIME...")
             closeCurrentResources()
 
-            val neuralCache = File(context.cacheDir, "neural_cache").apply { if (!exists()) mkdirs() }
+            val neuralCache = File(context.cacheDir, Constants.Inference.NEURAL_CACHE_DIR).apply { 
+                if (!exists()) mkdirs() 
+            }
 
             val backends = listOf(
                 Triple(Backend.GPU(), Backend.CPU(), "GPU + Vision"),
@@ -60,7 +63,7 @@ class LlmRuntimeManager @Inject constructor(
                         modelPath = modelPath,
                         backend = main,
                         visionBackend = vision,
-                        maxNumTokens = 4096,
+                        maxNumTokens = Constants.Inference.MAX_NUM_TOKENS,
                         cacheDir = neuralCache.absolutePath
                     )
                     
@@ -69,7 +72,7 @@ class LlmRuntimeManager @Inject constructor(
                         try {
                             val field = config.javaClass.getDeclaredField("maxNumImages")
                             field.isAccessible = true
-                            field.set(config, 1)
+                            field.set(config, Constants.Inference.MAX_NUM_IMAGES)
                         } catch (e: Exception) { /* ignore */ }
                     }
 

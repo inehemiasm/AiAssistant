@@ -43,7 +43,6 @@ fun ChatScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
-    val modelFile = File(context.filesDir, state.selectedModel)
     val listState = rememberLazyListState()
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -71,18 +70,15 @@ fun ChatScreen(
         }
     }
 
-    LaunchedEffect(state.selectedModel) {
-        if (state.runtimeState is RuntimeState.Uninitialized && modelFile.exists()) {
-            viewModel.onIntent(ChatIntent.Initialize(modelFile.absolutePath))
-        }
-    }
+    // Removed the redundant and error-prone LaunchedEffect for auto-initialization.
+    // Initialization is now managed exclusively by the ChatViewModel's init and observers.
 
     Scaffold(
         topBar = {
             ChatTopBar(
                 isInteractionEnabled = state.isReady,
                 selectedModel = state.selectedModel,
-                availableModels = emptyList(),
+                availableModels = state.localModels.map { it.fileName },
                 onModelSelected = { modelName ->
                     viewModel.onIntent(ChatIntent.SwitchModel(modelName, context.filesDir.absolutePath))
                 },

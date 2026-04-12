@@ -88,8 +88,6 @@ class DraftEmailTool @Inject constructor(
             subject = args["subject"],
             body = args["body"]
         )
-        // Email is usually something users want to review, but Intent itself is a safe action 
-        // as it just opens the app.
         return handleActionResult(actionExecutor.execute(request))
     }
 }
@@ -109,5 +107,70 @@ class CreateCalendarEventTool @Inject constructor(
             location = args["location"]
         )
         return handleActionResult(actionExecutor.execute(request))
+    }
+}
+
+class SearchAppsTool @Inject constructor(
+    private val actionExecutor: AndroidAppActionExecutor
+) : BaseAppActionTool(actionExecutor) {
+    override val name: String = "search_apps"
+    override val description: String = "Searches for installed apps that can handle a specific action or content type."
+    override val inputSchema: String = "action: The Android Intent action (e.g. android.intent.action.SEND). mimeType: Optional MIME type (e.g. text/plain)."
+
+    override suspend fun execute(args: Map<String, String>): ToolResult {
+        val action = args["action"] ?: return ToolResult.Error("Missing 'action' argument")
+        val request = SearchAppsRequest(action, args["mimeType"])
+        return handleActionResult(actionExecutor.execute(request))
+    }
+}
+
+class ListAppsTool @Inject constructor(
+    private val actionExecutor: AndroidAppActionExecutor
+) : BaseAppActionTool(actionExecutor) {
+    override val name: String = "list_apps"
+    override val description: String = "Lists all installed applications on the device."
+    override val inputSchema: String = ""
+
+    override suspend fun execute(args: Map<String, String>): ToolResult {
+        return handleActionResult(actionExecutor.execute(ListAppsRequest))
+    }
+}
+
+class LaunchAppTool @Inject constructor(
+    private val actionExecutor: AndroidAppActionExecutor
+) : BaseAppActionTool(actionExecutor) {
+    override val name: String = "launch_app"
+    override val description: String = "Launches an installed app by its unique package name."
+    override val inputSchema: String = "packageName: The Android package name (e.g. com.google.android.gm)."
+
+    override suspend fun execute(args: Map<String, String>): ToolResult {
+        val packageName = args["packageName"] ?: return ToolResult.Error("Missing 'packageName' argument")
+        return handleActionResult(actionExecutor.execute(LaunchAppRequest(packageName)))
+    }
+}
+
+class OpenAppTool @Inject constructor(
+    private val actionExecutor: AndroidAppActionExecutor
+) : BaseAppActionTool(actionExecutor) {
+    override val name: String = "open_app"
+    override val description: String = "Attempts to find and launch an installed app by its common name (e.g., 'Squarespace', 'Gmail', 'Spotify')."
+    override val inputSchema: String = "name: The common name of the app to open."
+
+    override suspend fun execute(args: Map<String, String>): ToolResult {
+        val name = args["name"] ?: return ToolResult.Error("Missing 'name' argument")
+        return handleActionResult(actionExecutor.execute(LaunchAppByNameRequest(name)))
+    }
+}
+
+class GetAppCapabilitiesTool @Inject constructor(
+    private val actionExecutor: AndroidAppActionExecutor
+) : BaseAppActionTool(actionExecutor) {
+    override val name: String = "get_app_capabilities"
+    override val description: String = "Returns the specific actions and intents an app can handle (e.g., sharing, viewing links, mapping)."
+    override val inputSchema: String = "name: The common name of the app to analyze."
+
+    override suspend fun execute(args: Map<String, String>): ToolResult {
+        val name = args["name"] ?: return ToolResult.Error("Missing 'name' argument")
+        return handleActionResult(actionExecutor.execute(GetAppCapabilitiesRequest(name)))
     }
 }

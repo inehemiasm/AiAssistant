@@ -12,10 +12,20 @@ A futuristic, high-performance Android AI assistant powered by **Google AI Edge 
     - **Integrity Verification**: Automatic SHA-256 checksum validation and health checks for installed models.
     - **Lifecycle Safety**: Guards against deleting active models or interrupting engine switches.
     - **Smart Grouping**: Curated models are prioritized over raw discovery items.
-- **Tool Use (Function Calling)**: The agent can invoke local tools such as:
-    - `AnalyzeImageTool`: Detailed visual description using multimodal capabilities.
-    - `ExtractTasksTool`: Automatically identifies actionable items from text.
-    - `SummarizeTextTool`: Condenses long conversations or documents.
+- **Tool Use (Function Calling)**: The agent can invoke a suite of local and remote tools:
+    - **AI/Content Tools**:
+        - `AnalyzeImageTool`: Detailed visual description using multimodal capabilities.
+        - `ExtractTasksTool`: Automatically identifies actionable items from text.
+        - `SummarizeTextTool`: Condenses long conversations or documents.
+    - **Android System Tools**:
+        - `OpenAppTool`: Intelligent launch-by-name for any installed application.
+        - `ListAppsTool`: Enumerates all user-accessible apps on the device.
+        - `GetAppCapabilitiesTool`: Analyzes an app's supported Android Intents (Sharing, Maps, Web, etc.).
+        - `OpenUrlTool` & `OpenMapsTool`: Deep-link into browsers or navigation.
+        - `DraftEmailTool` & `CreateCalendarEventTool`: Direct productivity shortcuts.
+        - `ShareTextTool` & `CopyToClipboardTool`: System-wide data interaction.
+    - **Web Tools**:
+        - `WebSearchTool`: Real-time information retrieval via Serper.dev with built-in **Internet Connectivity Detection** and LRU caching.
 - **Robust Background Downloads**: Uses **WorkManager** and **Ktor** for resilient model downloading with status tracking (Downloading -> Verifying -> Installed).
 - **Hardware Acceleration**: Automatic fallback logic attempting GPU acceleration first, with CPU fallback for stability.
 - **Futuristic UI**: A high-tech, "cyberpunk" inspired interface built with Jetpack Compose.
@@ -26,7 +36,7 @@ A futuristic, high-performance Android AI assistant powered by **Google AI Edge 
 - **Local AI**: [LiteRT-LM (0.10.0)](https://ai.google.dev/edge/litert)
 - **Architecture**: Clean Architecture + Agentic Workflow
 - **Dependency Injection**: Hilt
-- **Database**: Room (Registry for installed models)
+- **Database**: Room (Registry for installed models and search cache)
 - **Networking**: Ktor + OkHttp
 - **Data Sources**: Hugging Face Hub API, Kaggle Models API, Firebase Firestore.
 - **Background Tasks**: WorkManager (Foreground Service for downloads)
@@ -35,13 +45,9 @@ A futuristic, high-performance Android AI assistant powered by **Google AI Edge 
 
 ### 1. `:app` (Android Application)
 - **Agent Layer** (`data/agent/`): Manages reasoning loops and tool execution.
+- **Action Layer** (`data/agent/actions/`): Executes system-level Android commands with Intent security.
 - **Inference Layer** (`data/inference/`): LiteRT-LM engine lifecycle and hardware backend management.
-- **Data Sources** (`data/datasource/`): 
-    - `CompositeModelCatalogDataSource`: Merges models from multiple remote providers.
-    - `KaggleModelCatalogDataSource`: Integration for official Google/TFLite models.
-    - `HuggingFaceModelCatalogDataSource`: Dynamic search + curated HF assets.
 - **Registry** (`domain/InstalledModelRegistry.kt`): The single source of truth for model health and availability.
-- **Repository** (`ChatRepositoryImpl.kt`): Orchestrates between the Agent layer, Inference runtime, and Data sources.
 
 ### 2. `:ui-designsystem` (Android Library)
 Centralized visual identity: custom Material3 theme, futuristic typography, and reusable high-tech components.

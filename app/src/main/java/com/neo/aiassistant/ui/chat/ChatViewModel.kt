@@ -5,6 +5,7 @@ import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.viewModelScope
 import com.neo.aiassistant.core.BaseViewModel
+import com.neo.aiassistant.core.DispatcherProvider
 import com.neo.aiassistant.data.PreferenceManager
 import com.neo.aiassistant.domain.ChatMessage
 import com.neo.aiassistant.domain.ChatRepository
@@ -14,6 +15,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import javax.inject.Inject
 import kotlin.system.measureTimeMillis
@@ -29,6 +31,7 @@ import kotlin.system.measureTimeMillis
  * @property initializeChatUseCase Use case for initializing the AI model.
  * @property sendMessageUseCase Use case for sending messages to the AI.
  * @property preferenceManager Manages user preferences, including the selected model.
+ * @property dispatcherProvider Provides coroutine dispatchers for different threads.
  */
 @HiltViewModel
 class ChatViewModel @Inject constructor(
@@ -36,12 +39,12 @@ class ChatViewModel @Inject constructor(
     private val repository: ChatRepository,
     private val initializeChatUseCase: InitializeChatUseCase,
     private val sendMessageUseCase: SendMessageUseCase,
-    private val preferenceManager: PreferenceManager
+    private val preferenceManager: PreferenceManager,
+    private val dispatcherProvider: DispatcherProvider
 ) : BaseViewModel<ChatState, ChatIntent, ChatEffect>(application, ChatState()) {
 
     init {
         viewModelScope.launch {
-            // First, load what models we have locally
             updateLocalModels()
             
             observeSelectedModel()
@@ -104,7 +107,9 @@ class ChatViewModel @Inject constructor(
     }
 
     private suspend fun updateLocalModels() {
-        val models = repository.getLocalModels()
+        val models = withContext(dispatcherProvider.io) {
+            repository.getLocalModels()
+        }
         setState { copy(localModels = models) }
     }
 
@@ -117,9 +122,9 @@ class ChatViewModel @Inject constructor(
                 
                 Log.d("ChatViewModel", "Switching model to: ${intent.modelName}")
                 setState { copy(selectedModel = intent.modelName, messages = emptyList(), runtimeState = RuntimeState.Uninitialized) }
-                preferenceManager.updateSelectedModel(intent.modelName)
-                
-                // The actual init will be triggered by the observeSelectedModel collector
+                withContext(dispatcherProvider.io) {
+                    preferenceManager.updateSelectedModel(intent.modelName)
+                }
             }
             ChatIntent.ClearError -> setState { copy(
                 runtimeState = if (currentState.runtimeState is RuntimeState.Error) RuntimeState.Uninitialized else currentState.runtimeState,
@@ -136,7 +141,9 @@ class ChatViewModel @Inject constructor(
 
     private fun clearConversation() {
         viewModelScope.launch {
-            repository.clearConversation()
+            withContext(dispatcherProvider.io) {
+                repository.clearConversation()
+            }
             setState { copy(messages = emptyList()) }
         }
     }
@@ -144,11 +151,12 @@ class ChatViewModel @Inject constructor(
     private suspend fun initModel(modelPath: String) {
         Log.d("ChatViewModel", "Starting model initialization: $modelPath")
         setState { copy(runtimeState = RuntimeState.Initializing("SYNTHESIZING...")) }
-        initializeChatUseCase(modelPath)
-            .onFailure { e ->
-                Log.e("ChatViewModel", "Initialization failed", e)
-                setState { copy(runtimeState = RuntimeState.Error("Init failed: ${e.message}")) }
-            }
+        withContext(dispatcherProvider.default) {
+            initializeChatUseCase(modelPath)
+        }.onFailure { e ->
+            Log.e("ChatViewModel", "Initialization failed", e)
+            setState { copy(runtimeState = RuntimeState.Error("Init failed: ${e.message}")) }
+        }
     }
 
     private suspend fun sendMessage(text: String, imageUri: Uri?) {
@@ -156,15 +164,27 @@ class ChatViewModel @Inject constructor(
         setState { copy(messages = messages + userMsg, sendState = SendState.Sending, inputText = "", selectedImageUri = null) }
         sendEffect { ChatEffect.ScrollToBottom }
 
-        processAgentTurn { sendMessageUseCase(text, imageUri) }
+        processAgentTurn { 
+            withContext(dispatcherProvider.default) {
+                sendMessageUseCase(text, imageUri)
+            }
+        }
     }
 
     private suspend fun confirmAction() {
-        processAgentTurn { repository.confirmAction() }
+        processAgentTurn { 
+            withContext(dispatcherProvider.default) {
+                repository.confirmAction()
+            }
+        }
     }
 
     private suspend fun cancelAction() {
-        processAgentTurn { repository.cancelAction() }
+        processAgentTurn { 
+            withContext(dispatcherProvider.default) {
+                repository.cancelAction()
+            }
+        }
     }
 
     private suspend fun processAgentTurn(action: suspend () -> Result<String>) {
@@ -177,10 +197,6 @@ class ChatViewModel @Inject constructor(
                     return
                 }
         }
-
-        // Check if we already have this exact message (e.g. from a tool observation turn)
-        // Actually, AgentOrchestrator returns the final content or confirmation request.
-        // We append if it's new text.
 
         val aiMsg = ChatMessage(
             text = responseText,

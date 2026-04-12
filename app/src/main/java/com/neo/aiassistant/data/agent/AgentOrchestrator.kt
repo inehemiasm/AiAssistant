@@ -2,6 +2,7 @@ package com.neo.aiassistant.data.agent
 
 import android.net.Uri
 import android.util.Log
+import com.neo.aiassistant.core.Constants
 import com.neo.aiassistant.data.inference.InferenceManager
 import com.neo.aiassistant.domain.InferenceRequest
 import com.neo.aiassistant.domain.InferenceResult
@@ -17,9 +18,6 @@ private const val TAG = "AgentOrchestrator"
 
 /**
  * Orchestrates the Agent reasoning loop: Reason -> Act -> Observe.
- * 
- * This class handles the "Agent Loop" logic, managing multiple turns between 
- * the model and tools until a final answer is reached or limits are hit.
  */
 @Singleton
 class AgentOrchestrator @Inject constructor(
@@ -34,20 +32,15 @@ class AgentOrchestrator @Inject constructor(
     private var lastPrompt: String = ""
     private var lastImageUri: Uri? = null
     private var stepCount = 0
+    private var lastToolSummary: String? = null
 
-    private val MAX_TOOL_CALLS_PER_TURN = 5
-    private val TOOL_EXECUTION_TIMEOUT_MS = 30_000L // 30 seconds
-
-    /**
-     * Processes a user request through the agent loop.
-     */
     suspend fun processUserRequest(prompt: String, imageUri: Uri? = null): Result<String> {
         _agentState.value = AgentState.Planning
-        Log.i(TAG, "Starting agent loop for prompt: $prompt")
+        Log.i(TAG, ">>> Starting agent loop for user prompt: \"$prompt\"")
         
         val systemPrompt = toolRegistry.getToolsSystemPrompt()
         val initialPrompt = if (systemPrompt.isNotEmpty()) {
-            "SYSTEM: $systemPrompt\n\nUSER: $prompt"
+            "${Constants.Agent.SYSTEM_PROMPT_PREFIX}$systemPrompt${Constants.Agent.USER_PROMPT_PREFIX}$prompt"
         } else {
             prompt
         }
@@ -56,25 +49,28 @@ class AgentOrchestrator @Inject constructor(
         lastImageUri = imageUri
         stepCount = 0
         pendingConfirmation = null
+        lastToolSummary = null
 
         return runLoop()
     }
 
     private suspend fun runLoop(): Result<String> {
         try {
-            while (stepCount < MAX_TOOL_CALLS_PER_TURN) {
-                Log.d(TAG, "Agent Loop Iteration ${stepCount + 1}")
+            while (stepCount < Constants.Agent.MAX_TOOL_CALLS_PER_TURN) {
+                Log.d(TAG, "Loop iteration ${stepCount + 1}")
                 
                 val request = InferenceRequest(lastPrompt, lastImageUri)
                 val inferenceResult = inferenceManager.generate(request)
                 
                 val turnResult = when (inferenceResult) {
                     is InferenceResult.Success -> {
-                        val toolCall = parser.parse(inferenceResult.text)
+                        val text = inferenceResult.text
+                        Log.d(TAG, "Model raw output: \"$text\"")
+                        val toolCall = parser.parse(text)
                         if (toolCall != null) {
                             AssistantTurnResult.ToolRequest(toolCall)
                         } else {
-                            AssistantTurnResult.Text(parser.stripToolCall(inferenceResult.text))
+                            AssistantTurnResult.Text(parser.stripToolCall(text))
                         }
                     }
                     is InferenceResult.Failure -> {
@@ -84,19 +80,31 @@ class AgentOrchestrator @Inject constructor(
 
                 when (turnResult) {
                     is AssistantTurnResult.Text -> {
-                        Log.i(TAG, "Model returned final text response.")
+                        val originalText = turnResult.content
+                        val processedText = finalizeResponse(originalText)
+                        
+                        // If we have tool output but the model just returned a short acknowledgment or garbage,
+                        // we should try to get the model to actually summarize or use the tool output.
+                        if (stepCount > 0 && isVeryShort(processedText) && lastToolSummary != null) {
+                            Log.d(TAG, "Model returned short text after tool call. Forcing summary.")
+                            lastPrompt = "OBSERVATION: Action completed. Result: $lastToolSummary\n\nPlease provide a friendly confirmation to the user about what was done."
+                            stepCount++ // Avoid infinite loop if model keeps being short
+                            continue
+                        }
+
+                        Log.i(TAG, "<<< Loop finished. Final text: \"$processedText\"")
                         _agentState.value = AgentState.Completed
-                        return Result.success(turnResult.content)
+                        return Result.success(processedText)
                     }
                     is AssistantTurnResult.ToolRequest -> {
                         stepCount++
                         val toolCall = turnResult.toolCall
-                        Log.i(TAG, "Model requested tool: ${toolCall.toolName} with args: ${toolCall.arguments}")
+                        Log.i(TAG, "Tool request: ${toolCall.toolName} with ${toolCall.arguments}")
                         
                         val tool = toolRegistry.getTool(toolCall.toolName)
                         if (tool == null) {
-                            Log.w(TAG, "Tool ${toolCall.toolName} not found.")
-                            lastPrompt = "Error: Tool '${toolCall.toolName}' not found. Answer directly if possible."
+                            Log.w(TAG, "Tool '${toolCall.toolName}' not found.")
+                            lastPrompt = "${Constants.Agent.TOOL_ERROR_PREFIX}Tool '${toolCall.toolName}' not found. Please proceed without it or inform the user."
                             lastImageUri = null
                             continue
                         }
@@ -104,19 +112,19 @@ class AgentOrchestrator @Inject constructor(
                         _agentState.value = AgentState.ExecutingTool(tool.name)
                         
                         val toolResult = try {
-                            withTimeout(TOOL_EXECUTION_TIMEOUT_MS) {
+                            withTimeout(Constants.Agent.TOOL_EXECUTION_TIMEOUT_MS) {
                                 tool.execute(toolCall.arguments)
                             }
                         } catch (e: TimeoutCancellationException) {
                             Log.e(TAG, "Tool ${tool.name} timed out.")
                             ToolResult.Error("Tool execution timed out.")
                         } catch (e: Exception) {
-                            Log.e(TAG, "Tool ${tool.name} failed with exception", e)
+                            Log.e(TAG, "Tool ${tool.name} failed", e)
                             ToolResult.Error("Tool execution failed: ${e.message}")
                         }
 
-                        val processedResult = handleToolResult(tool, toolResult)
-                        if (processedResult != null) return processedResult
+                        val stopLoopResult = handleToolResult(tool, toolResult)
+                        if (stopLoopResult != null) return stopLoopResult
                         
                         lastImageUri = null
                     }
@@ -128,9 +136,10 @@ class AgentOrchestrator @Inject constructor(
                 }
             }
 
-            Log.w(TAG, "Reached max tool calls ($MAX_TOOL_CALLS_PER_TURN). Stopping loop.")
-            _agentState.value = AgentState.Error("Max reasoning steps reached.")
-            return Result.failure(Exception("Max reasoning steps reached without final answer."))
+            Log.w(TAG, "Reached max tool calls (${Constants.Agent.MAX_TOOL_CALLS_PER_TURN}).")
+            val finalFallback = lastToolSummary ?: "I've completed the requested actions."
+            _agentState.value = AgentState.Completed
+            return Result.success(finalFallback)
 
         } catch (e: Exception) {
             Log.e(TAG, "Unexpected error in agent loop", e)
@@ -139,30 +148,54 @@ class AgentOrchestrator @Inject constructor(
         }
     }
 
+    private fun isVeryShort(text: String): Boolean {
+        val trimmed = text.trim()
+        return trimmed.length < 5 || trimmed.split(" ").size < 3
+    }
+
+    private fun finalizeResponse(text: String): String {
+        val trimmed = text.trim()
+        
+        // Check for garbage/empty output which often happens after a tool execution turn
+        val isGarbage = trimmed.isEmpty() || 
+                       trimmed == "-" || 
+                       trimmed == "|" || 
+                       trimmed == "." || 
+                       trimmed.length < 2
+        
+        return if (isGarbage && lastToolSummary != null) {
+            Log.w(TAG, "Model returned garbage text after tool call. Using fallback summary: $lastToolSummary")
+            lastToolSummary!!
+        } else if (trimmed.isEmpty()) {
+            "I'm sorry, I encountered an issue generating a response."
+        } else {
+            trimmed
+        }
+    }
+
     private suspend fun handleToolResult(tool: AgentTool, toolResult: ToolResult): Result<String>? {
         return when (toolResult) {
             is ToolResult.Success -> {
-                Log.d(TAG, "Tool ${tool.name} success: ${toolResult.data}")
-                lastPrompt = "OBSERVATION from ${tool.name}: ${toolResult.data}\nContinue."
+                Log.d(TAG, "Tool ${tool.name} SUCCESS: ${toolResult.data}")
+                lastToolSummary = toolResult.data
+                lastPrompt = "${Constants.Agent.OBSERVATION_PREFIX}${tool.name}: ${toolResult.data}\n\nAction completed successfully. Please provide a brief final confirmation to the user."
                 null
             }
             is ToolResult.Error -> {
-                Log.e(TAG, "Tool ${tool.name} error: ${toolResult.message}")
-                lastPrompt = "TOOL_ERROR from ${tool.name}: ${toolResult.message}\nPlease try to recover or answer directly."
+                Log.e(TAG, "Tool ${tool.name} ERROR: ${toolResult.message}")
+                lastToolSummary = "Error: ${toolResult.message}"
+                lastPrompt = "TOOL_ERROR from ${tool.name}: ${toolResult.message}\n\nPlease explain the error to the user or try an alternative."
                 null
             }
             is ToolResult.NeedsConfirmation -> {
-                Log.i(TAG, "Tool ${tool.name} needs confirmation.")
+                Log.i(TAG, "Tool ${tool.name} needs confirmation: ${toolResult.message}")
                 pendingConfirmation = toolResult.onConfirm
                 _agentState.value = AgentState.WaitingForConfirmation(tool.name, toolResult.message)
-                Result.success("I need your confirmation to ${tool.name}: ${toolResult.message}")
+                Result.success("I need your confirmation to proceed with ${tool.name}: ${toolResult.message}")
             }
         }
     }
 
-    /**
-     * Resumes the agent loop after a user confirmation.
-     */
     suspend fun confirmAction(): Result<String> {
         val onConfirm = pendingConfirmation ?: return Result.failure(IllegalStateException("No pending confirmation"))
         pendingConfirmation = null
@@ -175,35 +208,28 @@ class AgentOrchestrator @Inject constructor(
             ToolResult.Error("Action confirmation failed: ${e.message}")
         }
         
-        // We need a reference to the tool name if we want to log it, 
-        // but for now we'll just use a generic name or keep it simple.
-        // To be better, ToolResult.NeedsConfirmation could include the tool name.
-        
-        // After confirmation result, we continue the loop
         when (toolResult) {
             is ToolResult.Success -> {
-                lastPrompt = "OBSERVATION: Action confirmed and successful: ${toolResult.data}\nContinue."
+                lastToolSummary = toolResult.data
+                lastPrompt = "OBSERVATION: User confirmed. Action successful: ${toolResult.data}\nContinue and provide a final response."
             }
             is ToolResult.Error -> {
-                lastPrompt = "OBSERVATION: Action confirmed but failed: ${toolResult.message}\nPlease try to recover."
+                lastToolSummary = "Error: ${toolResult.message}"
+                lastPrompt = "OBSERVATION: User confirmed, but action failed: ${toolResult.message}\nPlease inform the user."
             }
             is ToolResult.NeedsConfirmation -> {
-                // Nested confirmations? Unlikely but supported
                 pendingConfirmation = toolResult.onConfirm
-                _agentState.value = AgentState.WaitingForConfirmation("unknown", toolResult.message)
-                return Result.success("I need another confirmation: ${toolResult.message}")
+                _agentState.value = AgentState.WaitingForConfirmation("nested", toolResult.message)
+                return Result.success("Additional confirmation needed: ${toolResult.message}")
             }
         }
         
         return runLoop()
     }
 
-    /**
-     * Cancels the pending action and resumes the agent loop with a cancellation observation.
-     */
     suspend fun cancelAction(): Result<String> {
         pendingConfirmation = null
-        lastPrompt = "OBSERVATION: User canceled the action. Please acknowledge and ask if there's anything else you can do."
+        lastPrompt = "OBSERVATION: User canceled the action. Please acknowledge this cancellation."
         return runLoop()
     }
 
@@ -211,5 +237,6 @@ class AgentOrchestrator @Inject constructor(
         _agentState.value = AgentState.Idle
         pendingConfirmation = null
         stepCount = 0
+        lastToolSummary = null
     }
 }

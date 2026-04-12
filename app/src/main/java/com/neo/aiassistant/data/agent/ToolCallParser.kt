@@ -19,10 +19,25 @@ class ToolCallParser @Inject constructor() {
         
         val arguments = mutableMapOf<String, String>()
         if (paramsString.isNotBlank()) {
+            // Split by comma, but be careful of commas inside quoted values if we ever support them.
+            // For now, simple split is okay for basic parameters.
             paramsString.split(",").forEach { param ->
-                val parts = param.split("=").map { it.trim() }
+                // Split by first '=' only to support values that contain '=' (like URLs)
+                val parts = param.split("=", limit = 2).map { it.trim() }
                 if (parts.size == 2) {
-                    arguments[parts[0]] = parts[1]
+                    val key = parts[0]
+                    var value = parts[1]
+                    
+                    // Strip quotes if present (e.g., url="https://google.com" or url='https://google.com')
+                    // We remove all surrounding quotes to handle cases like ""google.com"" or " google.com "
+                    value = value.trim()
+                    while ((value.startsWith("\"") && value.endsWith("\"")) || 
+                           (value.startsWith("'") && value.endsWith("'"))) {
+                        if (value.length < 2) break
+                        value = value.substring(1, value.length - 1).trim()
+                    }
+                    
+                    arguments[key] = value
                 }
             }
         }

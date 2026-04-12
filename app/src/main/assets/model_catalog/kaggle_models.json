@@ -10,6 +10,26 @@
     "license": "Gemma Terms of Use"
   },
   {
+    "id": "gemma-4-e4b-it",
+    "displayName": "Gemma 4 E4B IT",
+    "modelPageUrl": "https://www.kaggle.com/models/google/gemma-2/liteRT/gemma-4-e4b-it",
+    "downloadUrl": "https://www.kaggle.com/models/google/gemma-2/liteRT/gemma-4-e4b-it/1/download",
+    "sizeBytes": 4200000000,
+    "supportsVision": false,
+    "description": "Advanced instruction-tuned Gemma model with enhanced reasoning capabilities.",
+    "license": "Gemma Terms of Use"
+  },
+  {
+    "id": "gemma-4-e2b-it",
+    "displayName": "Gemma 4 E2B IT",
+    "modelPageUrl": "https://www.kaggle.com/models/google/gemma-2/liteRT/gemma-4-e2b-it",
+    "downloadUrl": "https://www.kaggle.com/models/google/gemma-2/liteRT/gemma-4-e2b-it/1/download",
+    "sizeBytes": 2100000000,
+    "supportsVision": false,
+    "description": "Balanced 2B parameter Gemma model optimized for mobile instruction tasks.",
+    "license": "Gemma Terms of Use"
+  },
+  {
     "id": "mobilenet-v3-large-100-224",
     "displayName": "MobileNet V3 Large",
     "modelPageUrl": "https://www.kaggle.com/models/google/mobilenet-v3/liteRT/large-100-224-classification",
