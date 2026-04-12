@@ -10,6 +10,8 @@ import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeout
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -28,13 +30,14 @@ class AgentOrchestrator @Inject constructor(
     private val _agentState = MutableStateFlow<AgentState>(AgentState.Idle)
     val agentState: StateFlow<AgentState> = _agentState.asStateFlow()
 
+    private val loopMutex = Mutex()
     private var pendingConfirmation: (suspend () -> ToolResult)? = null
     private var lastPrompt: String = ""
     private var lastImageUri: Uri? = null
     private var stepCount = 0
     private var lastToolSummary: String? = null
 
-    suspend fun processUserRequest(prompt: String, imageUri: Uri? = null): Result<String> {
+    suspend fun processUserRequest(prompt: String, imageUri: Uri? = null): Result<String> = loopMutex.withLock {
         _agentState.value = AgentState.Planning
         Log.i(TAG, ">>> Starting agent loop for user prompt: \"$prompt\"")
         
@@ -51,10 +54,10 @@ class AgentOrchestrator @Inject constructor(
         pendingConfirmation = null
         lastToolSummary = null
 
-        return runLoop()
+        return runLoopInternal()
     }
 
-    private suspend fun runLoop(): Result<String> {
+    private suspend fun runLoopInternal(): Result<String> {
         try {
             while (stepCount < Constants.Agent.MAX_TOOL_CALLS_PER_TURN) {
                 Log.d(TAG, "Loop iteration ${stepCount + 1}")
@@ -83,12 +86,10 @@ class AgentOrchestrator @Inject constructor(
                         val originalText = turnResult.content
                         val processedText = finalizeResponse(originalText)
                         
-                        // If we have tool output but the model just returned a short acknowledgment or garbage,
-                        // we should try to get the model to actually summarize or use the tool output.
                         if (stepCount > 0 && isVeryShort(processedText) && lastToolSummary != null) {
                             Log.d(TAG, "Model returned short text after tool call. Forcing summary.")
                             lastPrompt = "OBSERVATION: Action completed. Result: $lastToolSummary\n\nPlease provide a friendly confirmation to the user about what was done."
-                            stepCount++ // Avoid infinite loop if model keeps being short
+                            stepCount++
                             continue
                         }
 
@@ -155,13 +156,7 @@ class AgentOrchestrator @Inject constructor(
 
     private fun finalizeResponse(text: String): String {
         val trimmed = text.trim()
-        
-        // Check for garbage/empty output which often happens after a tool execution turn
-        val isGarbage = trimmed.isEmpty() || 
-                       trimmed == "-" || 
-                       trimmed == "|" || 
-                       trimmed == "." || 
-                       trimmed.length < 2
+        val isGarbage = trimmed.isEmpty() || trimmed == "-" || trimmed == "|" || trimmed == "." || trimmed.length < 2
         
         return if (isGarbage && lastToolSummary != null) {
             Log.w(TAG, "Model returned garbage text after tool call. Using fallback summary: $lastToolSummary")
@@ -196,7 +191,7 @@ class AgentOrchestrator @Inject constructor(
         }
     }
 
-    suspend fun confirmAction(): Result<String> {
+    suspend fun confirmAction(): Result<String> = loopMutex.withLock {
         val onConfirm = pendingConfirmation ?: return Result.failure(IllegalStateException("No pending confirmation"))
         pendingConfirmation = null
         
@@ -224,13 +219,13 @@ class AgentOrchestrator @Inject constructor(
             }
         }
         
-        return runLoop()
+        return runLoopInternal()
     }
 
-    suspend fun cancelAction(): Result<String> {
+    suspend fun cancelAction(): Result<String> = loopMutex.withLock {
         pendingConfirmation = null
         lastPrompt = "OBSERVATION: User canceled the action. Please acknowledge this cancellation."
-        return runLoop()
+        return runLoopInternal()
     }
 
     fun reset() {

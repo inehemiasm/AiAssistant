@@ -82,4 +82,5 @@ sealed class ChatIntent : UiIntent {
 sealed class ChatEffect : UiEffect {
     data object ScrollToBottom : ChatEffect()
     data class ShowToast(val message: String) : ChatEffect()
+    data object HideKeyboard : ChatEffect()
 }

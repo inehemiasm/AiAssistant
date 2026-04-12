@@ -110,7 +110,7 @@ fun ChatInputBar(
                 .background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.8f))
                 .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)), RoundedCornerShape(28.dp))
                 .padding(horizontal = 4.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.Bottom // Align items to bottom as input grows
+            verticalAlignment = Alignment.Bottom 
         ) {
             Box(modifier = Modifier.align(Alignment.CenterVertically)) {
                 IconButton(
@@ -160,6 +160,8 @@ fun ChatInputBar(
                         style = Typography.bodyMedium
                     )
                 },
+                // We now strictly disable the TextField when the model is busy to provide clear feedback.
+                // The keyboard is explicitly dismissed by a HideKeyboard effect from the ViewModel.
                 enabled = enabled,
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = Color.Transparent,

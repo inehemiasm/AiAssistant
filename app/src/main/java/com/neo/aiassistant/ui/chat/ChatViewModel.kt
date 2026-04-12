@@ -15,6 +15,8 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
 import javax.inject.Inject
@@ -42,6 +44,9 @@ class ChatViewModel @Inject constructor(
     private val preferenceManager: PreferenceManager,
     private val dispatcherProvider: DispatcherProvider
 ) : BaseViewModel<ChatState, ChatIntent, ChatEffect>(application, ChatState()) {
+
+    // Mutex to prevent overlapping intent processing (solves "stress" crashes)
+    private val intentMutex = Mutex()
 
     init {
         viewModelScope.launch {
@@ -114,28 +119,41 @@ class ChatViewModel @Inject constructor(
     }
 
     override suspend fun handleIntent(intent: ChatIntent) {
-        when (intent) {
-            is ChatIntent.Initialize -> initModel(intent.modelPath)
-            is ChatIntent.SendMessage -> sendMessage(intent.text, intent.imageUri)
-            is ChatIntent.SwitchModel -> {
-                if (currentState.selectedModel == intent.modelName && currentState.runtimeState is RuntimeState.Ready) return
-                
-                Log.d("ChatViewModel", "Switching model to: ${intent.modelName}")
-                setState { copy(selectedModel = intent.modelName, messages = emptyList(), runtimeState = RuntimeState.Uninitialized) }
-                withContext(dispatcherProvider.io) {
-                    preferenceManager.updateSelectedModel(intent.modelName)
+        // Protect intent handling with a mutex to prevent race conditions during rapid user input
+        intentMutex.withLock {
+            when (intent) {
+                is ChatIntent.Initialize -> initModel(intent.modelPath)
+                is ChatIntent.SendMessage -> {
+                    if (currentState.isLoading) {
+                        Log.w("ChatViewModel", "Ignoring SendMessage: model is busy.")
+                        return@withLock
+                    }
+                    sendMessage(intent.text, intent.imageUri)
                 }
+                is ChatIntent.SwitchModel -> {
+                    if (currentState.isLoading) {
+                        Log.w("ChatViewModel", "Ignoring SwitchModel: model is busy.")
+                        return@withLock
+                    }
+                    if (currentState.selectedModel == intent.modelName && currentState.runtimeState is RuntimeState.Ready) return@withLock
+                    
+                    Log.d("ChatViewModel", "Switching model to: ${intent.modelName}")
+                    setState { copy(selectedModel = intent.modelName, messages = emptyList(), runtimeState = RuntimeState.Uninitialized) }
+                    withContext(dispatcherProvider.io) {
+                        preferenceManager.updateSelectedModel(intent.modelName)
+                    }
+                }
+                ChatIntent.ClearError -> setState { copy(
+                    runtimeState = if (currentState.runtimeState is RuntimeState.Error) RuntimeState.Uninitialized else currentState.runtimeState,
+                    sendState = SendState.Idle
+                ) }
+                ChatIntent.ClearConversation -> clearConversation()
+                is ChatIntent.UpdateInputText -> setState { copy(inputText = intent.text) }
+                is ChatIntent.SelectImage -> setState { copy(selectedImageUri = intent.uri) }
+                is ChatIntent.SetTempCameraUri -> setState { copy(tempCameraUri = intent.uri) }
+                ChatIntent.ConfirmAction -> confirmAction()
+                ChatIntent.CancelAction -> cancelAction()
             }
-            ChatIntent.ClearError -> setState { copy(
-                runtimeState = if (currentState.runtimeState is RuntimeState.Error) RuntimeState.Uninitialized else currentState.runtimeState,
-                sendState = SendState.Idle
-            ) }
-            ChatIntent.ClearConversation -> clearConversation()
-            is ChatIntent.UpdateInputText -> setState { copy(inputText = intent.text) }
-            is ChatIntent.SelectImage -> setState { copy(selectedImageUri = intent.uri) }
-            is ChatIntent.SetTempCameraUri -> setState { copy(tempCameraUri = intent.uri) }
-            ChatIntent.ConfirmAction -> confirmAction()
-            ChatIntent.CancelAction -> cancelAction()
         }
     }
 
@@ -150,6 +168,7 @@ class ChatViewModel @Inject constructor(
 
     private suspend fun initModel(modelPath: String) {
         Log.d("ChatViewModel", "Starting model initialization: $modelPath")
+        sendEffect { ChatEffect.HideKeyboard }
         setState { copy(runtimeState = RuntimeState.Initializing("SYNTHESIZING...")) }
         withContext(dispatcherProvider.default) {
             initializeChatUseCase(modelPath)
@@ -160,6 +179,7 @@ class ChatViewModel @Inject constructor(
     }
 
     private suspend fun sendMessage(text: String, imageUri: Uri?) {
+        sendEffect { ChatEffect.HideKeyboard }
         val userMsg = ChatMessage(text, isUser = true, imageUri = imageUri?.toString())
         setState { copy(messages = messages + userMsg, sendState = SendState.Sending, inputText = "", selectedImageUri = null) }
         sendEffect { ChatEffect.ScrollToBottom }
@@ -172,6 +192,7 @@ class ChatViewModel @Inject constructor(
     }
 
     private suspend fun confirmAction() {
+        sendEffect { ChatEffect.HideKeyboard }
         processAgentTurn { 
             withContext(dispatcherProvider.default) {
                 repository.confirmAction()
@@ -180,6 +201,7 @@ class ChatViewModel @Inject constructor(
     }
 
     private suspend fun cancelAction() {
+        sendEffect { ChatEffect.HideKeyboard }
         processAgentTurn { 
             withContext(dispatcherProvider.default) {
                 repository.cancelAction()

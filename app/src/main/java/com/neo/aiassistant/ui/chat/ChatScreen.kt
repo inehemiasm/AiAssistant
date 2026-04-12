@@ -13,6 +13,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
@@ -45,6 +47,9 @@ fun ChatScreen(
     val context = LocalContext.current
     val listState = rememberLazyListState()
     val snackbarHostState = remember { SnackbarHostState() }
+    
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -70,9 +75,6 @@ fun ChatScreen(
         }
     }
 
-    // Removed the redundant and error-prone LaunchedEffect for auto-initialization.
-    // Initialization is now managed exclusively by the ChatViewModel's init and observers.
-
     Scaffold(
         topBar = {
             ChatTopBar(
@@ -97,13 +99,13 @@ fun ChatScreen(
             }
         },
         containerColor = MaterialTheme.colorScheme.background,
-        contentWindowInsets = WindowInsets.safeDrawing
+        contentWindowInsets = WindowInsets.statusBars
     ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .consumeWindowInsets(innerPadding)
+                .imePadding()
         ) {
             Box(modifier = Modifier.weight(1f)) {
                 MessageList(
@@ -132,6 +134,7 @@ fun ChatScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 8.dp, vertical = 8.dp)
+                    .navigationBarsPadding()
             ) {
                 ChatInputBar(
                     text = state.inputText,
@@ -159,7 +162,7 @@ fun ChatScreen(
                     },
                     selectedImageUri = state.selectedImageUri,
                     onRemoveImage = { viewModel.onIntent(ChatIntent.SelectImage(null)) },
-                    enabled = !state.isLoading && state.isReady
+                    enabled = state.isReady && !state.isLoading
                 )
             }
         }
@@ -175,6 +178,10 @@ fun ChatScreen(
                 }
                 is ChatEffect.ShowToast -> {
                     Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
+                }
+                is ChatEffect.HideKeyboard -> {
+                    keyboardController?.hide()
+                    focusManager.clearFocus()
                 }
             }
         }
