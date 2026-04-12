@@ -129,6 +129,8 @@ class ChatViewModel @Inject constructor(
             is ChatIntent.UpdateInputText -> setState { copy(inputText = intent.text) }
             is ChatIntent.SelectImage -> setState { copy(selectedImageUri = intent.uri) }
             is ChatIntent.SetTempCameraUri -> setState { copy(tempCameraUri = intent.uri) }
+            ChatIntent.ConfirmAction -> confirmAction()
+            ChatIntent.CancelAction -> cancelAction()
         }
     }
 
@@ -154,15 +156,31 @@ class ChatViewModel @Inject constructor(
         setState { copy(messages = messages + userMsg, sendState = SendState.Sending, inputText = "", selectedImageUri = null) }
         sendEffect { ChatEffect.ScrollToBottom }
 
+        processAgentTurn { sendMessageUseCase(text, imageUri) }
+    }
+
+    private suspend fun confirmAction() {
+        processAgentTurn { repository.confirmAction() }
+    }
+
+    private suspend fun cancelAction() {
+        processAgentTurn { repository.cancelAction() }
+    }
+
+    private suspend fun processAgentTurn(action: suspend () -> Result<String>) {
         var responseText = ""
         val time = measureTimeMillis {
-            sendMessageUseCase(text, imageUri)
+            action()
                 .onSuccess { responseText = it }
                 .onFailure { e ->
-                    setState { copy(sendState = SendState.Error(e.message ?: "Inference failed")) }
+                    setState { copy(sendState = SendState.Error(e.message ?: "Action failed")) }
                     return
                 }
         }
+
+        // Check if we already have this exact message (e.g. from a tool observation turn)
+        // Actually, AgentOrchestrator returns the final content or confirmation request.
+        // We append if it's new text.
 
         val aiMsg = ChatMessage(
             text = responseText,

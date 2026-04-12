@@ -30,6 +30,11 @@ class AgentOrchestrator @Inject constructor(
     private val _agentState = MutableStateFlow<AgentState>(AgentState.Idle)
     val agentState: StateFlow<AgentState> = _agentState.asStateFlow()
 
+    private var pendingConfirmation: (suspend () -> ToolResult)? = null
+    private var lastPrompt: String = ""
+    private var lastImageUri: Uri? = null
+    private var stepCount = 0
+
     private val MAX_TOOL_CALLS_PER_TURN = 5
     private val TOOL_EXECUTION_TIMEOUT_MS = 30_000L // 30 seconds
 
@@ -47,15 +52,20 @@ class AgentOrchestrator @Inject constructor(
             prompt
         }
 
-        var currentPrompt = initialPrompt
-        var currentImageUri = imageUri
-        var stepCount = 0
+        lastPrompt = initialPrompt
+        lastImageUri = imageUri
+        stepCount = 0
+        pendingConfirmation = null
 
+        return runLoop()
+    }
+
+    private suspend fun runLoop(): Result<String> {
         try {
             while (stepCount < MAX_TOOL_CALLS_PER_TURN) {
                 Log.d(TAG, "Agent Loop Iteration ${stepCount + 1}")
                 
-                val request = InferenceRequest(currentPrompt, currentImageUri)
+                val request = InferenceRequest(lastPrompt, lastImageUri)
                 val inferenceResult = inferenceManager.generate(request)
                 
                 val turnResult = when (inferenceResult) {
@@ -86,8 +96,8 @@ class AgentOrchestrator @Inject constructor(
                         val tool = toolRegistry.getTool(toolCall.toolName)
                         if (tool == null) {
                             Log.w(TAG, "Tool ${toolCall.toolName} not found.")
-                            currentPrompt = "Error: Tool '${toolCall.toolName}' not found. Answer directly if possible."
-                            currentImageUri = null
+                            lastPrompt = "Error: Tool '${toolCall.toolName}' not found. Answer directly if possible."
+                            lastImageUri = null
                             continue
                         }
 
@@ -105,24 +115,10 @@ class AgentOrchestrator @Inject constructor(
                             ToolResult.Error("Tool execution failed: ${e.message}")
                         }
 
-                        when (toolResult) {
-                            is ToolResult.Success -> {
-                                Log.d(TAG, "Tool ${tool.name} success: ${toolResult.data}")
-                                currentPrompt = "OBSERVATION from ${tool.name}: ${toolResult.data}\nContinue."
-                            }
-                            is ToolResult.Error -> {
-                                Log.e(TAG, "Tool ${tool.name} error: ${toolResult.message}")
-                                currentPrompt = "TOOL_ERROR from ${tool.name}: ${toolResult.message}\nPlease try to recover or answer directly."
-                            }
-                            is ToolResult.NeedsConfirmation -> {
-                                Log.i(TAG, "Tool ${tool.name} needs confirmation.")
-                                _agentState.value = AgentState.WaitingForConfirmation(tool.name, toolResult.message)
-                                // We stop the loop and return a special message or wait for UI. 
-                                // For now, we'll return the confirmation request as the result.
-                                return Result.success("I need your confirmation to ${tool.name}: ${toolResult.message}")
-                            }
-                        }
-                        currentImageUri = null
+                        val processedResult = handleToolResult(tool, toolResult)
+                        if (processedResult != null) return processedResult
+                        
+                        lastImageUri = null
                     }
                     is AssistantTurnResult.Error -> {
                         Log.e(TAG, "Inference error: ${turnResult.message}")
@@ -143,7 +139,77 @@ class AgentOrchestrator @Inject constructor(
         }
     }
 
+    private suspend fun handleToolResult(tool: AgentTool, toolResult: ToolResult): Result<String>? {
+        return when (toolResult) {
+            is ToolResult.Success -> {
+                Log.d(TAG, "Tool ${tool.name} success: ${toolResult.data}")
+                lastPrompt = "OBSERVATION from ${tool.name}: ${toolResult.data}\nContinue."
+                null
+            }
+            is ToolResult.Error -> {
+                Log.e(TAG, "Tool ${tool.name} error: ${toolResult.message}")
+                lastPrompt = "TOOL_ERROR from ${tool.name}: ${toolResult.message}\nPlease try to recover or answer directly."
+                null
+            }
+            is ToolResult.NeedsConfirmation -> {
+                Log.i(TAG, "Tool ${tool.name} needs confirmation.")
+                pendingConfirmation = toolResult.onConfirm
+                _agentState.value = AgentState.WaitingForConfirmation(tool.name, toolResult.message)
+                Result.success("I need your confirmation to ${tool.name}: ${toolResult.message}")
+            }
+        }
+    }
+
+    /**
+     * Resumes the agent loop after a user confirmation.
+     */
+    suspend fun confirmAction(): Result<String> {
+        val onConfirm = pendingConfirmation ?: return Result.failure(IllegalStateException("No pending confirmation"))
+        pendingConfirmation = null
+        
+        _agentState.value = AgentState.ExecutingTool("confirming...")
+        
+        val toolResult = try {
+            onConfirm()
+        } catch (e: Exception) {
+            ToolResult.Error("Action confirmation failed: ${e.message}")
+        }
+        
+        // We need a reference to the tool name if we want to log it, 
+        // but for now we'll just use a generic name or keep it simple.
+        // To be better, ToolResult.NeedsConfirmation could include the tool name.
+        
+        // After confirmation result, we continue the loop
+        when (toolResult) {
+            is ToolResult.Success -> {
+                lastPrompt = "OBSERVATION: Action confirmed and successful: ${toolResult.data}\nContinue."
+            }
+            is ToolResult.Error -> {
+                lastPrompt = "OBSERVATION: Action confirmed but failed: ${toolResult.message}\nPlease try to recover."
+            }
+            is ToolResult.NeedsConfirmation -> {
+                // Nested confirmations? Unlikely but supported
+                pendingConfirmation = toolResult.onConfirm
+                _agentState.value = AgentState.WaitingForConfirmation("unknown", toolResult.message)
+                return Result.success("I need another confirmation: ${toolResult.message}")
+            }
+        }
+        
+        return runLoop()
+    }
+
+    /**
+     * Cancels the pending action and resumes the agent loop with a cancellation observation.
+     */
+    suspend fun cancelAction(): Result<String> {
+        pendingConfirmation = null
+        lastPrompt = "OBSERVATION: User canceled the action. Please acknowledge and ask if there's anything else you can do."
+        return runLoop()
+    }
+
     fun reset() {
         _agentState.value = AgentState.Idle
+        pendingConfirmation = null
+        stepCount = 0
     }
 }

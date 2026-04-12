@@ -6,101 +6,74 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 
 /**
- * Repository interface for managing chat interactions and AI models.
+ * Interface for the Chat Repository.
  *
- * This repository handles model initialization, message sending, model downloads,
- * and retrieval of available models.
+ * This repository is the main entry point for interacting with the AI assistant,
+ * managing model lifecycle, chat history, and the agent execution loop.
  */
 interface ChatRepository {
     /**
-     * A [StateFlow] representing the current state of the AI agent.
+     * The current state of the AI Agent.
      */
     val agentState: StateFlow<AgentState>
-
+    
     /**
-     * Returns a [Flow] of strings representing the status of model initialization.
+     * Returns a flow of status messages indicating the progress of model initialization.
      */
     fun getInitStatus(): Flow<String>
-
+    
     /**
-     * Initializes the AI model from the given file path.
-     *
-     * @param modelPath The absolute path to the model file.
-     * @return A [Result] indicating success or failure.
-     */
-    suspend fun initializeModel(modelPath: String): Result<Unit>
-
-    /**
-     * Sends a message to the AI agent and returns the response.
-     *
-     * @param prompt The user's input message.
-     * @param imageUri Optional URI of an image to be processed with the message.
-     * @return A [Result] containing the AI's response text or an error.
-     */
-    suspend fun sendMessage(prompt: String, imageUri: Uri? = null): Result<String>
-
-    /**
-     * Clears the current conversation history.
-     */
-    suspend fun clearConversation()
-
-    /**
-     * Downloads an AI model from the specified URL.
-     *
-     * @param url The URL of the model file.
-     * @param modelName The name to assign to the downloaded model.
-     * @param sha256 Optional SHA-256 hash for verifying the downloaded file.
-     * @return A [Flow] of [DownloadProgress] updates.
-     */
-    fun downloadModel(url: String, modelName: String, sha256: String? = null): Flow<DownloadProgress>
-
-    /**
-     * Fetches the list of available models from the catalog.
-     *
-     * @return A [Result] containing the list of [ModelEntry] objects or an error.
-     */
-    suspend fun fetchAvailableModels(): Result<List<ModelEntry>>
-
-    /**
-     * Checks if the currently loaded model supports vision (image processing).
+     * Checks if the current model/backend supports vision (image input).
      */
     fun isVisionSupported(): Boolean
-
+    
     /**
-     * Returns a list of all AI models stored locally on the device.
+     * Initializes the AI model from the given file path.
+     */
+    suspend fun initializeModel(modelPath: String): Result<Unit>
+    
+    /**
+     * Sends a message to the AI and receives a response through the agent loop.
+     */
+    suspend fun sendMessage(prompt: String, imageUri: Uri? = null): Result<String>
+    
+    /**
+     * Confirms a pending action requested by a tool.
+     */
+    suspend fun confirmAction(): Result<String>
+    
+    /**
+     * Cancels a pending action requested by a tool.
+     */
+    suspend fun cancelAction(): Result<String>
+    
+    /**
+     * Clears the current conversation history and resets the agent state.
+     */
+    suspend fun clearConversation()
+    
+    /**
+     * Fetches a list of models available for download from the remote catalog.
+     */
+    suspend fun fetchAvailableModels(): Result<List<ModelEntry>>
+    
+    /**
+     * Downloads a model from the given URL.
+     */
+    fun downloadModel(url: String, modelName: String, sha256: String? = null): Flow<DownloadProgress>
+    
+    /**
+     * Returns a list of models currently installed on the device.
      */
     suspend fun getLocalModels(): List<InstalledModel>
-
+    
     /**
-     * Checks if a model file with the given name exists and is valid.
-     */
-    fun isModelValid(modelName: String): Boolean
-
-    /**
-     * Deletes the specified model from local storage.
-     *
-     * @param modelName The name of the model to delete.
-     * @return `true` if the model was successfully deleted, `false` otherwise.
+     * Deletes an installed model.
      */
     suspend fun deleteModel(modelName: String): Boolean
-}
-
-/**
- * Represents the progress of a model download operation.
- */
-sealed class DownloadProgress {
+    
     /**
-     * Indicates that the download is in progress.
-     * @property percent The percentage of the download completed (0-100).
+     * Checks if a model file exists and is valid.
      */
-    data class Progress(val percent: Int) : DownloadProgress()
-    
-    /** Indicates that the download has finished successfully. */
-    object Finished : DownloadProgress()
-    
-    /** 
-     * Indicates that an error occurred during the download.
-     * @property message A description of the error.
-     */
-    data class Error(val message: String) : DownloadProgress()
+    fun isModelValid(modelName: String): Boolean
 }

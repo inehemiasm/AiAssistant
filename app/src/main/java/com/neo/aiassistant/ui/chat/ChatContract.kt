@@ -61,6 +61,9 @@ data class ChatState(
         agentState is AgentState.Error -> agentState.message
         else -> null
     }
+
+    val isWaitingForConfirmation: Boolean get() = agentState is AgentState.WaitingForConfirmation
+    val confirmationMessage: String? get() = (agentState as? AgentState.WaitingForConfirmation)?.message
 }
 
 sealed class ChatIntent : UiIntent {
@@ -72,6 +75,8 @@ sealed class ChatIntent : UiIntent {
     data class UpdateInputText(val text: String) : ChatIntent()
     data class SelectImage(val uri: Uri?) : ChatIntent()
     data class SetTempCameraUri(val uri: Uri?) : ChatIntent()
+    data object ConfirmAction : ChatIntent()
+    data object CancelAction : ChatIntent()
 }
 
 sealed class ChatEffect : UiEffect {

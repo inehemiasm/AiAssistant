@@ -137,3 +137,23 @@ data class InferenceRequest(
     val prompt: String,
     val imageUri: android.net.Uri? = null
 )
+
+/**
+ * Represents the progress of a model download.
+ */
+sealed class DownloadProgress {
+    /** 
+     * Indicates the download is in progress.
+     * @property percent The download percentage (0-100).
+     */
+    data class Progress(val percent: Int) : DownloadProgress()
+    
+    /** Indicates the download finished successfully. */
+    object Finished : DownloadProgress()
+    
+    /** 
+     * Indicates the download failed.
+     * @property message A description of the failure.
+     */
+    data class Error(val message: String) : DownloadProgress()
+}

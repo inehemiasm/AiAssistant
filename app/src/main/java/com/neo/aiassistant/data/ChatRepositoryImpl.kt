@@ -9,17 +9,7 @@ import com.neo.aiassistant.data.agent.AgentState
 import com.neo.aiassistant.data.datasource.ModelCatalogDataSource
 import com.neo.aiassistant.data.download.WorkManagerModelDownloadManager
 import com.neo.aiassistant.data.inference.InferenceManager
-import com.neo.aiassistant.domain.ChatRepository
-import com.neo.aiassistant.domain.DownloadProgress
-import com.neo.aiassistant.domain.InstallStatus
-import com.neo.aiassistant.domain.InstalledModel
-import com.neo.aiassistant.domain.InstalledModelRegistry
-import com.neo.aiassistant.domain.ModelCapability
-import com.neo.aiassistant.domain.ModelEntry
-import com.neo.aiassistant.domain.ModelFormat
-import com.neo.aiassistant.domain.ModelRuntime
-import com.neo.aiassistant.domain.ModelSource
-import com.neo.aiassistant.domain.ModelTaskType
+import com.neo.aiassistant.domain.*
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
@@ -77,6 +67,14 @@ class ChatRepositoryImpl @Inject constructor(
         }
 
         return agentOrchestrator.processUserRequest(prompt, imageUri)
+    }
+
+    override suspend fun confirmAction(): Result<String> {
+        return agentOrchestrator.confirmAction()
+    }
+
+    override suspend fun cancelAction(): Result<String> {
+        return agentOrchestrator.cancelAction()
     }
 
     override suspend fun clearConversation() {

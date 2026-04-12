@@ -6,25 +6,10 @@ import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.consumeWindowInsets
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -32,15 +17,11 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.neo.aiassistant.ui.chat.components.ChatInputBar
-import com.neo.aiassistant.ui.chat.components.ChatTopBar
-import com.neo.aiassistant.ui.chat.components.MessageList
-import com.neo.aiassistant.ui.chat.components.QuantumThinkingIndicator
+import com.neo.aiassistant.ui.chat.components.*
 import com.neo.aiassistant.ui.common.ErrorSnackbar
 import java.io.File
 import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import java.util.*
 
 /**
  * The main Chat screen of the application.
@@ -141,6 +122,14 @@ fun ChatScreen(
                         .align(Alignment.BottomStart)
                         .padding(16.dp)
                 )
+
+                if (state.isWaitingForConfirmation) {
+                    ActionConfirmationDialog(
+                        message = state.confirmationMessage ?: "Are you sure you want to proceed?",
+                        onConfirm = { viewModel.onIntent(ChatIntent.ConfirmAction) },
+                        onDismiss = { viewModel.onIntent(ChatIntent.CancelAction) }
+                    )
+                }
             }
 
             Box(
