@@ -8,6 +8,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -89,7 +90,8 @@ import kotlin.math.pow
 @Composable
 fun ModelMarketplaceScreen(
     viewModel: MarketplaceViewModel = hiltViewModel(),
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onModelClick: (String) -> Unit = {}
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
     val state by viewModel.uiState.collectAsState()
@@ -147,8 +149,8 @@ fun ModelMarketplaceScreen(
                 }
 
                 when (selectedTab) {
-                    0 -> DiscoverModelsList(state, viewModel::onIntent, context.filesDir.absolutePath)
-                    1 -> InstalledModelsList(state, viewModel::onIntent)
+                    0 -> DiscoverModelsList(state, viewModel::onIntent, context.filesDir.absolutePath, onModelClick)
+                    1 -> InstalledModelsList(state, viewModel::onIntent, onModelClick)
                 }
             }
         }
@@ -156,7 +158,12 @@ fun ModelMarketplaceScreen(
 }
 
 @Composable
-fun DiscoverModelsList(state: MarketplaceState, onIntent: (MarketplaceIntent) -> Unit, baseDir: String) {
+fun DiscoverModelsList(
+    state: MarketplaceState, 
+    onIntent: (MarketplaceIntent) -> Unit, 
+    baseDir: String,
+    onModelClick: (String) -> Unit
+) {
     if (state.catalogState is CatalogState.Loading) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
@@ -187,7 +194,8 @@ fun DiscoverModelsList(state: MarketplaceState, onIntent: (MarketplaceIntent) ->
                         downloadProgress = if (isDownloading) state.downloadProgress else null,
                         onDownload = {
                             onIntent(MarketplaceIntent.DownloadModel(model, baseDir)) 
-                        }
+                        },
+                        onClick = { onModelClick(model.effectiveFileName) }
                     )
                 }
             }
@@ -196,7 +204,11 @@ fun DiscoverModelsList(state: MarketplaceState, onIntent: (MarketplaceIntent) ->
 }
 
 @Composable
-fun InstalledModelsList(state: MarketplaceState, onIntent: (MarketplaceIntent) -> Unit) {
+fun InstalledModelsList(
+    state: MarketplaceState, 
+    onIntent: (MarketplaceIntent) -> Unit,
+    onModelClick: (String) -> Unit
+) {
     if (state.localModels.isEmpty()) {
         Box(Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
             Text(
@@ -225,7 +237,8 @@ fun InstalledModelsList(state: MarketplaceState, onIntent: (MarketplaceIntent) -
                         isSwitching = isSwitching,
                         warmupStatus = if (isSwitching) (state.switchState as? ModelSwitchState.WarmingUp)?.progress else null,
                         onSelect = { onIntent(MarketplaceIntent.SelectModel(model.id)) },
-                        onDelete = { onIntent(MarketplaceIntent.DeleteModel(model.id)) }
+                        onDelete = { onIntent(MarketplaceIntent.DeleteModel(model.id)) },
+                        onClick = { onModelClick(model.id) }
                     )
                 }
             }
@@ -280,10 +293,13 @@ fun RemoteModelCard(
     installedModel: InstalledModel?,
     isDownloading: Boolean,
     downloadProgress: Int?,
-    onDownload: () -> Unit
+    onDownload: () -> Unit,
+    onClick: () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.5f))
@@ -372,7 +388,8 @@ fun LocalModelCard(
     isSwitching: Boolean,
     warmupStatus: String?,
     onSelect: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onClick: () -> Unit
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "warmup")
     val alpha by infiniteTransition.animateFloat(
@@ -386,8 +403,9 @@ fun LocalModelCard(
     )
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        onClick = onSelect,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
         border = BorderStroke(
             1.dp, 

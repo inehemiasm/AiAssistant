@@ -18,6 +18,9 @@ sealed interface Route {
 
     @Serializable
     data object ModelMarketplace : Route
+
+    @Serializable
+    data class ModelDetails(val modelId: String) : Route
 }
 
 enum class TopLevelDestination(

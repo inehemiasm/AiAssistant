@@ -5,8 +5,10 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.toRoute
 import com.neo.aiassistant.ui.chat.ChatScreen
 import com.neo.aiassistant.ui.marketplace.ModelMarketplaceScreen
+import com.neo.aiassistant.ui.marketplace.details.ModelDetailsScreen
 import com.neo.aiassistant.ui.settings.SettingsScreen
 
 @Composable
@@ -34,6 +36,13 @@ fun AiAssistantNavHost(
 
         composable<Route.ModelMarketplace> {
             ModelMarketplaceScreen(
+                onBack = { navController.popBackStack() },
+                onModelClick = { modelId -> navController.navigate(Route.ModelDetails(modelId)) }
+            )
+        }
+
+        composable<Route.ModelDetails> {
+            ModelDetailsScreen(
                 onBack = { navController.popBackStack() }
             )
         }
