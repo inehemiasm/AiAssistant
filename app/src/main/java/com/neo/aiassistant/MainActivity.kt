@@ -9,6 +9,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.neo.aiassistant.data.PreferenceManager
+import com.neo.aiassistant.ui.LaunchAnimatedApp
 import com.neo.aiassistant.ui.designsystem.HighTechAiTheme
 import com.neo.aiassistant.ui.navigation.AiAssistantApp
 import dagger.hilt.android.AndroidEntryPoint
@@ -36,7 +37,10 @@ class MainActivity : ComponentActivity() {
             val isDarkMode by preferenceManager.themePreference.collectAsState(initial = systemDark)
             
             HighTechAiTheme(darkTheme = isDarkMode) {
-                AiAssistantApp()
+                // Wrap the main app entry with the launch animation
+                LaunchAnimatedApp {
+                    AiAssistantApp()
+                }
             }
         }
     }
