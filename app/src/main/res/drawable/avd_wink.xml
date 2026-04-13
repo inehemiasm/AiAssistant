@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt">
+    <aapt:attr name="android:drawable">
+        <vector
+            android:width="108dp"
+            android:height="108dp"
+            android:viewportWidth="108"
+            android:viewportHeight="108">
+            <!-- Ears/Headphones -->
+            <path
+                android:fillColor="#E0E0E0"
+                android:pathData="M20,54c0-10,4-15,6-15v30C24,69,20,64,20,54z M88,54c0-10-4-15-6-15v30C84,69,88,64,88,54z" />
+            <!-- Main Robot Head Body -->
+            <path
+                android:fillColor="#FFFFFF"
+                android:pathData="M54,25c-22,0-34,14-34,30v12c0,18,16,26,34,26s34-8,34-26V55C88,39,76,25,54,25z" />
+            <!-- Black Visor -->
+            <path
+                android:fillColor="#1A1C1E"
+                android:pathData="M30,48c0-8,10-14,24-14s24,6,24,14v8c0,8-10,14-24,14s-24-6-24-14V48z" />
+            <!-- Left Eye (Cyan Glow) -->
+            <path
+                android:fillColor="#00E5FF"
+                android:pathData="M43,52m-4,0a4,4 0 1,1 8,0a4,4 0 1,1 -8,0" />
+            <!-- Right Eye (Winking Group) -->
+            <group
+                android:name="right_eye_group"
+                android:pivotX="65"
+                android:pivotY="52"
+                android:scaleX="1.0"
+                android:scaleY="1.0">
+                <path
+                    android:fillColor="#00E5FF"
+                    android:pathData="M65,52m-4,0a4,4 0 1,1 8,0a4,4 0 1,1 -8,0" />
+            </group>
+            <!-- Orange Smile -->
+            <path
+                android:pathData="M44,72q10,6 20,0"
+                android:strokeColor="#FFAB40"
+                android:strokeLineCap="round"
+                android:strokeWidth="3.5" />
+        </vector>
+    </aapt:attr>
+    <target
+        android:name="right_eye_group"
+        android:animation="@animator/wink" />
+</animated-vector>

@@ -8,6 +8,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -15,26 +17,24 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.neo.aiassistant.R
 import com.neo.aiassistant.ui.chat.components.*
 import com.neo.aiassistant.ui.common.ErrorSnackbar
+import com.neo.aiassistant.ui.designsystem.Typography
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 
 /**
  * The main Chat screen of the application.
- *
- * This composable manages the chat interface, including the message list,
- * input field with image/camera support, and the top navigation bar.
- * It observes the [ChatViewModel] for state changes and emits user intents.
- *
- * @param viewModel The ViewModel providing state and handling intents.
- * @param onModelsClick Callback for navigating to the models selection screen.
- * @param onSettingsClick Callback for navigating to the settings screen.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -108,10 +108,14 @@ fun ChatScreen(
                 .imePadding()
         ) {
             Box(modifier = Modifier.weight(1f)) {
-                MessageList(
-                    messages = state.messages,
-                    listState = listState
-                )
+                if (state.localModels.isEmpty() && !state.isLoading) {
+                    EmptyModelState(onModelsClick)
+                } else {
+                    MessageList(
+                        messages = state.messages,
+                        listState = listState
+                    )
+                }
 
                 QuantumThinkingIndicator(
                     visible = state.isLoading,
@@ -184,6 +188,66 @@ fun ChatScreen(
                     focusManager.clearFocus()
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun EmptyModelState(onModelsClick: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Surface(
+            modifier = Modifier.size(80.dp),
+            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f),
+            shape = MaterialTheme.shapes.extraLarge
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = Icons.Default.Download,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(40.dp)
+                )
+            }
+        }
+        
+        Spacer(Modifier.height(24.dp))
+        
+        Text(
+            text = "Welcome to Chevere",
+            style = Typography.headlineMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center
+        )
+        
+        Spacer(Modifier.height(8.dp))
+        
+        Text(
+            text = "To start chatting, you need to download a local AI model first. All processing happens entirely on your device.",
+            style = Typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 16.dp)
+        )
+        
+        Spacer(Modifier.height(32.dp))
+        
+        Button(
+            onClick = onModelsClick,
+            shape = MaterialTheme.shapes.large,
+            contentPadding = PaddingValues(horizontal = 32.dp, vertical = 16.dp)
+        ) {
+            Icon(Icons.Default.Download, null)
+            Spacer(Modifier.width(12.dp))
+            Text(
+                "DOWNLOAD MODEL",
+                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+            )
         }
     }
 }

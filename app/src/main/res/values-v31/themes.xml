@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.App.Starting" parent="Theme.SplashScreen">
+        <!-- Attributes for API 31+ -->
+        <item name="android:windowSplashScreenBackground">#0E1513</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/avd_wink</item>
+        <item name="android:windowSplashScreenAnimationDuration">1000</item>
+        <item name="postSplashScreenTheme">@style/Theme.AiAssistant</item>
+    </style>
+</resources>

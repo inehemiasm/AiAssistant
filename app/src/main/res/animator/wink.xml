@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<set xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Wink down -->
+    <objectAnimator
+        android:duration="150"
+        android:propertyName="scaleY"
+        android:valueFrom="1.0"
+        android:valueTo="0.1"
+        android:valueType="floatType"
+        android:interpolator="@android:anim/accelerate_decelerate_interpolator"
+        android:startOffset="500" />
+    <!-- Wink up -->
+    <objectAnimator
+        android:duration="150"
+        android:propertyName="scaleY"
+        android:valueFrom="0.1"
+        android:valueTo="1.0"
+        android:valueType="floatType"
+        android:interpolator="@android:anim/accelerate_decelerate_interpolator"
+        android:startOffset="650" />
+</set>

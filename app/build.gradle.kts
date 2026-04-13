@@ -1,6 +1,5 @@
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.google.services)
     alias(libs.plugins.ksp)
@@ -13,7 +12,7 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.neo.aiassistant"
+        applicationId = "dev.neo.chevere"
         minSdk = 28
         targetSdk = 35
         versionCode = 1
@@ -38,10 +37,7 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlinOptions {
-        jvmTarget = "17"
-        freeCompilerArgs += listOf("-Xskip-metadata-version-check")
-    }
+
     buildFeatures {
         compose = true
         buildConfig = true
@@ -61,11 +57,7 @@ android {
     }
 }
 
-tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
-    kotlinOptions {
-        freeCompilerArgs += listOf("-Xskip-metadata-version-check")
-    }
-}
+
 
 dependencies {
     implementation(project(":ui-designsystem"))
@@ -82,47 +74,38 @@ dependencies {
     implementation(libs.androidx.hilt.navigation.compose)
     implementation(libs.okhttp)
     
-    // Hilt
+    implementation(libs.material)
+    implementation(libs.androidx.core.splashscreen)
+
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
     implementation(libs.androidx.hilt.work)
     ksp(libs.androidx.hilt.compiler)
     
-    // Room
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
     ksp(libs.room.compiler)
     
-    // Firebase
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.firestore)
     implementation(libs.firebase.storage)
     implementation(libs.kotlinx.coroutines.play.services)
     
-    // Ktor
     implementation(libs.ktor.client.core)
     implementation(libs.ktor.client.okhttp)
     implementation(libs.ktor.client.content.negotiation)
     implementation(libs.ktor.serialization.kotlinx.json)
     implementation(libs.kotlinx.serialization.json)
     
-    // Coil for Image Loading
     implementation(libs.coil.compose)
     
-    // WorkManager
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.guava.listenablefuture)
     
-    // LiteRT-LM for .litertlm models
     implementation(libs.google.ai.edge.litertlm)
-    
-    // MediaPipe GenAI for LlmInference
     implementation(libs.mediapipe.tasks.genai)
     
-    // EXIF handling
     implementation(libs.androidx.exifinterface)
-
-    // DataStore
     implementation(libs.androidx.datastore.preferences)
 
     testImplementation(libs.junit)

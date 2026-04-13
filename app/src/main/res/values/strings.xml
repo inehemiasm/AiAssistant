@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">AiAssistant</string>
+    <string name="app_name">Chevere</string>
 
     <!-- Chat Screen & Components -->
     <string name="synthesizing_core">SYNTHESIZING CORE…</string>

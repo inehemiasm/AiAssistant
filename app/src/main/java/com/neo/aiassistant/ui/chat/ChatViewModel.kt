@@ -12,7 +12,10 @@ import com.neo.aiassistant.domain.ChatRepository
 import com.neo.aiassistant.domain.InitializeChatUseCase
 import com.neo.aiassistant.domain.SendMessageUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -27,13 +30,6 @@ import kotlin.system.measureTimeMillis
  *
  * Manages the UI state for the chat interface, handles user intents,
  * and coordinates with use cases for model initialization and message processing.
- *
- * @property application The application context.
- * @property repository The repository for chat and model data.
- * @property initializeChatUseCase Use case for initializing the AI model.
- * @property sendMessageUseCase Use case for sending messages to the AI.
- * @property preferenceManager Manages user preferences, including the selected model.
- * @property dispatcherProvider Provides coroutine dispatchers for different threads.
  */
 @HiltViewModel
 class ChatViewModel @Inject constructor(
@@ -45,18 +41,27 @@ class ChatViewModel @Inject constructor(
     private val dispatcherProvider: DispatcherProvider
 ) : BaseViewModel<ChatState, ChatIntent, ChatEffect>(application, ChatState()) {
 
-    // Mutex to prevent overlapping intent processing (solves "stress" crashes)
     private val intentMutex = Mutex()
+    private var initJob: Job? = null
 
     init {
         viewModelScope.launch {
+            // Load local models first (fast IO)
             updateLocalModels()
             
-            observeSelectedModel()
+            // Observe status and agent state (passive)
             observeInitStatus()
             observeAgentStatus()
             
-            // Determine which model to initialize
+            // SIGNIFICANT DELAY: Defer heavy model initialization until well after 
+            // the app has started and the splash screen transition is complete.
+            // LiteRT GPU initialization is extremely resource-intensive and blocks the RenderThread.
+            delay(3500) 
+            
+            // Now start observing the selected model and initialize it
+            observeSelectedModel()
+            
+            // Initial load of the saved model
             val savedModel = preferenceManager.selectedModelPreference.first()
             val modelToLoad = savedModel ?: currentState.localModels.firstOrNull()?.fileName
             
@@ -75,10 +80,10 @@ class ChatViewModel @Inject constructor(
 
     private fun observeSelectedModel() {
         viewModelScope.launch {
-            preferenceManager.selectedModelPreference.collectLatest { savedModel ->
+            // Drop(1) to skip the initial value which we handle in the init block
+            preferenceManager.selectedModelPreference.drop(1).collectLatest { savedModel ->
                 if (savedModel != null && savedModel != currentState.selectedModel) {
                     setState { copy(selectedModel = savedModel) }
-                    // If the model changed in preferences (e.g. from Models screen), re-init here
                     val modelFile = File(application.filesDir, savedModel)
                     if (modelFile.exists()) {
                         initModel(modelFile.absolutePath)
@@ -119,25 +124,17 @@ class ChatViewModel @Inject constructor(
     }
 
     override suspend fun handleIntent(intent: ChatIntent) {
-        // Protect intent handling with a mutex to prevent race conditions during rapid user input
         intentMutex.withLock {
             when (intent) {
                 is ChatIntent.Initialize -> initModel(intent.modelPath)
                 is ChatIntent.SendMessage -> {
-                    if (currentState.isLoading) {
-                        Log.w("ChatViewModel", "Ignoring SendMessage: model is busy.")
-                        return@withLock
-                    }
+                    if (currentState.isLoading) return@withLock
                     sendMessage(intent.text, intent.imageUri)
                 }
                 is ChatIntent.SwitchModel -> {
-                    if (currentState.isLoading) {
-                        Log.w("ChatViewModel", "Ignoring SwitchModel: model is busy.")
-                        return@withLock
-                    }
+                    if (currentState.isLoading) return@withLock
                     if (currentState.selectedModel == intent.modelName && currentState.runtimeState is RuntimeState.Ready) return@withLock
                     
-                    Log.d("ChatViewModel", "Switching model to: ${intent.modelName}")
                     setState { copy(selectedModel = intent.modelName, messages = emptyList(), runtimeState = RuntimeState.Uninitialized) }
                     withContext(dispatcherProvider.io) {
                         preferenceManager.updateSelectedModel(intent.modelName)
@@ -167,14 +164,21 @@ class ChatViewModel @Inject constructor(
     }
 
     private suspend fun initModel(modelPath: String) {
-        Log.d("ChatViewModel", "Starting model initialization: $modelPath")
-        sendEffect { ChatEffect.HideKeyboard }
-        setState { copy(runtimeState = RuntimeState.Initializing("SYNTHESIZING...")) }
-        withContext(dispatcherProvider.default) {
-            initializeChatUseCase(modelPath)
-        }.onFailure { e ->
-            Log.e("ChatViewModel", "Initialization failed", e)
-            setState { copy(runtimeState = RuntimeState.Error("Init failed: ${e.message}")) }
+        // Cancel any previous init job to avoid race conditions
+        initJob?.cancel()
+        initJob = viewModelScope.launch {
+            sendEffect { ChatEffect.HideKeyboard }
+            setState { copy(runtimeState = RuntimeState.Initializing("SYNTHESIZING...")) }
+            
+            // Use non-blocking default dispatcher for the heavy JNI calls
+            val result = withContext(dispatcherProvider.default) {
+                initializeChatUseCase(modelPath)
+            }
+            
+            result.onFailure { e ->
+                Log.e("ChatViewModel", "Model initialization failed: ${e.message}")
+                setState { copy(runtimeState = RuntimeState.Error("Init failed: ${e.message}")) }
+            }
         }
     }
 

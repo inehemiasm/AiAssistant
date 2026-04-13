@@ -110,20 +110,22 @@ class ChatRepositoryImpl @Inject constructor(
             file.isFile && (file.name.endsWith(".litertlm") || file.name.endsWith(".bin"))
         } ?: emptyArray()
 
-        // 2. Fetch remote catalog for metadata enrichment
-        val remoteModels = modelCatalog.fetchAvailableModels().getOrDefault(emptyList())
-
-        // 3. Process and validate found files
+        // 2. Process and validate found files locally (Avoid remote fetch for performance)
         val validatedModels = potentialFiles.mapNotNull { file ->
             if (file.name.endsWith(".tmp") || file.length() < 1024) {
                 return@mapNotNull null
             }
-
-            val remoteMatch = remoteModels.find { it.effectiveFileName == file.name }
-            classifyModel(file, remoteMatch?.license)
+            
+            // Try to find in existing registry first to preserve license/metadata
+            val existing = installedModelRegistry.getInstalledModel(file.name)
+            if (existing != null && File(existing.filePath).exists()) {
+                existing
+            } else {
+                classifyModel(file)
+            }
         }
         
-        // 4. Update the Registry
+        // 3. Update the Registry
         val currentRegistry = installedModelRegistry.getInstalledModels()
         
         currentRegistry.forEach { registryModel ->
