@@ -8,7 +8,7 @@ plugins {
 }
 
 android {
-    namespace = "com.neo.aiassistant"
+    namespace = "com.neo.chevere"
     compileSdk = 36
 
     defaultConfig {
