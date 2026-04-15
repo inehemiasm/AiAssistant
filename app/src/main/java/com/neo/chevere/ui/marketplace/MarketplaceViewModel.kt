@@ -7,6 +7,7 @@ import com.neo.chevere.data.PreferenceManager
 import com.neo.chevere.domain.ChatRepository
 import com.neo.chevere.domain.DownloadProgress
 import com.neo.chevere.domain.InstallStatus
+import com.neo.chevere.domain.InitializationStatus
 import com.neo.chevere.ui.common.CatalogState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.collectLatest
@@ -36,9 +37,15 @@ class MarketplaceViewModel @Inject constructor(
 
         viewModelScope.launch {
             repository.getInitStatus().collectLatest { status ->
-                if (currentState.switchState is ModelSwitchState.Switching || currentState.switchState is ModelSwitchState.WarmingUp) {
+                val currentSwitchState = currentState.switchState
+                if (currentSwitchState is ModelSwitchState.Switching || currentSwitchState is ModelSwitchState.WarmingUp) {
+                    val modelId = when (currentSwitchState) {
+                        is ModelSwitchState.Switching -> currentSwitchState.toModelId
+                        is ModelSwitchState.WarmingUp -> currentSwitchState.modelId
+                        else -> currentState.pendingModelId ?: ""
+                    }
                     setState { 
-                        copy(switchState = ModelSwitchState.WarmingUp(currentState.pendingModelId ?: "", status))
+                        copy(switchState = ModelSwitchState.WarmingUp(modelId, status))
                     }
                 }
             }
@@ -65,7 +72,6 @@ class MarketplaceViewModel @Inject constructor(
         when (intent) {
             MarketplaceIntent.FetchModels -> fetchRemoteModels()
             is MarketplaceIntent.DownloadModel -> {
-                // Phase 3: Lifecycle Rule - cannot download if already downloading something
                 if (currentState.isDownloading) {
                     sendEffect { MarketplaceEffect.ShowToast("Another download is in progress") }
                     return
@@ -73,13 +79,11 @@ class MarketplaceViewModel @Inject constructor(
                 downloadModel(intent.model.effectiveFileName, intent.baseDir, intent.model.url, intent.model.sha256)
             }
             is MarketplaceIntent.DeleteModel -> {
-                // Phase 3: Lifecycle Rule - cannot delete active model
                 if (intent.modelId == currentState.activeModelId) {
                     sendEffect { MarketplaceEffect.ShowToast("Cannot delete active model. Switch models first.") }
                     return
                 }
                 
-                // Phase 3: Lifecycle Rule - cannot delete if switching or downloading
                 val model = currentState.localModels.find { it.id == intent.modelId }
                 if (model?.isTransitioning == true || currentState.isSwitching) {
                     sendEffect { MarketplaceEffect.ShowToast("Cannot delete while model is busy.") }
@@ -93,7 +97,6 @@ class MarketplaceViewModel @Inject constructor(
             is MarketplaceIntent.SelectModel -> {
                 val model = currentState.localModels.find { it.id == intent.modelId }
                 
-                // Phase 3: Lifecycle Rule - cannot select if invalid or not installed
                 if (model?.installStatus != InstallStatus.INSTALLED) {
                     sendEffect { MarketplaceEffect.ShowToast("Model is not ready for selection.") }
                     return

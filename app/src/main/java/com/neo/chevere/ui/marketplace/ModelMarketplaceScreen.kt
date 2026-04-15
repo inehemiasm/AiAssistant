@@ -1,67 +1,20 @@
 package com.neo.chevere.ui.marketplace
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Balance
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.CloudDownload
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.Error
-import androidx.compose.material.icons.filled.FileDownloadDone
-import androidx.compose.material.icons.filled.Memory
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Storage
-import androidx.compose.material.icons.filled.Sync
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
-import androidx.compose.material3.TabRowDefaults
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -72,8 +25,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.neo.chevere.R
+import com.neo.chevere.domain.InitializationStatus
 import com.neo.chevere.domain.InstallStatus
 import com.neo.chevere.domain.InstalledModel
 import com.neo.chevere.domain.ModelEntry
@@ -83,24 +36,27 @@ import com.neo.chevere.ui.designsystem.Typography
 import kotlin.math.log10
 import kotlin.math.pow
 
-/**
- * The screen for the AI Model Marketplace.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ModelMarketplaceScreen(
-    viewModel: MarketplaceViewModel = hiltViewModel(),
+    viewModel: MarketplaceViewModel,
     onBack: () -> Unit,
-    onModelClick: (String) -> Unit = {}
+    onModelClick: (String) -> Unit
 ) {
-    var selectedTab by remember { mutableIntStateOf(0) }
     val state by viewModel.uiState.collectAsState()
+    var selectedTab by remember { mutableIntStateOf(0) }
     val context = LocalContext.current
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.neural_repository), style = Typography.titleLarge, letterSpacing = 2.sp) },
+                title = { 
+                    Text(
+                        stringResource(R.string.ai_models).uppercase(), 
+                        style = Typography.titleLarge,
+                        letterSpacing = 2.sp
+                    ) 
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back), tint = MaterialTheme.colorScheme.primary)
@@ -386,7 +342,7 @@ fun LocalModelCard(
     isActive: Boolean,
     isPending: Boolean,
     isSwitching: Boolean,
-    warmupStatus: String?,
+    warmupStatus: InitializationStatus?,
     onSelect: () -> Unit,
     onDelete: () -> Unit,
     onClick: () -> Unit
@@ -462,8 +418,17 @@ fun LocalModelCard(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         CircularProgressIndicator(modifier = Modifier.size(12.dp), strokeWidth = 1.5.dp)
                         Spacer(Modifier.width(8.dp))
+                        
+                        val statusText = when (warmupStatus) {
+                            is InitializationStatus.Initializing -> warmupStatus.message
+                            is InitializationStatus.Failure -> "FAILED: ${warmupStatus.message}"
+                            InitializationStatus.Ready -> "READY"
+                            InitializationStatus.Uninitialized -> "STARTING..."
+                            null -> model.installStatus.name
+                        }
+                        
                         Text(
-                            warmupStatus ?: model.installStatus.name, 
+                            statusText,
                             style = Typography.labelSmall, 
                             color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.alpha(alpha)

@@ -3,6 +3,7 @@ package com.neo.chevere.ui.marketplace
 import com.neo.chevere.core.UiEffect
 import com.neo.chevere.core.UiIntent
 import com.neo.chevere.core.UiState
+import com.neo.chevere.domain.InitializationStatus
 import com.neo.chevere.domain.InstalledModel
 import com.neo.chevere.domain.ModelEntry
 import com.neo.chevere.ui.common.CatalogState
@@ -13,7 +14,7 @@ import com.neo.chevere.ui.common.CatalogState
 sealed class ModelSwitchState {
     data object Idle : ModelSwitchState()
     data class Switching(val fromModelId: String?, val toModelId: String) : ModelSwitchState()
-    data class WarmingUp(val modelId: String, val progress: String? = null) : ModelSwitchState()
+    data class WarmingUp(val modelId: String, val progress: InitializationStatus = InitializationStatus.Uninitialized) : ModelSwitchState()
     data class Ready(val modelId: String) : ModelSwitchState()
     data class Error(val modelId: String, val message: String) : ModelSwitchState()
 }

@@ -82,4 +82,5 @@
     <string name="error_init_failed">Init failed: %s</string>
     <string name="error_inference_failed">Inference failed</string>
     <string name="error_warmup">warmup</string>
+    <string name="ai_models">Ai Models</string>
 </resources>

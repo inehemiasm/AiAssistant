@@ -11,6 +11,7 @@ import com.neo.chevere.domain.ChatMessage
 import com.neo.chevere.domain.ChatRepository
 import com.neo.chevere.domain.InitializeChatUseCase
 import com.neo.chevere.domain.SendMessageUseCase
+import com.neo.chevere.domain.InitializationStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -53,10 +54,8 @@ class ChatViewModel @Inject constructor(
             observeInitStatus()
             observeAgentStatus()
             
-            // SIGNIFICANT DELAY: Defer heavy model initialization until well after 
-            // the app has started and the splash screen transition is complete.
-            // LiteRT GPU initialization is extremely resource-intensive and blocks the RenderThread.
-            delay(3500) 
+            // Small initial delay to avoid collision with splash screen startup animation
+            delay(500)
             
             // Now start observing the selected model and initialize it
             observeSelectedModel()
@@ -105,13 +104,13 @@ class ChatViewModel @Inject constructor(
         viewModelScope.launch {
             repository.getInitStatus().collectLatest { status ->
                 Log.d("ChatViewModel", "Init status update: $status")
-                if (status == "READY") {
-                    setState { copy(runtimeState = RuntimeState.Ready) }
-                } else if (status.contains("FAILED")) {
-                    setState { copy(runtimeState = RuntimeState.Error(status)) }
-                } else if (status.isNotBlank()) {
-                    setState { copy(runtimeState = RuntimeState.Initializing(status)) }
+                val runtimeState = when (status) {
+                    is InitializationStatus.Ready -> RuntimeState.Ready
+                    is InitializationStatus.Uninitialized -> RuntimeState.Uninitialized
+                    is InitializationStatus.Failure -> RuntimeState.Error(status.message)
+                    is InitializationStatus.Initializing -> RuntimeState.Initializing(status.message)
                 }
+                setState { copy(runtimeState = runtimeState) }
             }
         }
     }
@@ -168,7 +167,8 @@ class ChatViewModel @Inject constructor(
         initJob?.cancel()
         initJob = viewModelScope.launch {
             sendEffect { ChatEffect.HideKeyboard }
-            setState { copy(runtimeState = RuntimeState.Initializing("SYNTHESIZING...")) }
+            val modelName = File(modelPath).nameWithoutExtension.uppercase()
+            setState { copy(runtimeState = RuntimeState.Initializing("INITIALIZING $modelName...")) }
             
             // Use non-blocking default dispatcher for the heavy JNI calls
             val result = withContext(dispatcherProvider.default) {

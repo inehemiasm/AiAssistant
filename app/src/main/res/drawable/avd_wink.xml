@@ -7,9 +7,9 @@
             android:height="108dp"
             android:viewportWidth="108"
             android:viewportHeight="108">
-            <!-- Ears/Headphones -->
+            <!-- Ears/Headphones (Light Cyan Tint) -->
             <path
-                android:fillColor="#E0E0E0"
+                android:fillColor="#B2EBF2"
                 android:pathData="M20,54c0-10,4-15,6-15v30C24,69,20,64,20,54z M88,54c0-10-4-15-6-15v30C84,69,88,64,88,54z" />
             <!-- Main Robot Head Body -->
             <path
@@ -37,7 +37,7 @@
             <!-- Orange Smile -->
             <path
                 android:pathData="M44,72q10,6 20,0"
-                android:strokeColor="#FFAB40"
+                android:strokeColor="#FF7043"
                 android:strokeLineCap="round"
                 android:strokeWidth="3.5" />
         </vector>

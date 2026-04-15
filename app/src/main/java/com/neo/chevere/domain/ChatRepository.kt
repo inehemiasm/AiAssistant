@@ -18,9 +18,9 @@ interface ChatRepository {
     val agentState: StateFlow<AgentState>
     
     /**
-     * Returns a flow of status messages indicating the progress of model initialization.
+     * Returns a flow of the initialization status of the AI engine.
      */
-    fun getInitStatus(): Flow<String>
+    fun getInitStatus(): Flow<InitializationStatus>
     
     /**
      * Checks if the current model/backend supports vision (image input).

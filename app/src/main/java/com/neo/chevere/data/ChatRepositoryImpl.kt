@@ -38,7 +38,7 @@ class ChatRepositoryImpl @Inject constructor(
 
     override val agentState: StateFlow<AgentState> = agentOrchestrator.agentState
 
-    override fun getInitStatus(): Flow<String> = inferenceManager.initStatus
+    override fun getInitStatus(): Flow<InitializationStatus> = inferenceManager.initStatus
 
     override fun isVisionSupported(): Boolean = inferenceManager.isVisionSupported()
 

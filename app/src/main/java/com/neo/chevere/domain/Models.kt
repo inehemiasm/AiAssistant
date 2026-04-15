@@ -97,6 +97,30 @@ enum class InstallStatus {
 }
 
 /**
+ * Represents the current initialization status of the AI engine.
+ */
+sealed interface InitializationStatus {
+    /** The engine is not initialized and no initialization is in progress. */
+    data object Uninitialized : InitializationStatus
+    
+    /** 
+     * The engine is currently being initialized.
+     * @property message A descriptive message of the current step (e.g., "WARMING UP").
+     */
+    data class Initializing(val message: String) : InitializationStatus
+    
+    /** The engine is ready to receive requests. */
+    data object Ready : InitializationStatus
+    
+    /** 
+     * Initialization failed.
+     * @property message A description of the error.
+     * @property throwable The exception that caused the failure, if any.
+     */
+    data class Failure(val message: String, val throwable: Throwable? = null) : InitializationStatus
+}
+
+/**
  * Represents the result of an attempt to load a model.
  */
 sealed class LoadResult {

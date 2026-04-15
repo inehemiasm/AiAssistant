@@ -6,6 +6,10 @@ import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
@@ -42,6 +46,52 @@ fun ChatScreen(
     onSettingsClick: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+    
+    // Check if the model is initializing to show the full-screen loading state
+    val isInitializing = state.runtimeState is RuntimeState.Initializing
+
+    AnimatedContent(
+        targetState = isInitializing,
+        transitionSpec = {
+            fadeIn().togetherWith(fadeOut())
+        },
+        label = "ChatScreenTransition"
+    ) { initializing ->
+        if (initializing) {
+            ModelInitializationScreen(
+                statusMessage = (state.runtimeState as? RuntimeState.Initializing)?.message ?: "INITIALIZING..."
+            )
+        } else {
+            ChatContent(
+                state = state,
+                viewModel = viewModel,
+                onModelsClick = onModelsClick,
+                onSettingsClick = onSettingsClick
+            )
+        }
+    }
+
+    LaunchedEffect(viewModel.effect) {
+        viewModel.effect.collect { effect ->
+            when (effect) {
+                is ChatEffect.ShowToast -> {
+                    Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
+                }
+                else -> {}
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ChatContent(
+    state: ChatState,
+    viewModel: ChatViewModel,
+    onModelsClick: () -> Unit,
+    onSettingsClick: () -> Unit
+) {
     val context = LocalContext.current
     val listState = rememberLazyListState()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -116,7 +166,7 @@ fun ChatScreen(
                 }
 
                 QuantumThinkingIndicator(
-                    visible = state.isLoading,
+                    visible = state.isLoading && state.runtimeState !is RuntimeState.Initializing,
                     statusMessage = state.loadingMessage,
                     modifier = Modifier
                         .align(Alignment.BottomStart)
@@ -178,13 +228,11 @@ fun ChatScreen(
                         listState.animateScrollToItem(state.messages.size - 1)
                     }
                 }
-                is ChatEffect.ShowToast -> {
-                    Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
-                }
                 is ChatEffect.HideKeyboard -> {
                     keyboardController?.hide()
                     focusManager.clearFocus()
                 }
+                else -> {}
             }
         }
     }

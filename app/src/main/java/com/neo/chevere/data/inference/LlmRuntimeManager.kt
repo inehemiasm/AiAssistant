@@ -7,10 +7,11 @@ import com.google.ai.edge.litertlm.EngineConfig
 import com.google.ai.edge.litertlm.Message
 import com.neo.chevere.core.Constants
 import com.neo.chevere.core.DispatcherProvider
+import com.neo.chevere.domain.InitializationStatus
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -34,14 +35,14 @@ class LlmRuntimeManager @Inject constructor(
     private var isVisionEnabled = false
     private var isInitialized = false
 
-    private val _initStatus = MutableSharedFlow<String>(replay = 1)
-    val initStatus: SharedFlow<String> = _initStatus.asSharedFlow()
+    private val _initStatus = MutableStateFlow<InitializationStatus>(InitializationStatus.Uninitialized)
+    val initStatus: StateFlow<InitializationStatus> = _initStatus.asStateFlow()
 
     fun isVisionSupported(): Boolean = isVisionEnabled
 
     suspend fun initialize(modelPath: String): Result<Unit> = withContext(dispatcherProvider.io) {
         engineLock.withLock {
-            _initStatus.emit("RESETTING RUNTIME...")
+            _initStatus.value = InitializationStatus.Initializing("RESETTING RUNTIME...")
             closeCurrentResources()
 
             val neuralCache = File(context.cacheDir, Constants.Inference.NEURAL_CACHE_DIR).apply { 
@@ -57,7 +58,7 @@ class LlmRuntimeManager @Inject constructor(
             var lastError: Throwable? = null
 
             for ((main, vision, label) in backends) {
-                _initStatus.emit("ATTEMPTING: $label")
+                _initStatus.value = InitializationStatus.Initializing("ATTEMPTING: $label")
                 val result = runCatching {
                     val config = EngineConfig(
                         modelPath = modelPath,
@@ -78,7 +79,7 @@ class LlmRuntimeManager @Inject constructor(
 
                     engineWrapper.initialize(config)
                     
-                    _initStatus.emit("WARMING UP $label...")
+                    _initStatus.value = InitializationStatus.Initializing("WARMING UP $label...")
                     performWarmup(vision != null)
                 }
 
@@ -87,7 +88,7 @@ class LlmRuntimeManager @Inject constructor(
                     isVisionEnabled = vision != null
                     activeConversation = engineWrapper.createConversation()
                     isInitialized = true
-                    _initStatus.emit("READY")
+                    _initStatus.value = InitializationStatus.Ready
                     return@withContext Result.success(Unit)
                 }
 
@@ -98,8 +99,9 @@ class LlmRuntimeManager @Inject constructor(
                 neuralCache.mkdirs()
             }
 
-            _initStatus.emit("INITIALIZATION FAILED")
-            Result.failure(lastError ?: Exception("Hardware incompatible or model corrupt."))
+            val failureMessage = "Hardware incompatible or model corrupt."
+            _initStatus.value = InitializationStatus.Failure(failureMessage, lastError)
+            Result.failure(lastError ?: Exception(failureMessage))
         }
     }
 
@@ -143,5 +145,6 @@ class LlmRuntimeManager @Inject constructor(
         engineWrapper.close()
         isVisionEnabled = false
         isInitialized = false
+        _initStatus.value = InitializationStatus.Uninitialized
     }
 }

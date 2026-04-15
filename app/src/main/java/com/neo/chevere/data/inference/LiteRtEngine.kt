@@ -2,6 +2,7 @@ package com.neo.chevere.data.inference
 
 import com.neo.chevere.domain.InferenceRequest
 import com.neo.chevere.domain.InferenceResult
+import com.neo.chevere.domain.InitializationStatus
 import com.neo.chevere.domain.LoadResult
 import com.neo.chevere.domain.InstalledModel
 import kotlinx.coroutines.flow.Flow
@@ -18,7 +19,7 @@ class LiteRtEngine @Inject constructor(
     private val messageFactory: MultimodalMessageFactory
 ) : ModelEngine {
 
-    override val initStatus: Flow<String> = runtimeManager.initStatus
+    override val initStatus: Flow<InitializationStatus> = runtimeManager.initStatus
 
     override suspend fun load(model: InstalledModel): LoadResult {
         return try {

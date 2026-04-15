@@ -43,8 +43,9 @@ The project is an Android application following Clean Architecture and MVI (Mode
 - **Integrity**: SHA-256 verification is performed during the `VERIFYING` phase of download.
 
 ## Development Guidelines
-- **Documentation Standards**: Always generate KDoc for new implementations.
+- **Documentation Standards**: Always generate KDoc for new implementations and update kdoc when changes occur.
 - **Database Schema**: If modifying `InstalledModelEntity`, increment `AppDatabase.version` and handle migration (current: fallback destructive).
 - **Filtering**: New discovery items should be filtered for quality (size, runtime compatibility) before appearing in the UI.
 - **Error Handling**: Use `InstallStatus` (e.g., `CORRUPTED`, `INVALID`) to surface actionable errors in the Marketplace.
+- **State Representation**: Always use `sealed classes`, `sealed interfaces`, or `enums` to represent states (e.g., UI states, loading statuses). **Never use hardcoded raw strings** for state management.
 - **Commit Attribution**: Do not add 'Co-Authored-By' or any other AI/agent attribution to git commit messages.
