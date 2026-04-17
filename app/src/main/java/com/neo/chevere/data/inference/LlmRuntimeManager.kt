@@ -21,7 +21,6 @@ import javax.inject.Singleton
 
 /**
  * Manages the lifecycle of the LiteRT-LM engine and active conversation.
- * Handles hardware backends and initialization state.
  */
 @Singleton
 class LlmRuntimeManager @Inject constructor(
@@ -40,7 +39,7 @@ class LlmRuntimeManager @Inject constructor(
 
     fun isVisionSupported(): Boolean = isVisionEnabled
 
-    suspend fun initialize(modelPath: String): Result<Unit> = withContext(dispatcherProvider.io) {
+    suspend fun initialize(modelPath: String): Result<Unit> = withContext(dispatcherProvider.default) {
         engineLock.withLock {
             _initStatus.value = InitializationStatus.Initializing("RESETTING RUNTIME...")
             closeCurrentResources()
@@ -68,7 +67,6 @@ class LlmRuntimeManager @Inject constructor(
                         cacheDir = neuralCache.absolutePath
                     )
                     
-                    // Apply maxNumImages restriction if applicable
                     if (vision != null) {
                         try {
                             val field = config.javaClass.getDeclaredField("maxNumImages")
@@ -121,14 +119,14 @@ class LlmRuntimeManager @Inject constructor(
         }
     }
 
-    suspend fun sendMessage(message: Message): Result<Message> = withContext(dispatcherProvider.io) {
+    suspend fun sendMessage(message: Message): Result<Message> = withContext(dispatcherProvider.default) {
         engineLock.withLock {
             val conversation = activeConversation ?: return@withContext Result.failure(IllegalStateException("No active conversation"))
             runCatching { conversation.sendMessage(message) }
         }
     }
 
-    suspend fun clearConversation() {
+    suspend fun clearConversation() = withContext(dispatcherProvider.default) {
         engineLock.withLock {
             activeConversation?.close()
             activeConversation = if (isInitialized) engineWrapper.createConversation() else null

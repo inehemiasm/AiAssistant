@@ -11,6 +11,7 @@ import com.neo.chevere.data.agent.actions.GetAppCapabilitiesRequest
 import com.neo.chevere.data.agent.actions.LaunchAppByNameRequest
 import com.neo.chevere.data.agent.actions.LaunchAppRequest
 import com.neo.chevere.data.agent.actions.ListAppsRequest
+import com.neo.chevere.data.agent.actions.OpenDeepLinkRequest
 import com.neo.chevere.data.agent.actions.OpenMapsRequest
 import com.neo.chevere.data.agent.actions.OpenUrlRequest
 import com.neo.chevere.data.agent.actions.SearchAppsRequest
@@ -165,12 +166,26 @@ class OpenAppTool @Inject constructor(
     private val actionExecutor: AndroidAppActionExecutor
 ) : BaseAppActionTool(actionExecutor) {
     override val name: String = "open_app"
-    override val description: String = "Attempts to find and launch an installed app by its common name (e.g., 'Squarespace', 'Gmail', 'Spotify')."
+    override val description: String = "Attempts to find and launch an installed app by its common name (e.g., 'Squarespace', 'Gmail', 'Spotify'). Use this only for simple app launching."
     override val inputSchema: String = "name: The common name of the app to open."
 
     override suspend fun execute(args: Map<String, String>): ToolResult {
         val name = args["name"] ?: return ToolResult.Error("Missing 'name' argument")
         return handleActionResult(actionExecutor.execute(LaunchAppByNameRequest(name)))
+    }
+}
+
+class OpenDeepLinkTool @Inject constructor(
+    private val actionExecutor: AndroidAppActionExecutor
+) : BaseAppActionTool(actionExecutor) {
+    override val name: String = "open_deeplink"
+    override val description: String = "Open a deep link URI in another app. Use for specific in-app actions like creating invoices or viewing orders (e.g., in Squarespace)."
+    override val inputSchema: String = "uri: The deep link URI to open (required). packageName: Optional package name to force a specific app."
+
+    override suspend fun execute(args: Map<String, String>): ToolResult {
+        val uri = args["uri"] ?: return ToolResult.Error("Missing 'uri' argument")
+        val packageName = args["packageName"]
+        return handleActionResult(actionExecutor.execute(OpenDeepLinkRequest(uri, packageName)))
     }
 }
 

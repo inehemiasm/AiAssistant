@@ -45,3 +45,13 @@ object ListAppsRequest : AppActionRequest
  * Request to get detailed capabilities (intents handled) by a specific app.
  */
 data class GetAppCapabilitiesRequest(val appName: String) : AppActionRequest
+
+/**
+ * Request to open a deep link URI.
+ * @property uri The deep link URI to open.
+ * @property packageName Optional package name to force a specific app.
+ */
+data class OpenDeepLinkRequest(
+    val uri: String,
+    val packageName: String? = null
+) : AppActionRequest

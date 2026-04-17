@@ -14,10 +14,7 @@ import com.neo.chevere.domain.InitializeChatUseCase
 import com.neo.chevere.domain.SendMessageUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.drop
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -26,12 +23,6 @@ import java.io.File
 import javax.inject.Inject
 import kotlin.system.measureTimeMillis
 
-/**
- * ViewModel for the Chat screen.
- *
- * Manages the UI state for the chat interface, handles user intents,
- * and coordinates with use cases for model initialization and message processing.
- */
 @HiltViewModel
 class ChatViewModel @Inject constructor(
     private val application: Application,
@@ -46,42 +37,31 @@ class ChatViewModel @Inject constructor(
     private var initJob: Job? = null
 
     init {
+        // 1. Observe global initialization status from the repository
+        observeInitStatus()
+        
+        // 2. Observe agent state for tool executions
+        observeAgentStatus()
+        
+        // 3. React to model selection changes (Source of Truth)
+        observeSelectedModel()
+        
+        // 4. Initial load of local models metadata
         viewModelScope.launch {
-            // Load local models first (fast IO)
             updateLocalModels()
-            
-            // Observe status and agent state (passive)
-            observeInitStatus()
-            observeAgentStatus()
-            
-            // Small initial delay to avoid collision with splash screen startup animation
-            delay(500)
-            
-            // Now start observing the selected model and initialize it
-            observeSelectedModel()
-            
-            // Initial load of the saved model
-            val savedModel = preferenceManager.selectedModelPreference.first()
-            val modelToLoad = savedModel ?: currentState.localModels.firstOrNull()?.fileName
-            
-            if (modelToLoad != null) {
-                if (savedModel == null) {
-                    preferenceManager.updateSelectedModel(modelToLoad)
-                }
-                setState { copy(selectedModel = modelToLoad) }
-                val modelFile = File(application.filesDir, modelToLoad)
-                if (modelFile.exists()) {
-                    initModel(modelFile.absolutePath)
-                }
-            }
         }
     }
 
     private fun observeSelectedModel() {
         viewModelScope.launch {
-            // Drop(1) to skip the initial value which we handle in the init block
-            preferenceManager.selectedModelPreference.drop(1).collectLatest { savedModel ->
-                if (savedModel != null && savedModel != currentState.selectedModel) {
+            // We don't drop(1) here. We want to initialize whatever is currently saved 
+            // as soon as the ViewModel starts.
+            preferenceManager.selectedModelPreference.collectLatest { savedModel ->
+                val currentModel = currentState.selectedModel
+                
+                // If there's a saved model and it's different from our current state, 
+                // or if we aren't ready yet, trigger initialization.
+                if (savedModel != null && (savedModel != currentModel || currentState.runtimeState is RuntimeState.Uninitialized)) {
                     setState { copy(selectedModel = savedModel) }
                     val modelFile = File(application.filesDir, savedModel)
                     if (modelFile.exists()) {
@@ -132,12 +112,11 @@ class ChatViewModel @Inject constructor(
                 }
                 is ChatIntent.SwitchModel -> {
                     if (currentState.isLoading) return@withLock
-                    if (currentState.selectedModel == intent.modelName && currentState.runtimeState is RuntimeState.Ready) return@withLock
-                    
-                    setState { copy(selectedModel = intent.modelName, messages = emptyList(), runtimeState = RuntimeState.Uninitialized) }
+                    // Just update the preference. observeSelectedModel will handle the rest reactively.
                     withContext(dispatcherProvider.io) {
                         preferenceManager.updateSelectedModel(intent.modelName)
                     }
+                    setState { copy(messages = emptyList(), runtimeState = RuntimeState.Uninitialized) }
                 }
                 ChatIntent.ClearError -> setState { copy(
                     runtimeState = if (currentState.runtimeState is RuntimeState.Error) RuntimeState.Uninitialized else currentState.runtimeState,
@@ -163,21 +142,12 @@ class ChatViewModel @Inject constructor(
     }
 
     private suspend fun initModel(modelPath: String) {
-        // Cancel any previous init job to avoid race conditions
         initJob?.cancel()
         initJob = viewModelScope.launch {
             sendEffect { ChatEffect.HideKeyboard }
-            val modelName = File(modelPath).nameWithoutExtension.uppercase()
-            setState { copy(runtimeState = RuntimeState.Initializing("INITIALIZING $modelName...")) }
-            
-            // Use non-blocking default dispatcher for the heavy JNI calls
-            val result = withContext(dispatcherProvider.default) {
+            // State will be updated to Initializing/Ready via observeInitStatus flow
+            withContext(dispatcherProvider.default) {
                 initializeChatUseCase(modelPath)
-            }
-            
-            result.onFailure { e ->
-                Log.e("ChatViewModel", "Model initialization failed: ${e.message}")
-                setState { copy(runtimeState = RuntimeState.Error("Init failed: ${e.message}")) }
             }
         }
     }

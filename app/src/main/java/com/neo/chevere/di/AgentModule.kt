@@ -15,6 +15,7 @@ import com.neo.chevere.data.agent.tools.LaunchAppTool
 import com.neo.chevere.data.agent.tools.ListAppsTool
 import com.neo.chevere.data.agent.tools.ListModelsTool
 import com.neo.chevere.data.agent.tools.OpenAppTool
+import com.neo.chevere.data.agent.tools.OpenDeepLinkTool
 import com.neo.chevere.data.agent.tools.OpenMapsTool
 import com.neo.chevere.data.agent.tools.OpenUrlTool
 import com.neo.chevere.data.agent.tools.RecommendModelTool
@@ -183,6 +184,12 @@ abstract class AgentModule {
         fun provideOpenAppTool(
             executor: AndroidAppActionExecutor
         ): AgentTool = OpenAppTool(executor)
+
+        @Provides
+        @IntoSet
+        fun provideOpenDeepLinkTool(
+            executor: AndroidAppActionExecutor
+        ): AgentTool = OpenDeepLinkTool(executor)
 
         @Provides
         @IntoSet

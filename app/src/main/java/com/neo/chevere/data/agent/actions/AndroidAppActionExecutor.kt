@@ -46,6 +46,7 @@ class DefaultAndroidAppActionExecutor @Inject constructor(
                 is LaunchAppByNameRequest -> launchAppByName(request.name)
                 is ListAppsRequest -> listInstalledApps()
                 is GetAppCapabilitiesRequest -> getAppCapabilities(request.appName)
+                is OpenDeepLinkRequest -> openDeepLink(request)
                 is PickImageRequest -> AppActionResult.Error("Pick Image not implemented yet via Intent in this layer")
                 else -> AppActionResult.Error("Unknown action request type")
             }
@@ -314,6 +315,32 @@ class DefaultAndroidAppActionExecutor @Inject constructor(
             launchApp(match.activityInfo.packageName)
         } else {
             AppActionResult.Error("Could not find an app named '$name' on your device.")
+        }
+    }
+
+    private fun openDeepLink(request: OpenDeepLinkRequest): AppActionResult {
+        val uriString = sanitizeInput(request.uri)
+        if (uriString.isBlank()) {
+            return AppActionResult.Error("Missing required parameter: uri")
+        }
+
+        return try {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(uriString)).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                addCategory(Intent.CATEGORY_BROWSABLE)
+                request.packageName?.takeIf { it.isNotBlank() }?.let {
+                    setPackage(sanitizeInput(it))
+                }
+            }
+
+            if (intent.resolveActivity(context.packageManager) != null) {
+                context.startActivity(intent)
+                AppActionResult.Success("Opened deep link: $uriString")
+            } else {
+                AppActionResult.Error("No app found that can handle this deep link: $uriString")
+            }
+        } catch (t: Throwable) {
+            AppActionResult.Error("Failed to open deep link: ${t.message}")
         }
     }
 }

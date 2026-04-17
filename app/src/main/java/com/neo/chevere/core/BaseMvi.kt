@@ -1,6 +1,7 @@
 package com.neo.chevere.core
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.channels.Channel
@@ -27,6 +28,8 @@ abstract class BaseViewModel<S : UiState, I : UiIntent, E : UiEffect>(
     application: Application,
     initialState: S,
 ) : AndroidViewModel(application) {
+
+    private val tag = this::class.java.simpleName
     
     /**
      * The current state of the UI.
@@ -54,6 +57,7 @@ abstract class BaseViewModel<S : UiState, I : UiIntent, E : UiEffect>(
      * @param intent The intent to be processed.
      */
     fun onIntent(intent: I) {
+        Log.d(tag, "Intent: $intent")
         viewModelScope.launch {
             handleIntent(intent)
         }
@@ -72,7 +76,13 @@ abstract class BaseViewModel<S : UiState, I : UiIntent, E : UiEffect>(
      * @param reducer A function that takes the current state and returns the new state.
      */
     protected fun setState(reducer: S.() -> S) {
-        _uiState.update { it.reducer() }
+        _uiState.update { 
+            val newState = it.reducer()
+            if (newState != it) {
+                Log.d(tag, "State: $newState")
+            }
+            newState
+        }
     }
 
     /**
@@ -82,7 +92,9 @@ abstract class BaseViewModel<S : UiState, I : UiIntent, E : UiEffect>(
      */
     protected fun sendEffect(builder: () -> E) {
         viewModelScope.launch {
-            _effect.send(builder())
+            val effectValue = builder()
+            Log.d(tag, "Effect: $effectValue")
+            _effect.send(effectValue)
         }
     }
 }
