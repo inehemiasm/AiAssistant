@@ -165,9 +165,9 @@ class LaunchAppTool @Inject constructor(
 class OpenAppTool @Inject constructor(
     private val actionExecutor: AndroidAppActionExecutor
 ) : BaseAppActionTool(actionExecutor) {
-    override val name: String = "open_app"
-    override val description: String = "Attempts to find and launch an installed app by its common name (e.g., 'Squarespace', 'Gmail', 'Spotify'). Use this only for simple app launching."
-    override val inputSchema: String = "name: The common name of the app to open."
+    override val name: String = "launch_app_home_screen"
+    override val description: String = "Use ONLY to open the basic home screen of an app. NEVER use this for specific tasks like 'create invoice' or 'view order'. If the user mentions any specific action, you MUST use perform_app_action instead."
+    override val inputSchema: String = "name: The common name of the app (e.g., 'Settings')."
 
     override suspend fun execute(args: Map<String, String>): ToolResult {
         val name = args["name"] ?: return ToolResult.Error("Missing 'name' argument")
@@ -178,9 +178,9 @@ class OpenAppTool @Inject constructor(
 class OpenDeepLinkTool @Inject constructor(
     private val actionExecutor: AndroidAppActionExecutor
 ) : BaseAppActionTool(actionExecutor) {
-    override val name: String = "open_deeplink"
-    override val description: String = "Open a deep link URI in another app. Use for specific in-app actions like creating invoices or viewing orders (e.g., in Squarespace)."
-    override val inputSchema: String = "uri: The deep link URI to open (required). packageName: Optional package name to force a specific app."
+    override val name: String = "perform_app_action"
+    override val description: String = "MANDATORY for specific actions inside an app. For Squarespace: use uri='squarespace://invoices/create' to create an invoice, uri='squarespace://pay-links/create' for pay links, or uri='squarespace://orders' to view orders."
+    override val inputSchema: String = "uri: The action URI (required). packageName: Optional package name (e.g. 'com.squarespace.android')."
 
     override suspend fun execute(args: Map<String, String>): ToolResult {
         val uri = args["uri"] ?: return ToolResult.Error("Missing 'uri' argument")
