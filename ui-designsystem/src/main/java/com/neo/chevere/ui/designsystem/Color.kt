@@ -8,6 +8,17 @@ val ChevereBlue = Color(0xFF0091EA)
 val ChevereOrange = Color(0xFFFFAB40)
 val ChevereRed = Color(0xFFFF4B4B)
 
+// Splash / Initialization Palette (Astro Theme)
+val AstroDeepBlue = Color(0xFF0D47A1)
+val AstroBrightCyan = Color(0xFF00B8D4)
+val AstroSoftCyan = Color(0xFFE0F7FA)
+val AstroPeach = Color(0xFFFFCCBC)
+val AstroGlowCyan = Color(0xFF00E5FF)
+val AstroRobotWhite = Color(0xFFFFFFFF)
+val AstroRobotGray = Color(0xFFDDE4ED)
+val AstroRobotDark = Color(0xFF1A1A1A)
+val AstroAccentBlue = Color(0xFF4FC3F7)
+
 // Light Theme Colors
 val primaryLight = Color(0xFF006A5D)
 val onPrimaryLight = Color(0xFFFFFFFF)

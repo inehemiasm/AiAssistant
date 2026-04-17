@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Chevere</string>
 
@@ -66,6 +67,13 @@
     <string name="active">ACTIVE</string>
     <string name="activate">Activate</string>
     <string name="delete">Delete</string>
+
+    <!-- Splash & Initialization -->
+    <string name="splash_app_name">Chevere</string>
+    <string name="splash_subtitle">INTELLIGENT COMPANION</string>
+    <string name="initializing">INITIALIZING…</string>
+    <string name="attempting_gpu">ATTEMPTING GPU + VISION…</string>
+    <string name="warming_up">WARMING UP ENGINE…</string>
 
     <!-- Worker & Notifications -->
     <string name="downloading_neural_core">Downloading Neural Core</string>

@@ -3,16 +3,16 @@
 
     <!-- Post-splash screen theme. -->
     <style name="Theme.AiAssistant" parent="Theme.Material3.Dark.NoActionBar">
-        <item name="android:windowBackground">#0D47A1</item> <!-- Matches the start of our animated gradient -->
+        <item name="android:windowBackground">#0D47A1</item>
         <item name="android:statusBarColor">#0D47A1</item>
         <item name="android:navigationBarColor">#0D47A1</item>
     </style>
 
     <!-- Splash Screen theme -->
     <style name="Theme.App.Starting" parent="Theme.SplashScreen">
-        <!-- Deep Blue (#0D47A1) matches the top of our custom Robot Splash gradient -->
         <item name="windowSplashScreenBackground">#0D47A1</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <!-- Use transparent to hide the system icon and let our Robot be the only one visible -->
+        <item name="windowSplashScreenAnimatedIcon">@android:color/transparent</item>
         <item name="postSplashScreenTheme">@style/Theme.AiAssistant</item>
     </style>
 </resources>

@@ -2,8 +2,9 @@
 <resources>
     <style name="Theme.App.Starting" parent="Theme.SplashScreen">
         <!-- Attributes for API 31+ -->
-        <item name="android:windowSplashScreenBackground">#0E1513</item>
-        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="android:windowSplashScreenBackground">#0D47A1</item>
+        <!-- Hide the system icon to avoid seeing it before our custom robot animation starts -->
+        <item name="android:windowSplashScreenAnimatedIcon">@android:color/transparent</item>
         <item name="postSplashScreenTheme">@style/Theme.AiAssistant</item>
     </style>
 </resources>

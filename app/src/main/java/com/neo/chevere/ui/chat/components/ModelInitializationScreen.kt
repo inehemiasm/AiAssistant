@@ -1,27 +1,10 @@
 package com.neo.chevere.ui.chat.components
 
-import androidx.compose.animation.core.Easing
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.InfiniteTransition
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Sync
@@ -36,11 +19,13 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.neo.chevere.ui.designsystem.Typography
+import com.neo.chevere.R
+import com.neo.chevere.ui.designsystem.*
 
 @Composable
 fun ModelInitializationScreen(
@@ -48,16 +33,31 @@ fun ModelInitializationScreen(
     modifier: Modifier = Modifier
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "loading")
+    val isDark = isSystemInDarkTheme()
     
-    // Background: Deep Blue to Vibrant Cyan with a hint of Peach (matching the image's energy)
-    val backgroundBrush = Brush.verticalGradient(
-        colors = listOf(
-            Color(0xFF0D47A1), // Deep Blue
-            Color(0xFF00B8D4), // Bright Cyan
-            Color(0xFFE0F7FA), // Very Light Blue/White
-            Color(0xFFFFCCBC)  // Light Peach (from the light trails)
+    // Theme-aware Background Brush
+    val backgroundBrush = if (isDark) {
+        Brush.verticalGradient(
+            colors = listOf(
+                AstroDeepBlue,
+                AstroBrightCyan,
+                Color(0xFF002F6C), // Deep blue variant
+                Color(0xFF00193D)  // Near black blue
+            )
         )
-    )
+    } else {
+        Brush.verticalGradient(
+            colors = listOf(
+                AstroSoftCyan,
+                AstroPeach,
+                Color.White,
+                AstroSoftCyan
+            )
+        )
+    }
+
+    val textColor = if (isDark) AstroRobotWhite else AstroDeepBlue
+    val subtitleColor = if (isDark) AstroRobotWhite.copy(alpha = 0.7f) else AstroDeepBlue.copy(alpha = 0.7f)
 
     Box(
         modifier = modifier
@@ -65,7 +65,6 @@ fun ModelInitializationScreen(
             .background(backgroundBrush),
         contentAlignment = Alignment.Center
     ) {
-        // Dynamic "Light Trails" (Simulating the fast-moving background)
         DynamicLightTrails(infiniteTransition)
 
         Column(
@@ -75,16 +74,14 @@ fun ModelInitializationScreen(
         ) {
             Spacer(modifier = Modifier.weight(1f))
 
-            // Robot Illustration (Floating)
             RobotIcon(size = 240.dp)
 
             Spacer(modifier = Modifier.height(40.dp))
 
-            // App Name with high-tech feel
             Text(
-                text = "Chevere",
+                text = stringResource(R.string.splash_app_name),
                 style = Typography.displaySmall.copy(
-                    color = Color.White,
+                    color = textColor,
                     fontWeight = FontWeight.Black,
                     fontSize = 58.sp,
                     letterSpacing = (-2).sp
@@ -92,11 +89,10 @@ fun ModelInitializationScreen(
                 textAlign = TextAlign.Center
             )
 
-            // Subtitle
             Text(
-                text = "INTELLIGENT COMPANION",
+                text = stringResource(R.string.splash_subtitle),
                 style = Typography.labelSmall.copy(
-                    color = Color.White.copy(alpha = 0.7f),
+                    color = subtitleColor,
                     letterSpacing = 4.sp,
                     fontWeight = FontWeight.Bold,
                     fontSize = 10.sp
@@ -112,7 +108,7 @@ fun ModelInitializationScreen(
                     .fillMaxWidth(0.7f)
                     .height(3.dp)
                     .clip(RoundedCornerShape(1.5.dp))
-                    .background(Color.White.copy(alpha = 0.2f))
+                    .background(textColor.copy(alpha = 0.2f))
             ) {
                 val progressAnimation by infiniteTransition.animateFloat(
                     initialValue = -0.5f,
@@ -131,7 +127,7 @@ fun ModelInitializationScreen(
                     
                     drawRect(
                         brush = Brush.horizontalGradient(
-                            listOf(Color.Transparent, Color(0xFF00E5FF), Color.White, Color(0xFF00E5FF), Color.Transparent)
+                            listOf(Color.Transparent, AstroGlowCyan, textColor, AstroGlowCyan, Color.Transparent)
                         ),
                         topLeft = Offset(x, 0f),
                         size = androidx.compose.ui.geometry.Size(barWidth, size.height)
@@ -159,7 +155,7 @@ fun ModelInitializationScreen(
                 Icon(
                     imageVector = Icons.Default.Sync,
                     contentDescription = null,
-                    tint = Color.White.copy(alpha = 0.6f),
+                    tint = subtitleColor,
                     modifier = Modifier
                         .size(16.dp)
                         .graphicsLayer { rotationZ = rotation }
@@ -170,7 +166,7 @@ fun ModelInitializationScreen(
                 Text(
                     text = statusMessage.uppercase(),
                     style = Typography.labelSmall.copy(
-                        color = Color.White.copy(alpha = 0.6f),
+                        color = subtitleColor,
                         letterSpacing = 2.sp,
                         fontWeight = FontWeight.Medium
                     )
@@ -193,17 +189,12 @@ private fun DynamicLightTrails(infiniteTransition: InfiniteTransition) {
         ),
         label = "move_factor"
     )
+    val isDark = isSystemInDarkTheme()
 
     Canvas(modifier = Modifier.fillMaxSize()) {
         val w = size.width
         val h = size.height
 
-        // Colors from image
-        val cyan = Color(0xFF00E5FF)
-        val peach = Color(0xFFFFCCBC)
-        val white = Color.White
-
-        // Draw multiple streaks
         for (i in 0..10) {
             val startY = (h * (i / 10f))
             val xOffset = (moveFactor * w * 2) - w
@@ -212,7 +203,7 @@ private fun DynamicLightTrails(infiniteTransition: InfiniteTransition) {
             drawLine(
                 brush = Brush.horizontalGradient(
                     0.0f to Color.Transparent,
-                    0.5f to (if (i % 2 == 0) cyan else peach).copy(alpha = 0.4f),
+                    0.5f to (if (i % 2 == 0) AstroGlowCyan else AstroPeach).copy(alpha = if (isDark) 0.4f else 0.2f),
                     1.0f to Color.Transparent
                 ),
                 start = Offset(currentX, startY),
@@ -220,14 +211,5 @@ private fun DynamicLightTrails(infiniteTransition: InfiniteTransition) {
                 strokeWidth = 4f
             )
         }
-        
-        // Background Bokeh
-        drawCircle(cyan.copy(alpha = 0.1f), 100f, Offset(w * 0.2f, h * 0.3f))
-        drawCircle(peach.copy(alpha = 0.1f), 150f, Offset(w * 0.8f, h * 0.7f))
-        drawCircle(white.copy(alpha = 0.1f), 80f, Offset(w * 0.5f, h * 0.5f))
     }
-}
-
-private val SineHighlightEasing = Easing { fraction ->
-    kotlin.math.sin(fraction * kotlin.math.PI.toFloat())
 }

@@ -8,8 +8,10 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.neo.chevere.data.PreferenceManager
 import com.neo.chevere.ui.LaunchAnimatedApp
+import com.neo.chevere.ui.chat.ChatViewModel
 import com.neo.chevere.ui.designsystem.HighTechAiTheme
 import com.neo.chevere.ui.navigation.ChevereApp
 import dagger.hilt.android.AndroidEntryPoint
@@ -36,9 +38,17 @@ class MainActivity : ComponentActivity() {
             val systemDark = isSystemInDarkTheme()
             val isDarkMode by preferenceManager.themePreference.collectAsState(initial = systemDark)
             
+            // Access ChatViewModel here to observe the global initialization state
+            val chatViewModel: ChatViewModel = hiltViewModel()
+            val chatState by chatViewModel.uiState.collectAsState()
+            
             HighTechAiTheme(darkTheme = isDarkMode) {
                 // Wrap the main app entry with the launch animation
-                LaunchAnimatedApp {
+                // This will stay visible until the ChatViewModel says the model is ready
+                LaunchAnimatedApp(
+                    isReady = chatState.isReady,
+                    statusMessage = chatState.loadingMessage ?: "INITIALIZING..."
+                ) {
                     ChevereApp()
                 }
             }
