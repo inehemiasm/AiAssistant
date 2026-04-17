@@ -2,11 +2,14 @@ package com.neo.chevere.data.inference
 
 import com.neo.chevere.domain.InferenceRequest
 import com.neo.chevere.domain.InferenceResult
-import com.neo.chevere.domain.LoadResult
-import com.neo.chevere.domain.InstalledModel
 import com.neo.chevere.domain.InitializationStatus
+import com.neo.chevere.domain.InstalledModel
+import com.neo.chevere.domain.LoadResult
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject

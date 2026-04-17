@@ -2,8 +2,8 @@
   {
     "id": "gemma-2b-it-cpu-int8",
     "displayName": "Gemma 2B IT (Int8)",
-    "modelPageUrl": "https://www.kaggle.com/models/google/gemma/liteRT/gemma-2b-it-cpu-int8",
-    "downloadUrl": "https://www.kaggle.com/models/google/gemma/liteRT/gemma-2b-it-cpu-int8/1/download",
+    "modelPageUrl": "https://huggingface.co/google/gemma-2b-it-tflite",
+    "downloadUrl": "https://huggingface.co/google/gemma-2b-it-tflite/resolve/main/2b-it-cpu-int8.tflite",
     "sizeBytes": 2100000000,
     "supportsVision": false,
     "description": "Google's Gemma 2B instruction-tuned model, quantized for CPU efficiency.",
@@ -12,9 +12,9 @@
   {
     "id": "gemma-4-e4b-it",
     "displayName": "Gemma 4 E4B IT",
-    "modelPageUrl": "https://www.kaggle.com/models/google/gemma-2/liteRT/gemma-4-e4b-it",
-    "downloadUrl": "https://www.kaggle.com/models/google/gemma-2/liteRT/gemma-4-e4b-it/1/download",
-    "sizeBytes": 4200000000,
+    "modelPageUrl": "https://huggingface.co/litert-community/gemma-4-E4B-it-litert-lm",
+    "downloadUrl": "https://huggingface.co/litert-community/gemma-4-E4B-it-litert-lm/resolve/main/gemma-4-E4B-it.litertlm",
+    "sizeBytes": 5165953024,
     "supportsVision": false,
     "description": "Advanced instruction-tuned Gemma model with enhanced reasoning capabilities.",
     "license": "Gemma Terms of Use"
@@ -22,9 +22,9 @@
   {
     "id": "gemma-4-e2b-it",
     "displayName": "Gemma 4 E2B IT",
-    "modelPageUrl": "https://www.kaggle.com/models/google/gemma-2/liteRT/gemma-4-e2b-it",
-    "downloadUrl": "https://www.kaggle.com/models/google/gemma-2/liteRT/gemma-4-e2b-it/1/download",
-    "sizeBytes": 2100000000,
+    "modelPageUrl": "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm",
+    "downloadUrl": "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it.litertlm",
+    "sizeBytes": 2765953024,
     "supportsVision": false,
     "description": "Balanced 2B parameter Gemma model optimized for mobile instruction tasks.",
     "license": "Gemma Terms of Use"
@@ -32,8 +32,8 @@
   {
     "id": "mobilenet-v3-large-100-224",
     "displayName": "MobileNet V3 Large",
-    "modelPageUrl": "https://www.kaggle.com/models/google/mobilenet-v3/liteRT/large-100-224-classification",
-    "downloadUrl": "https://www.kaggle.com/models/google/mobilenet-v3/liteRT/large-100-224-classification/1/download",
+    "modelPageUrl": "https://huggingface.co/google/mobilenet-v3-large-100-224-classification",
+    "downloadUrl": "https://huggingface.co/google/mobilenet-v3-large-100-224-classification/resolve/main/mobilenet_v3_large_100_224.tflite",
     "sizeBytes": 22000000,
     "supportsVision": true,
     "description": "High-accuracy image classification model optimized for mobile devices.",
@@ -42,8 +42,8 @@
   {
     "id": "efficientnet-lite0-int8",
     "displayName": "EfficientNet Lite0 (Int8)",
-    "modelPageUrl": "https://www.kaggle.com/models/google/efficientnet/liteRT/lite0-int8",
-    "downloadUrl": "https://www.kaggle.com/models/google/efficientnet/liteRT/lite0-int8/1/download",
+    "modelPageUrl": "https://huggingface.co/google/efficientnet-lite0-int8",
+    "downloadUrl": "https://huggingface.co/google/efficientnet-lite0-int8/resolve/main/efficientnet_lite0_int8.tflite",
     "sizeBytes": 4000000,
     "supportsVision": true,
     "description": "Lightweight vision model for ultra-fast classification on edge devices.",

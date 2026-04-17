@@ -7,7 +7,6 @@ import com.neo.chevere.data.PreferenceManager
 import com.neo.chevere.domain.ChatRepository
 import com.neo.chevere.domain.DownloadProgress
 import com.neo.chevere.domain.InstallStatus
-import com.neo.chevere.domain.InitializationStatus
 import com.neo.chevere.ui.common.CatalogState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.collectLatest

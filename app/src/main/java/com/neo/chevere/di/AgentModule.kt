@@ -47,6 +47,14 @@ abstract class AgentModule {
 
         @Provides
         @IntoSet
+        fun provideWeatherTool(
+            httpClient: HttpClient
+        ): AgentTool {
+            return WeatherTool(httpClient)
+        }
+
+        @Provides
+        @IntoSet
         fun provideListModelsTool(
             registry: InstalledModelRegistry,
             preferenceManager: PreferenceManager

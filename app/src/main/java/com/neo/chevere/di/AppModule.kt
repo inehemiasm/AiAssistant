@@ -5,6 +5,7 @@ import androidx.work.WorkManager
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreSettings
 import com.google.firebase.firestore.PersistentCacheSettings
+import com.neo.chevere.core.Constants
 import com.neo.chevere.core.DefaultDispatcherProvider
 import com.neo.chevere.core.DispatcherProvider
 import com.neo.chevere.data.ChatRepositoryImpl
@@ -23,7 +24,11 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
+import io.ktor.client.plugins.DefaultRequest
+import io.ktor.client.plugins.HttpRedirect
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.request.header
+import io.ktor.http.HttpHeaders
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 import javax.inject.Singleton
@@ -83,6 +88,17 @@ abstract class AppModule {
                         prettyPrint = true
                         isLenient = true
                     })
+                }
+                
+                install(HttpRedirect) {
+                    checkHttpMethod = false
+                }
+                
+                // Add default headers to avoid being blocked by Kaggle/CDNs
+                install(DefaultRequest) {
+                    header(HttpHeaders.UserAgent, Constants.Network.DEFAULT_USER_AGENT)
+                    header(HttpHeaders.Accept, Constants.Network.ACCEPT_ALL)
+                    header("Referer", Constants.Network.KAGGE_REFERER)
                 }
             }
         }

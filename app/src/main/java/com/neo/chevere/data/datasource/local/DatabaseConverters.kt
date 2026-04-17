@@ -1,7 +1,11 @@
 package com.neo.chevere.data.datasource.local
 
 import androidx.room.TypeConverter
-import com.neo.chevere.domain.*
+import com.neo.chevere.domain.InstallStatus
+import com.neo.chevere.domain.ModelFormat
+import com.neo.chevere.domain.ModelRuntime
+import com.neo.chevere.domain.ModelSource
+import com.neo.chevere.domain.ModelTaskType
 
 class DatabaseConverters {
     @TypeConverter

@@ -3,8 +3,8 @@ package com.neo.chevere.data.inference
 import com.neo.chevere.domain.InferenceRequest
 import com.neo.chevere.domain.InferenceResult
 import com.neo.chevere.domain.InitializationStatus
-import com.neo.chevere.domain.LoadResult
 import com.neo.chevere.domain.InstalledModel
+import com.neo.chevere.domain.LoadResult
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import javax.inject.Singleton

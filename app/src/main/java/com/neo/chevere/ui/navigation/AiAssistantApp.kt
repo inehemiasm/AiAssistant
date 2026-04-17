@@ -77,7 +77,7 @@ fun ChevereApp() {
                 .padding(innerPadding)
                 .consumeWindowInsets(innerPadding)
         ) {
-            AiAssistantNavHost(
+            ChevereNavHost(
                 navController = navController
             )
         }

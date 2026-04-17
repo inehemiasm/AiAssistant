@@ -9,9 +9,9 @@ import com.neo.chevere.core.DispatcherProvider
 import com.neo.chevere.data.PreferenceManager
 import com.neo.chevere.domain.ChatMessage
 import com.neo.chevere.domain.ChatRepository
+import com.neo.chevere.domain.InitializationStatus
 import com.neo.chevere.domain.InitializeChatUseCase
 import com.neo.chevere.domain.SendMessageUseCase
-import com.neo.chevere.domain.InitializationStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay

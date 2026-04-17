@@ -8,11 +8,11 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.provider.CalendarContract
 import android.util.Log
+import androidx.core.net.toUri
 import com.neo.chevere.core.Constants
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
-import androidx.core.net.toUri
 
 private const val TAG = "AppActionExecutor"
 

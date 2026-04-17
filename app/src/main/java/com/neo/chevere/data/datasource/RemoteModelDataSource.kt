@@ -4,7 +4,9 @@ import com.google.firebase.storage.FirebaseStorage
 import io.ktor.client.HttpClient
 import io.ktor.client.request.prepareGet
 import io.ktor.client.statement.bodyAsChannel
+import io.ktor.http.ContentType
 import io.ktor.http.contentLength
+import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import io.ktor.utils.io.readAvailable
 import kotlinx.coroutines.Dispatchers
@@ -52,6 +54,12 @@ class DefaultRemoteModelDataSource @Inject constructor(
         httpClient.prepareGet(url).execute { response ->
             if (!response.status.isSuccess()) {
                 throw IOException("HTTP error: ${response.status}")
+            }
+            
+            // Check if we accidentally downloaded an HTML error page (Kaggle often redirects to one)
+            val contentType = response.contentType()
+            if (contentType != null && contentType.contentType == ContentType.Text.Html.contentType && contentType.contentSubtype == ContentType.Text.Html.contentSubtype) {
+                throw IOException("Received HTML instead of a model file. The download link might be expired or blocked.")
             }
 
             val channel = response.bodyAsChannel()

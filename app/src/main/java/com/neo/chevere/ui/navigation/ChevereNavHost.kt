@@ -7,13 +7,13 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.neo.chevere.ui.chat.ChatScreen
-import com.neo.chevere.ui.marketplace.ModelMarketplaceScreen
 import com.neo.chevere.ui.marketplace.MarketplaceViewModel
+import com.neo.chevere.ui.marketplace.ModelMarketplaceScreen
 import com.neo.chevere.ui.marketplace.details.ModelDetailsScreen
 import com.neo.chevere.ui.settings.SettingsScreen
 
 @Composable
-fun AiAssistantNavHost(
+fun ChevereNavHost(
     navController: NavHostController,
     modifier: Modifier = Modifier
 ) {
