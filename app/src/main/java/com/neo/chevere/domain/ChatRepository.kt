@@ -61,6 +61,11 @@ interface ChatRepository {
      * Downloads a model from the given URL.
      */
     fun downloadModel(url: String, modelName: String, sha256: String? = null): Flow<DownloadProgress>
+
+    /**
+     * Global flow tracking all active model downloads.
+     */
+    val allDownloadsProgress: Flow<Map<String, DownloadProgress>>
     
     /**
      * Returns a list of models currently installed on the device.

@@ -241,6 +241,13 @@ fun ActionSection(state: ModelDetailsState, onIntent: (ModelDetailsIntent) -> Un
                 icon = Icons.Default.Sync,
                 onClick = { onIntent(ModelDetailsIntent.ConfirmSwitch) }
             )
+        } else if (state.isActive) {
+            PrimaryAction(
+                label = "ENGINE ACTIVE",
+                icon = Icons.Default.CheckCircle,
+                onClick = { },
+                enabled = false
+            )
         }
         
         if (state.isInstalled && !state.isActive && !state.isActionInProgress) {
@@ -311,12 +318,21 @@ fun MetadataRow(label: String, value: String) {
 }
 
 @Composable
-fun PrimaryAction(label: String, icon: ImageVector, onClick: () -> Unit) {
+fun PrimaryAction(
+    label: String, 
+    icon: ImageVector, 
+    onClick: () -> Unit,
+    enabled: Boolean = true
+) {
     Button(
         onClick = onClick,
+        enabled = enabled,
         modifier = Modifier.fillMaxWidth().height(56.dp),
         shape = RoundedCornerShape(12.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.primary,
+            disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+        )
     ) {
         Icon(icon, null)
         Spacer(Modifier.width(12.dp))

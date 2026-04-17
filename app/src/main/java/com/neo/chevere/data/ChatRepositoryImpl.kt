@@ -113,6 +113,9 @@ class ChatRepositoryImpl @Inject constructor(
         return downloadManager.downloadModel(url, modelName, sha256)
     }
 
+    override val allDownloadsProgress: Flow<Map<String, DownloadProgress>>
+        get() = downloadManager.allDownloadsProgress
+
     override suspend fun getLocalModels(): List<InstalledModel> = withContext(dispatcherProvider.io) {
         val filesDir = context.filesDir
         

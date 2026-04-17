@@ -15,23 +15,35 @@ import javax.inject.Singleton
 
 /**
  * Manages the background downloading of AI models using Android's WorkManager.
- *
- * This manager handles enqueuing download tasks and mapping the WorkManager's
- * state and progress updates back to a domain-level [DownloadProgress] flow.
- *
- * @property workManager The system's WorkManager instance used to schedule tasks.
  */
 @Singleton
 class WorkManagerModelDownloadManager @Inject constructor(
     private val workManager: WorkManager
 ) {
+    companion object {
+        const val TAG_MODEL_DOWNLOAD = "MODEL_DOWNLOAD_TASK"
+    }
+
+    /**
+     * A global flow that tracks all active and recent model downloads.
+     * This allows any part of the UI to observe progress for any model by its ID (fileName).
+     */
+    val allDownloadsProgress: Flow<Map<String, DownloadProgress>> = 
+        workManager.getWorkInfosByTagFlow(TAG_MODEL_DOWNLOAD).map { workInfos ->
+            workInfos.associate { info ->
+                // The model name is stored as a tag (excluding the generic one and class tags)
+                val modelName = info.tags.find { 
+                    it != TAG_MODEL_DOWNLOAD && 
+                    !it.contains(".") && 
+                    it != ModelDownloadWorker::class.java.name 
+                } ?: "unknown"
+                
+                modelName to mapWorkInfoToDownloadProgress(info)
+            }
+        }
+
     /**
      * Initiates a model download task.
-     *
-     * @param url The URL from which to download the model file.
-     * @param modelName A unique name for the model, also used as the unique work name.
-     * @param sha256 Optional SHA-256 hash to verify the integrity of the downloaded file.
-     * @return A [Flow] of [DownloadProgress] updates for the initiated download.
      */
     fun downloadModel(url: String, modelName: String, sha256: String? = null): Flow<DownloadProgress> {
         Log.d("DownloadManager", "Creating WorkManager request for $modelName from $url")
@@ -48,25 +60,19 @@ class WorkManagerModelDownloadManager @Inject constructor(
 
         val workRequest = OneTimeWorkRequestBuilder<ModelDownloadWorker>()
             .setInputData(inputData)
-            .addTag(modelName)
+            .addTag(TAG_MODEL_DOWNLOAD) // Generic tag for tracking all downloads
+            .addTag(modelName)          // Specific tag for this model
             .build()
         
-        val enqueueResult = workManager.enqueueUniqueWork(modelName, ExistingWorkPolicy.KEEP, workRequest)
-        Log.d("DownloadManager", "WorkManager enqueue result for $modelName: ${enqueueResult.result}")
+        // Use KEEP policy so we don't restart an existing download for the same model
+        workManager.enqueueUniqueWork(modelName, ExistingWorkPolicy.KEEP, workRequest)
         
-        return workManager.getWorkInfoByIdFlow(workRequest.id).map { workInfo ->
-            val progress = mapWorkInfoToDownloadProgress(workInfo)
-            Log.v("DownloadManager", "WorkInfo status for $modelName: ${workInfo?.state}, progress: $progress")
-            progress
+        // Return a flow specifically for this model's name
+        return workManager.getWorkInfosForUniqueWorkFlow(modelName).map { list ->
+            mapWorkInfoToDownloadProgress(list.firstOrNull())
         }
     }
 
-    /**
-     * Maps the internal WorkManager [WorkInfo] to the domain-level [DownloadProgress].
-     *
-     * @param workInfo The information about the background work.
-     * @return The corresponding [DownloadProgress] state.
-     */
     internal fun mapWorkInfoToDownloadProgress(workInfo: WorkInfo?): DownloadProgress {
         return when (workInfo?.state) {
             WorkInfo.State.RUNNING -> {

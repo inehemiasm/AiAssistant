@@ -43,6 +43,7 @@ The project is an Android application following Clean Architecture and MVI (Mode
 - **Integrity**: SHA-256 verification is performed during the `VERIFYING` phase of download.
 
 ## Development Guidelines
+- **Reactive Architecture**: Always favor reactive programming patterns. UI state should observe `Flow` or `StateFlow` from repositories or managers to ensure a single source of truth and automatic updates across multiple screens. Avoid manual one-time state fetches for data that can change.
 - **Documentation Standards**: Always generate KDoc for new implementations and update kdoc when changes occur.
 - **Database Schema**: If modifying `InstalledModelEntity`, increment `AppDatabase.version` and handle migration (current: fallback destructive).
 - **Filtering**: New discovery items should be filtered for quality (size, runtime compatibility) before appearing in the UI.

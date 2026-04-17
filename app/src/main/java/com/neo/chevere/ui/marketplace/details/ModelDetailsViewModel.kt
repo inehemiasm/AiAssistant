@@ -31,9 +31,23 @@ class ModelDetailsViewModel @Inject constructor(
         setState { copy(modelId = modelId) }
         loadDetails()
         
+        // Use collectLatest on preferenceManager to stay in sync with the source of truth
         viewModelScope.launch {
             preferenceManager.selectedModelPreference.collectLatest { activeId ->
                 setState { copy(isActive = activeId == modelId) }
+            }
+        }
+
+        // Observe global downloads progress for this specific model
+        viewModelScope.launch {
+            repository.allDownloadsProgress.collectLatest { progressMap ->
+                val progress = progressMap[modelId]
+                if (progress is DownloadProgress.Progress) {
+                    setState { copy(downloadProgress = progress.percent, isActionInProgress = true) }
+                } else if (progress is DownloadProgress.Finished) {
+                    setState { copy(downloadProgress = null, isActionInProgress = false) }
+                    loadDetails()
+                }
             }
         }
     }
@@ -72,22 +86,10 @@ class ModelDetailsViewModel @Inject constructor(
 
     private fun downloadModel() {
         val entry = currentState.modelEntry ?: return
-        setState { copy(isActionInProgress = true, downloadProgress = 0) }
-        
         viewModelScope.launch {
-            repository.downloadModel(entry.url, entry.effectiveFileName, entry.sha256).collect { progress ->
-                when (progress) {
-                    is DownloadProgress.Progress -> setState { copy(downloadProgress = progress.percent) }
-                    DownloadProgress.Finished -> {
-                        setState { copy(isActionInProgress = false, downloadProgress = null) }
-                        loadDetails()
-                        sendEffect { ModelDetailsEffect.ShowToast("Download complete") }
-                    }
-                    is DownloadProgress.Error -> {
-                        setState { copy(isActionInProgress = false, downloadProgress = null) }
-                        sendEffect { ModelDetailsEffect.ShowToast(progress.message) }
-                        loadDetails()
-                    }
+            repository.downloadModel(entry.url, entry.effectiveFileName, entry.sha256).collectLatest { progress ->
+                if (progress is DownloadProgress.Error) {
+                    sendEffect { ModelDetailsEffect.ShowToast(progress.message) }
                 }
             }
         }
@@ -116,9 +118,6 @@ class ModelDetailsViewModel @Inject constructor(
             sendEffect { ModelDetailsEffect.ShowToast("Model is not ready") }
             return
         }
-        // In this architecture, "selecting" usually means setting it as pending in Marketplace 
-        // or just switching immediately if requested.
-        // For the details screen, let's trigger the switch confirmation.
         confirmSwitch()
     }
 
@@ -129,8 +128,9 @@ class ModelDetailsViewModel @Inject constructor(
         viewModelScope.launch {
             repository.initializeModel(model.filePath)
                 .onSuccess {
+                    // Update PreferenceManager - this will trigger the isActive collector
                     preferenceManager.updateSelectedModel(modelId)
-                    setState { copy(isActive = true, isActionInProgress = false) }
+                    setState { copy(isActionInProgress = false) }
                     sendEffect { ModelDetailsEffect.ShowToast("Model activated") }
                 }
                 .onFailure { e ->

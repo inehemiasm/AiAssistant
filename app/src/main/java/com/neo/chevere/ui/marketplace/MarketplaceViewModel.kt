@@ -10,6 +10,7 @@ import com.neo.chevere.domain.InstallStatus
 import com.neo.chevere.ui.common.CatalogState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -31,6 +32,29 @@ class MarketplaceViewModel @Inject constructor(
         viewModelScope.launch {
             preferenceManager.selectedModelPreference.collectLatest { modelId ->
                 setState { copy(activeModelId = modelId) }
+            }
+        }
+
+        // Observe global downloads progress
+        viewModelScope.launch {
+            repository.allDownloadsProgress.collectLatest { progressMap ->
+                // Update local state based on all active downloads
+                // If a download for a specific model is in progress, update its state
+                val downloadingModel = progressMap.entries.firstOrNull { it.value is DownloadProgress.Progress }
+                
+                setState { 
+                    copy(
+                        downloadingModelName = downloadingModel?.key,
+                        downloadProgress = (downloadingModel?.value as? DownloadProgress.Progress)?.percent,
+                        // We also need to map this back to individual model items in the UI if needed
+                        // but usually the installStatus in localModels (observed from DB) handles the rest
+                    )
+                }
+
+                // If any download just finished, refresh local models
+                if (progressMap.values.any { it is DownloadProgress.Finished }) {
+                    loadLocalModels()
+                }
             }
         }
 
@@ -135,21 +159,11 @@ class MarketplaceViewModel @Inject constructor(
     }
 
     private fun downloadModel(modelName: String, baseDir: String, url: String, sha256: String?) {
-        setState { copy(downloadingModelName = modelName, downloadProgress = 0) }
-        
+        // Just trigger it. The global observer in init will handle state updates.
         viewModelScope.launch {
-            repository.downloadModel(url, modelName, sha256).collect { progress ->
-                when (progress) {
-                    is DownloadProgress.Progress -> setState { copy(downloadProgress = progress.percent) }
-                    DownloadProgress.Finished -> {
-                        setState { copy(downloadingModelName = null, downloadProgress = null) }
-                        loadLocalModels()
-                    }
-                    is DownloadProgress.Error -> {
-                        setState { copy(downloadingModelName = null, downloadProgress = null) }
-                        sendEffect { MarketplaceEffect.ShowToast(progress.message) }
-                        loadLocalModels() // Refresh to show failure status
-                    }
+            repository.downloadModel(url, modelName, sha256).collectLatest { progress ->
+                if (progress is DownloadProgress.Error) {
+                    sendEffect { MarketplaceEffect.ShowToast(progress.message) }
                 }
             }
         }
