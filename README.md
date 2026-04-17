@@ -17,6 +17,9 @@ A futuristic, high-performance Android AI assistant powered by **Google AI Edge 
         - `AnalyzeImageTool`: Detailed visual description using multimodal capabilities.
         - `ExtractTasksTool`: Automatically identifies actionable items from text.
         - `SummarizeTextTool`: Condenses long conversations or documents.
+    - **System & Utility Tools**:
+        - `WeatherTool`: Real-time weather data and forecasts (via Open-Meteo API).
+        - `WebSearchTool`: Real-time information retrieval via Serper.dev with built-in **Internet Connectivity Detection** and LRU caching.
     - **Android System Tools**:
         - `OpenAppTool`: Intelligent launch-by-name for any installed application.
         - `ListAppsTool`: Enumerates all user-accessible apps on the device.
@@ -24,11 +27,9 @@ A futuristic, high-performance Android AI assistant powered by **Google AI Edge 
         - `OpenUrlTool` & `OpenMapsTool`: Deep-link into browsers or navigation.
         - `DraftEmailTool` & `CreateCalendarEventTool`: Direct productivity shortcuts.
         - `ShareTextTool` & `CopyToClipboardTool`: System-wide data interaction.
-    - **Web Tools**:
-        - `WebSearchTool`: Real-time information retrieval via Serper.dev with built-in **Internet Connectivity Detection** and LRU caching.
 - **Robust Background Downloads**: Uses **WorkManager** and **Ktor** for resilient model downloading with status tracking (Downloading -> Verifying -> Installed).
 - **Hardware Acceleration**: Automatic fallback logic attempting GPU acceleration first, with CPU fallback for stability.
-- **Futuristic UI**: A high-tech, "cyberpunk" inspired interface built with Jetpack Compose.
+- **Futuristic Animated Splash**: A custom-drawn, high-tech animated splash screen with a floating robot companion and dynamic light trails.
 
 ## 🛠 Tech Stack
 
