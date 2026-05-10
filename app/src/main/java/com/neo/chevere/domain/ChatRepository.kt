@@ -36,6 +36,11 @@ interface ChatRepository {
      * Sends a message to the AI and receives a response through the agent loop.
      */
     suspend fun sendMessage(prompt: String, imageUri: Uri? = null): Result<String>
+
+    /**
+     * Generates an image directly from the prompt using an installed image-generation model.
+     */
+    suspend fun generateImage(request: ImageGenerationRequest): Result<ImageGenerationResult.Success>
     
     /**
      * Confirms a pending action requested by a tool.

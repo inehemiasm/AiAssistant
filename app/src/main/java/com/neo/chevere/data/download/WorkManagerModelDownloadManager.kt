@@ -22,6 +22,7 @@ class WorkManagerModelDownloadManager @Inject constructor(
 ) {
     companion object {
         const val TAG_MODEL_DOWNLOAD = "MODEL_DOWNLOAD_TASK"
+        private const val TAG_MODEL_NAME_PREFIX = "MODEL_NAME:"
     }
 
     /**
@@ -30,16 +31,13 @@ class WorkManagerModelDownloadManager @Inject constructor(
      */
     val allDownloadsProgress: Flow<Map<String, DownloadProgress>> = 
         workManager.getWorkInfosByTagFlow(TAG_MODEL_DOWNLOAD).map { workInfos ->
-            workInfos.associate { info ->
-                // The model name is stored as a tag (excluding the generic one and class tags)
-                val modelName = info.tags.find { 
-                    it != TAG_MODEL_DOWNLOAD && 
-                    !it.contains(".") && 
-                    it != ModelDownloadWorker::class.java.name 
-                } ?: "unknown"
+            workInfos.mapNotNull { info ->
+                val modelName = info.tags.firstOrNull {
+                    it.startsWith(TAG_MODEL_NAME_PREFIX)
+                }?.removePrefix(TAG_MODEL_NAME_PREFIX) ?: return@mapNotNull null
                 
                 modelName to mapWorkInfoToDownloadProgress(info)
-            }
+            }.toMap()
         }
 
     /**
@@ -61,11 +59,11 @@ class WorkManagerModelDownloadManager @Inject constructor(
         val workRequest = OneTimeWorkRequestBuilder<ModelDownloadWorker>()
             .setInputData(inputData)
             .addTag(TAG_MODEL_DOWNLOAD) // Generic tag for tracking all downloads
-            .addTag(modelName)          // Specific tag for this model
+            .addTag("$TAG_MODEL_NAME_PREFIX$modelName") // Specific tag for this model
             .build()
         
-        // Use KEEP policy so we don't restart an existing download for the same model
-        workManager.enqueueUniqueWork(modelName, ExistingWorkPolicy.KEEP, workRequest)
+        // Replace same-model work so a stale interrupted job cannot keep the download button pinned.
+        workManager.enqueueUniqueWork(modelName, ExistingWorkPolicy.REPLACE, workRequest)
         
         // Return a flow specifically for this model's name
         return workManager.getWorkInfosForUniqueWorkFlow(modelName).map { list ->

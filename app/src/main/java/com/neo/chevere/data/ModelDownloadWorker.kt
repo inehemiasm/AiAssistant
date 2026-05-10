@@ -25,6 +25,7 @@ import java.io.FileInputStream
 import java.io.IOException
 import java.security.MessageDigest
 import java.util.concurrent.atomic.AtomicLong
+import java.util.zip.ZipInputStream
 
 private const val TAG = "ModelDownloadWorker"
 
@@ -55,7 +56,7 @@ class ModelDownloadWorker @AssistedInject constructor(
             return@withContext Result.failure(workDataOf("error" to "Missing metadata"))
         }
         
-        if (!modelName.endsWith(".litertlm") && !modelName.endsWith(".bin")) {
+        if (!modelName.endsWith(".litertlm") && !modelName.endsWith(".bin") && !modelName.endsWith(".zip")) {
              return@withContext Result.failure(workDataOf("error" to "Unsupported file type"))
         }
 
@@ -93,8 +94,25 @@ class ModelDownloadWorker @AssistedInject constructor(
                 }
 
                 if (targetFile.exists()) targetFile.delete()
-                
-                if (tempFile.renameTo(targetFile)) {
+
+                if (modelName.endsWith(".zip")) {
+                    val targetDir = File(applicationContext.filesDir, modelName.removeSuffix(".zip"))
+                    val tempDir = File(applicationContext.filesDir, "${targetDir.name}.tmpdir")
+                    if (targetDir.exists()) targetDir.deleteRecursively()
+                    if (tempDir.exists()) tempDir.deleteRecursively()
+                    tempDir.mkdirs()
+
+                    unzipModelBundle(tempFile, tempDir)
+                    if (!tempDir.renameTo(targetDir)) {
+                        tempDir.deleteRecursively()
+                        installedModelRegistry.updateInstallStatus(modelName, InstallStatus.FAILED)
+                        throw IOException("Failed to finalize extracted image model")
+                    }
+                    tempFile.delete()
+                    installedModelRegistry.updateInstallStatus(modelName, InstallStatus.INSTALLED)
+                    setProgress(workDataOf("progress" to 100))
+                    Result.success()
+                } else if (tempFile.renameTo(targetFile)) {
                     installedModelRegistry.updateInstallStatus(modelName, InstallStatus.INSTALLED)
                     setProgress(workDataOf("progress" to 100))
                     Result.success()
@@ -124,6 +142,31 @@ class ModelDownloadWorker @AssistedInject constructor(
             }
         }
         return digest.digest().joinToString("") { "%02x".format(it) }
+    }
+
+    private fun unzipModelBundle(zipFile: File, targetDir: File) {
+        val canonicalTarget = targetDir.canonicalFile
+        ZipInputStream(zipFile.inputStream().buffered()).use { zip ->
+            var entry = zip.nextEntry
+            while (entry != null) {
+                val outputFile = File(canonicalTarget, entry.name).canonicalFile
+                if (!outputFile.path.startsWith(canonicalTarget.path + File.separator)) {
+                    throw IOException("Unsafe zip entry: ${entry.name}")
+                }
+
+                if (entry.isDirectory) {
+                    outputFile.mkdirs()
+                } else {
+                    outputFile.parentFile?.mkdirs()
+                    outputFile.outputStream().buffered().use { output ->
+                        zip.copyTo(output)
+                    }
+                }
+
+                zip.closeEntry()
+                entry = zip.nextEntry
+            }
+        }
     }
 
     override suspend fun getForegroundInfo(): ForegroundInfo {

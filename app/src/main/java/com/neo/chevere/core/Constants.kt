@@ -15,6 +15,7 @@ object Constants {
     object Agent {
         const val MAX_TOOL_CALLS_PER_TURN = 5
         const val TOOL_EXECUTION_TIMEOUT_MS = 30_000L
+        const val IMAGE_GENERATION_TOOL_TIMEOUT_MS = 10 * 60_000L
         const val SYSTEM_PROMPT_PREFIX = "SYSTEM: "
         const val USER_PROMPT_PREFIX = "\n\nUSER: "
         const val TOOL_ERROR_PREFIX = "TOOL_ERROR: "

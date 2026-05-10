@@ -55,6 +55,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.neo.chevere.ui.chat.components.ActionConfirmationDialog
+import com.neo.chevere.ui.chat.components.AgeVerificationDialog
 import com.neo.chevere.ui.chat.components.ChatInputBar
 import com.neo.chevere.ui.chat.components.ChatTopBar
 import com.neo.chevere.ui.chat.components.MessageList
@@ -193,7 +194,10 @@ private fun ChatContent(
                 } else {
                     MessageList(
                         messages = state.messages,
-                        listState = listState
+                        listState = listState,
+                        onToggleExplicitImageMask = { index ->
+                            viewModel.onIntent(ChatIntent.ToggleExplicitImageMask(index))
+                        }
                     )
                 }
 
@@ -210,6 +214,17 @@ private fun ChatContent(
                         message = state.confirmationMessage ?: "Are you sure you want to proceed?",
                         onConfirm = { viewModel.onIntent(ChatIntent.ConfirmAction) },
                         onDismiss = { viewModel.onIntent(ChatIntent.CancelAction) }
+                    )
+                }
+
+                if (state.ageVerificationRequest != null) {
+                    AgeVerificationDialog(
+                        onSubmit = { year, month, day ->
+                            viewModel.onIntent(ChatIntent.SubmitBirthdate(year, month, day))
+                        },
+                        onDismiss = {
+                            viewModel.onIntent(ChatIntent.DismissAgeVerification)
+                        }
                     )
                 }
             }

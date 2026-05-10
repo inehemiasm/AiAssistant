@@ -3,6 +3,7 @@ package com.neo.chevere.data.agent
 import android.net.Uri
 import android.util.Log
 import com.neo.chevere.core.Constants
+import com.neo.chevere.data.agent.tools.IMAGE_GENERATION_RESULT_PREFIX
 import com.neo.chevere.data.inference.InferenceManager
 import com.neo.chevere.domain.InferenceRequest
 import com.neo.chevere.domain.InferenceResult
@@ -113,7 +114,7 @@ class AgentOrchestrator @Inject constructor(
                         _agentState.value = AgentState.ExecutingTool(tool.name)
                         
                         val toolResult = try {
-                            withTimeout(Constants.Agent.TOOL_EXECUTION_TIMEOUT_MS) {
+                            withTimeout(tool.executionTimeoutMs()) {
                                 tool.execute(toolCall.arguments)
                             }
                         } catch (e: TimeoutCancellationException) {
@@ -154,6 +155,14 @@ class AgentOrchestrator @Inject constructor(
         return trimmed.length < 5 || trimmed.split(" ").size < 3
     }
 
+    private fun AgentTool.executionTimeoutMs(): Long {
+        return if (name == "generate_image") {
+            Constants.Agent.IMAGE_GENERATION_TOOL_TIMEOUT_MS
+        } else {
+            Constants.Agent.TOOL_EXECUTION_TIMEOUT_MS
+        }
+    }
+
     private fun finalizeResponse(text: String): String {
         val trimmed = text.trim()
         val isGarbage = trimmed.isEmpty() || trimmed == "-" || trimmed == "|" || trimmed == "." || trimmed.length < 2
@@ -161,10 +170,8 @@ class AgentOrchestrator @Inject constructor(
         return if (isGarbage && lastToolSummary != null) {
             Log.w(TAG, "Model returned garbage text after tool call. Using fallback summary: $lastToolSummary")
             lastToolSummary!!
-        } else if (trimmed.isEmpty()) {
+        } else trimmed.ifEmpty {
             "I'm sorry, I encountered an issue generating a response."
-        } else {
-            trimmed
         }
     }
 
@@ -173,6 +180,10 @@ class AgentOrchestrator @Inject constructor(
             is ToolResult.Success -> {
                 Log.d(TAG, "Tool ${tool.name} SUCCESS: ${toolResult.data}")
                 lastToolSummary = toolResult.data
+                if (toolResult.data.startsWith(IMAGE_GENERATION_RESULT_PREFIX)) {
+                    _agentState.value = AgentState.Completed
+                    return Result.success(toolResult.data)
+                }
                 lastPrompt = "${Constants.Agent.OBSERVATION_PREFIX}${tool.name}: ${toolResult.data}\n\nAction completed successfully. Please provide a brief final confirmation to the user."
                 null
             }

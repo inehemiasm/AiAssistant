@@ -12,29 +12,43 @@ class DatabaseConverters {
     fun fromModelSource(value: ModelSource) = value.name
 
     @TypeConverter
-    fun toModelSource(value: String) = ModelSource.valueOf(value)
+    fun toModelSource(value: String) = enumValueOrDefault<ModelSource>(value, ModelSource.UNKNOWN)
 
     @TypeConverter
     fun fromModelFormat(value: ModelFormat) = value.name
 
     @TypeConverter
-    fun toModelFormat(value: String) = ModelFormat.valueOf(value)
+    fun toModelFormat(value: String): ModelFormat {
+        return when (value) {
+            "STABLE_DIFFUSION" -> ModelFormat.IMAGE_GENERATOR_BUNDLE
+            else -> enumValueOrDefault(value, ModelFormat.UNKNOWN)
+        }
+    }
 
     @TypeConverter
     fun fromModelRuntime(value: ModelRuntime) = value.name
 
     @TypeConverter
-    fun toModelRuntime(value: String) = ModelRuntime.valueOf(value)
+    fun toModelRuntime(value: String): ModelRuntime {
+        return when (value) {
+            "STABLE_DIFFUSION" -> ModelRuntime.IMAGE_GENERATOR
+            else -> enumValueOrDefault(value, ModelRuntime.UNKNOWN)
+        }
+    }
 
     @TypeConverter
     fun fromModelTaskType(value: ModelTaskType) = value.name
 
     @TypeConverter
-    fun toModelTaskType(value: String) = ModelTaskType.valueOf(value)
+    fun toModelTaskType(value: String) = enumValueOrDefault<ModelTaskType>(value, ModelTaskType.UNKNOWN)
 
     @TypeConverter
     fun fromInstallStatus(value: InstallStatus) = value.name
 
     @TypeConverter
-    fun toInstallStatus(value: String) = InstallStatus.valueOf(value)
+    fun toInstallStatus(value: String) = enumValueOrDefault(value, InstallStatus.INVALID)
+
+    private inline fun <reified T : Enum<T>> enumValueOrDefault(value: String, default: T): T {
+        return runCatching { enumValueOf<T>(value) }.getOrDefault(default)
+    }
 }

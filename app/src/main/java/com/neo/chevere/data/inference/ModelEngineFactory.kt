@@ -12,6 +12,8 @@ class ModelEngineFactory @Inject constructor(
     fun getEngine(runtime: ModelRuntime): ModelEngine {
         return when (runtime) {
             ModelRuntime.LITERT -> liteRtEngine.get()
+            ModelRuntime.IMAGE_GENERATOR -> throw UnsupportedOperationException("Image generation uses ImageGenerationManager")
+            ModelRuntime.ONNX_DIFFUSION -> throw UnsupportedOperationException("Image generation uses ImageGenerationManager")
             ModelRuntime.QUALCOMM -> throw UnsupportedOperationException("Qualcomm runtime not yet implemented")
             ModelRuntime.UNKNOWN -> throw IllegalArgumentException("Unknown runtime")
         }

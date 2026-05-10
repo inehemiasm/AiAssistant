@@ -1,52 +1,73 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file guides Claude Code when working in this repository. Keep it aligned with `AGENTS.md`.
 
 ## Common Commands
+
 - Build project: `./gradlew assembleDebug`
 - Run all tests: `./gradlew test`
 - Run Android instrumented tests: `./gradlew connectedAndroidTest`
 - Run lint: `./gradlew lint`
 - Clean project: `./gradlew clean`
 
-## High-level Architecture
-The project is an Android application following Clean Architecture and MVI (Model-View-Intent) patterns, enhanced with an **Agentic Workflow** and a hardened **Model Management System**.
+Windows PowerShell build command:
 
-### Project Structure
-- `:app`: Main application module.
-- `:ui-designsystem`: Shared design system (themes, components).
+```powershell
+$env:GRADLE_USER_HOME='C:\Users\nehem\.gradle'; .\gradlew.bat assembleDebug --no-daemon
+```
 
-### Architecture Layers (in `:app`)
-- **Domain Layer** (`app/src/main/java/com/neo/aiassistant/domain//`): Use cases, repository interfaces, and shared models like `ChatMessage`, `InferenceRequest`, and `InstalledModel`.
-- **Data Layer** (`app/src/main/java/com/neo/aiassistant/data//`):
-    - **Agent Layer** (`data/agent/`):
-        - `AgentOrchestrator`: Implements the Reason-Act-Observe loop.
-        - `ToolRegistry`: Manages available `AgentTool` implementations.
-    - **Inference Runtime** (`data/inference/`):
-        - `InferenceManager`: Central entry point for model loading and generation.
-        - `LlmRuntimeManager`: Manages LiteRT-LM `Engine` and hardware backends (GPU/CPU).
-    - **Data Sources** (`data/datasource/`):
-        - `CompositeModelCatalogDataSource`: Merges models from Kaggle, Hugging Face, and Firestore.
-        - `KaggleModelCatalogDataSource`: Curated TFLite models from Kaggle/TFHub.
-        - `HuggingFaceModelCatalogDataSource`: Search + curated HF items with aggressive quality filtering.
-    - **Registry** (`data/datasource/local/`): 
-        - `RoomInstalledModelRegistry`: The source of truth for model health.
-        - `AppDatabase`: Room database (current version: 3).
-    - **Repository**: `ChatRepositoryImpl.kt` orchestrates between the Agent layer, Inference runtime, and Data sources. Includes disk-sync and orphan cleanup logic.
-- **UI Layer**:
-    - `MarketplaceViewModel.kt`: Manages discovery, lifecycle safety rules, and model switching.
-- **Background Tasks**: `ModelDownloadWorker.kt` handles atomic downloads with SHA-256 verification and `VERIFYING` status transitions.
+## Architecture Summary
 
-### Model Management Rules
-- **Lifecycle Safety**: Active models cannot be deleted. Downloads/Switches cannot be interrupted by deletion.
-- **Health Checks**: Models must pass minimum size and file-type validation to be considered `INSTALLED`.
-- **Integrity**: SHA-256 verification is performed during the `VERIFYING` phase of download.
+Chevere is an Android app using Clean Architecture, MVI, Room, Hilt, LiteRT-LM, ONNX Runtime Android, and WorkManager. The package root is `com.neo.chevere`.
 
-## Development Guidelines
-- **Reactive Architecture**: Always favor reactive programming patterns. UI state should observe `Flow` or `StateFlow` from repositories or managers to ensure a single source of truth and automatic updates across multiple screens. Avoid manual one-time state fetches for data that can change.
-- **Documentation Standards**: Always generate KDoc for new implementations and update kdoc when changes occur.
-- **Database Schema**: If modifying `InstalledModelEntity`, increment `AppDatabase.version` and handle migration (current: fallback destructive).
-- **Filtering**: New discovery items should be filtered for quality (size, runtime compatibility) before appearing in the UI.
-- **Error Handling**: Use `InstallStatus` (e.g., `CORRUPTED`, `INVALID`) to surface actionable errors in the Marketplace.
-- **State Representation**: Always use `sealed classes`, `sealed interfaces`, or `enums` to represent states (e.g., UI states, loading statuses). **Never use hardcoded raw strings** for state management.
-- **Commit Attribution**: Do not add 'Co-Authored-By' or any other AI/agent attribution to git commit messages.
+### Main Areas
+
+- `:app`: application code.
+- `:ui-designsystem`: shared theme/components.
+- `domain/`: contracts, shared models, explicit prompt policy, model/runtime enums.
+- `data/agent/`: tool registry and Reason-Act-Observe orchestration.
+- `data/inference/`: LiteRT-LM chat and local image-generation runtimes.
+- `data/download/`: WorkManager download orchestration.
+- `data/datasource/local/`: Room registry for installed models.
+- `ui/chat/`: chat screen, slash commands, age verification, explicit image masking.
+- `ui/marketplace/`: model discovery, download, selection, and deletion UI.
+
+## Current Model Runtime Behavior
+
+- Text chat uses LiteRT-LM (`.litertlm` preferred).
+- Image generation can be invoked by:
+  - Gemma through `generate_image`, where prompts should be improved first.
+  - Slash commands `/image`, `/img`, `/imagine`, which bypass Gemma.
+- ONNX diffusion bundles must be extracted directories with:
+  - `text_encoder/model.ort`
+  - `tokenizer/vocab.json`
+  - `tokenizer/merges.txt`
+  - `unet/model.ort`
+  - `vae_decoder/model.ort`
+- Qualcomm/QNN bundles are detected and validated, but native execution is not implemented.
+
+## Explicit Image Flow
+
+- Explicit image prompts trigger an age-verification dialog.
+- Users under 18 are blocked from age-restricted image content.
+- Verified explicit image generations continue through the image backend.
+- Explicit generated images are masked by default in the chat UI.
+- Users can reveal or hide each masked image using the visibility toggle.
+
+## Download System Notes
+
+- `ModelDownloadWorker` downloads to a temporary file, verifies checksum if present, and finalizes atomically.
+- ZIP downloads are extracted safely and installed as directories.
+- `WorkManagerModelDownloadManager` tracks model progress using the `MODEL_NAME:<fileName>` tag.
+- Do not parse WorkManager tags by excluding dots. Model filenames normally contain dots.
+- Same-model download work uses `ExistingWorkPolicy.REPLACE` so stale interrupted work cannot block retries.
+
+## Development Rules
+
+- Follow existing MVI and Clean Architecture boundaries.
+- Use repository interfaces rather than reaching across layers.
+- Use `Flow`/`StateFlow` for reactive state.
+- Add or update KDoc when changing public models or new implementation classes.
+- Use `InstallStatus`, sealed states, and enums instead of raw state strings.
+- If `InstalledModelEntity` changes, increment Room database version and provide migration handling.
+- Do not add AI attribution or `Co-Authored-By` lines to commits.

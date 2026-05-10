@@ -48,6 +48,8 @@ enum class ModelSource {
  */
 enum class ModelRuntime {
     LITERT,
+    IMAGE_GENERATOR,
+    ONNX_DIFFUSION,
     QUALCOMM,
     UNKNOWN
 }
@@ -57,6 +59,8 @@ enum class ModelRuntime {
  */
 enum class ModelFormat {
     LITERTLM,
+    IMAGE_GENERATOR_BUNDLE,
+    ONNX_DIFFUSION_BUNDLE,
     QNN,
     BIN,
     UNKNOWN
@@ -161,6 +165,53 @@ data class InferenceRequest(
     val prompt: String,
     val imageUri: android.net.Uri? = null
 )
+
+/**
+ * Represents a text-to-image generation request.
+ *
+ * @property prompt The user prompt describing the desired image.
+ * @property negativePrompt Optional text describing concepts to avoid.
+ * @property width The requested output width in pixels.
+ * @property height The requested output height in pixels.
+ * @property steps The requested diffusion step count.
+ * @property guidanceScale The classifier-free guidance scale.
+ * @property seed Optional deterministic generation seed.
+ * @property conditionImageUri Optional image used as a visual generation reference.
+ */
+data class ImageGenerationRequest(
+    val prompt: String,
+    val negativePrompt: String? = null,
+    val width: Int = 512,
+    val height: Int = 512,
+    val steps: Int = 20,
+    val guidanceScale: Float = 7.5f,
+    val seed: Long? = null,
+    val conditionImageUri: android.net.Uri? = null
+)
+
+/**
+ * Represents the result of an image generation operation.
+ */
+sealed interface ImageGenerationResult {
+    /**
+     * Indicates that image generation completed and wrote an image to [imageUri].
+     */
+    data class Success(
+        val imageUri: android.net.Uri,
+        val prompt: String,
+        val width: Int,
+        val height: Int,
+        val seed: Long?
+    ) : ImageGenerationResult
+
+    /**
+     * Indicates that image generation failed.
+     */
+    data class Failure(
+        val message: String,
+        val throwable: Throwable? = null
+    ) : ImageGenerationResult
+}
 
 /**
  * Represents the progress of a model download.

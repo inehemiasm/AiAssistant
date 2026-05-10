@@ -19,9 +19,7 @@ class ToolCallParser @Inject constructor() {
         
         val arguments = mutableMapOf<String, String>()
         if (paramsString.isNotBlank()) {
-            // Split by comma, but be careful of commas inside quoted values if we ever support them.
-            // For now, simple split is okay for basic parameters.
-            paramsString.split(",").forEach { param ->
+            splitParams(paramsString).forEach { param ->
                 // Split by first '=' only to support values that contain '=' (like URLs)
                 val parts = param.split("=", limit = 2).map { it.trim() }
                 if (parts.size == 2) {
@@ -43,6 +41,36 @@ class ToolCallParser @Inject constructor() {
         }
         
         return ToolCall(toolName, arguments)
+    }
+
+    private fun splitParams(paramsString: String): List<String> {
+        val params = mutableListOf<String>()
+        val current = StringBuilder()
+        var quoteChar: Char? = null
+
+        paramsString.forEach { char ->
+            when {
+                quoteChar != null -> {
+                    current.append(char)
+                    if (char == quoteChar) quoteChar = null
+                }
+                char == '"' || char == '\'' -> {
+                    quoteChar = char
+                    current.append(char)
+                }
+                char == ',' -> {
+                    params.add(current.toString())
+                    current.clear()
+                }
+                else -> current.append(char)
+            }
+        }
+
+        if (current.isNotBlank()) {
+            params.add(current.toString())
+        }
+
+        return params
     }
     
     fun stripToolCall(text: String): String {

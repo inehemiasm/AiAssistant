@@ -8,11 +8,15 @@ package com.neo.chevere.domain
  * @property inferenceTimeMs The time taken in milliseconds to generate the response (if applicable).
  * @property imageUri Optional URI of an image associated with the message.
  * @property modelName Optional name of the AI model that generated the message.
+ * @property isExplicitImage `true` when the attached image should support explicit-content masking.
+ * @property isImageMasked `true` when an explicit image attachment is currently hidden behind a mask.
  */
 data class ChatMessage(
     val text: String,
     val isUser: Boolean,
     val inferenceTimeMs: Long? = null,
     val imageUri: String? = null,
-    val modelName: String? = null
+    val modelName: String? = null,
+    val isExplicitImage: Boolean = false,
+    val isImageMasked: Boolean = false
 )

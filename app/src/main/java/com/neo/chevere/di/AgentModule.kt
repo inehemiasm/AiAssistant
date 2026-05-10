@@ -11,6 +11,7 @@ import com.neo.chevere.data.agent.tools.DraftEmailTool
 import com.neo.chevere.data.agent.tools.GetActiveModelTool
 import com.neo.chevere.data.agent.tools.GetAppCapabilitiesTool
 import com.neo.chevere.data.agent.tools.GetModelDetailsTool
+import com.neo.chevere.data.agent.tools.ImageGenerationTool
 import com.neo.chevere.data.agent.tools.LaunchAppTool
 import com.neo.chevere.data.agent.tools.ListAppsTool
 import com.neo.chevere.data.agent.tools.ListModelsTool
@@ -27,6 +28,7 @@ import com.neo.chevere.data.agent.tools.SummarizeTextTool
 import com.neo.chevere.data.agent.tools.WeatherTool
 import com.neo.chevere.data.agent.tools.WebSearchTool
 import com.neo.chevere.data.datasource.local.SearchCacheDao
+import com.neo.chevere.data.inference.ImageGenerationManager
 import com.neo.chevere.domain.InstalledModelRegistry
 import dagger.Binds
 import dagger.Module
@@ -115,6 +117,14 @@ abstract class AgentModule {
             registry: InstalledModelRegistry
         ): AgentTool {
             return RecommendModelTool(registry)
+        }
+
+        @Provides
+        @IntoSet
+        fun provideImageGenerationTool(
+            imageGenerationManager: ImageGenerationManager
+        ): AgentTool {
+            return ImageGenerationTool(imageGenerationManager)
         }
 
         @Provides

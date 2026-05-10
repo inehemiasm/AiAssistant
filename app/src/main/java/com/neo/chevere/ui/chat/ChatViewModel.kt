@@ -7,10 +7,15 @@ import androidx.lifecycle.viewModelScope
 import com.neo.chevere.core.BaseViewModel
 import com.neo.chevere.core.DispatcherProvider
 import com.neo.chevere.data.PreferenceManager
+import com.neo.chevere.data.agent.tools.IMAGE_GENERATION_RESULT_PREFIX
 import com.neo.chevere.domain.ChatMessage
+import com.neo.chevere.domain.ExplicitImagePromptDecision
+import com.neo.chevere.domain.ExplicitImagePromptPolicy
 import com.neo.chevere.domain.ChatRepository
+import com.neo.chevere.domain.ImageGenerationRequest
 import com.neo.chevere.domain.InitializationStatus
 import com.neo.chevere.domain.InitializeChatUseCase
+import com.neo.chevere.domain.ModelCapability
 import com.neo.chevere.domain.SendMessageUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -20,6 +25,9 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.time.DateTimeException
+import java.time.LocalDate
+import java.time.Period
 import javax.inject.Inject
 import kotlin.system.measureTimeMillis
 
@@ -33,6 +41,7 @@ class ChatViewModel @Inject constructor(
     private val dispatcherProvider: DispatcherProvider
 ) : BaseViewModel<ChatState, ChatIntent, ChatEffect>(application, ChatState()) {
 
+    private val explicitImagePromptPolicy = ExplicitImagePromptPolicy()
     private val intentMutex = Mutex()
     private var initJob: Job? = null
 
@@ -63,9 +72,17 @@ class ChatViewModel @Inject constructor(
                 // or if we aren't ready yet, trigger initialization.
                 if (savedModel != null && (savedModel != currentModel || currentState.runtimeState is RuntimeState.Uninitialized)) {
                     setState { copy(selectedModel = savedModel) }
-                    val modelFile = File(application.filesDir, savedModel)
-                    if (modelFile.exists()) {
-                        initModel(modelFile.absolutePath)
+                    val models = withContext(dispatcherProvider.io) { repository.getLocalModels() }
+                    val selected = models.find { it.id == savedModel || it.fileName == savedModel }
+                    setState { copy(localModels = models) }
+
+                    if (selected?.capabilities?.contains(ModelCapability.IMAGE_GEN) == true) {
+                        setState { copy(runtimeState = RuntimeState.Ready) }
+                    } else {
+                        val modelFile = File(application.filesDir, savedModel)
+                        if (modelFile.exists()) {
+                            initModel(modelFile.absolutePath)
+                        }
                     }
                 }
             }
@@ -128,6 +145,9 @@ class ChatViewModel @Inject constructor(
                 is ChatIntent.SetTempCameraUri -> setState { copy(tempCameraUri = intent.uri) }
                 ChatIntent.ConfirmAction -> confirmAction()
                 ChatIntent.CancelAction -> cancelAction()
+                is ChatIntent.SubmitBirthdate -> submitBirthdate(intent.year, intent.month, intent.day)
+                ChatIntent.DismissAgeVerification -> dismissAgeVerification()
+                is ChatIntent.ToggleExplicitImageMask -> toggleExplicitImageMask(intent.messageIndex)
             }
         }
     }
@@ -158,11 +178,123 @@ class ChatViewModel @Inject constructor(
         setState { copy(messages = messages + userMsg, sendState = SendState.Sending, inputText = "", selectedImageUri = null) }
         sendEffect { ChatEffect.ScrollToBottom }
 
-        processAgentTurn { 
-            withContext(dispatcherProvider.default) {
-                sendMessageUseCase(text, imageUri)
+        if (explicitImagePromptPolicy.requiresAgeVerification(text)) {
+            setState {
+                copy(
+                    ageVerificationRequest = AgeVerificationRequest(text, imageUri),
+                    sendState = SendState.Idle
+                )
+            }
+            return
+        }
+
+        val imageCommand = parseImageCommand(text)
+        if (imageCommand != null) {
+            setState { copy(sendState = SendState.GeneratingImage) }
+            processImageGenerationTurn(imageCommand.prompt, imageUri)
+            return
+        }
+
+        val selectedImageModel = currentState.localModels.find {
+            (it.id == currentState.selectedModel || it.fileName == currentState.selectedModel) &&
+                it.capabilities.contains(ModelCapability.IMAGE_GEN)
+        }
+        if (selectedImageModel != null) {
+            setState { copy(sendState = SendState.GeneratingImage) }
+            processImageGenerationTurn(text, imageUri)
+        } else {
+            processAgentTurn {
+                withContext(dispatcherProvider.default) {
+                    sendMessageUseCase(text, imageUri)
+                }
             }
         }
+    }
+
+    private suspend fun submitBirthdate(year: Int, month: Int, day: Int) {
+        val request = currentState.ageVerificationRequest ?: return
+        val birthdate = try {
+            LocalDate.of(year, month, day)
+        } catch (_: DateTimeException) {
+            sendEffect { ChatEffect.ShowToast("Enter a valid birthdate.") }
+            return
+        }
+
+        if (birthdate.isAfter(LocalDate.now())) {
+            sendEffect { ChatEffect.ShowToast("Enter a valid birthdate.") }
+            return
+        }
+
+        setState { copy(ageVerificationRequest = null) }
+        val age = Period.between(birthdate, LocalDate.now()).years
+        val message = if (age < 18) {
+            "You must be 18 or older to request age-restricted image content."
+        } else {
+            when (val decision = explicitImagePromptPolicy.evaluate(request.prompt)) {
+                ExplicitImagePromptDecision.Allow -> null
+                is ExplicitImagePromptDecision.Block -> decision.message
+            }
+        }
+        if (message != null) {
+            appendAssistantMessage(message, modelName = "CHEVERE")
+            return
+        }
+
+        val imageCommand = parseImageCommand(request.prompt)
+        setState { copy(sendState = SendState.GeneratingImage) }
+        processImageGenerationTurn(
+            prompt = imageCommand?.prompt ?: request.prompt,
+            conditionImageUri = request.imageUri,
+            maskExplicitImage = true
+        )
+    }
+
+    private suspend fun dismissAgeVerification() {
+        setState { copy(ageVerificationRequest = null, sendState = SendState.Idle) }
+        appendAssistantMessage("Age verification was canceled.", modelName = "CHEVERE")
+    }
+
+    private suspend fun appendAssistantMessage(text: String, modelName: String? = currentState.selectedModel) {
+        setState {
+            copy(
+                messages = messages + ChatMessage(
+                    text = text,
+                    isUser = false,
+                    modelName = modelName
+                ),
+                sendState = SendState.Idle
+            )
+        }
+        sendEffect { ChatEffect.ScrollToBottom }
+    }
+
+    /**
+     * Parses explicit slash commands that should bypass the chat agent and call
+     * the installed image-generation backend directly.
+     */
+    private fun parseImageCommand(text: String): ImageCommand? {
+        val trimmed = text.trim()
+        val command = imageCommandPrefixes.firstOrNull { prefix ->
+            trimmed.startsWith(prefix, ignoreCase = true)
+        } ?: return null
+
+        val prompt = trimmed.substring(command.length).trim()
+        return prompt.takeIf { it.isNotBlank() }?.let(::ImageCommand)
+    }
+
+    /**
+     * Reveals or hides a generated explicit image without changing the stored
+     * image file. Non-explicit messages ignore the toggle.
+     */
+    private fun toggleExplicitImageMask(messageIndex: Int) {
+        val updatedMessages = currentState.messages.mapIndexed { index, message ->
+            if (index == messageIndex && message.isExplicitImage) {
+                message.copy(isImageMasked = !message.isImageMasked)
+            } else {
+                message
+            }
+        }
+        setState { copy(messages = updatedMessages) }
     }
 
     private suspend fun confirmAction() {
@@ -194,13 +326,87 @@ class ChatViewModel @Inject constructor(
                 }
         }
 
+        val imagePayload = parseGeneratedImagePayload(responseText)
         val aiMsg = ChatMessage(
-            text = responseText,
+            text = imagePayload?.caption ?: responseText,
             isUser = false,
             inferenceTimeMs = time,
+            imageUri = imagePayload?.imageUri,
             modelName = currentState.selectedModel.replace(".litertlm", "").uppercase()
         )
         setState { copy(messages = messages + aiMsg, sendState = SendState.Idle) }
         sendEffect { ChatEffect.ScrollToBottom }
+    }
+
+    private suspend fun processImageGenerationTurn(
+        prompt: String,
+        conditionImageUri: Uri?,
+        maskExplicitImage: Boolean = false
+    ) {
+        var generatedImageUri: String? = null
+        var generatedCaption = ""
+        val time = measureTimeMillis {
+            withContext(dispatcherProvider.default) {
+                repository.generateImage(
+                    ImageGenerationRequest(
+                        prompt = prompt,
+                        conditionImageUri = conditionImageUri
+                    )
+                )
+            }
+                .onSuccess { result ->
+                    generatedImageUri = result.imageUri.toString()
+                    generatedCaption = "Generated image for: ${result.prompt}"
+                }
+                .onFailure { e ->
+                    setState { copy(sendState = SendState.Error(e.message ?: "Image generation failed")) }
+                    return
+                }
+        }
+
+        val aiMsg = ChatMessage(
+            text = generatedCaption,
+            isUser = false,
+            inferenceTimeMs = time,
+            imageUri = generatedImageUri,
+            modelName = currentState.selectedModel.replace(".zip", "").uppercase(),
+            isExplicitImage = maskExplicitImage,
+            isImageMasked = maskExplicitImage
+        )
+        setState { copy(messages = messages + aiMsg, sendState = SendState.Idle) }
+        sendEffect { ChatEffect.ScrollToBottom }
+    }
+
+    private fun parseGeneratedImagePayload(text: String): GeneratedImagePayload? {
+        if (!text.startsWith(IMAGE_GENERATION_RESULT_PREFIX)) return null
+
+        val fields = text.split("|")
+            .drop(1)
+            .mapNotNull { part ->
+                val index = part.indexOf("=")
+                if (index <= 0) null else part.substring(0, index) to part.substring(index + 1)
+            }
+            .toMap()
+
+        val uri = fields["uri"] ?: return null
+        val prompt = fields["prompt"].orEmpty()
+        return GeneratedImagePayload(
+            imageUri = uri,
+            caption = if (prompt.isBlank()) "Generated image" else "Generated image for: $prompt"
+        )
+    }
+
+    private data class GeneratedImagePayload(
+        val imageUri: String,
+        val caption: String
+    )
+
+    /**
+     * Parsed direct image-generation command.
+     */
+    private data class ImageCommand(val prompt: String)
+
+    private companion object {
+        val imageCommandPrefixes = listOf("/image", "/img", "/imagine")
     }
 }

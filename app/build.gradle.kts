@@ -104,6 +104,7 @@ dependencies {
     
     implementation(libs.google.ai.edge.litertlm)
     implementation(libs.mediapipe.tasks.genai)
+    implementation(libs.onnxruntime.android)
     
     implementation(libs.androidx.exifinterface)
     implementation(libs.androidx.datastore.preferences)

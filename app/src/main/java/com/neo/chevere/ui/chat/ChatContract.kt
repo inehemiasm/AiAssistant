@@ -24,6 +24,7 @@ sealed interface RuntimeState {
 sealed interface SendState {
     data object Idle : SendState
     data object Sending : SendState
+    data object GeneratingImage : SendState
     data class Error(val message: String) : SendState
 }
 
@@ -39,17 +40,20 @@ data class ChatState(
     val agentState: AgentState = AgentState.Idle,
     val inputText: String = "",
     val selectedImageUri: Uri? = null,
-    val tempCameraUri: Uri? = null
+    val tempCameraUri: Uri? = null,
+    val ageVerificationRequest: AgeVerificationRequest? = null
 ) : UiState {
     val isReady: Boolean get() = runtimeState is RuntimeState.Ready
     
-    val isLoading: Boolean get() = runtimeState is RuntimeState.Initializing || 
-            sendState is SendState.Sending || 
+    val isLoading: Boolean get() = runtimeState is RuntimeState.Initializing ||
+            sendState is SendState.Sending ||
+            sendState is SendState.GeneratingImage ||
             (agentState is AgentState.Planning || agentState is AgentState.ExecutingTool)
     
     val loadingMessage: String? get() = when {
         agentState is AgentState.Planning -> "PLANNING..."
         agentState is AgentState.ExecutingTool -> "EXECUTING: ${agentState.toolName.uppercase()}"
+        sendState is SendState.GeneratingImage -> "GENERATING IMAGE..."
         sendState is SendState.Sending -> "THINKING..."
         runtimeState is RuntimeState.Initializing -> runtimeState.message
         else -> null
@@ -77,6 +81,9 @@ sealed class ChatIntent : UiIntent {
     data class SetTempCameraUri(val uri: Uri?) : ChatIntent()
     data object ConfirmAction : ChatIntent()
     data object CancelAction : ChatIntent()
+    data class SubmitBirthdate(val year: Int, val month: Int, val day: Int) : ChatIntent()
+    data object DismissAgeVerification : ChatIntent()
+    data class ToggleExplicitImageMask(val messageIndex: Int) : ChatIntent()
 }
 
 sealed class ChatEffect : UiEffect {
@@ -84,3 +91,11 @@ sealed class ChatEffect : UiEffect {
     data class ShowToast(val message: String) : ChatEffect()
     data object HideKeyboard : ChatEffect()
 }
+
+/**
+ * Pending age-gated image prompt waiting for a birthdate dialog result.
+ */
+data class AgeVerificationRequest(
+    val prompt: String,
+    val imageUri: Uri?
+)

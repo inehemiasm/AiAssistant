@@ -15,19 +15,23 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -50,11 +54,22 @@ import java.util.Locale
  * @param messages The list of [ChatMessage] objects to display.
  * @param modifier The modifier to be applied to the list.
  * @param listState The state object to be used to control or observe the list's scroll position.
+ * @param onToggleExplicitImageMask Called when the user reveals or hides a masked explicit image.
  */
 @Composable
-fun MessageList(messages: List<ChatMessage>, modifier: Modifier = Modifier, listState: LazyListState) {
+fun MessageList(
+    messages: List<ChatMessage>,
+    modifier: Modifier = Modifier,
+    listState: LazyListState,
+    onToggleExplicitImageMask: (Int) -> Unit = {}
+) {
     LazyColumn(state = listState, modifier = modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(24.dp)) {
-        items(messages) { message -> FuturisticChatBubble(message) }
+        itemsIndexed(messages) { index, message ->
+            FuturisticChatBubble(
+                message = message,
+                onToggleExplicitImageMask = { onToggleExplicitImageMask(index) }
+            )
+        }
     }
 }
 
@@ -65,9 +80,13 @@ fun MessageList(messages: List<ChatMessage>, modifier: Modifier = Modifier, list
  * and metadata like inference time and model name.
  *
  * @param message The [ChatMessage] to display.
+ * @param onToggleExplicitImageMask Called when the explicit image visibility button is tapped.
  */
 @Composable
-fun FuturisticChatBubble(message: ChatMessage) {
+fun FuturisticChatBubble(
+    message: ChatMessage,
+    onToggleExplicitImageMask: () -> Unit = {}
+) {
     val isUser = message.isUser
     val bubbleColor = if (isUser) MaterialTheme.colorScheme.surfaceContainerHigh else MaterialTheme.colorScheme.surfaceContainerLow
     val onBubbleColor = MaterialTheme.colorScheme.onSurface
@@ -105,14 +124,11 @@ fun FuturisticChatBubble(message: ChatMessage) {
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     if (message.imageUri != null) {
-                        AsyncImage(
-                            model = message.imageUri,
-                            contentDescription = null,
-                            modifier = Modifier
-                                .padding(bottom = 8.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .fillMaxWidth(),
-                            contentScale = ContentScale.FillWidth
+                        GeneratedMessageImage(
+                            imageUri = message.imageUri,
+                            isExplicitImage = message.isExplicitImage,
+                            isMasked = message.isImageMasked,
+                            onToggleMask = onToggleExplicitImageMask
                         )
                     }
                     SelectionContainer {
@@ -156,6 +172,67 @@ fun FuturisticChatBubble(message: ChatMessage) {
                 style = Typography.labelSmall.copy(fontSize = 9.sp, fontWeight = FontWeight.Medium),
                 modifier = Modifier.padding(top = 8.dp, start = 4.dp, end = 4.dp)
             )
+        }
+    }
+}
+
+/**
+ * Renders a generated image, optionally hidden behind an explicit-content mask
+ * that can be toggled by the user.
+ */
+@Composable
+private fun GeneratedMessageImage(
+    imageUri: String,
+    isExplicitImage: Boolean,
+    isMasked: Boolean,
+    onToggleMask: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .padding(bottom = 8.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .fillMaxWidth()
+    ) {
+        AsyncImage(
+            model = imageUri,
+            contentDescription = null,
+            modifier = Modifier
+                .fillMaxWidth()
+                .then(if (isExplicitImage && isMasked) Modifier.blur(18.dp) else Modifier),
+            contentScale = ContentScale.FillWidth
+        )
+
+        if (isExplicitImage) {
+            Surface(
+                color = MaterialTheme.colorScheme.surface.copy(alpha = if (isMasked) 0.78f else 0.64f),
+                shape = CircleShape,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(8.dp)
+            ) {
+                IconButton(onClick = onToggleMask, modifier = Modifier.size(40.dp)) {
+                    Icon(
+                        imageVector = if (isMasked) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                        contentDescription = if (isMasked) "Show explicit image" else "Hide explicit image",
+                        tint = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+
+            if (isMasked) {
+                Surface(
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.82f),
+                    shape = RoundedCornerShape(24.dp),
+                    modifier = Modifier.align(Alignment.Center)
+                ) {
+                    Text(
+                        text = "EXPLICIT IMAGE",
+                        color = MaterialTheme.colorScheme.onSurface,
+                        style = Typography.labelSmall.copy(fontSize = 10.sp, fontWeight = FontWeight.Bold),
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+                    )
+                }
+            }
         }
     }
 }
