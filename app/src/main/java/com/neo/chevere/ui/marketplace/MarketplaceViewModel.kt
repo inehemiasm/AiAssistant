@@ -99,7 +99,7 @@ class MarketplaceViewModel @Inject constructor(
                     sendEffect { MarketplaceEffect.ShowToast("Another download is in progress") }
                     return
                 }
-                downloadModel(intent.model.effectiveFileName, intent.baseDir, intent.model.url, intent.model.sha256)
+                downloadModel(intent.model)
             }
             is MarketplaceIntent.DeleteModel -> {
                 if (intent.modelId == currentState.activeModelId) {
@@ -158,10 +158,10 @@ class MarketplaceViewModel @Inject constructor(
         }
     }
 
-    private fun downloadModel(modelName: String, baseDir: String, url: String, sha256: String?) {
+    private fun downloadModel(model: com.neo.chevere.domain.ModelEntry) {
         // Just trigger it. The global observer in init will handle state updates.
         viewModelScope.launch {
-            repository.downloadModel(url, modelName, sha256).collectLatest { progress ->
+            repository.downloadModel(model).collectLatest { progress ->
                 if (progress is DownloadProgress.Error) {
                     sendEffect { MarketplaceEffect.ShowToast(progress.message) }
                 }

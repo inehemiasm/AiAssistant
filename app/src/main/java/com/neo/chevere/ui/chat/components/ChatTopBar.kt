@@ -33,6 +33,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.neo.chevere.R
+import com.neo.chevere.core.Constants
 import com.neo.chevere.ui.designsystem.Typography
 
 /**
@@ -76,13 +77,13 @@ fun ChatTopBar(
                 modifier = Modifier.fillMaxWidth().clickable { if (isInteractionEnabled && availableModels.isNotEmpty()) showMenu = true }
             ) {
                 Text(
-                    text = selectedModel.replace(".litertlm", "").uppercase().ifEmpty { "SELECT MODEL" },
+                    text = selectedModel.replace(Constants.ModelFiles.LITERTLM_EXTENSION, "").uppercase().ifEmpty { "SELECT MODEL" },
                     style = Typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                     letterSpacing = 1.sp
                 )
                 Text(
-                    text = stringResource(R.string.nebula_core_private_ai),
+                    text = stringResource(R.string.chevere_private_ai),
                     style = Typography.labelSmall.copy(fontSize = 9.sp, fontWeight = FontWeight.Normal),
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                     letterSpacing = 1.sp
@@ -98,7 +99,7 @@ fun ChatTopBar(
                             DropdownMenuItem(
                                 text = { 
                                     Text(
-                                        model.replace(".litertlm", "").uppercase(), 
+                                        model.replace(Constants.ModelFiles.LITERTLM_EXTENSION, "").uppercase(),
                                         color = if (model == selectedModel) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                                     ) 
                                 },

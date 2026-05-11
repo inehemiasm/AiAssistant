@@ -14,10 +14,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -75,6 +80,7 @@ fun SettingsScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(24.dp)
+                    .verticalScroll(rememberScrollState())
             ) {
                 Text(
                     stringResource(R.string.interface_configuration), 
@@ -139,6 +145,70 @@ fun SettingsScreen(
                 SystemInfoRow(stringResource(R.string.version_label), state.appVersion)
                 SystemInfoRow(stringResource(R.string.engine_label), state.engineInfo)
                 SystemInfoRow(stringResource(R.string.protocol_label), state.protocolInfo)
+
+                Spacer(Modifier.height(32.dp))
+
+                Text(
+                    stringResource(R.string.safety_privacy),
+                    style = Typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+
+                SafetyInfoCard(
+                    icon = Icons.Default.Storage,
+                    title = stringResource(R.string.local_first_ai),
+                    description = stringResource(R.string.local_first_ai_desc)
+                )
+                Spacer(Modifier.height(12.dp))
+                SafetyInfoCard(
+                    icon = Icons.Default.Security,
+                    title = stringResource(R.string.release_safeguards),
+                    description = stringResource(R.string.release_safeguards_desc)
+                )
+                Spacer(Modifier.height(12.dp))
+                SafetyInfoCard(
+                    icon = Icons.Default.Flag,
+                    title = stringResource(R.string.report_controls),
+                    description = stringResource(R.string.report_controls_desc)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SafetyInfoCard(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    description: String
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.5f),
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.1f))
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(24.dp)
+            )
+            Spacer(Modifier.width(16.dp))
+            Column {
+                Text(title, style = Typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                Text(
+                    description,
+                    style = Typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    lineHeight = 18.sp
+                )
             }
         }
     }

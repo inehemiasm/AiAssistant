@@ -3,7 +3,6 @@ package com.neo.chevere.data.agent
 import android.net.Uri
 import android.util.Log
 import com.neo.chevere.core.Constants
-import com.neo.chevere.data.agent.tools.IMAGE_GENERATION_RESULT_PREFIX
 import com.neo.chevere.data.inference.InferenceManager
 import com.neo.chevere.domain.InferenceRequest
 import com.neo.chevere.domain.InferenceResult
@@ -156,7 +155,7 @@ class AgentOrchestrator @Inject constructor(
     }
 
     private fun AgentTool.executionTimeoutMs(): Long {
-        return if (name == "generate_image") {
+        return if (name == Constants.Agent.IMAGE_GENERATION_TOOL_NAME) {
             Constants.Agent.IMAGE_GENERATION_TOOL_TIMEOUT_MS
         } else {
             Constants.Agent.TOOL_EXECUTION_TIMEOUT_MS
@@ -180,7 +179,7 @@ class AgentOrchestrator @Inject constructor(
             is ToolResult.Success -> {
                 Log.d(TAG, "Tool ${tool.name} SUCCESS: ${toolResult.data}")
                 lastToolSummary = toolResult.data
-                if (toolResult.data.startsWith(IMAGE_GENERATION_RESULT_PREFIX)) {
+                if (toolResult.data.startsWith(Constants.Agent.IMAGE_GENERATION_RESULT_PREFIX)) {
                     _agentState.value = AgentState.Completed
                     return Result.success(toolResult.data)
                 }
@@ -190,7 +189,7 @@ class AgentOrchestrator @Inject constructor(
             is ToolResult.Error -> {
                 Log.e(TAG, "Tool ${tool.name} ERROR: ${toolResult.message}")
                 lastToolSummary = "Error: ${toolResult.message}"
-                lastPrompt = "TOOL_ERROR from ${tool.name}: ${toolResult.message}\n\nPlease explain the error to the user or try an alternative."
+                lastPrompt = "${Constants.Agent.TOOL_ERROR_FROM_PREFIX}${tool.name}: ${toolResult.message}\n\nPlease explain the error to the user or try an alternative."
                 null
             }
             is ToolResult.NeedsConfirmation -> {

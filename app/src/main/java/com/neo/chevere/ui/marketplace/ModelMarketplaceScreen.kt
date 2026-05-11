@@ -187,7 +187,11 @@ fun DiscoverModelsList(
                 }
                 
                 items(models) { model ->
-                    val installedVersion = state.localModels.find { it.fileName == model.effectiveFileName }
+                    val installedVersion = state.localModels.find {
+                        it.fileName == model.effectiveFileName ||
+                            it.id == model.effectiveInstalledId ||
+                            it.fileName == model.effectiveInstalledId
+                    }
                     val isDownloading = state.downloadingModelName == model.effectiveFileName
                     
                     RemoteModelCard(

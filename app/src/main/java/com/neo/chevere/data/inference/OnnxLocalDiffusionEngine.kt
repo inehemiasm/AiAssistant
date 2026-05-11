@@ -7,12 +7,14 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Color
 import androidx.core.content.FileProvider
+import com.neo.chevere.core.Constants
 import com.neo.chevere.domain.ImageGenerationRequest
 import com.neo.chevere.domain.ImageGenerationResult
 import com.neo.chevere.domain.InstalledModel
 import com.neo.chevere.domain.LoadResult
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
@@ -25,6 +27,7 @@ import java.util.Random
 import java.util.regex.Pattern
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.coroutines.coroutineContext
 import kotlin.math.ln
 import kotlin.math.max
 import kotlin.math.min
@@ -32,11 +35,11 @@ import kotlin.math.pow
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
-private const val TEXT_ENCODER_MODEL = "text_encoder/model.ort"
-private const val TOKENIZER_VOCAB = "tokenizer/vocab.json"
-private const val TOKENIZER_MERGES = "tokenizer/merges.txt"
-private const val UNET_MODEL = "unet/model.ort"
-private const val VAE_DECODER_MODEL = "vae_decoder/model.ort"
+private val TEXT_ENCODER_MODEL = Constants.ImageGeneration.ONNX_REQUIRED_FILES[0]
+private val TOKENIZER_VOCAB = Constants.ImageGeneration.ONNX_REQUIRED_FILES[1]
+private val TOKENIZER_MERGES = Constants.ImageGeneration.ONNX_REQUIRED_FILES[2]
+private val UNET_MODEL = Constants.ImageGeneration.ONNX_REQUIRED_FILES[3]
+private val VAE_DECODER_MODEL = Constants.ImageGeneration.ONNX_REQUIRED_FILES[4]
 private const val MAX_TOKENS = 77
 private const val START_TOKEN = 49406
 private const val END_TOKEN = 49407
@@ -66,14 +69,7 @@ class OnnxLocalDiffusionEngine @Inject constructor(
             return@withContext LoadResult.Failure("ONNX diffusion model must be an extracted model directory.")
         }
 
-        val requiredFiles = listOf(
-            TEXT_ENCODER_MODEL,
-            TOKENIZER_VOCAB,
-            TOKENIZER_MERGES,
-            UNET_MODEL,
-            VAE_DECODER_MODEL
-        )
-        val missingFiles = requiredFiles.filterNot { relativePath -> File(directory, relativePath).isFile }
+        val missingFiles = Constants.ImageGeneration.ONNX_REQUIRED_FILES.filterNot { relativePath -> File(directory, relativePath).isFile }
         if (missingFiles.isNotEmpty()) {
             return@withContext LoadResult.Failure(
                 "ONNX diffusion model is missing required files: ${missingFiles.joinToString(", ")}"
@@ -134,6 +130,7 @@ class OnnxLocalDiffusionEngine @Inject constructor(
             var latents = createLatents(seed, height / 8, width / 8, scheduler.initNoiseSigma)
 
             for (stepIndex in 0 until steps) {
+                coroutineContext.ensureActive()
                 val sigma = scheduler.sigma(stepIndex)
                 val scaledLatents = scaleLatents(duplicateBatch(latents), sigma)
                 val timestep = scheduler.timestep(stepIndex)
@@ -228,8 +225,11 @@ class OnnxLocalDiffusionEngine @Inject constructor(
     }
 
     private fun saveBitmap(bitmap: Bitmap): android.net.Uri {
-        val outputDirectory = File(context.filesDir, "generated_images").apply { mkdirs() }
-        val outputFile = File(outputDirectory, "image_${System.currentTimeMillis()}.png")
+        val outputDirectory = File(context.filesDir, Constants.ImageGeneration.GENERATED_IMAGES_DIRECTORY).apply { mkdirs() }
+        val outputFile = File(
+            outputDirectory,
+            "${Constants.ImageGeneration.GENERATED_IMAGE_PREFIX}${System.currentTimeMillis()}${Constants.ImageGeneration.PNG_EXTENSION}"
+        )
         FileOutputStream(outputFile).use { output ->
             bitmap.compress(Bitmap.CompressFormat.PNG, 100, output)
         }

@@ -1,5 +1,6 @@
 package com.neo.chevere.ui.marketplace.details
 
+import android.os.StatFs
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -22,8 +23,10 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Memory
+import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -34,6 +37,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -43,6 +47,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -50,6 +55,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.neo.chevere.R
+import com.neo.chevere.core.Constants
 import com.neo.chevere.ui.designsystem.AmbientGlow
 import com.neo.chevere.ui.designsystem.Typography
 import kotlin.math.log10
@@ -62,6 +68,7 @@ fun ModelDetailsScreen(
     onBack: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
 
     Scaffold(
         topBar = {
@@ -113,6 +120,15 @@ fun ModelDetailsScreen(
                     
                     Spacer(Modifier.height(24.dp))
                 }
+            }
+
+            if (state.showDownloadRequirements) {
+                DownloadRequirementsDialog(
+                    state = state,
+                    availableBytes = getAvailableBytes(context.filesDir.absolutePath),
+                    onConfirm = { viewModel.onIntent(ModelDetailsIntent.ConfirmDownload) },
+                    onDismiss = { viewModel.onIntent(ModelDetailsIntent.DismissDownloadRequirements) }
+                )
             }
         }
     }
@@ -207,6 +223,12 @@ fun CompatibilitySection(state: ModelDetailsState) {
                 value = if (state.modelEntry?.supportsVision == true || state.installedModel?.capabilities?.contains(com.neo.chevere.domain.ModelCapability.VISION) == true) "Vision Enabled" else "Text Only",
                 isOk = true
             )
+            CompatibilityRow(
+                icon = Icons.Default.Storage,
+                label = "Download Space",
+                value = recommendedStorageText(state),
+                isOk = true
+            )
         }
     }
 }
@@ -232,6 +254,14 @@ fun ActionSection(state: ModelDetailsState, onIntent: (ModelDetailsIntent) -> Un
                 label = "DOWNLOAD ENGINE",
                 icon = Icons.Default.Download,
                 onClick = { onIntent(ModelDetailsIntent.Download) }
+            )
+        }
+
+        if (state.downloadProgress != null) {
+            SecondaryAction(
+                label = "CANCEL DOWNLOAD",
+                icon = Icons.Default.Delete,
+                onClick = { onIntent(ModelDetailsIntent.CancelDownload) }
             )
         }
         
@@ -264,6 +294,53 @@ fun ActionSection(state: ModelDetailsState, onIntent: (ModelDetailsIntent) -> Un
             }
         }
     }
+}
+
+@Composable
+private fun DownloadRequirementsDialog(
+    state: ModelDetailsState,
+    availableBytes: Long,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val modelSize = state.modelEntry?.sizeBytes ?: state.installedModel?.sizeBytes ?: 0L
+    val requiredBytes = recommendedRequiredBytes(modelSize, state.modelEntry?.effectiveFileName.orEmpty())
+    val hasEnoughSpace = modelSize <= 0L || availableBytes >= requiredBytes
+    val modelKind = when {
+        state.modelEntry?.runtimeType?.contains("ONNX", ignoreCase = true) == true -> "Image generation models are large and can take several minutes per image."
+        state.modelEntry?.supportsVision == true -> "Vision models need extra memory when processing images."
+        else -> "Chat models run locally and may be slow on older devices."
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Download requirements") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Model size: ${formatFileSize(modelSize)}")
+                Text("Recommended free space: ${formatFileSize(requiredBytes)}")
+                Text("Available space: ${formatFileSize(availableBytes)}")
+                Text(modelKind)
+                if (!hasEnoughSpace) {
+                    Text(
+                        "Free more storage before downloading this model.",
+                        color = MaterialTheme.colorScheme.error,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm, enabled = hasEnoughSpace) {
+                Text("Download")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }
 
 @Composable
@@ -360,4 +437,25 @@ private fun formatFileSize(size: Long): String {
     val units = arrayOf("B", "KB", "MB", "GB", "TB")
     val digitGroups = (log10(size.toDouble()) / log10(1024.0)).toInt()
     return "%.1f %s".format(size / 1024.0.pow(digitGroups.toDouble()), units[digitGroups])
+}
+
+private fun recommendedStorageText(state: ModelDetailsState): String {
+    val modelSize = state.modelEntry?.sizeBytes ?: state.installedModel?.sizeBytes ?: 0L
+    return if (modelSize <= 0L) {
+        "Check device storage"
+    } else {
+        "${formatFileSize(recommendedRequiredBytes(modelSize, state.modelEntry?.effectiveFileName.orEmpty()))} free recommended"
+    }
+}
+
+private fun recommendedRequiredBytes(modelSize: Long, fileName: String): Long {
+    if (modelSize <= 0L) return 0L
+    val extractionMultiplier = if (fileName.endsWith(Constants.ModelFiles.ZIP_EXTENSION, ignoreCase = true)) 2.5 else 1.25
+    return (modelSize * extractionMultiplier).toLong()
+}
+
+private fun getAvailableBytes(path: String): Long {
+    return runCatching {
+        StatFs(path).availableBytes
+    }.getOrDefault(0L)
 }

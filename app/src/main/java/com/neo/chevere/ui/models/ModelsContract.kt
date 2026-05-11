@@ -37,8 +37,10 @@ data class ModelsState(
      * Filters [remoteModels] to find those that are not yet downloaded locally.
      */
     val availableDownloads: List<ModelEntry> get() {
-        val downloadedFileNames = localModels.map { it.fileName }.toSet()
-        return remoteModels.filter { it.effectiveFileName !in downloadedFileNames }
+        val downloadedIds = localModels.flatMap { listOf(it.id, it.fileName) }.toSet()
+        return remoteModels.filter {
+            it.effectiveFileName !in downloadedIds && it.effectiveInstalledId !in downloadedIds
+        }
     }
 
     val isSwitching: Boolean get() = switchState is ModelSwitchState.Switching || switchState is ModelSwitchState.WarmingUp

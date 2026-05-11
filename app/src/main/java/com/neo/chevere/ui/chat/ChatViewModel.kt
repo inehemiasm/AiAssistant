@@ -4,10 +4,11 @@ import android.app.Application
 import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.viewModelScope
+import com.neo.chevere.BuildConfig
 import com.neo.chevere.core.BaseViewModel
+import com.neo.chevere.core.Constants
 import com.neo.chevere.core.DispatcherProvider
 import com.neo.chevere.data.PreferenceManager
-import com.neo.chevere.data.agent.tools.IMAGE_GENERATION_RESULT_PREFIX
 import com.neo.chevere.domain.ChatMessage
 import com.neo.chevere.domain.ExplicitImagePromptDecision
 import com.neo.chevere.domain.ExplicitImagePromptPolicy
@@ -18,6 +19,7 @@ import com.neo.chevere.domain.InitializeChatUseCase
 import com.neo.chevere.domain.ModelCapability
 import com.neo.chevere.domain.SendMessageUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -44,6 +46,7 @@ class ChatViewModel @Inject constructor(
     private val explicitImagePromptPolicy = ExplicitImagePromptPolicy()
     private val intentMutex = Mutex()
     private var initJob: Job? = null
+    private var imageGenerationJob: Job? = null
 
     init {
         // 1. Observe global initialization status from the repository
@@ -120,6 +123,11 @@ class ChatViewModel @Inject constructor(
     }
 
     override suspend fun handleIntent(intent: ChatIntent) {
+        if (intent is ChatIntent.CancelGeneration) {
+            cancelImageGeneration()
+            return
+        }
+
         intentMutex.withLock {
             when (intent) {
                 is ChatIntent.Initialize -> initModel(intent.modelPath)
@@ -145,9 +153,11 @@ class ChatViewModel @Inject constructor(
                 is ChatIntent.SetTempCameraUri -> setState { copy(tempCameraUri = intent.uri) }
                 ChatIntent.ConfirmAction -> confirmAction()
                 ChatIntent.CancelAction -> cancelAction()
+                ChatIntent.CancelGeneration -> cancelImageGeneration()
                 is ChatIntent.SubmitBirthdate -> submitBirthdate(intent.year, intent.month, intent.day)
                 ChatIntent.DismissAgeVerification -> dismissAgeVerification()
                 is ChatIntent.ToggleExplicitImageMask -> toggleExplicitImageMask(intent.messageIndex)
+                is ChatIntent.ReportMessage -> reportMessage(intent.messageIndex)
             }
         }
     }
@@ -179,6 +189,11 @@ class ChatViewModel @Inject constructor(
         sendEffect { ChatEffect.ScrollToBottom }
 
         if (explicitImagePromptPolicy.requiresAgeVerification(text)) {
+            if (!BuildConfig.DEBUG) {
+                appendAssistantMessage(Constants.ContentPolicy.EXPLICIT_RELEASE_BLOCK_MESSAGE, modelName = "CHEVERE")
+                return
+            }
+
             setState {
                 copy(
                     ageVerificationRequest = AgeVerificationRequest(text, imageUri),
@@ -190,8 +205,7 @@ class ChatViewModel @Inject constructor(
 
         val imageCommand = parseImageCommand(text)
         if (imageCommand != null) {
-            setState { copy(sendState = SendState.GeneratingImage) }
-            processImageGenerationTurn(imageCommand.prompt, imageUri)
+            startImageGenerationTurn(imageCommand.prompt, imageUri)
             return
         }
 
@@ -200,8 +214,7 @@ class ChatViewModel @Inject constructor(
                 it.capabilities.contains(ModelCapability.IMAGE_GEN)
         }
         if (selectedImageModel != null) {
-            setState { copy(sendState = SendState.GeneratingImage) }
-            processImageGenerationTurn(text, imageUri)
+            startImageGenerationTurn(text, imageUri)
         } else {
             processAgentTurn {
                 withContext(dispatcherProvider.default) {
@@ -213,6 +226,12 @@ class ChatViewModel @Inject constructor(
 
     private suspend fun submitBirthdate(year: Int, month: Int, day: Int) {
         val request = currentState.ageVerificationRequest ?: return
+        if (!BuildConfig.DEBUG) {
+            setState { copy(ageVerificationRequest = null, sendState = SendState.Idle) }
+            appendAssistantMessage(Constants.ContentPolicy.EXPLICIT_RELEASE_BLOCK_MESSAGE, modelName = "CHEVERE")
+            return
+        }
+
         val birthdate = try {
             LocalDate.of(year, month, day)
         } catch (_: DateTimeException) {
@@ -241,8 +260,7 @@ class ChatViewModel @Inject constructor(
         }
 
         val imageCommand = parseImageCommand(request.prompt)
-        setState { copy(sendState = SendState.GeneratingImage) }
-        processImageGenerationTurn(
+        startImageGenerationTurn(
             prompt = imageCommand?.prompt ?: request.prompt,
             conditionImageUri = request.imageUri,
             maskExplicitImage = true
@@ -297,6 +315,55 @@ class ChatViewModel @Inject constructor(
         setState { copy(messages = updatedMessages) }
     }
 
+    private fun startImageGenerationTurn(
+        prompt: String,
+        conditionImageUri: Uri?,
+        maskExplicitImage: Boolean = false
+    ) {
+        imageGenerationJob?.cancel()
+        setState { copy(sendState = SendState.GeneratingImage) }
+        imageGenerationJob = viewModelScope.launch {
+            processImageGenerationTurn(
+                prompt = prompt,
+                conditionImageUri = conditionImageUri,
+                maskExplicitImage = maskExplicitImage
+            )
+        }
+    }
+
+    private suspend fun cancelImageGeneration() {
+        imageGenerationJob?.cancel()
+        imageGenerationJob = null
+        setState { copy(sendState = SendState.Idle) }
+        appendAssistantMessage("Image generation canceled.", modelName = "CHEVERE")
+    }
+
+    /**
+     * Opens the platform share sheet with enough context for the user to report
+     * unwanted AI-generated content without sending anything automatically.
+     */
+    private fun reportMessage(messageIndex: Int) {
+        val message = currentState.messages.getOrNull(messageIndex) ?: return
+        if (message.isUser) return
+
+        val reportText = buildString {
+            appendLine("Chevere AI content report")
+            appendLine()
+            appendLine("Model: ${message.modelName ?: "Unknown"}")
+            appendLine("Generated image: ${message.imageUri ?: "None"}")
+            appendLine()
+            appendLine("Message:")
+            appendLine(message.text)
+        }
+
+        sendEffect {
+            ChatEffect.ShareText(
+                title = "Report Chevere content",
+                text = reportText
+            )
+        }
+    }
+
     private suspend fun confirmAction() {
         sendEffect { ChatEffect.HideKeyboard }
         processAgentTurn { 
@@ -332,7 +399,7 @@ class ChatViewModel @Inject constructor(
             isUser = false,
             inferenceTimeMs = time,
             imageUri = imagePayload?.imageUri,
-            modelName = currentState.selectedModel.replace(".litertlm", "").uppercase()
+            modelName = currentState.selectedModel.replace(Constants.ModelFiles.LITERTLM_EXTENSION, "").uppercase()
         )
         setState { copy(messages = messages + aiMsg, sendState = SendState.Idle) }
         sendEffect { ChatEffect.ScrollToBottom }
@@ -345,15 +412,23 @@ class ChatViewModel @Inject constructor(
     ) {
         var generatedImageUri: String? = null
         var generatedCaption = ""
+        var wasCanceled = false
         val time = measureTimeMillis {
-            withContext(dispatcherProvider.default) {
-                repository.generateImage(
-                    ImageGenerationRequest(
-                        prompt = prompt,
-                        conditionImageUri = conditionImageUri
+            val result = try {
+                withContext(dispatcherProvider.default) {
+                    repository.generateImage(
+                        ImageGenerationRequest(
+                            prompt = prompt,
+                            conditionImageUri = conditionImageUri
+                        )
                     )
-                )
+                }
+            } catch (_: CancellationException) {
+                wasCanceled = true
+                return@measureTimeMillis
             }
+
+            result
                 .onSuccess { result ->
                     generatedImageUri = result.imageUri.toString()
                     generatedCaption = "Generated image for: ${result.prompt}"
@@ -364,23 +439,29 @@ class ChatViewModel @Inject constructor(
                 }
         }
 
+        if (wasCanceled) {
+            setState { copy(sendState = SendState.Idle) }
+            return
+        }
+
         val aiMsg = ChatMessage(
             text = generatedCaption,
             isUser = false,
             inferenceTimeMs = time,
             imageUri = generatedImageUri,
-            modelName = currentState.selectedModel.replace(".zip", "").uppercase(),
+            modelName = currentState.selectedModel.replace(Constants.ModelFiles.ZIP_EXTENSION, "").uppercase(),
             isExplicitImage = maskExplicitImage,
             isImageMasked = maskExplicitImage
         )
+        imageGenerationJob = null
         setState { copy(messages = messages + aiMsg, sendState = SendState.Idle) }
         sendEffect { ChatEffect.ScrollToBottom }
     }
 
     private fun parseGeneratedImagePayload(text: String): GeneratedImagePayload? {
-        if (!text.startsWith(IMAGE_GENERATION_RESULT_PREFIX)) return null
+        if (!text.startsWith(Constants.Agent.IMAGE_GENERATION_RESULT_PREFIX)) return null
 
-        val fields = text.split("|")
+        val fields = text.split(Constants.Agent.IMAGE_GENERATION_RESULT_SEPARATOR)
             .drop(1)
             .mapNotNull { part ->
                 val index = part.indexOf("=")
@@ -407,6 +488,6 @@ class ChatViewModel @Inject constructor(
     private data class ImageCommand(val prompt: String)
 
     private companion object {
-        val imageCommandPrefixes = listOf("/image", "/img", "/imagine")
+        val imageCommandPrefixes = Constants.Commands.IMAGE_GENERATION
     }
 }

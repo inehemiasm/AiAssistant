@@ -11,14 +11,14 @@ import com.neo.chevere.ui.chat.components.ModelInitializationScreen
 
 @Composable
 fun LaunchAnimatedApp(
-    isReady: Boolean,
+    isInitializing: Boolean,
     statusMessage: String,
     content: @Composable () -> Unit
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
         content()
         AnimatedVisibility(
-            visible = !isReady,
+            visible = isInitializing,
             exit = fadeOut(animationSpec = tween(durationMillis = 800))
         ) {
             ModelInitializationScreen(

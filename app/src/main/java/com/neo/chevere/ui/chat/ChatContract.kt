@@ -1,6 +1,7 @@
 package com.neo.chevere.ui.chat
 
 import android.net.Uri
+import com.neo.chevere.core.Constants
 import com.neo.chevere.core.UiEffect
 import com.neo.chevere.core.UiIntent
 import com.neo.chevere.core.UiState
@@ -51,10 +52,10 @@ data class ChatState(
             (agentState is AgentState.Planning || agentState is AgentState.ExecutingTool)
     
     val loadingMessage: String? get() = when {
-        agentState is AgentState.Planning -> "PLANNING..."
-        agentState is AgentState.ExecutingTool -> "EXECUTING: ${agentState.toolName.uppercase()}"
-        sendState is SendState.GeneratingImage -> "GENERATING IMAGE..."
-        sendState is SendState.Sending -> "THINKING..."
+        agentState is AgentState.Planning -> Constants.UiStatus.PLANNING
+        agentState is AgentState.ExecutingTool -> "${Constants.UiStatus.EXECUTING_PREFIX}${agentState.toolName.uppercase()}"
+        sendState is SendState.GeneratingImage -> Constants.UiStatus.GENERATING_IMAGE
+        sendState is SendState.Sending -> Constants.UiStatus.THINKING
         runtimeState is RuntimeState.Initializing -> runtimeState.message
         else -> null
     }
@@ -81,14 +82,17 @@ sealed class ChatIntent : UiIntent {
     data class SetTempCameraUri(val uri: Uri?) : ChatIntent()
     data object ConfirmAction : ChatIntent()
     data object CancelAction : ChatIntent()
+    data object CancelGeneration : ChatIntent()
     data class SubmitBirthdate(val year: Int, val month: Int, val day: Int) : ChatIntent()
     data object DismissAgeVerification : ChatIntent()
     data class ToggleExplicitImageMask(val messageIndex: Int) : ChatIntent()
+    data class ReportMessage(val messageIndex: Int) : ChatIntent()
 }
 
 sealed class ChatEffect : UiEffect {
     data object ScrollToBottom : ChatEffect()
     data class ShowToast(val message: String) : ChatEffect()
+    data class ShareText(val title: String, val text: String) : ChatEffect()
     data object HideKeyboard : ChatEffect()
 }
 

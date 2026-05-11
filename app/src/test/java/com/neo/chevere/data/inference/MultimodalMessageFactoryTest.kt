@@ -3,6 +3,8 @@ package com.neo.chevere.data.inference
 import android.net.Uri
 import com.google.ai.edge.litertlm.Content
 import com.google.ai.edge.litertlm.Role
+import android.content.Context
+import com.neo.chevere.R
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -16,12 +18,16 @@ import org.mockito.kotlin.whenever
 class MultimodalMessageFactoryTest {
 
     private lateinit var imageProcessor: ImageProcessor
+    private lateinit var context: Context
     private lateinit var factory: MultimodalMessageFactory
 
     @Before
     fun setup() {
+        context = mock {
+            on { getString(R.string.error_warmup) } doReturn "warmup"
+        }
         imageProcessor = mock()
-        factory = MultimodalMessageFactory(imageProcessor)
+        factory = MultimodalMessageFactory(context, imageProcessor)
     }
 
     @Test

@@ -129,7 +129,7 @@ class ModelsViewModel @Inject constructor(
         setState { copy(isDownloading = true, downloadProgress = 0) }
         
         viewModelScope.launch {
-            repository.downloadModel(modelEntry.url, modelEntry.effectiveFileName, modelEntry.sha256).collect { progress ->
+            repository.downloadModel(modelEntry).collect { progress ->
                 when (progress) {
                     is DownloadProgress.Progress -> setState { copy(downloadProgress = progress.percent) }
                     DownloadProgress.Finished -> {

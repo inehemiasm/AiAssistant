@@ -2,6 +2,7 @@ package com.neo.chevere.data.datasource
 
 import android.content.Context
 import android.util.Log
+import com.neo.chevere.core.Constants
 import com.neo.chevere.domain.ModelEntry
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.ktor.client.HttpClient
@@ -55,7 +56,7 @@ class KaggleModelCatalogDataSource @Inject constructor(
                     provider = "Kaggle",
                     sizeBytes = dto.sizeBytes,
                     runtimeType = "LiteRT",
-                    fileName = dto.id + ".litertlm",
+                    fileName = dto.id + Constants.ModelFiles.LITERTLM_EXTENSION,
                     supportsVision = dto.supportsVision,
                     license = dto.license
                 )

@@ -22,6 +22,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.neo.chevere.R
+import com.neo.chevere.core.Constants
 import com.neo.chevere.ui.designsystem.AmbientGlow
 import com.neo.chevere.ui.designsystem.Typography
 
@@ -68,7 +69,7 @@ fun DownloadProgressView(modelName: String, progress: Int) {
             )
             
             Text(
-                modelName.replace(".litertlm", "").uppercase(), 
+                modelName.replace(Constants.ModelFiles.LITERTLM_EXTENSION, "").uppercase(),
                 color = MaterialTheme.colorScheme.primary, 
                 style = Typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
                 modifier = Modifier.padding(top = 4.dp)

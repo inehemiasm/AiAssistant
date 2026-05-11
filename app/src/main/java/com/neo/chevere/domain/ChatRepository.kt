@@ -63,9 +63,14 @@ interface ChatRepository {
     suspend fun fetchAvailableModels(): Result<List<ModelEntry>>
     
     /**
-     * Downloads a model from the given URL.
+     * Downloads and registers [model] from the remote catalog.
      */
-    fun downloadModel(url: String, modelName: String, sha256: String? = null): Flow<DownloadProgress>
+    fun downloadModel(model: ModelEntry): Flow<DownloadProgress>
+
+    /**
+     * Cancels an active model download by catalog file name or installed id.
+     */
+    suspend fun cancelModelDownload(modelName: String)
 
     /**
      * Global flow tracking all active model downloads.

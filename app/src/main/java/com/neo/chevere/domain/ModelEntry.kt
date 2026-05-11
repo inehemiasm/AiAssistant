@@ -1,5 +1,7 @@
 package com.neo.chevere.domain
 
+import com.neo.chevere.core.Constants
+
 /**
  * Metadata for a remote AI model available in the catalog.
  *
@@ -30,5 +32,10 @@ data class ModelEntry(
      * The effective file name to use for this model, derived from [fileName] or [name].
      */
     val effectiveFileName: String get() = fileName ?: (name.replace(" ", "_")
-        .lowercase() + if (runtimeType == "LiteRT") ".litertlm" else ".bin")
+        .lowercase() + if (runtimeType == "LiteRT") Constants.ModelFiles.LITERTLM_EXTENSION else Constants.ModelFiles.BIN_EXTENSION)
+
+    /**
+     * The canonical installed model id. ZIP bundles install as extracted directories.
+     */
+    val effectiveInstalledId: String get() = effectiveFileName.removeSuffix(Constants.ModelFiles.ZIP_EXTENSION)
 }

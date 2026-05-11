@@ -1,5 +1,6 @@
 package com.neo.chevere.data.agent
 
+import com.neo.chevere.core.Constants
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -46,7 +47,7 @@ class ToolRegistry @Inject constructor(
             }
             append("\nOnly call a tool when the user is asking you to perform that action now. If the user asks whether you can do something, answer the capability question instead of calling the tool.\n")
             append("For generate_image, improve the user's image request before the tool call. Expand vague prompts into a clear visual prompt with subject, environment, medium/style, lighting, camera/composition, and quality terms while preserving the user's intent.\n")
-            append("\nTo call a tool, use the format: [TOOL_CALL: tool_name, param1=value1, param2=value2]\n")
+            append("\nTo call a tool, use the format: ${Constants.Agent.TOOL_CALL_PREFIX} tool_name, param1=value1, param2=value2]\n")
         }
     }
 }

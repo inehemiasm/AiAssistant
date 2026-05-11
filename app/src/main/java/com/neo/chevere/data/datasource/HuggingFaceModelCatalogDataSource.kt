@@ -2,6 +2,7 @@ package com.neo.chevere.data.datasource
 
 import android.content.Context
 import android.util.Log
+import com.neo.chevere.core.Constants
 import com.neo.chevere.domain.ModelEntry
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.ktor.client.HttpClient
@@ -84,7 +85,8 @@ class HuggingFaceModelCatalogDataSource @Inject constructor(
                 val discoveredEntries = hubModels.mapNotNull { hubModel ->
                     // Find a file ending in .litertlm or .bin
                     val sibling = hubModel.siblings.firstOrNull { 
-                        it.rfilename.endsWith(".litertlm") || it.rfilename.endsWith(".bin") 
+                        it.rfilename.endsWith(Constants.ModelFiles.LITERTLM_EXTENSION) ||
+                            it.rfilename.endsWith(Constants.ModelFiles.BIN_EXTENSION)
                     } ?: return@mapNotNull null
                     
                     val targetFile = sibling.rfilename
@@ -113,7 +115,7 @@ class HuggingFaceModelCatalogDataSource @Inject constructor(
                         sizeBytes = sibling.size,
                         supportsVision = hubModel.tags.any { it.contains("vision", ignoreCase = true) },
                         license = license,
-                        runtimeType = if (targetFile.endsWith(".litertlm")) "LiteRT" else "TFLite/Other"
+                        runtimeType = if (targetFile.endsWith(Constants.ModelFiles.LITERTLM_EXTENSION)) "LiteRT" else "TFLite/Other"
                     )
                 }
                 allModels.addAll(discoveredEntries)

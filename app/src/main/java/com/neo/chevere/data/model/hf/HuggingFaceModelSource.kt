@@ -1,5 +1,6 @@
 package com.neo.chevere.data.model.hf
 
+import com.neo.chevere.core.Constants
 import com.neo.chevere.data.model.MarketplaceModel
 import com.neo.chevere.data.model.ModelSource
 import com.neo.chevere.data.model.RuntimeType
@@ -53,8 +54,8 @@ class HuggingFaceModelSource @Inject constructor(
 
     private fun HFModelResponse.toMarketplaceModel(): MarketplaceModel? {
         val supportedFile = siblings.find { 
-            it.rfilename.endsWith(".litertlm") || 
-            it.rfilename.endsWith(".bin") || 
+            it.rfilename.endsWith(Constants.ModelFiles.LITERTLM_EXTENSION) ||
+            it.rfilename.endsWith(Constants.ModelFiles.BIN_EXTENSION) ||
             it.rfilename.endsWith(".tflite") 
         } ?: return null
 

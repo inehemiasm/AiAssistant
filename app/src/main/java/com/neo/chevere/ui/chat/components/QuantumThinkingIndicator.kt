@@ -21,7 +21,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -50,7 +52,8 @@ import com.neo.chevere.ui.designsystem.Typography
 fun QuantumThinkingIndicator(
     visible: Boolean,
     modifier: Modifier = Modifier,
-    statusMessage: String? = null
+    statusMessage: String? = null,
+    onCancel: (() -> Unit)? = null
 ) {
     AnimatedVisibility(
         visible = visible,
@@ -102,6 +105,18 @@ fun QuantumThinkingIndicator(
                     color = Color.Cyan.copy(alpha = alpha)
                 )
             )
+
+            if (onCancel != null) {
+                Spacer(Modifier.width(8.dp))
+                IconButton(onClick = onCancel, modifier = Modifier.size(32.dp)) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Cancel",
+                        tint = Color.Cyan.copy(alpha = alpha),
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
         }
     }
 }

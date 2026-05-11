@@ -6,6 +6,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import com.neo.chevere.core.BaseViewModel
+import com.neo.chevere.core.Constants
 import com.neo.chevere.data.PreferenceManager
 import com.neo.chevere.domain.ChatRepository
 import com.neo.chevere.domain.DownloadProgress
@@ -49,7 +50,9 @@ class ModelDetailsViewModel @Inject constructor(
         // Global Download Observation
         viewModelScope.launch {
             repository.allDownloadsProgress.collectLatest { progressMap ->
-                val progress = progressMap[modelId]
+                val progress = progressMap[modelId] ?: currentState.modelEntry?.let { entry ->
+                    progressMap[entry.effectiveFileName] ?: progressMap[entry.effectiveInstalledId]
+                }
                 Log.v(TAG, "[DOWNLOAD] Map update for $modelId: $progress")
                 
                 when (progress) {
@@ -71,7 +74,10 @@ class ModelDetailsViewModel @Inject constructor(
         Log.d(TAG, "Handling Intent: ${intent::class.simpleName}")
         when (intent) {
             is ModelDetailsIntent.LoadDetails -> loadDetails(intent.modelId)
-            ModelDetailsIntent.Download -> downloadModel()
+            ModelDetailsIntent.Download -> setState { copy(showDownloadRequirements = true) }
+            ModelDetailsIntent.ConfirmDownload -> downloadModel()
+            ModelDetailsIntent.DismissDownloadRequirements -> setState { copy(showDownloadRequirements = false) }
+            ModelDetailsIntent.CancelDownload -> cancelDownload()
             ModelDetailsIntent.Delete -> deleteModel()
             ModelDetailsIntent.Select -> selectModel()
             ModelDetailsIntent.ConfirmSwitch -> confirmSwitch()
@@ -84,12 +90,14 @@ class ModelDetailsViewModel @Inject constructor(
         
         // Local scan
         val localModels = repository.getLocalModels()
-        val installed = localModels.find { it.id == id }
+        val installed = localModels.find {
+            it.id == id || it.id == id.removeSuffix(Constants.ModelFiles.ZIP_EXTENSION) || it.fileName == id
+        }
         Log.d(TAG, "Local Check: Found=${installed != null}, Status=${installed?.installStatus}")
         
         // Remote scan
         val remoteModels = repository.fetchAvailableModels().getOrDefault(emptyList())
-        val entry = remoteModels.find { it.effectiveFileName == id || it.name == id }
+        val entry = remoteModels.find { it.effectiveFileName == id || it.effectiveInstalledId == id || it.name == id }
         Log.d(TAG, "Remote Check: Found=${entry != null}, Provider=${entry?.provider}")
 
         setState { 
@@ -104,14 +112,25 @@ class ModelDetailsViewModel @Inject constructor(
     private fun downloadModel() {
         val entry = currentState.modelEntry ?: return
         Log.i(TAG, "Starting download for: ${entry.name} from ${entry.url}")
+        setState { copy(showDownloadRequirements = false, isActionInProgress = true) }
         
         viewModelScope.launch {
-            repository.downloadModel(entry.url, entry.effectiveFileName, entry.sha256).collectLatest { progress ->
+            repository.downloadModel(entry).collectLatest { progress ->
                 if (progress is DownloadProgress.Error) {
                     Log.e(TAG, "Download Error: ${progress.message}")
+                    setState { copy(isActionInProgress = false, downloadProgress = null) }
                     sendEffect { ModelDetailsEffect.ShowToast(progress.message) }
                 }
             }
+        }
+    }
+
+    private fun cancelDownload() {
+        val entry = currentState.modelEntry
+        viewModelScope.launch {
+            repository.cancelModelDownload(entry?.effectiveFileName ?: modelId)
+            setState { copy(isActionInProgress = false, downloadProgress = null) }
+            sendEffect { ModelDetailsEffect.ShowToast("Download canceled") }
         }
     }
 

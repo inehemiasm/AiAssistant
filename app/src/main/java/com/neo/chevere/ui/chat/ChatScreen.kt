@@ -1,6 +1,7 @@
 package com.neo.chevere.ui.chat
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.widget.Toast
@@ -79,7 +80,6 @@ fun ChatScreen(
     onSettingsClick: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
-    val context = LocalContext.current
     
     // Check if the model is initializing to show the full-screen loading state
     val isInitializing = state.runtimeState is RuntimeState.Initializing
@@ -102,17 +102,6 @@ fun ChatScreen(
                 onModelsClick = onModelsClick,
                 onSettingsClick = onSettingsClick
             )
-        }
-    }
-
-    LaunchedEffect(viewModel.effect) {
-        viewModel.effect.collect { effect ->
-            when (effect) {
-                is ChatEffect.ShowToast -> {
-                    Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
-                }
-                else -> {}
-            }
         }
     }
 }
@@ -197,6 +186,9 @@ private fun ChatContent(
                         listState = listState,
                         onToggleExplicitImageMask = { index ->
                             viewModel.onIntent(ChatIntent.ToggleExplicitImageMask(index))
+                        },
+                        onReportMessage = { index ->
+                            viewModel.onIntent(ChatIntent.ReportMessage(index))
                         }
                     )
                 }
@@ -204,6 +196,11 @@ private fun ChatContent(
                 QuantumThinkingIndicator(
                     visible = state.isLoading && state.runtimeState !is RuntimeState.Initializing,
                     statusMessage = state.loadingMessage,
+                    onCancel = if (state.sendState is SendState.GeneratingImage) {
+                        { viewModel.onIntent(ChatIntent.CancelGeneration) }
+                    } else {
+                        null
+                    },
                     modifier = Modifier
                         .align(Alignment.BottomStart)
                         .padding(16.dp)
@@ -278,6 +275,17 @@ private fun ChatContent(
                 is ChatEffect.HideKeyboard -> {
                     keyboardController?.hide()
                     focusManager.clearFocus()
+                }
+                is ChatEffect.ShowToast -> {
+                    Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
+                }
+                is ChatEffect.ShareText -> {
+                    val sendIntent = Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(Intent.EXTRA_TEXT, effect.text)
+                    }
+                    val chooser = Intent.createChooser(sendIntent, effect.title)
+                    context.startActivity(chooser)
                 }
                 else -> {}
             }

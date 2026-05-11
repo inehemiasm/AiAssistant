@@ -27,6 +27,8 @@ import com.neo.chevere.domain.ModelSource
 import com.neo.chevere.domain.ModelTaskType
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -69,7 +71,10 @@ class ChatRepositoryImpl @Inject constructor(
         }
 
         val installedModel = classifyModel(file) ?: return Result.failure(
-            Exception("Unsupported or invalid model format. Please use a .litertlm, .bin, or extracted image model directory.")
+            Exception(
+                "Unsupported or invalid model format. Please use a ${Constants.ModelFiles.LITERTLM_EXTENSION}, " +
+                    "${Constants.ModelFiles.BIN_EXTENSION}, or extracted image model directory."
+            )
         )
         
         // Sync with registry
@@ -122,8 +127,32 @@ class ChatRepositoryImpl @Inject constructor(
         return modelCatalog.fetchAvailableModels()
     }
 
-    override fun downloadModel(url: String, modelName: String, sha256: String?): Flow<DownloadProgress> {
-        return downloadManager.downloadModel(url, modelName, sha256)
+    override fun downloadModel(model: ModelEntry): Flow<DownloadProgress> {
+        val downloadFileName = model.effectiveFileName
+        val installedId = downloadFileName.installedModelId()
+        val targetFile = File(context.filesDir, installedId)
+        val placeholder = model.toPendingInstalledModel(
+            id = installedId,
+            filePath = targetFile.absolutePath
+        )
+        return flow {
+            installedModelRegistry.upsertInstalledModel(placeholder)
+            emitAll(
+                downloadManager.downloadModel(
+                    url = model.url,
+                    modelName = downloadFileName,
+                    modelId = installedId,
+                    sha256 = model.sha256
+                )
+            )
+        }
+    }
+
+    override suspend fun cancelModelDownload(modelName: String) {
+        val matchingModel = installedModelRegistry.getInstalledModels().firstOrNull {
+            it.id == modelName || it.fileName == modelName
+        }
+        downloadManager.cancelDownload(matchingModel?.fileName ?: modelName)
     }
 
     override val allDownloadsProgress: Flow<Map<String, DownloadProgress>>
@@ -134,19 +163,25 @@ class ChatRepositoryImpl @Inject constructor(
         
         // 1. Scan for potential model files
         val potentialFiles = filesDir.listFiles { file ->
-            (file.isFile && (file.name.endsWith(".litertlm") || file.name.endsWith(".bin") || file.name.endsWith(".zip"))) ||
+            (file.isFile && (
+                file.name.endsWith(Constants.ModelFiles.LITERTLM_EXTENSION) ||
+                    file.name.endsWith(Constants.ModelFiles.BIN_EXTENSION) ||
+                    file.name.endsWith(Constants.ModelFiles.ZIP_EXTENSION)
+                )) ||
                 isImageGenerationDirectory(file)
         } ?: emptyArray()
 
         // 2. Process and validate found files locally (Avoid remote fetch for performance)
         val validatedModels = potentialFiles.mapNotNull { file ->
-            if (file.name.endsWith(".tmp") || file.length() < 1024) {
+            if (file.name.endsWith(Constants.ModelFiles.TEMP_EXTENSION) ||
+                (file.isFile && file.length() < Constants.ModelFiles.MIN_VALID_FILE_SIZE_BYTES)
+            ) {
                 return@mapNotNull null
             }
             
             // Reclassify local files so stale registry rows from older image backends do not survive forever.
             val existing = installedModelRegistry.getInstalledModel(file.name)
-            classifyModel(file, existing?.license)
+            classifyModel(file, existing)
         }
         
         // 3. Update the Registry
@@ -154,8 +189,11 @@ class ChatRepositoryImpl @Inject constructor(
         
         currentRegistry.forEach { registryModel ->
             val modelFile = File(registryModel.filePath)
-            val refreshedModel = classifyModel(modelFile, registryModel.license)
+            val refreshedModel = classifyModel(modelFile, registryModel)
             if (!modelFile.exists()) {
+                if (registryModel.installStatus.shouldRemainWithoutFile()) {
+                    return@forEach
+                }
                 Log.w(TAG, "Removing orphaned registry entry: ${registryModel.id}")
                 installedModelRegistry.removeInstalledModel(registryModel.id)
             } else if (registryModel.runtime == ModelRuntime.IMAGE_GENERATOR) {
@@ -182,7 +220,7 @@ class ChatRepositoryImpl @Inject constructor(
         return file.exists() && file.isFile && file.length() > 1024 * 1024
     }
 
-    private fun classifyModel(file: File, license: String? = null): InstalledModel? {
+    private fun classifyModel(file: File, existing: InstalledModel? = null): InstalledModel? {
         if (!file.exists()) return null
 
         if (isOnnxDiffusionDirectory(file)) {
@@ -193,15 +231,16 @@ class ChatRepositoryImpl @Inject constructor(
                     .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() },
                 filePath = file.absolutePath,
                 fileName = file.name,
-                source = ModelSource.LOCAL,
+                source = existing?.source ?: ModelSource.LOCAL,
                 format = ModelFormat.ONNX_DIFFUSION_BUNDLE,
                 runtime = ModelRuntime.ONNX_DIFFUSION,
                 taskType = ModelTaskType.IMAGE_GENERATION,
                 capabilities = setOf(ModelCapability.IMAGE_GEN),
                 installStatus = InstallStatus.INSTALLED,
                 sizeBytes = file.walkTopDown().filter { it.isFile }.sumOf { it.length() },
+                checksum = existing?.checksum,
                 installedAt = file.lastModified(),
-                license = license
+                license = existing?.license
             )
         }
 
@@ -213,15 +252,16 @@ class ChatRepositoryImpl @Inject constructor(
                     .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() },
                 filePath = file.absolutePath,
                 fileName = file.name,
-                source = ModelSource.LOCAL,
+                source = existing?.source ?: ModelSource.LOCAL,
                 format = ModelFormat.QNN,
                 runtime = ModelRuntime.QUALCOMM,
                 taskType = ModelTaskType.IMAGE_GENERATION,
                 capabilities = setOf(ModelCapability.IMAGE_GEN),
                 installStatus = InstallStatus.INSTALLED,
                 sizeBytes = file.walkTopDown().filter { it.isFile }.sumOf { it.length() },
+                checksum = existing?.checksum,
                 installedAt = file.lastModified(),
-                license = license
+                license = existing?.license
             )
         }
 
@@ -250,17 +290,90 @@ class ChatRepositoryImpl @Inject constructor(
                 .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() },
             filePath = file.absolutePath,
             fileName = file.name,
-            source = ModelSource.LOCAL,
+            source = existing?.source ?: ModelSource.LOCAL,
             format = format,
             runtime = runtime,
             taskType = taskType,
             capabilities = capabilities,
             installStatus = InstallStatus.INSTALLED,
             sizeBytes = file.length(),
+            checksum = existing?.checksum,
             installedAt = file.lastModified(),
+            license = existing?.license
+        )
+    }
+
+    private fun String.installedModelId(): String = removeSuffix(Constants.ModelFiles.ZIP_EXTENSION)
+
+    private fun ModelEntry.toPendingInstalledModel(id: String, filePath: String): InstalledModel {
+        val (format, runtime, taskType, capabilities) = when {
+            effectiveFileName.endsWith(Constants.ModelFiles.ZIP_EXTENSION, ignoreCase = true) &&
+                runtimeType.contains("ONNX", ignoreCase = true) -> Tuple4(
+                    ModelFormat.ONNX_DIFFUSION_BUNDLE,
+                    ModelRuntime.ONNX_DIFFUSION,
+                    ModelTaskType.IMAGE_GENERATION,
+                    setOf(ModelCapability.IMAGE_GEN)
+                )
+            effectiveFileName.endsWith(Constants.ModelFiles.ZIP_EXTENSION, ignoreCase = true) &&
+                runtimeType.contains("Qualcomm", ignoreCase = true) -> Tuple4(
+                    ModelFormat.QNN,
+                    ModelRuntime.QUALCOMM,
+                    ModelTaskType.IMAGE_GENERATION,
+                    setOf(ModelCapability.IMAGE_GEN)
+                )
+            effectiveFileName.endsWith(Constants.ModelFiles.LITERTLM_EXTENSION, ignoreCase = true) -> Tuple4(
+                ModelFormat.LITERTLM,
+                ModelRuntime.LITERT,
+                if (supportsVision) ModelTaskType.VISION_CHAT else ModelTaskType.CHAT,
+                if (supportsVision) setOf(ModelCapability.TEXT, ModelCapability.VISION) else setOf(ModelCapability.TEXT)
+            )
+            else -> Tuple4(
+                ModelFormat.BIN,
+                ModelRuntime.LITERT,
+                if (supportsVision) ModelTaskType.VISION_CHAT else ModelTaskType.CHAT,
+                if (supportsVision) setOf(ModelCapability.TEXT, ModelCapability.VISION) else setOf(ModelCapability.TEXT)
+            )
+        }
+        return InstalledModel(
+            id = id,
+            displayName = name,
+            filePath = filePath,
+            fileName = id,
+            source = provider.toModelSource(),
+            format = format,
+            runtime = runtime,
+            taskType = taskType,
+            capabilities = capabilities,
+            installStatus = InstallStatus.DOWNLOADING,
+            sizeBytes = sizeBytes.takeIf { it > 0 },
+            checksum = sha256,
+            installedAt = null,
             license = license
         )
     }
+
+    private fun String.toModelSource(): ModelSource {
+        return when {
+            equals("Hugging Face", ignoreCase = true) || equals("HF Hub", ignoreCase = true) -> ModelSource.HUGGING_FACE
+            equals("Kaggle", ignoreCase = true) -> ModelSource.KAGGLE
+            equals("Firebase", ignoreCase = true) || equals("Firestore", ignoreCase = true) -> ModelSource.FIREBASE
+            else -> ModelSource.UNKNOWN
+        }
+    }
+
+    private fun InstallStatus.shouldRemainWithoutFile(): Boolean {
+        return this == InstallStatus.DOWNLOADING ||
+            this == InstallStatus.VERIFYING ||
+            this == InstallStatus.FAILED ||
+            this == InstallStatus.CORRUPTED
+    }
+
+    private data class Tuple4<A, B, C, D>(
+        val first: A,
+        val second: B,
+        val third: C,
+        val fourth: D
+    )
 
     override suspend fun deleteModel(modelName: String): Boolean {
         if (modelName.isBlank()) return false
@@ -279,7 +392,9 @@ class ChatRepositoryImpl @Inject constructor(
 
     private fun isImageGenerationDirectory(file: File): Boolean {
         if (!file.isDirectory) return false
-        if (file.name == "generated_images" || file.name == Constants.Inference.NEURAL_CACHE_DIR) return false
+        if (file.name == Constants.ImageGeneration.GENERATED_IMAGES_DIRECTORY ||
+            file.name == Constants.Inference.NEURAL_CACHE_DIR
+        ) return false
         val nameLooksLikeImageModel = file.name.contains("image", ignoreCase = true) ||
             file.name.contains("diffusion", ignoreCase = true) ||
             file.name.contains("stable", ignoreCase = true)
@@ -288,27 +403,11 @@ class ChatRepositoryImpl @Inject constructor(
 
     private fun isOnnxDiffusionDirectory(file: File): Boolean {
         if (!file.isDirectory) return false
-        val requiredFiles = listOf(
-            "text_encoder/model.ort",
-            "tokenizer/vocab.json",
-            "tokenizer/merges.txt",
-            "unet/model.ort",
-            "vae_decoder/model.ort"
-        )
-        return requiredFiles.all { relativePath -> File(file, relativePath).isFile }
+        return Constants.ImageGeneration.ONNX_REQUIRED_FILES.all { relativePath -> File(file, relativePath).isFile }
     }
 
     private fun isQualcommImageGenerationDirectory(file: File): Boolean {
         if (!file.isDirectory) return false
-        val requiredFiles = listOf(
-            "metadata.json",
-            "text_encoder.onnx",
-            "text_encoder_qairt_context.bin",
-            "unet.onnx",
-            "unet_qairt_context.bin",
-            "vae.onnx",
-            "vae_qairt_context.bin"
-        )
-        return requiredFiles.all { fileName -> File(file, fileName).isFile }
+        return Constants.ImageGeneration.QUALCOMM_REQUIRED_FILES.all { fileName -> File(file, fileName).isFile }
     }
 }

@@ -11,6 +11,7 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.neo.chevere.data.PreferenceManager
 import com.neo.chevere.ui.LaunchAnimatedApp
+import com.neo.chevere.ui.chat.RuntimeState
 import com.neo.chevere.ui.chat.ChatViewModel
 import com.neo.chevere.ui.designsystem.HighTechAiTheme
 import com.neo.chevere.ui.navigation.ChevereApp
@@ -44,9 +45,10 @@ class MainActivity : ComponentActivity() {
             
             HighTechAiTheme(darkTheme = isDarkMode) {
                 // Wrap the main app entry with the launch animation
-                // This will stay visible until the ChatViewModel says the model is ready
+                // Only cover the app while a model is actively warming up. A fresh install
+                // starts uninitialized and must be able to show the model download screen.
                 LaunchAnimatedApp(
-                    isReady = chatState.isReady,
+                    isInitializing = chatState.runtimeState is RuntimeState.Initializing,
                     statusMessage = chatState.loadingMessage ?: "INITIALIZING..."
                 ) {
                     ChevereApp()

@@ -1,5 +1,6 @@
 package com.neo.chevere.data.inference
 
+import com.neo.chevere.core.Constants
 import com.neo.chevere.domain.ImageGenerationRequest
 import com.neo.chevere.domain.ImageGenerationResult
 import com.neo.chevere.domain.InstalledModel
@@ -9,16 +10,6 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
-
-private val requiredQualcommStableDiffusionFiles = listOf(
-    "metadata.json",
-    "text_encoder.onnx",
-    "text_encoder_qairt_context.bin",
-    "unet.onnx",
-    "unet_qairt_context.bin",
-    "vae.onnx",
-    "vae_qairt_context.bin"
-)
 
 /**
  * Image-generation backend for Qualcomm AI Hub / QAIRT Stable Diffusion bundles.
@@ -39,7 +30,7 @@ class QualcommImageGenerationEngine @Inject constructor() : ImageGenerationEngin
             return@withContext LoadResult.Failure("Qualcomm image generation model must be an extracted QAIRT directory.")
         }
 
-        val missingFiles = requiredQualcommStableDiffusionFiles.filterNot { fileName ->
+        val missingFiles = Constants.ImageGeneration.QUALCOMM_REQUIRED_FILES.filterNot { fileName ->
             File(modelDirectory, fileName).isFile
         }
         if (missingFiles.isNotEmpty()) {

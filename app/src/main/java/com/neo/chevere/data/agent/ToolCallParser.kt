@@ -1,5 +1,6 @@
 package com.neo.chevere.data.agent
 
+import com.neo.chevere.core.Constants
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -11,7 +12,7 @@ import javax.inject.Singleton
 class ToolCallParser @Inject constructor() {
 
     fun parse(text: String): ToolCall? {
-        val regex = """\[TOOL_CALL:\s*(\w+)\s*(?:,\s*([^\]]+))?\]""".toRegex()
+        val regex = Constants.Agent.TOOL_CALL_PATTERN.toRegex()
         val match = regex.find(text) ?: return null
         
         val toolName = match.groupValues[1]
@@ -74,6 +75,6 @@ class ToolCallParser @Inject constructor() {
     }
     
     fun stripToolCall(text: String): String {
-        return text.replace("""\[TOOL_CALL:.*?\]""".toRegex(), "").trim()
+        return text.replace(Constants.Agent.TOOL_CALL_STRIP_PATTERN.toRegex(), "").trim()
     }
 }

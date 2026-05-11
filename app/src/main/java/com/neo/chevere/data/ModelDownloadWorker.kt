@@ -12,6 +12,7 @@ import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
+import com.neo.chevere.core.Constants
 import com.neo.chevere.data.datasource.DownloadStatus
 import com.neo.chevere.data.datasource.RemoteModelDataSource
 import com.neo.chevere.domain.InstallStatus
@@ -19,6 +20,7 @@ import com.neo.chevere.domain.InstalledModelRegistry
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileInputStream
@@ -26,6 +28,7 @@ import java.io.IOException
 import java.security.MessageDigest
 import java.util.concurrent.atomic.AtomicLong
 import java.util.zip.ZipInputStream
+import kotlin.coroutines.coroutineContext
 
 private const val TAG = "ModelDownloadWorker"
 
@@ -43,92 +46,105 @@ class ModelDownloadWorker @AssistedInject constructor(
     private val lastUpdateMs = AtomicLong(0L)
     private val throttleIntervalMs = 500L
     private val notificationId = 1001
-    private val channelId = "model_download_channel"
+    private val channelId = Constants.Download.NOTIFICATION_CHANNEL_ID
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
-        val uri = inputData.getString("url")
-        val modelName = inputData.getString("modelName")
-        val expectedSha256 = inputData.getString("sha256")
+        val uri = inputData.getString(Constants.Download.INPUT_URL)
+        val modelName = inputData.getString(Constants.Download.INPUT_MODEL_NAME)
+        val modelId = inputData.getString(Constants.Download.INPUT_MODEL_ID)
+            ?: modelName?.removeSuffix(Constants.ModelFiles.ZIP_EXTENSION)
+        val expectedSha256 = inputData.getString(Constants.Download.INPUT_SHA256)
         
         Log.d(TAG, "Worker started. Name: $modelName, URL: $uri")
 
-        if (uri == null || modelName == null) {
-            return@withContext Result.failure(workDataOf("error" to "Missing metadata"))
+        if (uri == null || modelName == null || modelId == null) {
+            return@withContext Result.failure(workDataOf(Constants.Download.OUTPUT_ERROR to "Missing metadata"))
         }
         
-        if (!modelName.endsWith(".litertlm") && !modelName.endsWith(".bin") && !modelName.endsWith(".zip")) {
-             return@withContext Result.failure(workDataOf("error" to "Unsupported file type"))
+        if (!modelName.endsWith(Constants.ModelFiles.LITERTLM_EXTENSION) &&
+            !modelName.endsWith(Constants.ModelFiles.BIN_EXTENSION) &&
+            !modelName.endsWith(Constants.ModelFiles.ZIP_EXTENSION)
+        ) {
+             return@withContext Result.failure(workDataOf(Constants.Download.OUTPUT_ERROR to "Unsupported file type"))
         }
 
         val targetFile = File(applicationContext.filesDir, modelName)
-        val tempFile = File(applicationContext.filesDir, "$modelName.tmp")
+        val tempFile = File(applicationContext.filesDir, "$modelName${Constants.ModelFiles.TEMP_EXTENSION}")
         
         try {
             setForeground(getForegroundInfo())
             
             // Mark as downloading in registry
-            installedModelRegistry.updateInstallStatus(modelName, InstallStatus.DOWNLOADING)
+            installedModelRegistry.updateInstallStatus(modelId, InstallStatus.DOWNLOADING)
 
             val downloadUrl = remoteModelDataSource.getDownloadUrl(uri)
 
             remoteModelDataSource.downloadToFile(downloadUrl, tempFile).collect { status ->
+                coroutineContext.ensureActive()
                 if (status is DownloadStatus.Progress) {
                     val currentTime = System.currentTimeMillis()
                     if (currentTime - lastUpdateMs.get() >= throttleIntervalMs) {
-                        setProgress(workDataOf("progress" to status.percent))
+                        setProgress(workDataOf(Constants.Download.PROGRESS to status.percent))
                         lastUpdateMs.set(currentTime)
                     }
                 }
             }
             
-            if (tempFile.exists() && tempFile.length() > 1024) {
+            if (tempFile.exists() && tempFile.length() > Constants.ModelFiles.MIN_VALID_FILE_SIZE_BYTES) {
                 // Phase 4: Integrity check
-                installedModelRegistry.updateInstallStatus(modelName, InstallStatus.VERIFYING)
+                installedModelRegistry.updateInstallStatus(modelId, InstallStatus.VERIFYING)
                 
                 if (expectedSha256 != null) {
                     val actualSha256 = calculateSha256(tempFile)
                     if (!actualSha256.equals(expectedSha256, ignoreCase = true)) {
-                        installedModelRegistry.updateInstallStatus(modelName, InstallStatus.CORRUPTED)
+                        installedModelRegistry.updateInstallStatus(modelId, InstallStatus.CORRUPTED)
                         throw IOException("Checksum mismatch")
                     }
                 }
 
                 if (targetFile.exists()) targetFile.delete()
 
-                if (modelName.endsWith(".zip")) {
-                    val targetDir = File(applicationContext.filesDir, modelName.removeSuffix(".zip"))
-                    val tempDir = File(applicationContext.filesDir, "${targetDir.name}.tmpdir")
+                if (modelName.endsWith(Constants.ModelFiles.ZIP_EXTENSION)) {
+                    val targetDir = File(applicationContext.filesDir, modelId)
+                    val tempDir = File(applicationContext.filesDir, "${targetDir.name}${Constants.ModelFiles.TEMP_DIRECTORY_EXTENSION}")
                     if (targetDir.exists()) targetDir.deleteRecursively()
                     if (tempDir.exists()) tempDir.deleteRecursively()
                     tempDir.mkdirs()
 
                     unzipModelBundle(tempFile, tempDir)
+                    if (!isSupportedExtractedModelBundle(tempDir)) {
+                        tempDir.deleteRecursively()
+                        installedModelRegistry.updateInstallStatus(modelId, InstallStatus.FAILED)
+                        throw IOException(
+                            "Downloaded ZIP is not a supported model bundle. Missing ONNX or Qualcomm image-generation files."
+                        )
+                    }
                     if (!tempDir.renameTo(targetDir)) {
                         tempDir.deleteRecursively()
-                        installedModelRegistry.updateInstallStatus(modelName, InstallStatus.FAILED)
+                        installedModelRegistry.updateInstallStatus(modelId, InstallStatus.FAILED)
                         throw IOException("Failed to finalize extracted image model")
                     }
                     tempFile.delete()
-                    installedModelRegistry.updateInstallStatus(modelName, InstallStatus.INSTALLED)
-                    setProgress(workDataOf("progress" to 100))
+                    installedModelRegistry.updateInstallStatus(modelId, InstallStatus.INSTALLED)
+                    setProgress(workDataOf(Constants.Download.PROGRESS to 100))
                     Result.success()
                 } else if (tempFile.renameTo(targetFile)) {
-                    installedModelRegistry.updateInstallStatus(modelName, InstallStatus.INSTALLED)
-                    setProgress(workDataOf("progress" to 100))
+                    installedModelRegistry.updateInstallStatus(modelId, InstallStatus.INSTALLED)
+                    setProgress(workDataOf(Constants.Download.PROGRESS to 100))
                     Result.success()
                 } else {
-                    installedModelRegistry.updateInstallStatus(modelName, InstallStatus.FAILED)
+                    installedModelRegistry.updateInstallStatus(modelId, InstallStatus.FAILED)
                     throw IOException("Finalization failed")
                 }
             } else {
-                installedModelRegistry.updateInstallStatus(modelName, InstallStatus.FAILED)
+                installedModelRegistry.updateInstallStatus(modelId, InstallStatus.FAILED)
                 throw IOException("Empty file")
             }
         } catch (e: Exception) {
             Log.e(TAG, "Download failed: ${e.message}")
             if (tempFile.exists()) tempFile.delete()
-            installedModelRegistry.updateInstallStatus(modelName, InstallStatus.FAILED)
-            Result.failure(workDataOf("error" to (e.localizedMessage ?: "Unknown error")))
+            installedModelRegistry.updateInstallStatus(modelId, InstallStatus.FAILED)
+            Result.failure(workDataOf(Constants.Download.OUTPUT_ERROR to (e.localizedMessage ?: Constants.Download.UNKNOWN_ERROR)))
         }
     }
 
@@ -169,10 +185,19 @@ class ModelDownloadWorker @AssistedInject constructor(
         }
     }
 
+    private fun isSupportedExtractedModelBundle(directory: File): Boolean {
+        return hasRequiredFiles(directory, Constants.ImageGeneration.ONNX_REQUIRED_FILES) ||
+            hasRequiredFiles(directory, Constants.ImageGeneration.QUALCOMM_REQUIRED_FILES)
+    }
+
+    private fun hasRequiredFiles(directory: File, requiredFiles: List<String>): Boolean {
+        return requiredFiles.all { relativePath -> File(directory, relativePath).isFile }
+    }
+
     override suspend fun getForegroundInfo(): ForegroundInfo {
         createNotificationChannel()
         val notification = NotificationCompat.Builder(applicationContext, channelId)
-            .setContentTitle("Downloading Neural Core")
+            .setContentTitle(Constants.Download.NOTIFICATION_TITLE)
             .setSmallIcon(android.R.drawable.stat_sys_download)
             .setOngoing(true)
             .build()
@@ -185,7 +210,7 @@ class ModelDownloadWorker @AssistedInject constructor(
     }
 
     private fun createNotificationChannel() {
-        val channel = NotificationChannel(channelId, "Model Downloads", NotificationManager.IMPORTANCE_LOW)
+        val channel = NotificationChannel(channelId, Constants.Download.NOTIFICATION_CHANNEL_NAME, NotificationManager.IMPORTANCE_LOW)
         val manager = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         manager.createNotificationChannel(channel)
     }

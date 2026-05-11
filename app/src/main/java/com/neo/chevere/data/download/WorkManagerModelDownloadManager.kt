@@ -6,6 +6,7 @@ import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
+import com.neo.chevere.core.Constants
 import com.neo.chevere.data.ModelDownloadWorker
 import com.neo.chevere.domain.DownloadProgress
 import kotlinx.coroutines.flow.Flow
@@ -21,8 +22,7 @@ class WorkManagerModelDownloadManager @Inject constructor(
     private val workManager: WorkManager
 ) {
     companion object {
-        const val TAG_MODEL_DOWNLOAD = "MODEL_DOWNLOAD_TASK"
-        private const val TAG_MODEL_NAME_PREFIX = "MODEL_NAME:"
+        const val TAG_MODEL_DOWNLOAD = Constants.Download.TAG_MODEL_DOWNLOAD
     }
 
     /**
@@ -33,8 +33,8 @@ class WorkManagerModelDownloadManager @Inject constructor(
         workManager.getWorkInfosByTagFlow(TAG_MODEL_DOWNLOAD).map { workInfos ->
             workInfos.mapNotNull { info ->
                 val modelName = info.tags.firstOrNull {
-                    it.startsWith(TAG_MODEL_NAME_PREFIX)
-                }?.removePrefix(TAG_MODEL_NAME_PREFIX) ?: return@mapNotNull null
+                    it.startsWith(Constants.Download.TAG_MODEL_NAME_PREFIX)
+                }?.removePrefix(Constants.Download.TAG_MODEL_NAME_PREFIX) ?: return@mapNotNull null
                 
                 modelName to mapWorkInfoToDownloadProgress(info)
             }.toMap()
@@ -43,15 +43,21 @@ class WorkManagerModelDownloadManager @Inject constructor(
     /**
      * Initiates a model download task.
      */
-    fun downloadModel(url: String, modelName: String, sha256: String? = null): Flow<DownloadProgress> {
+    fun downloadModel(
+        url: String,
+        modelName: String,
+        modelId: String = modelName.removeSuffix(Constants.ModelFiles.ZIP_EXTENSION),
+        sha256: String? = null
+    ): Flow<DownloadProgress> {
         Log.d("DownloadManager", "Creating WorkManager request for $modelName from $url")
         
         val inputData = Data.Builder()
-            .putString("url", url)
-            .putString("modelName", modelName)
+            .putString(Constants.Download.INPUT_URL, url)
+            .putString(Constants.Download.INPUT_MODEL_NAME, modelName)
+            .putString(Constants.Download.INPUT_MODEL_ID, modelId)
             .apply {
                 if (sha256 != null) {
-                    putString("sha256", sha256)
+                    putString(Constants.Download.INPUT_SHA256, sha256)
                 }
             }
             .build()
@@ -59,7 +65,7 @@ class WorkManagerModelDownloadManager @Inject constructor(
         val workRequest = OneTimeWorkRequestBuilder<ModelDownloadWorker>()
             .setInputData(inputData)
             .addTag(TAG_MODEL_DOWNLOAD) // Generic tag for tracking all downloads
-            .addTag("$TAG_MODEL_NAME_PREFIX$modelName") // Specific tag for this model
+            .addTag("${Constants.Download.TAG_MODEL_NAME_PREFIX}$modelName") // Specific tag for this model
             .build()
         
         // Replace same-model work so a stale interrupted job cannot keep the download button pinned.
@@ -71,15 +77,22 @@ class WorkManagerModelDownloadManager @Inject constructor(
         }
     }
 
+    /**
+     * Cancels an active download and lets WorkManager surface the cancelled state.
+     */
+    fun cancelDownload(modelName: String) {
+        workManager.cancelUniqueWork(modelName)
+    }
+
     internal fun mapWorkInfoToDownloadProgress(workInfo: WorkInfo?): DownloadProgress {
         return when (workInfo?.state) {
             WorkInfo.State.RUNNING -> {
-                val progress = workInfo.progress.getInt("progress", 0)
+                val progress = workInfo.progress.getInt(Constants.Download.PROGRESS, 0)
                 DownloadProgress.Progress(progress)
             }
             WorkInfo.State.SUCCEEDED -> DownloadProgress.Finished
             WorkInfo.State.FAILED -> {
-                val error = workInfo.outputData.getString("error") ?: "Download failed."
+                val error = workInfo.outputData.getString(Constants.Download.OUTPUT_ERROR) ?: "Download failed."
                 DownloadProgress.Error(error)
             }
             WorkInfo.State.ENQUEUED, WorkInfo.State.BLOCKED -> DownloadProgress.Progress(0)

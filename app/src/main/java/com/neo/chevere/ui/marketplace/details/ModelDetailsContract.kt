@@ -14,6 +14,7 @@ data class ModelDetailsState(
     val isActionInProgress: Boolean = false,
     val isActive: Boolean = false,
     val isPending: Boolean = false,
+    val showDownloadRequirements: Boolean = false,
     val error: String? = null,
     val downloadProgress: Int? = null
 ) : UiState {
@@ -24,6 +25,9 @@ data class ModelDetailsState(
 sealed class ModelDetailsIntent : UiIntent {
     data class LoadDetails(val modelId: String) : ModelDetailsIntent()
     data object Download : ModelDetailsIntent()
+    data object ConfirmDownload : ModelDetailsIntent()
+    data object DismissDownloadRequirements : ModelDetailsIntent()
+    data object CancelDownload : ModelDetailsIntent()
     data object Delete : ModelDetailsIntent()
     data object Select : ModelDetailsIntent()
     data object ConfirmSwitch : ModelDetailsIntent()
