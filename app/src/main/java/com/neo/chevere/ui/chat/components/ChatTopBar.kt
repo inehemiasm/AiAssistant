@@ -1,18 +1,20 @@
 package com.neo.chevere.ui.chat.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -21,10 +23,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -33,19 +31,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.neo.chevere.R
-import com.neo.chevere.core.Constants
 import com.neo.chevere.ui.designsystem.Typography
 
 /**
  * A top app bar for the chat screen.
  *
- * Displays the currently selected model, provides a menu for model selection,
- * and actions for clearing the chat and navigating to profile/settings.
+ * Displays the Chevere brand and the available local AI capabilities, with
+ * actions for clearing chat and navigating to model/settings screens.
  *
  * @param isInteractionEnabled Whether user interaction with the bar's elements is allowed.
- * @param selectedModel The name of the currently selected AI model.
- * @param availableModels List of model names available for switching.
- * @param onModelSelected Callback triggered when a model is selected from the dropdown.
+ * @param isChatReady Whether a chat or vision chat model is available.
+ * @param isImageReady Whether an image generation model is available.
  * @param onClearChat Callback triggered when the "clear chat" button is clicked.
  * @param onModelsClick Callback triggered when the navigation icon (menu) is clicked.
  * @param onSettingsClick Callback triggered when the profile icon is clicked.
@@ -55,16 +51,13 @@ import com.neo.chevere.ui.designsystem.Typography
 @Composable
 fun ChatTopBar(
     isInteractionEnabled: Boolean,
-    selectedModel: String,
-    availableModels: List<String>,
-    onModelSelected: (String) -> Unit,
+    isChatReady: Boolean,
+    isImageReady: Boolean,
     onClearChat: () -> Unit,
     onModelsClick: () -> Unit,
     onSettingsClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var showMenu by remember { mutableStateOf(false) }
-    
     TopAppBar(
         navigationIcon = {
             IconButton(onClick = onModelsClick) {
@@ -74,39 +67,22 @@ fun ChatTopBar(
         title = {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.fillMaxWidth().clickable { if (isInteractionEnabled && availableModels.isNotEmpty()) showMenu = true }
+                modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text = selectedModel.replace(Constants.ModelFiles.LITERTLM_EXTENSION, "").uppercase().ifEmpty { "SELECT MODEL" },
-                    style = Typography.titleMedium,
+                    text = "CHEVERE",
+                    style = Typography.titleLarge,
                     color = MaterialTheme.colorScheme.onSurface,
-                    letterSpacing = 1.sp
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = 2.sp
                 )
-                Text(
-                    text = stringResource(R.string.chevere_private_ai),
-                    style = Typography.labelSmall.copy(fontSize = 9.sp, fontWeight = FontWeight.Normal),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                    letterSpacing = 1.sp
-                )
-                
-                if (availableModels.isNotEmpty()) {
-                    DropdownMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false },
-                        modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainerHighest)
-                    ) {
-                        availableModels.forEach { model ->
-                            DropdownMenuItem(
-                                text = { 
-                                    Text(
-                                        model.replace(Constants.ModelFiles.LITERTLM_EXTENSION, "").uppercase(),
-                                        color = if (model == selectedModel) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                                    ) 
-                                },
-                                onClick = { onModelSelected(model); showMenu = false }
-                            )
-                        }
-                    }
+
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    CapabilityChip(label = "CHAT", ready = isChatReady)
+                    CapabilityChip(label = "IMAGE", ready = isImageReady)
                 }
             }
         },
@@ -129,4 +105,34 @@ fun ChatTopBar(
         ),
         modifier = modifier.background(MaterialTheme.colorScheme.surface.copy(alpha = 0.7f))
     )
+}
+
+@Composable
+private fun CapabilityChip(label: String, ready: Boolean) {
+    val contentColor = if (ready) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+    val containerColor = if (ready) {
+        MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+    } else {
+        MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.55f)
+    }
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .background(containerColor, RoundedCornerShape(50))
+            .padding(horizontal = 7.dp, vertical = 2.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(5.dp)
+                .background(contentColor, CircleShape)
+        )
+        androidx.compose.foundation.layout.Spacer(Modifier.width(4.dp))
+        Text(
+            text = label,
+            style = Typography.labelSmall.copy(fontSize = 8.sp, fontWeight = FontWeight.Bold),
+            color = contentColor,
+            letterSpacing = 1.sp
+        )
+    }
 }

@@ -10,7 +10,10 @@ import com.neo.chevere.core.Constants
 import com.neo.chevere.data.PreferenceManager
 import com.neo.chevere.domain.ChatRepository
 import com.neo.chevere.domain.DownloadProgress
+import com.neo.chevere.domain.InstalledModel
 import com.neo.chevere.ui.navigation.Route
+import com.neo.chevere.ui.marketplace.ModelActivationCategory
+import com.neo.chevere.ui.marketplace.activationCategory
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -28,6 +31,7 @@ class ModelDetailsViewModel @Inject constructor(
 
     private val modelDetailsRoute = savedStateHandle.toRoute<Route.ModelDetails>()
     private val modelId = modelDetailsRoute.modelId
+    private var handledFinishedDownload = false
 
     init {
         Log.d(TAG, "--- INITIALIZING VM for Model: $modelId ---")
@@ -63,6 +67,10 @@ class ModelDetailsViewModel @Inject constructor(
                         Log.i(TAG, "[DOWNLOAD] Finished for $modelId. Reloading details.")
                         setState { copy(downloadProgress = null, isActionInProgress = false) }
                         handleIntent(ModelDetailsIntent.LoadDetails(modelId))
+                        if (!handledFinishedDownload) {
+                            handledFinishedDownload = true
+                            maybeAutoActivateAfterDownload()
+                        }
                     }
                     else -> { /* Idle or Error */ }
                 }
@@ -197,5 +205,47 @@ class ModelDetailsViewModel @Inject constructor(
                     sendEffect { ModelDetailsEffect.ShowToast("Switch failed: ${e.message}") }
                 }
         }
+    }
+
+    private suspend fun maybeAutoActivateAfterDownload() {
+        val installedModels = repository.getLocalModels()
+        val installedModel = installedModels.find {
+            it.id == modelId ||
+                it.id == modelId.removeSuffix(Constants.ModelFiles.ZIP_EXTENSION) ||
+                it.fileName == modelId
+        } ?: return
+
+        if (!installedModel.isHealthy) return
+
+        when (installedModel.activationCategory()) {
+            ModelActivationCategory.CHAT -> {
+                val healthyChatModels = installedModels.filter {
+                    it.isHealthy && it.activationCategory() == ModelActivationCategory.CHAT
+                }
+                if (healthyChatModels.size == 1) {
+                    activateChatModel(installedModel)
+                }
+            }
+            ModelActivationCategory.IMAGE_GENERATION -> {
+                val healthyImageModels = installedModels.filter {
+                    it.isHealthy && it.activationCategory() == ModelActivationCategory.IMAGE_GENERATION
+                }
+                if (healthyImageModels.size == 1) {
+                    sendEffect { ModelDetailsEffect.ShowToast("${installedModel.displayName} is ready for image generation") }
+                }
+            }
+        }
+    }
+
+    private suspend fun activateChatModel(model: InstalledModel) {
+        repository.initializeModel(model.filePath)
+            .onSuccess {
+                preferenceManager.updateSelectedModel(model.id)
+                setState { copy(isActionInProgress = false, isActive = true) }
+                sendEffect { ModelDetailsEffect.ShowToast("${model.displayName} activated") }
+            }
+            .onFailure { e ->
+                sendEffect { ModelDetailsEffect.ShowToast("Downloaded, but activation failed: ${e.message}") }
+            }
     }
 }

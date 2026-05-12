@@ -176,16 +176,14 @@ fun DiscoverModelsList(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            state.groupedRemoteModels.forEach { (provider, models) ->
-                item {
-                    Text(
-                        text = provider.uppercase(),
-                        style = Typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp)
-                    )
-                }
-                
+            val groups = listOf(
+                "Chat and Vision Models" to state.chatRemoteModels,
+                "Image Generation Models" to state.imageRemoteModels
+            ).filter { (_, models) -> models.isNotEmpty() }
+
+            groups.forEach { (title, models) ->
+                item { ModelSectionHeader(title) }
+
                 items(models) { model ->
                     val installedVersion = state.localModels.find {
                         it.fileName == model.effectiveFileName ||
@@ -231,7 +229,11 @@ fun InstalledModelsList(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                items(state.localModels) { model ->
+                if (state.chatLocalModels.isNotEmpty()) {
+                    item { ModelSectionHeader("Chat and Vision Models") }
+                }
+
+                items(state.chatLocalModels) { model ->
                     val isActive = state.activeModelId == model.id
                     val isPending = state.pendingModelId == model.id
                     val isSwitching = (state.switchState as? ModelSwitchState.Switching)?.toModelId == model.id ||
@@ -243,6 +245,23 @@ fun InstalledModelsList(
                         isPending = isPending,
                         isSwitching = isSwitching,
                         warmupStatus = if (isSwitching) (state.switchState as? ModelSwitchState.WarmingUp)?.progress else null,
+                        onSelect = { onIntent(MarketplaceIntent.SelectModel(model.id)) },
+                        onDelete = { onIntent(MarketplaceIntent.DeleteModel(model.id)) },
+                        onClick = { onModelClick(model.id) }
+                    )
+                }
+
+                if (state.imageLocalModels.isNotEmpty()) {
+                    item { ModelSectionHeader("Image Generation Models") }
+                }
+
+                items(state.imageLocalModels) { model ->
+                    LocalModelCard(
+                        model = model,
+                        isActive = false,
+                        isPending = model.isHealthy,
+                        isSwitching = model.isTransitioning,
+                        warmupStatus = null,
                         onSelect = { onIntent(MarketplaceIntent.SelectModel(model.id)) },
                         onDelete = { onIntent(MarketplaceIntent.DeleteModel(model.id)) },
                         onClick = { onModelClick(model.id) }
@@ -292,6 +311,16 @@ fun InstalledModelsList(
             }
         }
     }
+}
+
+@Composable
+private fun ModelSectionHeader(title: String) {
+    Text(
+        text = title.uppercase(),
+        style = Typography.labelLarge,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp)
+    )
 }
 
 @Composable
@@ -523,7 +552,7 @@ fun LocalModelCard(
                 )
             } else if (isPending && !isSwitching) {
                 Badge(
-                    text = "SELECTED",
+                    text = if (model.activationCategory() == ModelActivationCategory.IMAGE_GENERATION) "READY" else "SELECTED",
                     containerColor = MaterialTheme.colorScheme.secondary,
                     contentColor = MaterialTheme.colorScheme.onSecondary,
                     modifier = Modifier.align(Alignment.TopEnd).padding(16.dp)

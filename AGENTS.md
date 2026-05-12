@@ -52,9 +52,9 @@ Path: `app/src/main/java/com/neo/chevere/data/`
   - `OnnxLocalDiffusionEngine`: local ONNX Stable Diffusion style pipeline.
   - `QualcommImageGenerationEngine`: QNN bundle validation only; native QAIRT execution is not implemented.
 - **Data sources** (`data/datasource/`):
-  - `CompositeModelCatalogDataSource`: merges Firestore, Hugging Face, and Kaggle catalogs.
+  - `CompositeModelCatalogDataSource`: merges Firestore and Hugging Face catalogs.
   - `HuggingFaceModelCatalogDataSource`: curated models plus Hub discovery.
-  - `KaggleModelCatalogDataSource`: curated Kaggle/TFHub style models.
+  - Kaggle model discovery has been removed because it was unreliable and often blocked.
 - **Registry** (`data/datasource/local/`):
   - `RoomInstalledModelRegistry`: source of truth for installed models.
   - `AppDatabase`: Room database.
@@ -67,18 +67,26 @@ Path: `app/src/main/java/com/neo/chevere/data/`
 Path: `app/src/main/java/com/neo/chevere/ui/`
 
 - Chat MVI state lives in `ChatContract.kt`.
+- `ChatTopBar` is brand/capability focused. It shows `CHEVERE` with `CHAT` and `IMAGE` readiness chips, not the selected model filename.
+- Attached images must route through chat/vision inference. Do not route image attachments to the text-to-image backend unless the user explicitly invokes an image-generation flow without an attachment.
+- Image-only sends default to `Describe this image.`.
+- Assistant message actions should use share semantics. Do not reintroduce report/flag controls until a real reporting backend exists.
 - `SendState.GeneratingImage` drives `GENERATING IMAGE...` UI while slash commands run.
 - Slash commands `/image`, `/img`, and `/imagine` bypass Gemma and call `ChatRepository.generateImage`.
+- If no healthy image-generation model is installed, image requests should show `ChatEffect.ShowImageModelDownloadPrompt` instead of falling through to a tool error.
 - Explicit image requests show `AgeVerificationDialog` first.
 - Explicit generated images are masked by default using `ChatMessage.isExplicitImage` and `ChatMessage.isImageMasked`.
 - Marketplace state observes both Room-installed models and WorkManager download progress.
+- Marketplace UI should keep chat/vision models and image-generation models visually separated. Chat models can be selected as the active LLM; image models are used automatically by the image backend.
+- Settings Safety & Privacy content should remain expandable and factual: local processing, release controls, user-controlled sharing, and local storage.
 
 ## Model Management Rules
 
 - Active models cannot be deleted.
 - Downloads and engine switches should not be interrupted by deletion.
 - Installed model health is represented with `InstallStatus`; use existing enum values instead of raw strings.
-- `ModelSource` describes where a model came from, but local disk scans currently classify installed files as `LOCAL`.
+- `ModelSource` describes where a model came from. Supported remote sources are Hugging Face and Firebase/Firestore; local disk scans classify installed files as `LOCAL`.
+- When the first healthy chat model finishes downloading, it should auto-activate. When the first healthy image-generation model finishes downloading, it should become usable immediately without replacing the active chat model.
 - Supported installed formats:
   - `.litertlm`
   - `.bin`
@@ -99,6 +107,12 @@ Path: `app/src/main/java/com/neo/chevere/ui/`
 - Agent-triggered image generation returns the `CHEVERE_IMAGE_GENERATION_RESULT:` payload; `ChatViewModel` parses it into an image message.
 - Direct slash-command image generation does not ask Gemma to rewrite the prompt.
 - Agent tool image generation should ask Gemma to improve the prompt before `generate_image`.
+- Explicit image generation is debug-only. Release builds block explicit prompts before the backend is invoked.
+
+## Visual Identity Notes
+
+- Launcher icon and splash animation should use the same robot-head/cyan identity.
+- Keep attachment previews large enough to inspect and use a neutral remove affordance rather than an oversized destructive red control.
 
 ## Development Guidelines
 

@@ -5,19 +5,25 @@ Chevere is a privacy-first Android assistant that runs local language models on 
 ## Features
 
 - **Local LLM execution**: Runs LiteRT-LM models such as Gemma from app-private storage.
-- **Multimodal chat**: Users can attach gallery or camera images when the active model supports vision.
+- **Multimodal chat**: Users can attach gallery or camera images when the active chat model supports vision. Image attachments always route through chat/vision inference rather than the image-generation backend.
 - **Agent workflow**: `AgentOrchestrator` runs a Reason-Act-Observe loop and executes registered tools.
 - **Image generation**:
   - Agent tool: `generate_image` lets Gemma improve the prompt before calling the image backend.
   - Slash commands: `/image`, `/img`, and `/imagine` bypass Gemma and call image generation directly.
+  - If no healthy local image model is installed, image requests show a download prompt instead of failing inside the agent loop.
   - Local ONNX diffusion runtime for extracted Stable Diffusion bundles.
   - Qualcomm/QNN bundle detection is present, but native QAIRT execution is not implemented yet.
 - **Explicit image handling**:
-  - Explicit prompts trigger an age-verification dialog before generation.
-  - Generated explicit images are masked by default in chat.
-  - Users can reveal or hide each explicit image with the visibility toggle.
+  - Debug builds can gate explicit image prompts behind an age-verification dialog.
+  - Release builds block explicit image generation before it reaches any model backend.
+  - Debug explicit images are masked by default in chat and can be revealed or hidden with the visibility toggle.
+- **Safety and privacy UX**:
+  - Settings uses expandable Safety & Privacy rows for local processing, content controls, sharing, and local storage.
+  - Assistant responses expose a share action through the Android share sheet. There is no in-app report mechanism yet.
 - **Model marketplace**:
-  - Merges curated and discovered models from Hugging Face, Kaggle, and Firestore.
+  - Merges curated/discovered Hugging Face models with Firestore catalog entries.
+  - Separates chat/vision models from image-generation models for clearer selection.
+  - Auto-activates the first usable chat model after download; the first image model becomes available immediately for image generation without replacing the chat model.
   - Uses Room as the installed-model source of truth.
   - Protects active models from deletion and tracks lifecycle states with `InstallStatus`.
 - **Background downloads**:
@@ -67,7 +73,12 @@ Located under `app/src/main/java/com/neo/chevere/data/`.
 Located under `app/src/main/java/com/neo/chevere/ui/`.
 
 - Chat uses `ChatState`, `ChatIntent`, and `SendState`.
+- The chat top bar is brand/capability focused: it shows `CHEVERE` plus `CHAT` and `IMAGE` readiness chips rather than a single selected model name.
+- Chat model switching lives in the Models screen. Image-generation models are used automatically by `ImageGenerationManager`.
+- Attached images force the chat/vision path. If the text field is empty, the prompt defaults to `Describe this image.`.
+- Attached-image previews use a larger thumbnail with a neutral remove control.
 - Slash-command image generation uses `SendState.GeneratingImage` so the UI shows `GENERATING IMAGE...`.
+- Requests that look like image generation show an image-model download dialog when no healthy image model is installed.
 - `AgeVerificationDialog` handles explicit prompt gating.
 - Generated explicit images use `ChatMessage.isExplicitImage` and `ChatMessage.isImageMasked` to show a blur mask and reveal/hide toggle.
 - Marketplace screens observe `allDownloadsProgress` and local model state.
@@ -116,14 +127,16 @@ $env:GRADLE_USER_HOME='C:\Users\nehem\.gradle'; .\gradlew.bat assembleDebug --no
 1. Add `google-services.json` to `app/` if Firestore catalog support is needed.
 2. Build and install the debug APK.
 3. Open **Models** and download or manually push a supported model bundle.
-4. Select a LiteRT-LM model for chat, or keep one installed so the agent can call tools.
-5. Use `/image your prompt` for direct local image generation.
+4. Download a LiteRT-LM model for chat. If it is the only chat model, it activates automatically.
+5. Download an ONNX diffusion image model if you want image generation. If it is the only image model, it is ready immediately.
+6. Use `/image your prompt` for direct local image generation.
 
 ## Notes
 
 - Image generation is slow on CPU/mobile hardware and can take minutes.
 - The ONNX diffusion path is experimental and quality depends heavily on the bundle format and scheduler compatibility.
-- Explicit image generation is gated by age verification and masked in the UI by default.
+- Explicit image generation is debug-only. Release builds block explicit image generation.
+- Launcher icon and splash robot use the same robot-head/cyan visual identity.
 - Network access is only required for model discovery, downloads, web search, weather, and other explicitly network-backed tools.
 
 ## License

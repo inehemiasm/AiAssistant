@@ -21,7 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.Flag
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Icon
@@ -56,7 +56,7 @@ import java.util.Locale
  * @param modifier The modifier to be applied to the list.
  * @param listState The state object to be used to control or observe the list's scroll position.
  * @param onToggleExplicitImageMask Called when the user reveals or hides a masked explicit image.
- * @param onReportMessage Called when the user wants to report an assistant message.
+ * @param onShareMessage Called when the user wants to share an assistant message.
  */
 @Composable
 fun MessageList(
@@ -64,14 +64,14 @@ fun MessageList(
     modifier: Modifier = Modifier,
     listState: LazyListState,
     onToggleExplicitImageMask: (Int) -> Unit = {},
-    onReportMessage: (Int) -> Unit = {}
+    onShareMessage: (Int) -> Unit = {}
 ) {
     LazyColumn(state = listState, modifier = modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(24.dp)) {
         itemsIndexed(messages) { index, message ->
             FuturisticChatBubble(
                 message = message,
                 onToggleExplicitImageMask = { onToggleExplicitImageMask(index) },
-                onReportMessage = { onReportMessage(index) }
+                onShareMessage = { onShareMessage(index) }
             )
         }
     }
@@ -85,13 +85,13 @@ fun MessageList(
  *
  * @param message The [ChatMessage] to display.
  * @param onToggleExplicitImageMask Called when the explicit image visibility button is tapped.
- * @param onReportMessage Called when the report button is tapped.
+ * @param onShareMessage Called when the share button is tapped.
  */
 @Composable
 fun FuturisticChatBubble(
     message: ChatMessage,
     onToggleExplicitImageMask: () -> Unit = {},
-    onReportMessage: () -> Unit = {}
+    onShareMessage: () -> Unit = {}
 ) {
     val isUser = message.isUser
     val bubbleColor = if (isUser) MaterialTheme.colorScheme.surfaceContainerHigh else MaterialTheme.colorScheme.surfaceContainerLow
@@ -169,12 +169,12 @@ fun FuturisticChatBubble(
                                 }
                             }
                             IconButton(
-                                onClick = onReportMessage,
+                                onClick = onShareMessage,
                                 modifier = Modifier.size(32.dp)
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.Flag,
-                                    contentDescription = stringResource(R.string.report_message),
+                                    imageVector = Icons.Default.Share,
+                                    contentDescription = stringResource(R.string.share_message),
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                                     modifier = Modifier.size(18.dp)
                                 )

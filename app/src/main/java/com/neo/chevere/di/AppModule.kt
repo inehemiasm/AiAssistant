@@ -94,11 +94,10 @@ abstract class AppModule {
                     checkHttpMethod = false
                 }
                 
-                // Add default headers to avoid being blocked by Kaggle/CDNs
+                // Keep catalog and model downloads looking like normal browser requests.
                 install(DefaultRequest) {
                     header(HttpHeaders.UserAgent, Constants.Network.DEFAULT_USER_AGENT)
                     header(HttpHeaders.Accept, Constants.Network.ACCEPT_ALL)
-                    header("Referer", Constants.Network.KAGGE_REFERER)
                 }
             }
         }

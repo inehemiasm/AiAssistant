@@ -7,6 +7,8 @@ import com.neo.chevere.data.PreferenceManager
 import com.neo.chevere.domain.ChatRepository
 import com.neo.chevere.domain.DownloadProgress
 import com.neo.chevere.domain.InstallStatus
+import com.neo.chevere.domain.InstalledModel
+import com.neo.chevere.domain.ModelEntry
 import com.neo.chevere.ui.common.CatalogState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.collectLatest
@@ -22,6 +24,8 @@ class MarketplaceViewModel @Inject constructor(
     private val repository: ChatRepository,
     private val preferenceManager: PreferenceManager
 ) : BaseViewModel<MarketplaceState, MarketplaceIntent, MarketplaceEffect>(application, MarketplaceState()) {
+
+    private val handledFinishedDownloads = mutableSetOf<String>()
 
     init {
         viewModelScope.launch {
@@ -51,9 +55,16 @@ class MarketplaceViewModel @Inject constructor(
                     )
                 }
 
-                // If any download just finished, refresh local models
-                if (progressMap.values.any { it is DownloadProgress.Finished }) {
-                    loadLocalModels()
+                val finishedDownloads = progressMap
+                    .filterValues { it is DownloadProgress.Finished }
+                    .keys
+                    .filter { handledFinishedDownloads.add(it) }
+
+                if (finishedDownloads.isNotEmpty()) {
+                    val models = loadLocalModels()
+                    finishedDownloads.forEach { finishedKey ->
+                        maybeAutoActivateDownloadedModel(finishedKey, models)
+                    }
                 }
             }
         }
@@ -75,9 +86,10 @@ class MarketplaceViewModel @Inject constructor(
         }
     }
 
-    private suspend fun loadLocalModels() {
+    private suspend fun loadLocalModels(): List<InstalledModel> {
         val models = repository.getLocalModels()
         setState { copy(localModels = models) }
+        return models
     }
 
     private suspend fun fetchRemoteModels() {
@@ -124,6 +136,11 @@ class MarketplaceViewModel @Inject constructor(
                     sendEffect { MarketplaceEffect.ShowToast("Model is not ready for selection.") }
                     return
                 }
+
+                if (model.activationCategory() == ModelActivationCategory.IMAGE_GENERATION) {
+                    sendEffect { MarketplaceEffect.ShowToast("Image models are used automatically when you generate images.") }
+                    return
+                }
                 
                 setState { copy(pendingModelId = intent.modelId) }
             }
@@ -158,7 +175,7 @@ class MarketplaceViewModel @Inject constructor(
         }
     }
 
-    private fun downloadModel(model: com.neo.chevere.domain.ModelEntry) {
+    private fun downloadModel(model: ModelEntry) {
         // Just trigger it. The global observer in init will handle state updates.
         viewModelScope.launch {
             repository.downloadModel(model).collectLatest { progress ->
@@ -167,5 +184,56 @@ class MarketplaceViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    private suspend fun maybeAutoActivateDownloadedModel(
+        finishedKey: String,
+        installedModels: List<InstalledModel>
+    ) {
+        val remoteEntry = currentState.remoteModels.find {
+            it.effectiveFileName == finishedKey || it.effectiveInstalledId == finishedKey
+        }
+        val installedModel = installedModels.find { model ->
+            model.id == finishedKey ||
+                model.fileName == finishedKey ||
+                (remoteEntry != null && model.matchesEntry(remoteEntry))
+        } ?: return
+
+        if (!installedModel.isHealthy) return
+
+        when (installedModel.activationCategory()) {
+            ModelActivationCategory.CHAT -> {
+                val healthyChatModels = installedModels
+                    .filter { it.isHealthy && it.activationCategory() == ModelActivationCategory.CHAT }
+                if (healthyChatModels.size == 1) {
+                    activateChatModel(installedModel)
+                }
+            }
+            ModelActivationCategory.IMAGE_GENERATION -> {
+                val healthyImageModels = installedModels
+                    .filter { it.isHealthy && it.activationCategory() == ModelActivationCategory.IMAGE_GENERATION }
+                if (healthyImageModels.size == 1) {
+                    sendEffect { MarketplaceEffect.ShowToast("${installedModel.displayName} is ready for image generation") }
+                }
+            }
+        }
+    }
+
+    private suspend fun activateChatModel(model: InstalledModel) {
+        repository.initializeModel(model.filePath)
+            .onSuccess {
+                preferenceManager.updateSelectedModel(model.id)
+                setState {
+                    copy(
+                        activeModelId = model.id,
+                        pendingModelId = null,
+                        switchState = ModelSwitchState.Ready(model.id)
+                    )
+                }
+                sendEffect { MarketplaceEffect.ShowToast("${model.displayName} activated") }
+            }
+            .onFailure { e ->
+                sendEffect { MarketplaceEffect.ShowToast("Downloaded, but activation failed: ${e.message}") }
+            }
     }
 }

@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material3.Surface
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -82,22 +83,34 @@ fun ChatInputBar(
 
     Column(modifier = modifier) {
         if (selectedImageUri != null) {
-            Box(Modifier.size(80.dp).padding(bottom = 8.dp, start = 16.dp)) {
+            Box(Modifier.size(112.dp).padding(bottom = 10.dp, start = 16.dp)) {
                 AsyncImage(
                     model = selectedImageUri,
                     contentDescription = null,
-                    modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)),
+                    modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp)),
                     contentScale = ContentScale.Crop
                 )
-                IconButton(
-                    onClick = onRemoveImage,
+                Surface(
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+                    contentColor = MaterialTheme.colorScheme.onSurface,
+                    shape = CircleShape,
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .size(20.dp)
-                        .offset(x = 4.dp, y = (-4).dp)
-                        .background(MaterialTheme.colorScheme.error, CircleShape)
+                        .offset(x = 8.dp, y = (-8).dp),
+                    shadowElevation = 2.dp,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
                 ) {
-                    Icon(Icons.Default.Close, null, tint = MaterialTheme.colorScheme.onError, modifier = Modifier.size(12.dp))
+                    IconButton(
+                        onClick = onRemoveImage,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Close,
+                            null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
                 }
             }
         }

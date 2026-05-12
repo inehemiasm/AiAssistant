@@ -51,11 +51,27 @@ Prefer `1.dp` outlines over shadows. Use `outlineVariant` at low alpha for inact
 
 ## Chat UX Rules
 
-### 9. Generation Feedback
+### 9. Top Bar Identity
+
+The chat top bar should represent Chevere and local capability readiness, not a single model filename. Use the `CHEVERE` brand title with compact readiness chips such as `CHAT` and `IMAGE`. Model selection and model details belong in the Models screen.
+
+### 10. Generation Feedback
 
 Image generation can take minutes on device. Any image-generation path, including slash commands, must set `SendState.GeneratingImage` so the chat shows `GENERATING IMAGE...` and disables duplicate sends.
 
-### 10. Explicit Image Mask
+If no healthy image-generation model is installed, image-generation requests should show a clear download prompt instead of silently failing or producing a generic assistant apology.
+
+Attached images are multimodal chat inputs. They should route to chat/vision inference, not text-to-image generation, unless a future explicit image-editing flow is added.
+
+### 11. Attachment Preview
+
+Selected image thumbnails should be large enough to inspect before sending. Use a neutral circular remove button over the thumbnail; avoid oversized red/destructive controls for routine removal.
+
+### 12. Assistant Message Actions
+
+Assistant message controls should reflect available behavior. Use a share icon for Android share-sheet actions. Do not show report or flag controls until there is an actual reporting workflow.
+
+### 13. Explicit Image Mask
 
 Explicit generated images must render masked by default:
 
@@ -65,9 +81,13 @@ Explicit generated images must render masked by default:
 - When visible, provide the inverse toggle so the user can hide it again.
 - Non-explicit images should not show mask controls.
 
-### 11. Age Verification Dialog
+### 14. Age Verification Dialog
 
-Explicit image requests should use a dialog rather than an inline chat-only prompt. The dialog should be direct and neutral: it verifies age before proceeding with age-restricted image content.
+Debug builds may use a dialog rather than an inline chat-only prompt for explicit image requests. Release builds should block explicit image generation before model execution.
+
+### 15. Launcher And Splash
+
+Launcher icon and launch animation should use a shared robot-head/cyan identity so the app drawer, Android splash, and in-app launch screen feel like the same product.
 
 ## Token Reference
 

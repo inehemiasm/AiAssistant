@@ -60,6 +60,14 @@ Use uppercase for screen titles and compact status labels when it improves scana
 - Pill shape around `28.dp`.
 - Use `surfaceContainerHigh` with light opacity.
 - Send button should use the active primary treatment only when input is valid.
+- Selected image thumbnails should be large enough to inspect before sending.
+- Remove controls on selected thumbnails should be neutral and compact, not oversized destructive red controls.
+
+### Chat Top Bar
+
+- Show the `CHEVERE` brand rather than a single selected model filename.
+- Use compact readiness chips for local capabilities, currently `CHAT` and `IMAGE`.
+- Keep chat model switching, image model readiness, downloads, and model details in the Models screen.
 
 ### Generated Images
 
@@ -68,6 +76,20 @@ Use uppercase for screen titles and compact status labels when it improves scana
   - `EXPLICIT IMAGE` label
   - reveal button using visibility icon
   - hide button after reveal
+
+### Assistant Message Actions
+
+- Use a share icon for response sharing through the Android share sheet.
+- Do not use flag/report icons until there is a real reporting mechanism.
+
+### Safety & Privacy Settings
+
+- Use expandable rows so the section stays scannable.
+- Explain local processing, release content controls, user-controlled sharing, and local storage.
+
+### Launcher & Splash
+
+- Keep launcher and launch animation visually aligned around the robot-head/cyan identity.
 
 ## 5. Effects & Motion
 
@@ -83,11 +105,16 @@ Use uppercase for screen titles and compact status labels when it improves scana
 - Tool execution: `EXECUTING: <TOOL>`.
 - Direct image generation: `GENERATING IMAGE...`.
 - Long-running image generation must keep the input disabled and visible activity state active.
+- If image generation is requested without a healthy image model, show a download prompt with a path to Models.
 
 ## 6. Checklist
 
 - [ ] Are theme tokens used instead of hardcoded colors?
 - [ ] Does the screen remain readable on small devices?
 - [ ] Does every long-running operation show clear feedback?
+- [ ] Does the top bar describe capabilities rather than a single active model?
+- [ ] Do image attachments route through multimodal chat/vision behavior?
+- [ ] Are response actions named and iconized for what they actually do?
+- [ ] Does missing image-model state offer a download path?
 - [ ] Are explicit image masks applied only when `ChatMessage.isExplicitImage` is true?
 - [ ] Can the user hide a revealed explicit image again?

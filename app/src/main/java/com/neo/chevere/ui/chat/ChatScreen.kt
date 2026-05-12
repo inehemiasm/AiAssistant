@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -38,11 +39,14 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -55,6 +59,8 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.neo.chevere.domain.ModelCapability
+import com.neo.chevere.domain.ModelTaskType
 import com.neo.chevere.ui.chat.components.ActionConfirmationDialog
 import com.neo.chevere.ui.chat.components.AgeVerificationDialog
 import com.neo.chevere.ui.chat.components.ChatInputBar
@@ -117,6 +123,7 @@ private fun ChatContent(
     val context = LocalContext.current
     val listState = rememberLazyListState()
     val snackbarHostState = remember { SnackbarHostState() }
+    var showImageModelDownloadPrompt by remember { mutableStateOf(false) }
     
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
@@ -149,10 +156,11 @@ private fun ChatContent(
         topBar = {
             ChatTopBar(
                 isInteractionEnabled = state.isReady,
-                selectedModel = state.selectedModel,
-                availableModels = state.localModels.map { it.fileName },
-                onModelSelected = { modelName ->
-                    viewModel.onIntent(ChatIntent.SwitchModel(modelName, context.filesDir.absolutePath))
+                isChatReady = state.localModels.any {
+                    it.isHealthy && it.taskType != ModelTaskType.IMAGE_GENERATION
+                },
+                isImageReady = state.localModels.any {
+                    it.isHealthy && (it.taskType == ModelTaskType.IMAGE_GENERATION || ModelCapability.IMAGE_GEN in it.capabilities)
                 },
                 onClearChat = {
                     viewModel.onIntent(ChatIntent.ClearConversation)
@@ -187,8 +195,8 @@ private fun ChatContent(
                         onToggleExplicitImageMask = { index ->
                             viewModel.onIntent(ChatIntent.ToggleExplicitImageMask(index))
                         },
-                        onReportMessage = { index ->
-                            viewModel.onIntent(ChatIntent.ReportMessage(index))
+                        onShareMessage = { index ->
+                            viewModel.onIntent(ChatIntent.ShareMessage(index))
                         }
                     )
                 }
@@ -221,6 +229,31 @@ private fun ChatContent(
                         },
                         onDismiss = {
                             viewModel.onIntent(ChatIntent.DismissAgeVerification)
+                        }
+                    )
+                }
+
+                if (showImageModelDownloadPrompt) {
+                    AlertDialog(
+                        onDismissRequest = { showImageModelDownloadPrompt = false },
+                        title = { Text("Download image model?") },
+                        text = {
+                            Text("Chevere needs a local image generation model before it can create images on this device.")
+                        },
+                        confirmButton = {
+                            TextButton(
+                                onClick = {
+                                    showImageModelDownloadPrompt = false
+                                    onModelsClick()
+                                }
+                            ) {
+                                Text("Open Models")
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showImageModelDownloadPrompt = false }) {
+                                Text("Not now")
+                            }
                         }
                     )
                 }
@@ -286,6 +319,9 @@ private fun ChatContent(
                     }
                     val chooser = Intent.createChooser(sendIntent, effect.title)
                     context.startActivity(chooser)
+                }
+                ChatEffect.ShowImageModelDownloadPrompt -> {
+                    showImageModelDownloadPrompt = true
                 }
                 else -> {}
             }

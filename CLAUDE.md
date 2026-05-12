@@ -29,8 +29,9 @@ Chevere is an Android app using Clean Architecture, MVI, Room, Hilt, LiteRT-LM, 
 - `data/inference/`: LiteRT-LM chat and local image-generation runtimes.
 - `data/download/`: WorkManager download orchestration.
 - `data/datasource/local/`: Room registry for installed models.
-- `ui/chat/`: chat screen, slash commands, age verification, explicit image masking.
-- `ui/marketplace/`: model discovery, download, selection, and deletion UI.
+- `data/datasource/`: Firestore and Hugging Face model catalogs. Kaggle discovery was removed.
+- `ui/chat/`: chat screen, capability-focused top bar, multimodal attachments, slash commands, image-model download prompt, age verification, explicit image masking, response sharing.
+- `ui/marketplace/`: grouped chat/image model discovery, download, selection, and deletion UI.
 
 ## Current Model Runtime Behavior
 
@@ -38,6 +39,9 @@ Chevere is an Android app using Clean Architecture, MVI, Room, Hilt, LiteRT-LM, 
 - Image generation can be invoked by:
   - Gemma through `generate_image`, where prompts should be improved first.
   - Slash commands `/image`, `/img`, `/imagine`, which bypass Gemma.
+- If no healthy image-generation model is installed, image requests should show a download prompt rather than letting the agent/tool loop fail.
+- Chat models and image models are separate capabilities. Selecting/activating a chat model should not be confused with making an image model available.
+- Attached images route through chat/vision inference, not image generation. Image-only sends should use `Describe this image.` as the prompt.
 - ONNX diffusion bundles must be extracted directories with:
   - `text_encoder/model.ort`
   - `tokenizer/vocab.json`
@@ -48,11 +52,13 @@ Chevere is an Android app using Clean Architecture, MVI, Room, Hilt, LiteRT-LM, 
 
 ## Explicit Image Flow
 
-- Explicit image prompts trigger an age-verification dialog.
+- Explicit image generation is debug-only. Release builds block explicit prompts before model execution.
+- In debug builds, explicit image prompts trigger an age-verification dialog.
 - Users under 18 are blocked from age-restricted image content.
 - Verified explicit image generations continue through the image backend.
 - Explicit generated images are masked by default in the chat UI.
 - Users can reveal or hide each masked image using the visibility toggle.
+- Assistant responses can be shared through the Android share sheet. Do not add report/flag UI until the app has a reporting mechanism.
 
 ## Download System Notes
 
@@ -61,6 +67,13 @@ Chevere is an Android app using Clean Architecture, MVI, Room, Hilt, LiteRT-LM, 
 - `WorkManagerModelDownloadManager` tracks model progress using the `MODEL_NAME:<fileName>` tag.
 - Do not parse WorkManager tags by excluding dots. Model filenames normally contain dots.
 - Same-model download work uses `ExistingWorkPolicy.REPLACE` so stale interrupted work cannot block retries.
+- The first healthy downloaded chat model should auto-activate.
+- The first healthy downloaded image-generation model should become ready for image generation without replacing the active chat model.
+
+## Visual Identity
+
+- Keep launcher icon and splash animation visually aligned around the robot-head/cyan identity.
+- Attachment thumbnails should be inspectable and use calm neutral remove controls.
 
 ## Development Rules
 

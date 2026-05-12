@@ -17,6 +17,7 @@ import com.neo.chevere.domain.ImageGenerationRequest
 import com.neo.chevere.domain.InitializationStatus
 import com.neo.chevere.domain.InitializeChatUseCase
 import com.neo.chevere.domain.ModelCapability
+import com.neo.chevere.domain.ModelTaskType
 import com.neo.chevere.domain.SendMessageUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
@@ -74,18 +75,26 @@ class ChatViewModel @Inject constructor(
                 // If there's a saved model and it's different from our current state, 
                 // or if we aren't ready yet, trigger initialization.
                 if (savedModel != null && (savedModel != currentModel || currentState.runtimeState is RuntimeState.Uninitialized)) {
-                    setState { copy(selectedModel = savedModel) }
                     val models = withContext(dispatcherProvider.io) { repository.getLocalModels() }
                     val selected = models.find { it.id == savedModel || it.fileName == savedModel }
                     setState { copy(localModels = models) }
 
-                    if (selected?.capabilities?.contains(ModelCapability.IMAGE_GEN) == true) {
-                        setState { copy(runtimeState = RuntimeState.Ready) }
-                    } else {
-                        val modelFile = File(application.filesDir, savedModel)
-                        if (modelFile.exists()) {
-                            initModel(modelFile.absolutePath)
+                    if (selected?.isImageGenerationModel() == true) {
+                        val chatModel = models.firstOrNull { it.isHealthy && it.isChatModel() }
+                        if (chatModel != null) {
+                            withContext(dispatcherProvider.io) {
+                                preferenceManager.updateSelectedModel(chatModel.id)
+                            }
+                        } else {
+                            setState { copy(selectedModel = "", runtimeState = RuntimeState.Uninitialized) }
                         }
+                        return@collectLatest
+                    }
+
+                    setState { copy(selectedModel = savedModel) }
+                    val modelFile = File(application.filesDir, savedModel)
+                    if (modelFile.exists()) {
+                        initModel(modelFile.absolutePath)
                     }
                 }
             }
@@ -157,7 +166,7 @@ class ChatViewModel @Inject constructor(
                 is ChatIntent.SubmitBirthdate -> submitBirthdate(intent.year, intent.month, intent.day)
                 ChatIntent.DismissAgeVerification -> dismissAgeVerification()
                 is ChatIntent.ToggleExplicitImageMask -> toggleExplicitImageMask(intent.messageIndex)
-                is ChatIntent.ReportMessage -> reportMessage(intent.messageIndex)
+                is ChatIntent.ShareMessage -> shareMessage(intent.messageIndex)
             }
         }
     }
@@ -184,11 +193,14 @@ class ChatViewModel @Inject constructor(
 
     private suspend fun sendMessage(text: String, imageUri: Uri?) {
         sendEffect { ChatEffect.HideKeyboard }
-        val userMsg = ChatMessage(text, isUser = true, imageUri = imageUri?.toString())
+        val promptText = text.ifBlank {
+            if (imageUri != null) "Describe this image." else text
+        }
+        val userMsg = ChatMessage(promptText, isUser = true, imageUri = imageUri?.toString())
         setState { copy(messages = messages + userMsg, sendState = SendState.Sending, inputText = "", selectedImageUri = null) }
         sendEffect { ChatEffect.ScrollToBottom }
 
-        if (explicitImagePromptPolicy.requiresAgeVerification(text)) {
+        if (explicitImagePromptPolicy.requiresAgeVerification(promptText)) {
             if (!BuildConfig.DEBUG) {
                 appendAssistantMessage(Constants.ContentPolicy.EXPLICIT_RELEASE_BLOCK_MESSAGE, modelName = "CHEVERE")
                 return
@@ -196,30 +208,27 @@ class ChatViewModel @Inject constructor(
 
             setState {
                 copy(
-                    ageVerificationRequest = AgeVerificationRequest(text, imageUri),
+                    ageVerificationRequest = AgeVerificationRequest(promptText, imageUri),
                     sendState = SendState.Idle
                 )
             }
             return
         }
 
-        val imageCommand = parseImageCommand(text)
-        if (imageCommand != null) {
+        val imageCommand = parseImageCommand(promptText)
+        if (imageUri == null && (imageCommand != null || looksLikeImageGenerationRequest(promptText)) && !hasInstalledImageGenerationModel()) {
+            promptForImageModelDownload()
+            return
+        }
+
+        if (imageUri == null && imageCommand != null) {
             startImageGenerationTurn(imageCommand.prompt, imageUri)
             return
         }
 
-        val selectedImageModel = currentState.localModels.find {
-            (it.id == currentState.selectedModel || it.fileName == currentState.selectedModel) &&
-                it.capabilities.contains(ModelCapability.IMAGE_GEN)
-        }
-        if (selectedImageModel != null) {
-            startImageGenerationTurn(text, imageUri)
-        } else {
-            processAgentTurn {
-                withContext(dispatcherProvider.default) {
-                    sendMessageUseCase(text, imageUri)
-                }
+        processAgentTurn {
+            withContext(dispatcherProvider.default) {
+                sendMessageUseCase(promptText, imageUri)
             }
         }
     }
@@ -286,6 +295,14 @@ class ChatViewModel @Inject constructor(
         sendEffect { ChatEffect.ScrollToBottom }
     }
 
+    private suspend fun promptForImageModelDownload() {
+        appendAssistantMessage(
+            text = "Image generation needs a local image model first. Download an image generation model from Models, then try this prompt again.",
+            modelName = "CHEVERE"
+        )
+        sendEffect { ChatEffect.ShowImageModelDownloadPrompt }
+    }
+
     /**
      * Parses explicit slash commands that should bypass the chat agent and call
      * the installed image-generation backend directly.
@@ -298,6 +315,18 @@ class ChatViewModel @Inject constructor(
 
         val prompt = trimmed.substring(command.length).trim()
         return prompt.takeIf { it.isNotBlank() }?.let(::ImageCommand)
+    }
+
+    private fun hasInstalledImageGenerationModel(): Boolean =
+        currentState.localModels.any {
+            it.isHealthy && it.isImageGenerationModel()
+        }
+
+    private fun looksLikeImageGenerationRequest(text: String): Boolean {
+        val normalized = text.lowercase()
+        val hasImageNoun = imageRequestNouns.any { it in normalized }
+        val hasCreateVerb = imageRequestVerbs.any { it in normalized }
+        return hasImageNoun && hasCreateVerb
     }
 
     /**
@@ -339,27 +368,25 @@ class ChatViewModel @Inject constructor(
     }
 
     /**
-     * Opens the platform share sheet with enough context for the user to report
-     * unwanted AI-generated content without sending anything automatically.
+     * Opens the platform share sheet for an assistant response without sending
+     * anything automatically.
      */
-    private fun reportMessage(messageIndex: Int) {
+    private fun shareMessage(messageIndex: Int) {
         val message = currentState.messages.getOrNull(messageIndex) ?: return
         if (message.isUser) return
 
-        val reportText = buildString {
-            appendLine("Chevere AI content report")
+        val shareText = buildString {
+            appendLine("Chevere response")
+            message.modelName?.let { modelName -> appendLine("Model: $modelName") }
+            message.imageUri?.let { imageUri -> appendLine("Image: $imageUri") }
             appendLine()
-            appendLine("Model: ${message.modelName ?: "Unknown"}")
-            appendLine("Generated image: ${message.imageUri ?: "None"}")
-            appendLine()
-            appendLine("Message:")
             appendLine(message.text)
         }
 
         sendEffect {
             ChatEffect.ShareText(
-                title = "Report Chevere content",
-                text = reportText
+                title = "Share Chevere response",
+                text = shareText
             )
         }
     }
@@ -388,7 +415,7 @@ class ChatViewModel @Inject constructor(
             action()
                 .onSuccess { responseText = it }
                 .onFailure { e ->
-                    setState { copy(sendState = SendState.Error(e.message ?: "Action failed")) }
+                    appendAssistantMessage(e.message ?: "Action failed", modelName = "CHEVERE")
                     return
                 }
         }
@@ -489,5 +516,13 @@ class ChatViewModel @Inject constructor(
 
     private companion object {
         val imageCommandPrefixes = Constants.Commands.IMAGE_GENERATION
+        val imageRequestVerbs = listOf("create", "generate", "make", "draw", "render", "paint")
+        val imageRequestNouns = listOf("image", "picture", "photo", "art", "illustration", "portrait")
     }
 }
+
+private fun com.neo.chevere.domain.InstalledModel.isImageGenerationModel(): Boolean =
+    taskType == ModelTaskType.IMAGE_GENERATION || ModelCapability.IMAGE_GEN in capabilities
+
+private fun com.neo.chevere.domain.InstalledModel.isChatModel(): Boolean =
+    !isImageGenerationModel()

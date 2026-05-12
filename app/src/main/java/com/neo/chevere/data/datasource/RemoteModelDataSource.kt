@@ -56,7 +56,7 @@ class DefaultRemoteModelDataSource @Inject constructor(
                 throw IOException("HTTP error: ${response.status}")
             }
             
-            // Check if we accidentally downloaded an HTML error page (Kaggle often redirects to one)
+            // Check if we accidentally downloaded an HTML error page from a blocked or expired link.
             val contentType = response.contentType()
             if (contentType != null && contentType.contentType == ContentType.Text.Html.contentType && contentType.contentSubtype == ContentType.Text.Html.contentSubtype) {
                 throw IOException("Received HTML instead of a model file. The download link might be expired or blocked.")

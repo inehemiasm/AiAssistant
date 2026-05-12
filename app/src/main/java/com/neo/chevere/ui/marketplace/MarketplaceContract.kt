@@ -35,11 +35,17 @@ data class MarketplaceState(
     val isDownloading: Boolean get() = downloadingModelName != null
     val isSwitching: Boolean get() = switchState is ModelSwitchState.Switching || switchState is ModelSwitchState.WarmingUp
     
-    /**
-     * Group models by provider for cleaner UI.
-     */
-    val groupedRemoteModels: Map<String, List<ModelEntry>> 
-        get() = remoteModels.groupBy { it.provider }
+    val chatRemoteModels: List<ModelEntry>
+        get() = remoteModels.filter { it.activationCategory() == ModelActivationCategory.CHAT }
+
+    val imageRemoteModels: List<ModelEntry>
+        get() = remoteModels.filter { it.activationCategory() == ModelActivationCategory.IMAGE_GENERATION }
+
+    val chatLocalModels: List<InstalledModel>
+        get() = localModels.filter { it.activationCategory() == ModelActivationCategory.CHAT }
+
+    val imageLocalModels: List<InstalledModel>
+        get() = localModels.filter { it.activationCategory() == ModelActivationCategory.IMAGE_GENERATION }
 }
 
 sealed class MarketplaceIntent : UiIntent {

@@ -2,6 +2,7 @@ package com.neo.chevere.ui.settings
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,12 +17,15 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DarkMode
-import androidx.compose.material.icons.filled.Flag
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -38,6 +42,9 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -163,14 +170,26 @@ fun SettingsScreen(
                 Spacer(Modifier.height(12.dp))
                 SafetyInfoCard(
                     icon = Icons.Default.Security,
-                    title = stringResource(R.string.release_safeguards),
-                    description = stringResource(R.string.release_safeguards_desc)
+                    title = stringResource(R.string.offline_processing),
+                    description = stringResource(R.string.offline_processing_desc)
                 )
                 Spacer(Modifier.height(12.dp))
                 SafetyInfoCard(
-                    icon = Icons.Default.Flag,
-                    title = stringResource(R.string.report_controls),
-                    description = stringResource(R.string.report_controls_desc)
+                    icon = Icons.Default.Security,
+                    title = stringResource(R.string.release_content_controls),
+                    description = stringResource(R.string.release_content_controls_desc)
+                )
+                Spacer(Modifier.height(12.dp))
+                SafetyInfoCard(
+                    icon = Icons.Default.Share,
+                    title = stringResource(R.string.user_controlled_sharing),
+                    description = stringResource(R.string.user_controlled_sharing_desc)
+                )
+                Spacer(Modifier.height(12.dp))
+                SafetyInfoCard(
+                    icon = Icons.Default.Storage,
+                    title = stringResource(R.string.local_storage_privacy),
+                    description = stringResource(R.string.local_storage_privacy_desc)
                 )
             }
         }
@@ -183,31 +202,50 @@ private fun SafetyInfoCard(
     title: String,
     description: String
 ) {
+    var expanded by remember { mutableStateOf(false) }
+
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.5f),
         shape = RoundedCornerShape(16.dp),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.1f))
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .clickable { expanded = !expanded }
+                .padding(16.dp)
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(24.dp)
-            )
-            Spacer(Modifier.width(16.dp))
-            Column {
-                Text(title, style = Typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(Modifier.width(16.dp))
+                Text(
+                    title,
+                    style = Typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(1f)
+                )
+                Icon(
+                    imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+
+            AnimatedVisibility(visible = expanded) {
                 Text(
                     description,
                     style = Typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    lineHeight = 18.sp
+                    lineHeight = 18.sp,
+                    modifier = Modifier.padding(start = 40.dp, top = 12.dp)
                 )
             }
         }

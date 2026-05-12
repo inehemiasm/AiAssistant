@@ -15,7 +15,7 @@
     <string name="hardware_accel">HARDWARE ACCEL</string>
     <string name="privacy_lock">PRIVACY LOCK</string>
     <string name="sent_status">SENT</string>
-    <string name="report_message">Report message</string>
+    <string name="share_message">Share message</string>
     <string name="model_optimization_info">GEMMA • OPTIMIZED FOR M3/RTX</string>
     <string name="add_attachment">Add attachment</string>
     <string name="gallery">Gallery</string>
@@ -52,10 +52,14 @@
     <string name="safety_privacy">SAFETY &amp; PRIVACY</string>
     <string name="local_first_ai">Local-first AI</string>
     <string name="local_first_ai_desc">Prompts, images, and generated files stay on this device unless you choose to share them.</string>
-    <string name="release_safeguards">Release safeguards</string>
-    <string name="release_safeguards_desc">Explicit image generation is disabled in release builds.</string>
-    <string name="report_controls">Report controls</string>
-    <string name="report_controls_desc">Assistant messages include a report action that opens your share sheet with the message details.</string>
+    <string name="offline_processing">Offline processing</string>
+    <string name="offline_processing_desc">Chat inference and image generation run on installed local models. Network access is only used for model catalogs, downloads, and explicit web-backed tools.</string>
+    <string name="release_content_controls">Release content controls</string>
+    <string name="release_content_controls_desc">Release builds block explicit image generation before a prompt reaches the image backend. Debug builds can use age verification for local testing.</string>
+    <string name="user_controlled_sharing">User-controlled sharing</string>
+    <string name="user_controlled_sharing_desc">Assistant responses can be shared through the Android share sheet only when you tap share. Chevere does not send chat content to a report endpoint.</string>
+    <string name="local_storage_privacy">Local storage</string>
+    <string name="local_storage_privacy_desc">Downloaded models and generated images are stored in app-controlled local storage. Deleting the app removes app-private data.</string>
     <string name="version_label">Version</string>
     <string name="engine_label">Engine</string>
     <string name="protocol_label">Protocol</string>

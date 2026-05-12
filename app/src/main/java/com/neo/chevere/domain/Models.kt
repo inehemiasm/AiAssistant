@@ -38,7 +38,6 @@ data class InstalledModel(
 enum class ModelSource {
     HUGGING_FACE,
     FIREBASE,
-    KAGGLE,
     LOCAL,
     UNKNOWN
 }

@@ -35,10 +35,10 @@
             android:pathData="M65,52m-4,0a4,4 0 1,1 8,0a4,4 0 1,1 -8,0" />
     </group>
 
-    <!-- Orange Smile -->
+    <!-- Cyan Smile -->
     <path
         android:pathData="M44,72q10,6 20,0"
-        android:strokeColor="#FFAB40"
+        android:strokeColor="#4DD0E1"
         android:strokeLineCap="round"
         android:strokeWidth="3.5"/>
 

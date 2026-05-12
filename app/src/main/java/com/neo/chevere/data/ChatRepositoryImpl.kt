@@ -355,7 +355,6 @@ class ChatRepositoryImpl @Inject constructor(
     private fun String.toModelSource(): ModelSource {
         return when {
             equals("Hugging Face", ignoreCase = true) || equals("HF Hub", ignoreCase = true) -> ModelSource.HUGGING_FACE
-            equals("Kaggle", ignoreCase = true) -> ModelSource.KAGGLE
             equals("Firebase", ignoreCase = true) || equals("Firestore", ignoreCase = true) -> ModelSource.FIREBASE
             else -> ModelSource.UNKNOWN
         }
