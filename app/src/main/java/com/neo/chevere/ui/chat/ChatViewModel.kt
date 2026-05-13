@@ -9,11 +9,14 @@ import com.neo.chevere.core.BaseViewModel
 import com.neo.chevere.core.Constants
 import com.neo.chevere.core.DispatcherProvider
 import com.neo.chevere.data.PreferenceManager
+import com.neo.chevere.data.telemetry.AppTelemetry
+import com.neo.chevere.data.telemetry.TelemetryConstants
 import com.neo.chevere.domain.ChatMessage
 import com.neo.chevere.domain.ExplicitImagePromptDecision
 import com.neo.chevere.domain.ExplicitImagePromptPolicy
 import com.neo.chevere.domain.ChatRepository
 import com.neo.chevere.domain.ImageGenerationRequest
+import com.neo.chevere.domain.ImageGenerationResult
 import com.neo.chevere.domain.InitializationStatus
 import com.neo.chevere.domain.InitializeChatUseCase
 import com.neo.chevere.domain.ModelCapability
@@ -41,7 +44,8 @@ class ChatViewModel @Inject constructor(
     private val initializeChatUseCase: InitializeChatUseCase,
     private val sendMessageUseCase: SendMessageUseCase,
     private val preferenceManager: PreferenceManager,
-    private val dispatcherProvider: DispatcherProvider
+    private val dispatcherProvider: DispatcherProvider,
+    private val telemetry: AppTelemetry
 ) : BaseViewModel<ChatState, ChatIntent, ChatEffect>(application, ChatState()) {
 
     private val explicitImagePromptPolicy = ExplicitImagePromptPolicy()
@@ -188,7 +192,26 @@ class ChatViewModel @Inject constructor(
             sendEffect { ChatEffect.HideKeyboard }
             // State will be updated to Initializing/Ready via observeInitStatus flow
             withContext(dispatcherProvider.default) {
-                initializeChatUseCase(modelPath)
+                val modelId = File(modelPath).name
+                telemetry.setActiveModel(modelId)
+                telemetry.logModelInitStarted(modelId)
+                var result: Result<Unit>? = null
+                val time = measureTimeMillis {
+                    result = initializeChatUseCase(modelPath)
+                }
+                result
+                    ?.onSuccess {
+                        telemetry.logModelInitFinished(modelId, success = true, durationMs = time)
+                    }
+                    ?.onFailure { throwable ->
+                        telemetry.logModelInitFinished(
+                            modelId = modelId,
+                            success = false,
+                            durationMs = time,
+                            errorType = throwable::class.java.simpleName
+                        )
+                        telemetry.recordNonFatal(throwable, TelemetryConstants.Context.MODEL_INIT)
+                    }
             }
         }
     }
@@ -228,9 +251,10 @@ class ChatViewModel @Inject constructor(
             return
         }
 
+        telemetry.logChatTurnStarted(hasImage = imageUri != null, promptLength = promptText.length)
         responseJob?.cancel()
         responseJob = viewModelScope.launch {
-            processAgentTurn {
+            processAgentTurn(hasImage = imageUri != null) {
                 withContext(dispatcherProvider.default) {
                     sendMessageUseCase(promptText, imageUri)
                 }
@@ -355,6 +379,10 @@ class ChatViewModel @Inject constructor(
         maskExplicitImage: Boolean = false
     ) {
         imageGenerationJob?.cancel()
+        telemetry.logImageGenerationStarted(
+            hasConditionImage = conditionImageUri != null,
+            isExplicit = maskExplicitImage
+        )
         setState { copy(sendState = SendState.GeneratingImage) }
         imageGenerationJob = viewModelScope.launch {
             processImageGenerationTurn(
@@ -374,6 +402,7 @@ class ChatViewModel @Inject constructor(
 
     private suspend fun stopActiveResponse() {
         val hadActiveWork = responseJob?.isActive == true || imageGenerationJob?.isActive == true
+        telemetry.logStopRequested(hadActiveWork)
         responseJob?.cancel()
         responseJob = null
         imageGenerationJob?.cancel()
@@ -412,7 +441,7 @@ class ChatViewModel @Inject constructor(
         sendEffect { ChatEffect.HideKeyboard }
         responseJob?.cancel()
         responseJob = viewModelScope.launch {
-            processAgentTurn {
+            processAgentTurn(hasImage = false) {
                 withContext(dispatcherProvider.default) {
                     repository.confirmAction()
                 }
@@ -424,7 +453,7 @@ class ChatViewModel @Inject constructor(
         sendEffect { ChatEffect.HideKeyboard }
         responseJob?.cancel()
         responseJob = viewModelScope.launch {
-            processAgentTurn {
+            processAgentTurn(hasImage = false) {
                 withContext(dispatcherProvider.default) {
                     repository.cancelAction()
                 }
@@ -432,23 +461,37 @@ class ChatViewModel @Inject constructor(
         }
     }
 
-    private suspend fun processAgentTurn(action: suspend () -> Result<String>) {
-        var responseText = ""
+    private suspend fun processAgentTurn(hasImage: Boolean, action: suspend () -> Result<String>) {
+        var result: Result<String>? = null
         val time = measureTimeMillis {
-            val result = try {
+            result = try {
                 action()
             } catch (_: CancellationException) {
                 setState { copy(sendState = SendState.Idle) }
                 return
             }
-
-            result
-                .onSuccess { responseText = it }
-                .onFailure { e ->
-                    appendAssistantMessage(e.message ?: "Action failed", modelName = "CHEVERE AI")
-                    return
-                }
         }
+
+        val responseText = result
+            ?.onSuccess {
+                telemetry.logChatTurnFinished(hasImage, success = true, durationMs = time)
+            }
+            ?.onFailure { e ->
+                telemetry.logChatTurnFinished(
+                    hasImage = hasImage,
+                    success = false,
+                    durationMs = time,
+                    errorType = e::class.java.simpleName
+                )
+                telemetry.recordNonFatal(e, TelemetryConstants.Context.CHAT_TURN)
+                appendAssistantMessage(e.message ?: "Action failed", modelName = "CHEVERE AI")
+                return
+            }
+            ?.getOrNull()
+            ?: run {
+                setState { copy(sendState = SendState.Idle) }
+                return
+            }
 
         val imagePayload = parseGeneratedImagePayload(responseText)
         val aiMsg = ChatMessage(
@@ -468,11 +511,10 @@ class ChatViewModel @Inject constructor(
         conditionImageUri: Uri?,
         maskExplicitImage: Boolean = false
     ) {
-        var generatedImageUri: String? = null
-        var generatedCaption = ""
         var wasCanceled = false
+        var result: Result<ImageGenerationResult.Success>? = null
         val time = measureTimeMillis {
-            val result = try {
+            result = try {
                 withContext(dispatcherProvider.default) {
                     repository.generateImage(
                         ImageGenerationRequest(
@@ -485,16 +527,6 @@ class ChatViewModel @Inject constructor(
                 wasCanceled = true
                 return@measureTimeMillis
             }
-
-            result
-                .onSuccess { result ->
-                    generatedImageUri = result.imageUri.toString()
-                    generatedCaption = "Generated image for: ${result.prompt}"
-                }
-                .onFailure { e ->
-                    setState { copy(sendState = SendState.Error(e.message ?: "Image generation failed")) }
-                    return
-                }
         }
 
         if (wasCanceled) {
@@ -502,16 +534,39 @@ class ChatViewModel @Inject constructor(
             return
         }
 
+        val generation = result
+            ?.onFailure { e ->
+                telemetry.logImageGenerationFinished(
+                    success = false,
+                    durationMs = time,
+                    isExplicit = maskExplicitImage,
+                    errorType = e::class.java.simpleName
+                )
+                telemetry.recordNonFatal(e, TelemetryConstants.Context.IMAGE_GENERATION)
+                setState { copy(sendState = SendState.Error(e.message ?: "Image generation failed")) }
+                return
+            }
+            ?.getOrNull()
+            ?: run {
+                setState { copy(sendState = SendState.Idle) }
+                return
+            }
+
         val aiMsg = ChatMessage(
-            text = generatedCaption,
+            text = "Generated image for: ${generation.prompt}",
             isUser = false,
             inferenceTimeMs = time,
-            imageUri = generatedImageUri,
+            imageUri = generation.imageUri.toString(),
             modelName = currentState.selectedModel.replace(Constants.ModelFiles.ZIP_EXTENSION, "").uppercase(),
             isExplicitImage = maskExplicitImage,
             isImageMasked = maskExplicitImage
         )
         imageGenerationJob = null
+        telemetry.logImageGenerationFinished(
+            success = true,
+            durationMs = time,
+            isExplicit = maskExplicitImage
+        )
         setState { copy(messages = messages + aiMsg, sendState = SendState.Idle) }
         sendEffect { ChatEffect.ScrollToBottom }
     }

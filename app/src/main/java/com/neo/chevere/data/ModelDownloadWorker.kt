@@ -15,10 +15,13 @@ import androidx.work.workDataOf
 import com.neo.chevere.core.Constants
 import com.neo.chevere.data.datasource.DownloadStatus
 import com.neo.chevere.data.datasource.RemoteModelDataSource
+import com.neo.chevere.data.telemetry.AppTelemetry
+import com.neo.chevere.data.telemetry.TelemetryConstants
 import com.neo.chevere.domain.InstallStatus
 import com.neo.chevere.domain.InstalledModelRegistry
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
@@ -40,7 +43,8 @@ class ModelDownloadWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted workerParams: WorkerParameters,
     private val remoteModelDataSource: RemoteModelDataSource,
-    private val installedModelRegistry: InstalledModelRegistry
+    private val installedModelRegistry: InstalledModelRegistry,
+    private val telemetry: AppTelemetry
 ) : CoroutineWorker(context, workerParams) {
 
     private val lastUpdateMs = AtomicLong(0L)
@@ -70,6 +74,9 @@ class ModelDownloadWorker @AssistedInject constructor(
 
         val targetFile = File(applicationContext.filesDir, modelName)
         val tempFile = File(applicationContext.filesDir, "$modelName${Constants.ModelFiles.TEMP_EXTENSION}")
+        val fileType = modelName.substringAfterLast('.', missingDelimiterValue = "directory")
+        val startedAtMs = System.currentTimeMillis()
+        telemetry.logModelDownloadStarted(modelId = modelId, fileType = fileType)
         
         try {
             setForeground(getForegroundInfo())
@@ -127,10 +134,22 @@ class ModelDownloadWorker @AssistedInject constructor(
                     tempFile.delete()
                     installedModelRegistry.updateInstallStatus(modelId, InstallStatus.INSTALLED)
                     setProgress(workDataOf(Constants.Download.PROGRESS to 100))
+                    telemetry.logModelDownloadFinished(
+                        modelId = modelId,
+                        success = true,
+                        durationMs = System.currentTimeMillis() - startedAtMs,
+                        fileType = fileType
+                    )
                     Result.success()
                 } else if (tempFile.renameTo(targetFile)) {
                     installedModelRegistry.updateInstallStatus(modelId, InstallStatus.INSTALLED)
                     setProgress(workDataOf(Constants.Download.PROGRESS to 100))
+                    telemetry.logModelDownloadFinished(
+                        modelId = modelId,
+                        success = true,
+                        durationMs = System.currentTimeMillis() - startedAtMs,
+                        fileType = fileType
+                    )
                     Result.success()
                 } else {
                     installedModelRegistry.updateInstallStatus(modelId, InstallStatus.FAILED)
@@ -140,10 +159,29 @@ class ModelDownloadWorker @AssistedInject constructor(
                 installedModelRegistry.updateInstallStatus(modelId, InstallStatus.FAILED)
                 throw IOException("Empty file")
             }
+        } catch (e: CancellationException) {
+            Log.d(TAG, "Download canceled: ${e.message}")
+            if (tempFile.exists()) tempFile.delete()
+            telemetry.logModelDownloadFinished(
+                modelId = modelId,
+                success = false,
+                durationMs = System.currentTimeMillis() - startedAtMs,
+                fileType = fileType,
+                errorType = "CancellationException"
+            )
+            throw e
         } catch (e: Exception) {
             Log.e(TAG, "Download failed: ${e.message}")
             if (tempFile.exists()) tempFile.delete()
             installedModelRegistry.updateInstallStatus(modelId, InstallStatus.FAILED)
+            telemetry.logModelDownloadFinished(
+                modelId = modelId,
+                success = false,
+                durationMs = System.currentTimeMillis() - startedAtMs,
+                fileType = fileType,
+                errorType = e::class.java.simpleName
+            )
+            telemetry.recordNonFatal(e, TelemetryConstants.Context.MODEL_DOWNLOAD)
             Result.failure(workDataOf(Constants.Download.OUTPUT_ERROR to (e.localizedMessage ?: Constants.Download.UNKNOWN_ERROR)))
         }
     }

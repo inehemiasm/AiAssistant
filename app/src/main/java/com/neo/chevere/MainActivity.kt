@@ -10,6 +10,7 @@ import androidx.compose.runtime.getValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.neo.chevere.data.PreferenceManager
+import com.neo.chevere.data.telemetry.AppTelemetry
 import com.neo.chevere.ui.LaunchAnimatedApp
 import com.neo.chevere.ui.chat.RuntimeState
 import com.neo.chevere.ui.chat.ChatViewModel
@@ -28,6 +29,9 @@ class MainActivity : ComponentActivity() {
     
     @Inject
     lateinit var preferenceManager: PreferenceManager
+
+    @Inject
+    lateinit var telemetry: AppTelemetry
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // Install splash screen before super.onCreate()
@@ -51,7 +55,7 @@ class MainActivity : ComponentActivity() {
                     isInitializing = chatState.runtimeState is RuntimeState.Initializing,
                     statusMessage = chatState.loadingMessage ?: "INITIALIZING..."
                 ) {
-                    ChevereApp()
+                    ChevereApp(telemetry = telemetry)
                 }
             }
         }

@@ -15,6 +15,7 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -26,12 +27,25 @@ import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.neo.chevere.data.telemetry.AppTelemetry
+import com.neo.chevere.data.telemetry.TelemetryConstants
 
 @Composable
-fun ChevereApp() {
+fun ChevereApp(
+    telemetry: AppTelemetry
+) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
+    val currentScreen = currentDestination.telemetryScreen()
+    val currentProductArea = currentDestination.telemetryProductArea()
+
+    LaunchedEffect(currentScreen) {
+        telemetry.logScreenViewed(
+            screenName = currentScreen,
+            productArea = currentProductArea
+        )
+    }
 
     Scaffold(
         bottomBar = {
@@ -46,6 +60,11 @@ fun ChevereApp() {
                     NavigationBarItem(
                         selected = selected,
                         onClick = {
+                            telemetry.logClick(
+                                action = destination.telemetryAction,
+                                screenName = currentScreen,
+                                productArea = currentProductArea
+                            )
                             navController.navigate(destination.route) {
                                 popUpTo(navController.graph.findStartDestination().id) {
                                     saveState = true
@@ -91,4 +110,19 @@ fun ChevereApp() {
             )
         }
     }
+}
+
+private fun androidx.navigation.NavDestination?.telemetryScreen(): String = when {
+    this?.hierarchy?.any { it.hasRoute(Route.Chat::class) } == true -> TelemetryConstants.Screen.CHAT
+    this?.hierarchy?.any { it.hasRoute(Route.ModelMarketplace::class) } == true -> TelemetryConstants.Screen.MODEL_MARKETPLACE
+    this?.hierarchy?.any { it.hasRoute(Route.ModelDetails::class) } == true -> TelemetryConstants.Screen.MODEL_DETAILS
+    this?.hierarchy?.any { it.hasRoute(Route.Settings::class) } == true -> TelemetryConstants.Screen.SETTINGS
+    else -> TelemetryConstants.Screen.UNKNOWN
+}
+
+private fun androidx.navigation.NavDestination?.telemetryProductArea(): String = when (telemetryScreen()) {
+    TelemetryConstants.Screen.MODEL_MARKETPLACE,
+    TelemetryConstants.Screen.MODEL_DETAILS -> TelemetryConstants.ProductArea.MODEL_MANAGEMENT
+    TelemetryConstants.Screen.SETTINGS -> TelemetryConstants.ProductArea.SETTINGS
+    else -> TelemetryConstants.ProductArea.CHAT
 }

@@ -1,6 +1,5 @@
 package com.neo.chevere.data.datasource
 
-import com.google.firebase.storage.FirebaseStorage
 import io.ktor.client.HttpClient
 import io.ktor.client.request.prepareGet
 import io.ktor.client.statement.bodyAsChannel
@@ -13,8 +12,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.tasks.await
-import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -27,7 +24,7 @@ sealed class DownloadStatus {
 }
 
 /**
- * Interface for resolving and downloading model files from remote storage.
+ * Interface for resolving and downloading model files from remote HTTP sources.
  */
 interface RemoteModelDataSource {
     suspend fun getDownloadUrl(uri: String): String
@@ -35,20 +32,14 @@ interface RemoteModelDataSource {
 }
 
 /**
- * Default implementation of RemoteModelDataSource using Ktor and supporting Firebase Storage URIs.
+ * Default implementation of [RemoteModelDataSource] using Ktor for direct HTTP downloads.
  */
 @Singleton
 class DefaultRemoteModelDataSource @Inject constructor(
     private val httpClient: HttpClient
 ) : RemoteModelDataSource {
 
-    override suspend fun getDownloadUrl(uri: String): String = withContext(Dispatchers.IO) {
-        if (uri.startsWith("gs://")) {
-            FirebaseStorage.getInstance().getReferenceFromUrl(uri).downloadUrl.await().toString()
-        } else {
-            uri
-        }
-    }
+    override suspend fun getDownloadUrl(uri: String): String = uri
 
     override fun downloadToFile(url: String, file: File): Flow<DownloadStatus> = flow {
         httpClient.prepareGet(url).execute { response ->

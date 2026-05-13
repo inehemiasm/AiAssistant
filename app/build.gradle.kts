@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.google.services)
+    alias(libs.plugins.firebase.crashlytics)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
     alias(libs.plugins.kotlin.serialization)
@@ -87,8 +88,9 @@ dependencies {
     ksp(libs.room.compiler)
     
     implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.analytics)
+    implementation(libs.firebase.crashlytics)
     implementation(libs.firebase.firestore)
-    implementation(libs.firebase.storage)
     implementation(libs.kotlinx.coroutines.play.services)
     
     implementation(libs.ktor.client.core)
