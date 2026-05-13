@@ -1,6 +1,6 @@
-# Chevere: Local AI Assistant
+# Chevere AI: Local AI Assistant
 
-Chevere is a privacy-first Android assistant that runs local language models on device and can route user requests through a small agent/tool system. It supports chat, image attachments, Android actions, model marketplace management, and local text-to-image generation through ONNX Stable Diffusion bundles.
+Chevere AI is a privacy-first Android assistant that runs local language models on device and can route user requests through a small agent/tool system. It supports chat, image attachments, Android actions, model marketplace management, and local text-to-image generation through ONNX Stable Diffusion bundles.
 
 ## Features
 
@@ -73,7 +73,7 @@ Located under `app/src/main/java/com/neo/chevere/data/`.
 Located under `app/src/main/java/com/neo/chevere/ui/`.
 
 - Chat uses `ChatState`, `ChatIntent`, and `SendState`.
-- The chat top bar is brand/capability focused: it shows `CHEVERE` plus `CHAT` and `IMAGE` readiness chips rather than a single selected model name.
+- The chat top bar is brand/capability focused: it shows `CHEVERE AI` plus `CHAT` and `IMAGE` readiness chips rather than a single selected model name.
 - Chat model switching lives in the Models screen. Image-generation models are used automatically by `ImageGenerationManager`.
 - Attached images force the chat/vision path. If the text field is empty, the prompt defaults to `Describe this image.`.
 - Attached-image previews use a larger thumbnail with a neutral remove control.

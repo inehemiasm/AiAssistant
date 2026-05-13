@@ -23,7 +23,10 @@ class LiteRtEngine @Inject constructor(
 
     override suspend fun load(model: InstalledModel): LoadResult {
         return try {
-            val result = runtimeManager.initialize(model.filePath)
+            val result = runtimeManager.initialize(
+                modelPath = model.filePath,
+                enableVision = model.capabilities.contains(com.neo.chevere.domain.ModelCapability.VISION)
+            )
             if (result.isSuccess) {
                 LoadResult.Success
             } else {

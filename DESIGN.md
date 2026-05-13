@@ -1,6 +1,6 @@
 # Design Rules: High-Tech AI Assistant
 
-This document defines the UI/UX rules for Chevere. All new components should use the shared design system and Material theme tokens.
+This document defines the UI/UX rules for Chevere AI. All new components should use the shared design system and Material theme tokens.
 
 ## Layout & Keyboard Rules
 
@@ -53,7 +53,7 @@ Prefer `1.dp` outlines over shadows. Use `outlineVariant` at low alpha for inact
 
 ### 9. Top Bar Identity
 
-The chat top bar should represent Chevere and local capability readiness, not a single model filename. Use the `CHEVERE` brand title with compact readiness chips such as `CHAT` and `IMAGE`. Model selection and model details belong in the Models screen.
+The chat top bar should represent Chevere AI and local capability readiness, not a single model filename. Use the `CHEVERE AI` brand title with compact readiness chips such as `CHAT` and `IMAGE`. Model selection and model details belong in the Models screen.
 
 ### 10. Generation Feedback
 

@@ -15,6 +15,8 @@ import com.neo.chevere.domain.ChatRepository
 import com.neo.chevere.domain.DownloadProgress
 import com.neo.chevere.domain.ImageGenerationRequest
 import com.neo.chevere.domain.ImageGenerationResult
+import com.neo.chevere.domain.InferenceRequest
+import com.neo.chevere.domain.InferenceResult
 import com.neo.chevere.domain.InitializationStatus
 import com.neo.chevere.domain.InstallStatus
 import com.neo.chevere.domain.InstalledModel
@@ -98,6 +100,15 @@ class ChatRepositoryImpl @Inject constructor(
             return Result.failure(
                 IllegalArgumentException("Vision is not supported by the current model/backend.")
             )
+        }
+
+        if (imageUri != null) {
+            return when (val result = inferenceManager.generate(InferenceRequest(prompt, imageUri))) {
+                is InferenceResult.Success -> Result.success(result.text)
+                is InferenceResult.Failure -> Result.failure(
+                    result.throwable ?: Exception(result.message)
+                )
+            }
         }
 
         return agentOrchestrator.processUserRequest(prompt, imageUri)
@@ -277,8 +288,10 @@ class ChatRepositoryImpl @Inject constructor(
         val capabilities = mutableSetOf(ModelCapability.TEXT)
         var taskType = ModelTaskType.CHAT
         
-        if (file.name.contains("vision", ignoreCase = true) || 
-            file.name.contains("multimodal", ignoreCase = true)) {
+        if (file.name.contains("vision", ignoreCase = true) ||
+            file.name.contains("multimodal", ignoreCase = true) ||
+            file.name.contains("gemma-4", ignoreCase = true)
+        ) {
             capabilities.add(ModelCapability.VISION)
             taskType = ModelTaskType.VISION_CHAT
         }

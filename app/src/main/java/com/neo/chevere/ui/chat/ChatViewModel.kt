@@ -48,6 +48,7 @@ class ChatViewModel @Inject constructor(
     private val intentMutex = Mutex()
     private var initJob: Job? = null
     private var imageGenerationJob: Job? = null
+    private var responseJob: Job? = null
 
     init {
         // 1. Observe global initialization status from the repository
@@ -132,8 +133,8 @@ class ChatViewModel @Inject constructor(
     }
 
     override suspend fun handleIntent(intent: ChatIntent) {
-        if (intent is ChatIntent.CancelGeneration) {
-            cancelImageGeneration()
+        if (intent is ChatIntent.CancelGeneration || intent is ChatIntent.StopResponse) {
+            stopActiveResponse()
             return
         }
 
@@ -163,6 +164,7 @@ class ChatViewModel @Inject constructor(
                 ChatIntent.ConfirmAction -> confirmAction()
                 ChatIntent.CancelAction -> cancelAction()
                 ChatIntent.CancelGeneration -> cancelImageGeneration()
+                ChatIntent.StopResponse -> stopActiveResponse()
                 is ChatIntent.SubmitBirthdate -> submitBirthdate(intent.year, intent.month, intent.day)
                 ChatIntent.DismissAgeVerification -> dismissAgeVerification()
                 is ChatIntent.ToggleExplicitImageMask -> toggleExplicitImageMask(intent.messageIndex)
@@ -202,7 +204,7 @@ class ChatViewModel @Inject constructor(
 
         if (explicitImagePromptPolicy.requiresAgeVerification(promptText)) {
             if (!BuildConfig.DEBUG) {
-                appendAssistantMessage(Constants.ContentPolicy.EXPLICIT_RELEASE_BLOCK_MESSAGE, modelName = "CHEVERE")
+                appendAssistantMessage(Constants.ContentPolicy.EXPLICIT_RELEASE_BLOCK_MESSAGE, modelName = "CHEVERE AI")
                 return
             }
 
@@ -226,9 +228,12 @@ class ChatViewModel @Inject constructor(
             return
         }
 
-        processAgentTurn {
-            withContext(dispatcherProvider.default) {
-                sendMessageUseCase(promptText, imageUri)
+        responseJob?.cancel()
+        responseJob = viewModelScope.launch {
+            processAgentTurn {
+                withContext(dispatcherProvider.default) {
+                    sendMessageUseCase(promptText, imageUri)
+                }
             }
         }
     }
@@ -237,7 +242,7 @@ class ChatViewModel @Inject constructor(
         val request = currentState.ageVerificationRequest ?: return
         if (!BuildConfig.DEBUG) {
             setState { copy(ageVerificationRequest = null, sendState = SendState.Idle) }
-            appendAssistantMessage(Constants.ContentPolicy.EXPLICIT_RELEASE_BLOCK_MESSAGE, modelName = "CHEVERE")
+            appendAssistantMessage(Constants.ContentPolicy.EXPLICIT_RELEASE_BLOCK_MESSAGE, modelName = "CHEVERE AI")
             return
         }
 
@@ -264,7 +269,7 @@ class ChatViewModel @Inject constructor(
             }
         }
         if (message != null) {
-            appendAssistantMessage(message, modelName = "CHEVERE")
+            appendAssistantMessage(message, modelName = "CHEVERE AI")
             return
         }
 
@@ -278,7 +283,7 @@ class ChatViewModel @Inject constructor(
 
     private suspend fun dismissAgeVerification() {
         setState { copy(ageVerificationRequest = null, sendState = SendState.Idle) }
-        appendAssistantMessage("Age verification was canceled.", modelName = "CHEVERE")
+        appendAssistantMessage("Age verification was canceled.", modelName = "CHEVERE AI")
     }
 
     private suspend fun appendAssistantMessage(text: String, modelName: String? = currentState.selectedModel) {
@@ -298,7 +303,7 @@ class ChatViewModel @Inject constructor(
     private suspend fun promptForImageModelDownload() {
         appendAssistantMessage(
             text = "Image generation needs a local image model first. Download an image generation model from Models, then try this prompt again.",
-            modelName = "CHEVERE"
+            modelName = "CHEVERE AI"
         )
         sendEffect { ChatEffect.ShowImageModelDownloadPrompt }
     }
@@ -364,7 +369,19 @@ class ChatViewModel @Inject constructor(
         imageGenerationJob?.cancel()
         imageGenerationJob = null
         setState { copy(sendState = SendState.Idle) }
-        appendAssistantMessage("Image generation canceled.", modelName = "CHEVERE")
+        appendAssistantMessage("Image generation canceled.", modelName = "CHEVERE AI")
+    }
+
+    private suspend fun stopActiveResponse() {
+        val hadActiveWork = responseJob?.isActive == true || imageGenerationJob?.isActive == true
+        responseJob?.cancel()
+        responseJob = null
+        imageGenerationJob?.cancel()
+        imageGenerationJob = null
+        setState { copy(sendState = SendState.Idle) }
+        if (hadActiveWork) {
+            appendAssistantMessage("Stopped.", modelName = "CHEVERE AI")
+        }
     }
 
     /**
@@ -376,7 +393,7 @@ class ChatViewModel @Inject constructor(
         if (message.isUser) return
 
         val shareText = buildString {
-            appendLine("Chevere response")
+            appendLine("Chevere AI response")
             message.modelName?.let { modelName -> appendLine("Model: $modelName") }
             message.imageUri?.let { imageUri -> appendLine("Image: $imageUri") }
             appendLine()
@@ -385,7 +402,7 @@ class ChatViewModel @Inject constructor(
 
         sendEffect {
             ChatEffect.ShareText(
-                title = "Share Chevere response",
+                title = "Share Chevere AI response",
                 text = shareText
             )
         }
@@ -393,18 +410,24 @@ class ChatViewModel @Inject constructor(
 
     private suspend fun confirmAction() {
         sendEffect { ChatEffect.HideKeyboard }
-        processAgentTurn { 
-            withContext(dispatcherProvider.default) {
-                repository.confirmAction()
+        responseJob?.cancel()
+        responseJob = viewModelScope.launch {
+            processAgentTurn {
+                withContext(dispatcherProvider.default) {
+                    repository.confirmAction()
+                }
             }
         }
     }
 
     private suspend fun cancelAction() {
         sendEffect { ChatEffect.HideKeyboard }
-        processAgentTurn { 
-            withContext(dispatcherProvider.default) {
-                repository.cancelAction()
+        responseJob?.cancel()
+        responseJob = viewModelScope.launch {
+            processAgentTurn {
+                withContext(dispatcherProvider.default) {
+                    repository.cancelAction()
+                }
             }
         }
     }
@@ -412,10 +435,17 @@ class ChatViewModel @Inject constructor(
     private suspend fun processAgentTurn(action: suspend () -> Result<String>) {
         var responseText = ""
         val time = measureTimeMillis {
-            action()
+            val result = try {
+                action()
+            } catch (_: CancellationException) {
+                setState { copy(sendState = SendState.Idle) }
+                return
+            }
+
+            result
                 .onSuccess { responseText = it }
                 .onFailure { e ->
-                    appendAssistantMessage(e.message ?: "Action failed", modelName = "CHEVERE")
+                    appendAssistantMessage(e.message ?: "Action failed", modelName = "CHEVERE AI")
                     return
                 }
         }
@@ -428,6 +458,7 @@ class ChatViewModel @Inject constructor(
             imageUri = imagePayload?.imageUri,
             modelName = currentState.selectedModel.replace(Constants.ModelFiles.LITERTLM_EXTENSION, "").uppercase()
         )
+        responseJob = null
         setState { copy(messages = messages + aiMsg, sendState = SendState.Idle) }
         sendEffect { ChatEffect.ScrollToBottom }
     }

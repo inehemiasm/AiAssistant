@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -22,6 +23,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.Surface
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -72,11 +74,13 @@ fun ChatInputBar(
     text: String,
     onTextChange: (String) -> Unit,
     onSend: () -> Unit,
+    onStop: () -> Unit,
     selectedImageUri: Uri?,
     onGalleryClick: () -> Unit,
     onCameraClick: () -> Unit,
     onRemoveImage: () -> Unit,
     enabled: Boolean,
+    isBusy: Boolean,
     modifier: Modifier = Modifier
 ) {
     var showAttachmentMenu by remember { mutableStateOf(false) }
@@ -118,34 +122,59 @@ fun ChatInputBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = 56.dp)
-                .clip(RoundedCornerShape(28.dp))
-                .background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.8f))
-                .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)), RoundedCornerShape(28.dp))
-                .padding(horizontal = 4.dp, vertical = 4.dp),
+                .heightIn(min = 62.dp)
+                .clip(RoundedCornerShape(32.dp))
+                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.78f))
+                .border(
+                    BorderStroke(
+                        1.dp,
+                        if (enabled) MaterialTheme.colorScheme.primary.copy(alpha = 0.22f)
+                        else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+                    ),
+                    RoundedCornerShape(32.dp)
+                )
+                .padding(horizontal = 6.dp, vertical = 6.dp),
             verticalAlignment = Alignment.Bottom 
         ) {
             Box(modifier = Modifier.align(Alignment.CenterVertically)) {
                 IconButton(
                     onClick = { showAttachmentMenu = true },
                     enabled = enabled,
-                    modifier = Modifier.size(44.dp)
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.34f))
                 ) {
                     Icon(
                         Icons.Default.Add,
                         stringResource(R.string.add_attachment),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(24.dp)
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(26.dp)
                     )
                 }
                 DropdownMenu(
                     expanded = showAttachmentMenu,
                     onDismissRequest = { showAttachmentMenu = false },
-                    modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainerHighest)
+                    modifier = Modifier
+                        .width(188.dp)
+                        .background(MaterialTheme.colorScheme.surfaceContainerLow),
+                    shape = RoundedCornerShape(18.dp),
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                    tonalElevation = 8.dp,
+                    shadowElevation = 8.dp
                 ) {
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.gallery), color = MaterialTheme.colorScheme.onSurface) },
-                        leadingIcon = { Icon(Icons.Default.AddPhotoAlternate, null, tint = MaterialTheme.colorScheme.primary) },
+                        leadingIcon = {
+                            AttachmentMenuIcon {
+                                Icon(
+                                    Icons.Default.AddPhotoAlternate,
+                                    null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        },
                         onClick = {
                             onGalleryClick()
                             showAttachmentMenu = false
@@ -153,7 +182,16 @@ fun ChatInputBar(
                     )
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.camera), color = MaterialTheme.colorScheme.onSurface) },
-                        leadingIcon = { Icon(Icons.Default.PhotoCamera, null, tint = MaterialTheme.colorScheme.primary) },
+                        leadingIcon = {
+                            AttachmentMenuIcon {
+                                Icon(
+                                    Icons.Default.PhotoCamera,
+                                    null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        },
                         onClick = {
                             onCameraClick()
                             showAttachmentMenu = false
@@ -165,11 +203,11 @@ fun ChatInputBar(
             TextField(
                 value = text,
                 onValueChange = onTextChange,
-                modifier = Modifier.weight(1f).padding(vertical = 4.dp),
+                modifier = Modifier.weight(1f).padding(vertical = 2.dp),
                 placeholder = {
                     Text(
                         stringResource(R.string.input_placeholder),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f),
                         style = Typography.bodyMedium
                     )
                 },
@@ -197,23 +235,55 @@ fun ChatInputBar(
             )
 
             val isSendEnabled = enabled && (text.isNotBlank() || selectedImageUri != null)
-            IconButton(
-                onClick = { if (isSendEnabled) onSend() },
+            val actionEnabled = isBusy || isSendEnabled
+            Surface(
+                color = when {
+                    isBusy -> MaterialTheme.colorScheme.primary
+                    isSendEnabled -> MaterialTheme.colorScheme.primary
+                    else -> MaterialTheme.colorScheme.surfaceContainerHigh
+                },
+                contentColor = if (isSendEnabled || isBusy) {
+                    MaterialTheme.colorScheme.onPrimary
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f)
+                },
+                shape = CircleShape,
                 modifier = Modifier
-                    .padding(bottom = 2.dp, end = 2.dp)
-                    .size(44.dp)
-                    .clip(CircleShape)
-                    .background(if (isSendEnabled) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHighest)
+                    .padding(bottom = 1.dp, end = 1.dp)
+                    .size(52.dp)
                     .align(Alignment.CenterVertically),
-                enabled = isSendEnabled
+                shadowElevation = if (actionEnabled) 3.dp else 0.dp
             ) {
-                Icon(
-                    Icons.AutoMirrored.Filled.Send,
-                    stringResource(R.string.send),
-                    tint = if (isSendEnabled) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                    modifier = Modifier.size(20.dp)
-                )
+                IconButton(
+                    onClick = {
+                        if (isBusy) {
+                            onStop()
+                        } else if (isSendEnabled) {
+                            onSend()
+                        }
+                    },
+                    enabled = actionEnabled
+                ) {
+                    Icon(
+                        if (isBusy) Icons.Default.Stop else Icons.AutoMirrored.Filled.Send,
+                        stringResource(if (isBusy) R.string.stop_response else R.string.send),
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
             }
+        }
+    }
+}
+
+@Composable
+private fun AttachmentMenuIcon(content: @Composable () -> Unit) {
+    Surface(
+        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+        shape = CircleShape,
+        modifier = Modifier.size(34.dp)
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            content()
         }
     }
 }

@@ -1,6 +1,6 @@
 # Google AI Edge Gallery Reference
 
-This document is a bounded reference for architectural patterns inspired by the [Google AI Edge Gallery](https://github.com/google-ai-edge/gallery). Chevere borrows patterns, not large framework code.
+This document is a bounded reference for architectural patterns inspired by the [Google AI Edge Gallery](https://github.com/google-ai-edge/gallery). Chevere AI borrows patterns, not large framework code.
 
 ## Relevant Gallery Resources
 The following areas of the Gallery are prioritized for reference:
@@ -18,11 +18,11 @@ The following areas of the Gallery are prioritized for reference:
 The Gallery uses a declarative approach where functions are defined with JSON-schema-like metadata. The LLM returns a "call" which the app executes locally.
 
 ### Why it fits this app
-Chevere interacts with local model state, image generation, web/weather services, and Android intents. Decoupling tool definitions from implementation lets the active chat model decide what to call without coupling inference code to platform actions.
+Chevere AI interacts with local model state, image generation, web/weather services, and Android intents. Decoupling tool definitions from implementation lets the active chat model decide what to call without coupling inference code to platform actions.
 
 ### Implementation Difference
 - **Gallery**: Often uses complex DI-based plugin systems.
-- **Chevere**: Uses Hilt multibinding for `AgentTool` and a `ToolRegistry` that produces the system tool list.
+- **Chevere AI**: Uses Hilt multibinding for `AgentTool` and a `ToolRegistry` that produces the system tool list.
 
 ---
 
@@ -36,7 +36,7 @@ It prevents the inference runtime from becoming a "God Object." Tools and runtim
 
 ### Implementation Difference
 - **Gallery**: Uses a rich event bus for inter-skill communication.
-- **Chevere**: Uses direct repository and orchestrator calls, plus MVI state in the UI. This keeps the data flow easier to debug.
+- **Chevere AI**: Uses direct repository and orchestrator calls, plus MVI state in the UI. This keeps the data flow easier to debug.
 
 ---
 
@@ -46,11 +46,11 @@ It prevents the inference runtime from becoming a "God Object." Tools and runtim
 Asynchronous image processing where images are "attached" to the conversation context before the user sends the prompt.
 
 ### Why it fits this app
-Chevere supports image attachments for multimodal chat and generated image attachments for text-to-image output.
+Chevere AI supports image attachments for multimodal chat and generated image attachments for text-to-image output.
 
 ### Implementation Difference
 - **Gallery**: Standard Material 3 components.
-- **Chevere**: Keeps high-tech styling, image previews, generated image bubbles, explicit image masking, and reactive URI state.
+- **Chevere AI**: Keeps high-tech styling, image previews, generated image bubbles, explicit image masking, and reactive URI state.
 
 ---
 
@@ -64,7 +64,7 @@ Local-first does not mean action-free. External sharing, app actions, and age-re
 
 ### Implementation Difference
 - **Gallery**: Complex permission negotiation.
-- **Chevere**: Uses confirmation dialogs/cards for sensitive actions and an age-verification dialog before explicit image generation. Explicit generated images are masked by default.
+- **Chevere AI**: Uses confirmation dialogs/cards for sensitive actions and an age-verification dialog before explicit image generation. Explicit generated images are masked by default.
 
 ---
 
@@ -78,7 +78,7 @@ Privacy is a core feature. Chat and image generation should run locally when mod
 
 ### Implementation Difference
 - **Gallery**: Often showcases hybrid models.
-- **Chevere**: Prioritizes local chat and local image generation. Network-backed features are explicit: model discovery/downloads, web search, weather, and any tool that opens external services.
+- **Chevere AI**: Prioritizes local chat and local image generation. Network-backed features are explicit: model discovery/downloads, web search, weather, and any tool that opens external services.
 
 ---
 

@@ -15,21 +15,21 @@ val Typography = Typography(
         fontWeight = FontWeight.ExtraBold,
         fontSize = 45.sp,
         lineHeight = 52.sp,
-        letterSpacing = (-0.02).sp
+        letterSpacing = 0.sp
     ),
     displaySmall = TextStyle(
         fontFamily = PlusJakartaSans,
         fontWeight = FontWeight.Bold,
         fontSize = 32.sp,
         lineHeight = 40.sp,
-        letterSpacing = (-0.02).sp
+        letterSpacing = 0.sp
     ),
     headlineMedium = TextStyle(
         fontFamily = PlusJakartaSans,
         fontWeight = FontWeight.Bold,
         fontSize = 28.sp,
         lineHeight = 36.sp,
-        letterSpacing = (-0.01).sp
+        letterSpacing = 0.sp
     ),
     titleLarge = TextStyle(
         fontFamily = PlusJakartaSans,

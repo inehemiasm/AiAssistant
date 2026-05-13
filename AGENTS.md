@@ -67,7 +67,7 @@ Path: `app/src/main/java/com/neo/chevere/data/`
 Path: `app/src/main/java/com/neo/chevere/ui/`
 
 - Chat MVI state lives in `ChatContract.kt`.
-- `ChatTopBar` is brand/capability focused. It shows `CHEVERE` with `CHAT` and `IMAGE` readiness chips, not the selected model filename.
+- `ChatTopBar` is brand/capability focused. It shows `CHEVERE AI` with `CHAT` and `IMAGE` readiness chips, not the selected model filename.
 - Attached images must route through chat/vision inference. Do not route image attachments to the text-to-image backend unless the user explicitly invokes an image-generation flow without an attachment.
 - Image-only sends default to `Describe this image.`.
 - Assistant message actions should use share semantics. Do not reintroduce report/flag controls until a real reporting backend exists.

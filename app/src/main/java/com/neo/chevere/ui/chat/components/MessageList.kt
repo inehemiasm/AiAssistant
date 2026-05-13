@@ -66,7 +66,12 @@ fun MessageList(
     onToggleExplicitImageMask: (Int) -> Unit = {},
     onShareMessage: (Int) -> Unit = {}
 ) {
-    LazyColumn(state = listState, modifier = modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(24.dp)) {
+    LazyColumn(
+        state = listState,
+        modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(22.dp)
+    ) {
         itemsIndexed(messages) { index, message ->
             FuturisticChatBubble(
                 message = message,
@@ -94,9 +99,9 @@ fun FuturisticChatBubble(
     onShareMessage: () -> Unit = {}
 ) {
     val isUser = message.isUser
-    val bubbleColor = if (isUser) MaterialTheme.colorScheme.surfaceContainerHigh else MaterialTheme.colorScheme.surfaceContainerLow
+    val bubbleColor = if (isUser) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.18f) else MaterialTheme.colorScheme.surfaceContainerLowest
     val onBubbleColor = MaterialTheme.colorScheme.onSurface
-    val borderColor = if (isUser) Color.Transparent else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+    val borderColor = if (isUser) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.42f)
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -110,9 +115,9 @@ fun FuturisticChatBubble(
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier
                     .padding(end = 12.dp, top = 8.dp)
-                    .size(24.dp)
-                    .background(MaterialTheme.colorScheme.surfaceContainerHighest, CircleShape)
-                    .padding(4.dp)
+                    .size(28.dp)
+                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.42f), CircleShape)
+                    .padding(5.dp)
             )
         }
 
@@ -123,10 +128,10 @@ fun FuturisticChatBubble(
             Surface(
                 color = bubbleColor,
                 contentColor = onBubbleColor,
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(22.dp),
                 modifier = Modifier
-                    .widthIn(max = 300.dp)
-                    .border(1.dp, borderColor, RoundedCornerShape(16.dp))
+                    .widthIn(max = 340.dp)
+                    .border(1.dp, borderColor, RoundedCornerShape(22.dp))
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     if (message.imageUri != null) {

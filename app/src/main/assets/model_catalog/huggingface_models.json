@@ -7,7 +7,7 @@
     "fileName": "gemma-4-E2B-it.litertlm",
     "downloadUrl": "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it.litertlm",
     "sizeBytes": 2765953024,
-    "supportsVision": false,
+    "supportsVision": true,
     "license": "Gemma Terms of Use"
   },
   {
@@ -18,7 +18,7 @@
     "fileName": "gemma-4-E2B-it-q4.litertlm",
     "downloadUrl": "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it-q4.litertlm",
     "sizeBytes": 1565953024,
-    "supportsVision": false,
+    "supportsVision": true,
     "license": "Gemma Terms of Use"
   },
   {
@@ -53,7 +53,7 @@
     "downloadUrl": "https://github.com/ShiftHackZ/Local-Diffusion-Models-SDAI-ONXX/releases/download/patch-25022024/dreamshaper.zip",
     "sizeBytes": 0,
     "runtimeType": "ONNX Diffusion",
-    "supportsVision": false,
+    "supportsVision": true,
     "license": "Model-specific community checkpoint license"
   }
 ]

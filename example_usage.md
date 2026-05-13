@@ -14,7 +14,7 @@ Attach an image from the gallery or camera and ask about it:
 What is in this image?
 ```
 
-If the text field is empty, Chevere sends a default `Describe this image.` prompt. Attached images route through chat/vision inference, not text-to-image generation.
+If the text field is empty, Chevere AI sends a default `Describe this image.` prompt. Attached images route through chat/vision inference, not text-to-image generation.
 
 ## Direct Image Generation
 
@@ -30,7 +30,7 @@ Supported aliases:
 - `/img`
 - `/imagine`
 
-If no healthy image-generation model is installed, Chevere shows a dialog that offers to open **Models** so the user can download one.
+If no healthy image-generation model is installed, Chevere AI shows a dialog that offers to open **Models** so the user can download one.
 
 ## Agent Image Generation
 
@@ -48,7 +48,7 @@ Explicit image generation is debug-only. Debug builds show an age-verification d
 
 - The first downloaded chat model activates automatically.
 - The first downloaded image-generation model becomes available immediately without replacing the active chat model.
-- The chat top bar shows `CHEVERE` with `CHAT` and `IMAGE` readiness chips rather than a single model filename.
+- The chat top bar shows `CHEVERE AI` with `CHAT` and `IMAGE` readiness chips rather than a single model filename.
 
 ## Sharing Responses
 

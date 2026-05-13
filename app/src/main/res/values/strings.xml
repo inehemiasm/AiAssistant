@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Chevere</string>
+    <string name="app_name">Chevere AI</string>
 
     <!-- Chat Screen & Components -->
     <string name="synthesizing_core">SYNTHESIZING CORE…</string>
     <string name="synthesizing_description">Aligning neural weights for on-device inference. This process is hardware-intensive.</string>
     <string name="menu_library">Library</string>
-    <string name="chevere_private_ai">CHEVERE PRIVATE AI</string>
+    <string name="chevere_private_ai">CHEVERE AI PRIVATE</string>
     <string name="clear_chat">Clear Chat</string>
     <string name="profile">Profile</string>
     <string name="synthesizing">SYNTHESIZING…</string>
@@ -20,8 +20,9 @@
     <string name="add_attachment">Add attachment</string>
     <string name="gallery">Gallery</string>
     <string name="camera">Camera</string>
-    <string name="input_placeholder">Command Chevere…</string>
+    <string name="input_placeholder">Ask Chevere AI…</string>
     <string name="send">Send</string>
+    <string name="stop_response">Stop response</string>
     <string name="local_compute_engine">Local Compute Engine</string>
     <string name="engine_description">Select a neural architecture optimized for your local hardware. High-efficiency, zero-latency inference.</string>
     <string name="scanning_repositories">SCANNING REPOSITORIES…</string>
@@ -57,7 +58,7 @@
     <string name="release_content_controls">Release content controls</string>
     <string name="release_content_controls_desc">Release builds block explicit image generation before a prompt reaches the image backend. Debug builds can use age verification for local testing.</string>
     <string name="user_controlled_sharing">User-controlled sharing</string>
-    <string name="user_controlled_sharing_desc">Assistant responses can be shared through the Android share sheet only when you tap share. Chevere does not send chat content to a report endpoint.</string>
+    <string name="user_controlled_sharing_desc">Assistant responses can be shared through the Android share sheet only when you tap share. Chevere AI does not send chat content to a report endpoint.</string>
     <string name="local_storage_privacy">Local storage</string>
     <string name="local_storage_privacy_desc">Downloaded models and generated images are stored in app-controlled local storage. Deleting the app removes app-private data.</string>
     <string name="version_label">Version</string>
@@ -81,7 +82,7 @@
     <string name="delete">Delete</string>
 
     <!-- Splash & Initialization -->
-    <string name="splash_app_name">Chevere</string>
+    <string name="splash_app_name">Chevere AI</string>
     <string name="splash_subtitle">INTELLIGENT COMPANION</string>
     <string name="initializing">INITIALIZING…</string>
     <string name="attempting_gpu">ATTEMPTING GPU + VISION…</string>

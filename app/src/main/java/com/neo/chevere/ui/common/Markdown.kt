@@ -14,7 +14,7 @@ import androidx.compose.ui.text.font.FontWeight
  * Parses a simple markdown string and converts it to an [AnnotatedString] for display in Compose.
  *
  * Supports bold (**text**), italic (*text*), and inline code (`text`).
- * Also provides special styling for the "Chevere" keyword.
+ * Also provides special styling for the "Chevere AI" brand keyword.
  *
  * @param text The markdown text to parse.
  * @return An [AnnotatedString] with the appropriate styles applied.
@@ -53,7 +53,7 @@ fun parseMarkdownLogic(
         val boldRegex = Regex("""\*\*(.*?)\*\*""")
         val italicRegex = Regex("""\*(?!\*)(.*?)\*""")
         val codeRegex = Regex("""`(.*?)`""")
-        val highlightRegex = Regex("(Chevere)") // Example of keyword highlighting from design
+        val highlightRegex = Regex("(Chevere AI|Chevere)")
 
         var currentPos = 0
         
@@ -98,7 +98,7 @@ fun parseMarkdownLogic(
                 match.value.startsWith("*") -> {
                     addStyle(SpanStyle(fontStyle = FontStyle.Italic), start, end)
                 }
-                match.value == "Chevere" -> {
+                match.value == "Chevere" || match.value == "Chevere AI" -> {
                     addStyle(SpanStyle(color = primaryColor, fontWeight = FontWeight.Bold), start, end)
                 }
             }

@@ -71,7 +71,7 @@ object Constants {
         const val TAG_MODEL_NAME_PREFIX = "MODEL_NAME:"
         const val NOTIFICATION_CHANNEL_ID = "model_download_channel"
         const val NOTIFICATION_CHANNEL_NAME = "Model Downloads"
-        const val NOTIFICATION_TITLE = "Downloading Chevere model"
+        const val NOTIFICATION_TITLE = "Downloading Chevere AI model"
         const val UNKNOWN_ERROR = "Unknown error"
     }
 

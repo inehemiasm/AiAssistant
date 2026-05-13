@@ -1,6 +1,6 @@
 # Design Guidelines: High-Tech AI Assistant
 
-Chevere uses a high-tech, privacy-first assistant aesthetic: deep surfaces, cyan activity states, precise borders, and readable typography.
+Chevere AI uses a high-tech, privacy-first assistant aesthetic: deep surfaces, cyan activity states, precise borders, and readable typography.
 
 ## 1. Visual Philosophy
 
@@ -65,7 +65,7 @@ Use uppercase for screen titles and compact status labels when it improves scana
 
 ### Chat Top Bar
 
-- Show the `CHEVERE` brand rather than a single selected model filename.
+- Show the `CHEVERE AI` brand rather than a single selected model filename.
 - Use compact readiness chips for local capabilities, currently `CHAT` and `IMAGE`.
 - Keep chat model switching, image model readiness, downloads, and model details in the Models screen.
 

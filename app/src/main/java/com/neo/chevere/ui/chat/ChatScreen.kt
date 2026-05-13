@@ -11,6 +11,7 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -49,6 +50,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -176,12 +178,20 @@ private fun ChatContent(
                 }
             }
         },
-        containerColor = MaterialTheme.colorScheme.background,
+        containerColor = androidx.compose.ui.graphics.Color.Transparent,
         contentWindowInsets = WindowInsets.statusBars
     ) { innerPadding ->
+        val glassBackground = Brush.verticalGradient(
+            colors = listOf(
+                MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.62f),
+                MaterialTheme.colorScheme.background,
+                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.32f)
+            )
+        )
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .background(glassBackground)
                 .padding(innerPadding)
                 .imePadding()
         ) {
@@ -200,19 +210,6 @@ private fun ChatContent(
                         }
                     )
                 }
-
-                QuantumThinkingIndicator(
-                    visible = state.isLoading && state.runtimeState !is RuntimeState.Initializing,
-                    statusMessage = state.loadingMessage,
-                    onCancel = if (state.sendState is SendState.GeneratingImage) {
-                        { viewModel.onIntent(ChatIntent.CancelGeneration) }
-                    } else {
-                        null
-                    },
-                    modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .padding(16.dp)
-                )
 
                 if (state.isWaitingForConfirmation) {
                     ActionConfirmationDialog(
@@ -238,7 +235,7 @@ private fun ChatContent(
                         onDismissRequest = { showImageModelDownloadPrompt = false },
                         title = { Text("Download image model?") },
                         text = {
-                            Text("Chevere needs a local image generation model before it can create images on this device.")
+                            Text("Chevere AI needs a local image generation model before it can create images on this device.")
                         },
                         confirmButton = {
                             TextButton(
@@ -259,6 +256,14 @@ private fun ChatContent(
                 }
             }
 
+            QuantumThinkingIndicator(
+                visible = state.isLoading && state.runtimeState !is RuntimeState.Initializing,
+                statusMessage = state.loadingMessage,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp)
+            )
+
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -269,6 +274,7 @@ private fun ChatContent(
                     text = state.inputText,
                     onTextChange = { viewModel.onIntent(ChatIntent.UpdateInputText(it)) },
                     onSend = { viewModel.onIntent(ChatIntent.SendMessage(state.inputText, state.selectedImageUri)) },
+                    onStop = { viewModel.onIntent(ChatIntent.StopResponse) },
                     onGalleryClick = { imagePickerLauncher.launch("image/*") },
                     onCameraClick = {
                         when (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)) {
@@ -291,7 +297,11 @@ private fun ChatContent(
                     },
                     selectedImageUri = state.selectedImageUri,
                     onRemoveImage = { viewModel.onIntent(ChatIntent.SelectImage(null)) },
-                    enabled = state.isReady && !state.isLoading
+                    enabled = state.isReady && !state.isLoading,
+                    isBusy = state.sendState is SendState.Sending ||
+                        state.sendState is SendState.GeneratingImage ||
+                        state.agentState is com.neo.chevere.data.agent.AgentState.Planning ||
+                        state.agentState is com.neo.chevere.data.agent.AgentState.ExecutingTool
                 )
             }
         }
@@ -356,7 +366,7 @@ private fun EmptyModelState(onModelsClick: () -> Unit) {
         Spacer(Modifier.height(24.dp))
         
         Text(
-            text = "Welcome to Chevere",
+            text = "Welcome to Chevere AI",
             style = Typography.headlineMedium,
             color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center

@@ -39,7 +39,10 @@ class LlmRuntimeManager @Inject constructor(
 
     fun isVisionSupported(): Boolean = isVisionEnabled
 
-    suspend fun initialize(modelPath: String): Result<Unit> = withContext(dispatcherProvider.default) {
+    suspend fun initialize(
+        modelPath: String,
+        enableVision: Boolean
+    ): Result<Unit> = withContext(dispatcherProvider.default) {
         engineLock.withLock {
             _initStatus.value = InitializationStatus.Initializing("RESETTING RUNTIME...")
             closeCurrentResources()
@@ -48,11 +51,13 @@ class LlmRuntimeManager @Inject constructor(
                 if (!exists()) mkdirs() 
             }
 
-            val backends = listOf(
-                Triple(Backend.GPU(), Backend.CPU(), "GPU + Vision"),
-                Triple(Backend.CPU(), Backend.CPU(), "CPU + Vision"),
-                Triple(Backend.CPU(), null, "Text-Only")
-            )
+            val backends = buildList {
+                if (enableVision) {
+                    add(Triple(Backend.GPU(), Backend.CPU(), "GPU + Vision"))
+                    add(Triple(Backend.CPU(), Backend.CPU(), "CPU + Vision"))
+                }
+                add(Triple(Backend.CPU(), null, "Text-Only"))
+            }
 
             var lastError: Throwable? = null
 
@@ -66,14 +71,6 @@ class LlmRuntimeManager @Inject constructor(
                         maxNumTokens = Constants.Inference.MAX_NUM_TOKENS,
                         cacheDir = neuralCache.absolutePath
                     )
-                    
-                    if (vision != null) {
-                        try {
-                            val field = config.javaClass.getDeclaredField("maxNumImages")
-                            field.isAccessible = true
-                            field.set(config, Constants.Inference.MAX_NUM_IMAGES)
-                        } catch (e: Exception) { /* ignore */ }
-                    }
 
                     engineWrapper.initialize(config)
                     

@@ -83,6 +83,7 @@ sealed class ChatIntent : UiIntent {
     data object ConfirmAction : ChatIntent()
     data object CancelAction : ChatIntent()
     data object CancelGeneration : ChatIntent()
+    data object StopResponse : ChatIntent()
     data class SubmitBirthdate(val year: Int, val month: Int, val day: Int) : ChatIntent()
     data object DismissAgeVerification : ChatIntent()
     data class ToggleExplicitImageMask(val messageIndex: Int) : ChatIntent()
