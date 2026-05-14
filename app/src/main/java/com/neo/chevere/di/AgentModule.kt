@@ -70,9 +70,10 @@ abstract class AgentModule {
         @Provides
         @IntoSet
         fun provideWeatherTool(
-            httpClient: HttpClient
+            httpClient: HttpClient,
+            preferenceManager: PreferenceManager
         ): AgentTool {
-            return WeatherTool(httpClient)
+            return WeatherTool(httpClient, preferenceManager)
         }
 
         @Provides

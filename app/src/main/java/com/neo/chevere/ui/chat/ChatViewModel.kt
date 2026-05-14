@@ -173,6 +173,7 @@ class ChatViewModel @Inject constructor(
                 ChatIntent.DismissAgeVerification -> dismissAgeVerification()
                 is ChatIntent.ToggleExplicitImageMask -> toggleExplicitImageMask(intent.messageIndex)
                 is ChatIntent.ShareMessage -> shareMessage(intent.messageIndex)
+                is ChatIntent.SaveImage -> saveImage(intent.messageIndex)
             }
         }
     }
@@ -430,10 +431,31 @@ class ChatViewModel @Inject constructor(
         }
 
         sendEffect {
-            ChatEffect.ShareText(
+            ChatEffect.ShareMessage(
                 title = "Share Chevere AI response",
-                text = shareText
+                text = shareText,
+                imageUri = message.imageUri
+                    ?.takeUnless { message.isExplicitImage && message.isImageMasked }
+                    ?.let(Uri::parse)
             )
+        }
+    }
+
+    /**
+     * Requests that the UI save an image-bearing assistant message to user-visible storage.
+     */
+    private fun saveImage(messageIndex: Int) {
+        val message = currentState.messages.getOrNull(messageIndex) ?: return
+        val imageUri = message.imageUri ?: return
+        if (message.isExplicitImage && message.isImageMasked) {
+            viewModelScope.launch {
+                sendEffect { ChatEffect.ShowToast("Reveal the image before saving it.") }
+            }
+            return
+        }
+
+        viewModelScope.launch {
+            sendEffect { ChatEffect.SaveImage(Uri.parse(imageUri)) }
         }
     }
 

@@ -88,12 +88,14 @@ sealed class ChatIntent : UiIntent {
     data object DismissAgeVerification : ChatIntent()
     data class ToggleExplicitImageMask(val messageIndex: Int) : ChatIntent()
     data class ShareMessage(val messageIndex: Int) : ChatIntent()
+    data class SaveImage(val messageIndex: Int) : ChatIntent()
 }
 
 sealed class ChatEffect : UiEffect {
     data object ScrollToBottom : ChatEffect()
     data class ShowToast(val message: String) : ChatEffect()
-    data class ShareText(val title: String, val text: String) : ChatEffect()
+    data class ShareMessage(val title: String, val text: String, val imageUri: Uri? = null) : ChatEffect()
+    data class SaveImage(val imageUri: Uri) : ChatEffect()
     data object ShowImageModelDownloadPrompt : ChatEffect()
     data object HideKeyboard : ChatEffect()
 }

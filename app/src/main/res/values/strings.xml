@@ -16,6 +16,9 @@
     <string name="privacy_lock">PRIVACY LOCK</string>
     <string name="sent_status">SENT</string>
     <string name="share_message">Share message</string>
+    <string name="save_image">Save image</string>
+    <string name="image_saved">Image saved</string>
+    <string name="image_save_failed">Could not save image</string>
     <string name="model_optimization_info">GEMMA • OPTIMIZED FOR M3/RTX</string>
     <string name="add_attachment">Add attachment</string>
     <string name="gallery">Gallery</string>
@@ -49,6 +52,12 @@
     <string name="high_tech_mode">High-Tech Mode</string>
     <string name="neural_dark_active">Neural dark interface active</string>
     <string name="standard_light_active">Standard light interface active</string>
+    <string name="weather_units">Weather units</string>
+    <string name="weather_units_desc">Choose how weather tools report temperature and wind.</string>
+    <string name="weather_units_metric">METRIC</string>
+    <string name="weather_units_metric_desc">C, km/h</string>
+    <string name="weather_units_imperial">IMPERIAL</string>
+    <string name="weather_units_imperial_desc">F, mph</string>
     <string name="system_info">SYSTEM INFO</string>
     <string name="safety_privacy">SAFETY &amp; PRIVACY</string>
     <string name="local_first_ai">Local-first AI</string>
@@ -80,6 +89,18 @@
     <string name="active">ACTIVE</string>
     <string name="activate">Activate</string>
     <string name="delete">Delete</string>
+    <string name="onboarding_title">Private AI, powered by your device</string>
+    <string name="onboarding_subtitle">Download a local model to start chatting. Chevere AI runs the core experience on-device, so setup is heavier than a cloud chatbot but gives you more local control.</string>
+    <string name="onboarding_privacy_title">Local-first privacy</string>
+    <string name="onboarding_privacy_body">Chats, image attachments, and generated files stay in app storage unless you choose to share them.</string>
+    <string name="onboarding_heavy_title">Local LLMs are large</string>
+    <string name="onboarding_heavy_body">Models can take gigabytes of storage and may warm up your device during downloads, loading, or long responses.</string>
+    <string name="onboarding_image_title">Chat and image models are separate</string>
+    <string name="onboarding_image_body">Start with a chat model. Add an image-generation model later if you want local image creation.</string>
+    <string name="onboarding_offline_title">Works without a cloud brain</string>
+    <string name="onboarding_offline_body">Inference runs locally. Network access is mainly for model catalogs, downloads, and explicit web-backed tools.</string>
+    <string name="onboarding_download_cta">OPEN MODEL LIBRARY</string>
+    <string name="onboarding_footer">Tip: smaller chat models start faster and use less battery. Larger models can reason better but feel heavier.</string>
 
     <!-- Splash & Initialization -->
     <string name="splash_app_name">Chevere AI</string>

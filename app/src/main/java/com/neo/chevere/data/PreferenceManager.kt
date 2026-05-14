@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.neo.chevere.domain.WeatherUnitSystem
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
@@ -22,7 +23,7 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
  * Manages user preferences using Jetpack DataStore.
  *
  * This class provides access to and allows modification of application settings,
- * such as the theme preference and the currently selected AI model.
+ * such as the theme preference, selected AI model, and weather unit system.
  *
  * @property context The application context used to access DataStore.
  */
@@ -65,6 +66,24 @@ class PreferenceManager @Inject constructor(@ApplicationContext context: Context
         }
 
     /**
+     * A [Flow] that emits the user's preferred weather unit system.
+     * Defaults to [WeatherUnitSystem.METRIC] if no preference is set.
+     */
+    val weatherUnitPreference: Flow<WeatherUnitSystem> = dataStore.data
+        .catch { exception ->
+            if (exception is IOException) {
+                emit(emptyPreferences())
+            } else {
+                throw exception
+            }
+        }
+        .map { preferences ->
+            preferences[WEATHER_UNIT_KEY]
+                ?.let { value -> WeatherUnitSystem.entries.firstOrNull { it.name == value } }
+                ?: WeatherUnitSystem.METRIC
+        }
+
+    /**
      * Updates the user's theme preference.
      *
      * @param isDark `true` to enable dark theme, `false` for light theme.
@@ -86,8 +105,18 @@ class PreferenceManager @Inject constructor(@ApplicationContext context: Context
         }
     }
 
+    /**
+     * Updates the user's preferred weather unit system.
+     */
+    suspend fun updateWeatherUnitSystem(unitSystem: WeatherUnitSystem) {
+        dataStore.edit { preferences ->
+            preferences[WEATHER_UNIT_KEY] = unitSystem.name
+        }
+    }
+
     companion object {
         private val THEME_KEY = booleanPreferencesKey("theme_preference")
         private val SELECTED_MODEL_KEY = stringPreferencesKey("selected_model")
+        private val WEATHER_UNIT_KEY = stringPreferencesKey("weather_unit_system")
     }
 }

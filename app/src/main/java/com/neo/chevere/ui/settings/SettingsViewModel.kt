@@ -21,12 +21,20 @@ class SettingsViewModel @Inject constructor(
                 setState { copy(isDarkMode = isDark) }
             }
         }
+        viewModelScope.launch {
+            preferenceManager.weatherUnitPreference.collectLatest { unitSystem ->
+                setState { copy(weatherUnitSystem = unitSystem) }
+            }
+        }
     }
 
     override suspend fun handleIntent(intent: SettingsIntent) {
         when (intent) {
             is SettingsIntent.UpdateTheme -> {
                 preferenceManager.updateTheme(intent.isDark)
+            }
+            is SettingsIntent.UpdateWeatherUnitSystem -> {
+                preferenceManager.updateWeatherUnitSystem(intent.unitSystem)
             }
         }
     }

@@ -54,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.neo.chevere.R
+import com.neo.chevere.domain.WeatherUnitSystem
 import com.neo.chevere.ui.designsystem.Typography
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -137,6 +138,13 @@ fun SettingsScreen(
                         )
                     }
                 }
+
+                Spacer(Modifier.height(12.dp))
+
+                WeatherUnitsCard(
+                    selectedUnitSystem = state.weatherUnitSystem,
+                    onUnitSelected = { viewModel.onIntent(SettingsIntent.UpdateWeatherUnitSystem(it)) }
+                )
                 
                 Spacer(Modifier.height(32.dp))
                 
@@ -192,6 +200,100 @@ fun SettingsScreen(
                     description = stringResource(R.string.local_storage_privacy_desc)
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun WeatherUnitsCard(
+    selectedUnitSystem: WeatherUnitSystem,
+    onUnitSelected: (WeatherUnitSystem) -> Unit
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.5f),
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.1f))
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Text(
+                stringResource(R.string.weather_units),
+                style = Typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                stringResource(R.string.weather_units_desc),
+                style = Typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp, bottom = 14.dp)
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                WeatherUnitSegment(
+                    label = stringResource(R.string.weather_units_metric),
+                    detail = stringResource(R.string.weather_units_metric_desc),
+                    selected = selectedUnitSystem == WeatherUnitSystem.METRIC,
+                    modifier = Modifier.weight(1f),
+                    onClick = { onUnitSelected(WeatherUnitSystem.METRIC) }
+                )
+                WeatherUnitSegment(
+                    label = stringResource(R.string.weather_units_imperial),
+                    detail = stringResource(R.string.weather_units_imperial_desc),
+                    selected = selectedUnitSystem == WeatherUnitSystem.IMPERIAL,
+                    modifier = Modifier.weight(1f),
+                    onClick = { onUnitSelected(WeatherUnitSystem.IMPERIAL) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun WeatherUnitSegment(
+    label: String,
+    detail: String,
+    selected: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    val background = if (selected) {
+        MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)
+    } else {
+        MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.55f)
+    }
+    val borderColor = if (selected) {
+        MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
+    } else {
+        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.18f)
+    }
+
+    Surface(
+        modifier = modifier.clickable(onClick = onClick),
+        color = background,
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, borderColor)
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                label,
+                style = Typography.labelSmall,
+                color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                letterSpacing = 1.sp
+            )
+            Text(
+                detail,
+                style = Typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 2.dp)
+            )
         }
     }
 }

@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -58,6 +59,7 @@ import java.util.Locale
  * @param listState The state object to be used to control or observe the list's scroll position.
  * @param onToggleExplicitImageMask Called when the user reveals or hides a masked explicit image.
  * @param onShareMessage Called when the user wants to share an assistant message.
+ * @param onSaveImage Called when the user wants to save an assistant image.
  */
 @Composable
 fun MessageList(
@@ -65,7 +67,8 @@ fun MessageList(
     modifier: Modifier = Modifier,
     listState: LazyListState,
     onToggleExplicitImageMask: (Int) -> Unit = {},
-    onShareMessage: (Int) -> Unit = {}
+    onShareMessage: (Int) -> Unit = {},
+    onSaveImage: (Int) -> Unit = {}
 ) {
     LazyColumn(
         state = listState,
@@ -77,7 +80,8 @@ fun MessageList(
             FuturisticChatBubble(
                 message = message,
                 onToggleExplicitImageMask = { onToggleExplicitImageMask(index) },
-                onShareMessage = { onShareMessage(index) }
+                onShareMessage = { onShareMessage(index) },
+                onSaveImage = { onSaveImage(index) }
             )
         }
     }
@@ -92,12 +96,14 @@ fun MessageList(
  * @param message The [ChatMessage] to display.
  * @param onToggleExplicitImageMask Called when the explicit image visibility button is tapped.
  * @param onShareMessage Called when the share button is tapped.
+ * @param onSaveImage Called when the save image button is tapped.
  */
 @Composable
 fun FuturisticChatBubble(
     message: ChatMessage,
     onToggleExplicitImageMask: () -> Unit = {},
-    onShareMessage: () -> Unit = {}
+    onShareMessage: () -> Unit = {},
+    onSaveImage: () -> Unit = {}
 ) {
     val isUser = message.isUser
     val bubbleColor = if (isUser) {
@@ -196,16 +202,31 @@ fun FuturisticChatBubble(
                                     Badge(text = stringResource(R.string.privacy_lock))
                                 }
                             }
-                            IconButton(
-                                onClick = onShareMessage,
-                                modifier = Modifier.size(32.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Share,
-                                    contentDescription = stringResource(R.string.share_message),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                                    modifier = Modifier.size(18.dp)
-                                )
+                            Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                                if (message.imageUri != null) {
+                                    IconButton(
+                                        onClick = onSaveImage,
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Download,
+                                            contentDescription = stringResource(R.string.save_image),
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                }
+                                IconButton(
+                                    onClick = onShareMessage,
+                                    modifier = Modifier.size(32.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Share,
+                                        contentDescription = stringResource(R.string.share_message),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
                             }
                         }
                     }

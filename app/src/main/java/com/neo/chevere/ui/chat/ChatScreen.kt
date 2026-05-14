@@ -1,9 +1,14 @@
 package com.neo.chevere.ui.chat
 
 import android.Manifest
+import android.content.ClipData
+import android.content.ContentValues
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
+import android.provider.MediaStore
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -12,10 +17,14 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -29,7 +38,12 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Memory
+import androidx.compose.material.icons.filled.Security
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -54,13 +68,16 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.neo.chevere.R
 import com.neo.chevere.core.Constants
 import com.neo.chevere.data.agent.AgentState
 import com.neo.chevere.domain.ModelCapability
@@ -74,9 +91,11 @@ import com.neo.chevere.ui.chat.components.ModelInitializationScreen
 import com.neo.chevere.ui.common.ErrorSnackbar
 import com.neo.chevere.ui.designsystem.Typography
 import java.io.File
+import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlinx.coroutines.delay
 
 /**
  * The main Chat screen of the application.
@@ -217,6 +236,9 @@ private fun ChatContent(
                         },
                         onShareMessage = { index ->
                             viewModel.onIntent(ChatIntent.ShareMessage(index))
+                        },
+                        onSaveImage = { index ->
+                            viewModel.onIntent(ChatIntent.SaveImage(index))
                         }
                     )
                 }
@@ -311,8 +333,9 @@ private fun ChatContent(
         viewModel.effect.collect { effect ->
             when (effect) {
                 is ChatEffect.ScrollToBottom -> {
-                    if (state.messages.isNotEmpty()) {
-                        listState.animateScrollToItem(state.messages.size - 1)
+                    val lastIndex = listState.layoutInfo.totalItemsCount - 1
+                    if (lastIndex >= 0) {
+                        listState.animateScrollToItem(lastIndex)
                     }
                 }
                 is ChatEffect.HideKeyboard -> {
@@ -322,20 +345,80 @@ private fun ChatContent(
                 is ChatEffect.ShowToast -> {
                     Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
                 }
-                is ChatEffect.ShareText -> {
+                is ChatEffect.ShareMessage -> {
                     val sendIntent = Intent(Intent.ACTION_SEND).apply {
-                        type = "text/plain"
+                        type = if (effect.imageUri != null) "image/*" else "text/plain"
                         putExtra(Intent.EXTRA_TEXT, effect.text)
+                        effect.imageUri?.let { imageUri ->
+                            putExtra(Intent.EXTRA_STREAM, imageUri)
+                            clipData = ClipData.newUri(context.contentResolver, "Chevere AI image", imageUri)
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        }
                     }
                     val chooser = Intent.createChooser(sendIntent, effect.title)
                     context.startActivity(chooser)
                 }
+                is ChatEffect.SaveImage -> {
+                    val saved = runCatching { saveImageToGallery(context, effect.imageUri) }
+                        .getOrDefault(false)
+                    Toast.makeText(
+                        context,
+                        if (saved) context.getString(R.string.image_saved) else context.getString(R.string.image_save_failed),
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
                 ChatEffect.ShowImageModelDownloadPrompt -> {
                     showImageModelDownloadPrompt = true
                 }
-                else -> {}
             }
         }
+    }
+
+    LaunchedEffect(state.messages.size) {
+        if (state.messages.isNotEmpty()) {
+            val lastIndex = state.messages.lastIndex
+            listState.animateScrollToItem(lastIndex)
+            delay(180)
+            listState.animateScrollToItem(lastIndex)
+        }
+    }
+}
+
+private fun saveImageToGallery(context: Context, sourceUri: Uri): Boolean {
+    val resolver = context.contentResolver
+    val mimeType = resolver.getType(sourceUri) ?: "image/png"
+    val extension = when (mimeType) {
+        "image/jpeg" -> "jpg"
+        "image/webp" -> "webp"
+        else -> "png"
+    }
+    val values = ContentValues().apply {
+        put(MediaStore.Images.Media.DISPLAY_NAME, "chevere_ai_${System.currentTimeMillis()}.$extension")
+        put(MediaStore.Images.Media.MIME_TYPE, mimeType)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/Chevere AI")
+            put(MediaStore.Images.Media.IS_PENDING, 1)
+        }
+    }
+    val destinationUri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
+        ?: return false
+
+    return try {
+        resolver.openInputStream(sourceUri).use { input ->
+            resolver.openOutputStream(destinationUri).use { output ->
+                if (input == null || output == null) throw IOException("Could not open image streams")
+                input.copyTo(output)
+            }
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            values.clear()
+            values.put(MediaStore.Images.Media.IS_PENDING, 0)
+            resolver.update(destinationUri, values, null, null)
+        }
+        true
+    } catch (_: Exception) {
+        resolver.delete(destinationUri, null, null)
+        false
     }
 }
 
@@ -344,21 +427,24 @@ private fun EmptyModelState(onModelsClick: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(32.dp),
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 24.dp, vertical = 28.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
         Surface(
-            modifier = Modifier.size(80.dp),
-            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f),
-            shape = MaterialTheme.shapes.extraLarge
+            modifier = Modifier.size(88.dp),
+            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.72f),
+            contentColor = MaterialTheme.colorScheme.primary,
+            shape = MaterialTheme.shapes.extraLarge,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.24f)),
+            shadowElevation = 8.dp
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
-                    imageVector = Icons.Default.Download,
+                    imageVector = Icons.Default.AutoAwesome,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(40.dp)
+                    modifier = Modifier.size(42.dp)
                 )
             }
         }
@@ -366,35 +452,123 @@ private fun EmptyModelState(onModelsClick: () -> Unit) {
         Spacer(Modifier.height(24.dp))
         
         Text(
-            text = "Welcome to Chevere AI",
-            style = Typography.headlineMedium,
+            text = stringResource(R.string.onboarding_title),
+            style = Typography.headlineMedium.copy(fontWeight = FontWeight.ExtraBold),
             color = MaterialTheme.colorScheme.onSurface,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
+            letterSpacing = 0.sp
         )
         
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(10.dp))
         
         Text(
-            text = "To start chatting, you need to download a local AI model first. All processing happens entirely on your device.",
+            text = stringResource(R.string.onboarding_subtitle),
             style = Typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
-            modifier = Modifier.padding(horizontal = 16.dp)
+            modifier = Modifier.padding(horizontal = 8.dp)
         )
         
-        Spacer(Modifier.height(32.dp))
+        Spacer(Modifier.height(24.dp))
+
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            OnboardingPoint(
+                icon = Icons.Default.Security,
+                title = stringResource(R.string.onboarding_privacy_title),
+                body = stringResource(R.string.onboarding_privacy_body)
+            )
+            OnboardingPoint(
+                icon = Icons.Default.Memory,
+                title = stringResource(R.string.onboarding_heavy_title),
+                body = stringResource(R.string.onboarding_heavy_body)
+            )
+            OnboardingPoint(
+                icon = Icons.Default.Image,
+                title = stringResource(R.string.onboarding_image_title),
+                body = stringResource(R.string.onboarding_image_body)
+            )
+            OnboardingPoint(
+                icon = Icons.Default.CloudOff,
+                title = stringResource(R.string.onboarding_offline_title),
+                body = stringResource(R.string.onboarding_offline_body)
+            )
+        }
+
+        Spacer(Modifier.height(28.dp))
         
         Button(
             onClick = onModelsClick,
             shape = MaterialTheme.shapes.large,
-            contentPadding = PaddingValues(horizontal = 32.dp, vertical = 16.dp)
+            contentPadding = PaddingValues(horizontal = 28.dp, vertical = 16.dp),
+            modifier = Modifier.fillMaxWidth()
         ) {
             Icon(Icons.Default.Download, null)
             Spacer(Modifier.width(12.dp))
             Text(
-                "DOWNLOAD MODEL",
+                stringResource(R.string.onboarding_download_cta),
                 style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
             )
         }
+
+        Spacer(Modifier.height(12.dp))
+
+        Text(
+            text = stringResource(R.string.onboarding_footer),
+            style = Typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.78f),
+            textAlign = TextAlign.Center
+        )
     }
+}
+
+@Composable
+private fun OnboardingPoint(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    body: String
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.74f),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.34f)),
+        tonalElevation = 1.dp
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Surface(
+                modifier = Modifier.size(38.dp),
+                shape = MaterialTheme.shapes.medium,
+                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.64f),
+                contentColor = MaterialTheme.colorScheme.primary
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(icon, contentDescription = null, modifier = Modifier.size(21.dp))
+                }
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = Typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(Modifier.height(3.dp))
+                Text(
+                    text = body,
+                    style = Typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    lineHeight = 18.sp
+                )
+            }
+        }
+    }
+
 }
