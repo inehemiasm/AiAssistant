@@ -1,6 +1,7 @@
 package com.neo.chevere.ui.chat.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,6 +26,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -45,15 +49,32 @@ fun ChatTopBar(
     onSettingsClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val topBarShape = RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp)
     Surface(
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.72f),
+        color = Color.Transparent,
         contentColor = MaterialTheme.colorScheme.onSurface,
-        tonalElevation = 2.dp,
-        modifier = modifier.fillMaxWidth()
+        shape = topBarShape,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)),
+        modifier = modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = 12.dp,
+                shape = topBarShape,
+                ambientColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.16f),
+                spotColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.14f)
+            )
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
+                            MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.86f)
+                        )
+                    )
+                )
                 .height(82.dp)
                 .padding(horizontal = 18.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -115,12 +136,13 @@ private fun TopBarIconButton(
     content: @Composable () -> Unit
 ) {
     Surface(
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.62f),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.76f),
         shape = CircleShape,
-        border = androidx.compose.foundation.BorderStroke(
+        border = BorderStroke(
             1.dp,
-            MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)
+            MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)
         ),
+        shadowElevation = 3.dp,
         modifier = Modifier.size(44.dp)
     ) {
         IconButton(onClick = onClick, enabled = enabled) {

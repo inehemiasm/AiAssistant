@@ -50,7 +50,8 @@ Path: `app/src/main/java/com/neo/chevere/data/`
   - `InferenceManager`: LiteRT-LM model loading and chat inference.
   - `ImageGenerationManager`: selects a compatible installed image-generation model.
   - `OnnxLocalDiffusionEngine`: local ONNX Stable Diffusion style pipeline.
-  - `QualcommImageGenerationEngine`: QNN bundle validation only; native QAIRT execution is not implemented.
+- **Context management** (`data/context/`):
+  - `ConversationContextManager`: rolling context slicer for small on-device models. It keeps recent turns verbatim, compresses older turns into deterministic memory, and rebuilds each prompt instead of relying on an unbounded runtime conversation.
 - **Data sources** (`data/datasource/`):
   - `CompositeModelCatalogDataSource`: merges Firestore and Hugging Face catalogs.
   - `HuggingFaceModelCatalogDataSource`: curated models plus Hub discovery.
@@ -70,6 +71,7 @@ Path: `app/src/main/java/com/neo/chevere/ui/`
 - `ChatTopBar` is brand/capability focused. It shows `CHEVERE AI` with `CHAT` and `IMAGE` readiness chips, not the selected model filename.
 - Attached images must route through chat/vision inference. Do not route image attachments to the text-to-image backend unless the user explicitly invokes an image-generation flow without an attachment.
 - Image-only sends default to `Describe this image.`.
+- Chat context should go through `ConversationContextManager`. Do not add unbounded message replay directly into LiteRT conversations.
 - Assistant message actions should use share semantics. Do not reintroduce report/flag controls until a real reporting backend exists.
 - `SendState.GeneratingImage` drives `GENERATING IMAGE...` UI while slash commands run.
 - Slash commands `/image`, `/img`, and `/imagine` bypass Gemma and call `ChatRepository.generateImage`.
@@ -91,7 +93,6 @@ Path: `app/src/main/java/com/neo/chevere/ui/`
   - `.litertlm`
   - `.bin`
   - extracted ONNX diffusion directory
-  - extracted QNN/Qualcomm image-generation directory
 - ZIP downloads are extracted atomically into a directory named after the ZIP file without `.zip`.
 - If modifying `InstalledModelEntity`, increment the Room database version and handle migration. Current setup uses destructive fallback.
 

@@ -8,9 +8,8 @@ import com.neo.chevere.domain.LoadResult
 /**
  * Runtime contract for text-to-image generation backends.
  *
- * Implementations can wrap Qualcomm/QNN diffusion pipelines, a LiteRT
- * diffusion bundle, or a remote fallback while keeping the rest of the app
- * independent from backend details.
+ * Implementations wrap local diffusion pipelines while keeping the rest of the
+ * app independent from backend details.
  */
 interface ImageGenerationEngine {
     /**

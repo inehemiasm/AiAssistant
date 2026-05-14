@@ -7,6 +7,8 @@ import com.neo.chevere.core.Constants
 import com.neo.chevere.core.DispatcherProvider
 import com.neo.chevere.data.agent.AgentOrchestrator
 import com.neo.chevere.data.agent.AgentState
+import com.neo.chevere.data.chat.ChatRequestRouter
+import com.neo.chevere.data.context.ConversationContextManager
 import com.neo.chevere.data.datasource.ModelCatalogDataSource
 import com.neo.chevere.data.download.WorkManagerModelDownloadManager
 import com.neo.chevere.data.inference.ImageGenerationManager
@@ -37,6 +39,7 @@ import java.io.File
 import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.system.measureTimeMillis
 
 private const val TAG = "ChatRepositoryImpl"
 
@@ -46,13 +49,15 @@ private const val TAG = "ChatRepositoryImpl"
  */
 @Singleton
 class ChatRepositoryImpl @Inject constructor(
-    @ApplicationContext private val context: Context,
+    @param:ApplicationContext private val context: Context,
     private val inferenceManager: InferenceManager,
     private val modelCatalog: ModelCatalogDataSource,
     private val downloadManager: WorkManagerModelDownloadManager,
     private val agentOrchestrator: AgentOrchestrator,
     private val imageGenerationManager: ImageGenerationManager,
     private val installedModelRegistry: InstalledModelRegistry,
+    private val conversationContextManager: ConversationContextManager,
+    private val chatRequestRouter: ChatRequestRouter,
     private val dispatcherProvider: DispatcherProvider
 ) : ChatRepository {
 
@@ -88,6 +93,7 @@ class ChatRepositoryImpl @Inject constructor(
         }
         
         agentOrchestrator.reset()
+        conversationContextManager.clear()
         
         return when (val result = inferenceManager.loadModel(installedModel)) {
             com.neo.chevere.domain.LoadResult.Success -> Result.success(Unit)
@@ -103,15 +109,74 @@ class ChatRepositoryImpl @Inject constructor(
         }
 
         if (imageUri != null) {
-            return when (val result = inferenceManager.generate(InferenceRequest(prompt, imageUri))) {
-                is InferenceResult.Success -> Result.success(result.text)
-                is InferenceResult.Failure -> Result.failure(
-                    result.throwable ?: Exception(result.message)
-                )
-            }
+            return generateDirectChatResponse(prompt, imageUri)
         }
 
-        return agentOrchestrator.processUserRequest(prompt, imageUri)
+        chatRequestRouter.capabilityResponseFor(prompt)?.let { response ->
+            conversationContextManager.recordExchange(prompt, imageUri = null, assistantResponse = response)
+            return Result.success(response)
+        }
+
+        if (!chatRequestRouter.shouldUseAgent(prompt)) {
+            return generateDirectChatResponse(prompt, imageUri = null)
+        }
+
+        val conversationContext = conversationContextManager.buildContextPrefix().takeIf { it.isNotBlank() }
+        inferenceManager.clearConversation()
+        val result = agentOrchestrator.processUserRequest(
+            prompt = prompt,
+            imageUri = imageUri,
+            conversationContext = conversationContext
+        )
+        result.onSuccess { response ->
+            val memoryResponse = if (response.startsWith(Constants.Agent.IMAGE_GENERATION_RESULT_PREFIX)) {
+                "Generated an image from the user's prompt."
+            } else {
+                response
+            }
+            conversationContextManager.recordExchange(prompt, imageUri, memoryResponse)
+        }
+        return result
+    }
+
+    private suspend fun generateDirectChatResponse(prompt: String, imageUri: Uri?): Result<String> {
+        var contextualPrompt = ""
+        var result: InferenceResult? = null
+        val elapsedMs = measureTimeMillis {
+            contextualPrompt = buildDirectChatPrompt(prompt, imageUri)
+            inferenceManager.clearConversation()
+            result = inferenceManager.generate(InferenceRequest(contextualPrompt, imageUri))
+        }
+        logDebug(
+            "Direct chat turn completed in ${elapsedMs}ms. promptChars=${prompt.length}, contextChars=${contextualPrompt.length}, hasImage=${imageUri != null}"
+        )
+
+        return when (val inferenceResult = result) {
+            is InferenceResult.Success -> {
+                conversationContextManager.recordExchange(prompt, imageUri, inferenceResult.text)
+                Result.success(inferenceResult.text)
+            }
+            is InferenceResult.ImageSuccess -> Result.failure(
+                IllegalStateException("Image inference result is not supported in chat.")
+            )
+            is InferenceResult.Failure -> Result.failure(
+                inferenceResult.throwable ?: Exception(inferenceResult.message)
+            )
+            null -> Result.failure(Exception("No inference result was returned."))
+        }
+    }
+
+    private fun buildDirectChatPrompt(prompt: String, imageUri: Uri?): String {
+        val contextualPrompt = conversationContextManager.buildPrompt(prompt, imageUri)
+        return chatRequestRouter.buildDirectChatPrompt(contextualPrompt)
+    }
+
+    private fun logDebug(message: String) {
+        try {
+            Log.d(TAG, message)
+        } catch (_: RuntimeException) {
+            // Android Log is not mocked in local JVM tests.
+        }
     }
 
     override suspend fun generateImage(request: ImageGenerationRequest): Result<ImageGenerationResult.Success> {
@@ -131,6 +196,7 @@ class ChatRepositoryImpl @Inject constructor(
 
     override suspend fun clearConversation() {
         agentOrchestrator.reset()
+        conversationContextManager.clear()
         inferenceManager.clearConversation()
     }
 
@@ -255,27 +321,6 @@ class ChatRepositoryImpl @Inject constructor(
             )
         }
 
-        if (isQualcommImageGenerationDirectory(file)) {
-            return InstalledModel(
-                id = file.name,
-                displayName = file.nameWithoutExtension.replace("_", " ")
-                    .replace("-", " ")
-                    .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() },
-                filePath = file.absolutePath,
-                fileName = file.name,
-                source = existing?.source ?: ModelSource.LOCAL,
-                format = ModelFormat.QNN,
-                runtime = ModelRuntime.QUALCOMM,
-                taskType = ModelTaskType.IMAGE_GENERATION,
-                capabilities = setOf(ModelCapability.IMAGE_GEN),
-                installStatus = InstallStatus.INSTALLED,
-                sizeBytes = file.walkTopDown().filter { it.isFile }.sumOf { it.length() },
-                checksum = existing?.checksum,
-                installedAt = file.lastModified(),
-                license = existing?.license
-            )
-        }
-
         if (!file.isFile) return null
 
         val extension = file.extension.lowercase()
@@ -320,20 +365,12 @@ class ChatRepositoryImpl @Inject constructor(
 
     private fun ModelEntry.toPendingInstalledModel(id: String, filePath: String): InstalledModel {
         val (format, runtime, taskType, capabilities) = when {
-            effectiveFileName.endsWith(Constants.ModelFiles.ZIP_EXTENSION, ignoreCase = true) &&
-                runtimeType.contains("ONNX", ignoreCase = true) -> Tuple4(
-                    ModelFormat.ONNX_DIFFUSION_BUNDLE,
-                    ModelRuntime.ONNX_DIFFUSION,
-                    ModelTaskType.IMAGE_GENERATION,
-                    setOf(ModelCapability.IMAGE_GEN)
-                )
-            effectiveFileName.endsWith(Constants.ModelFiles.ZIP_EXTENSION, ignoreCase = true) &&
-                runtimeType.contains("Qualcomm", ignoreCase = true) -> Tuple4(
-                    ModelFormat.QNN,
-                    ModelRuntime.QUALCOMM,
-                    ModelTaskType.IMAGE_GENERATION,
-                    setOf(ModelCapability.IMAGE_GEN)
-                )
+            effectiveFileName.endsWith(Constants.ModelFiles.ZIP_EXTENSION, ignoreCase = true) -> Tuple4(
+                ModelFormat.ONNX_DIFFUSION_BUNDLE,
+                ModelRuntime.ONNX_DIFFUSION,
+                ModelTaskType.IMAGE_GENERATION,
+                setOf(ModelCapability.IMAGE_GEN)
+            )
             effectiveFileName.endsWith(Constants.ModelFiles.LITERTLM_EXTENSION, ignoreCase = true) -> Tuple4(
                 ModelFormat.LITERTLM,
                 ModelRuntime.LITERT,
@@ -410,7 +447,7 @@ class ChatRepositoryImpl @Inject constructor(
         val nameLooksLikeImageModel = file.name.contains("image", ignoreCase = true) ||
             file.name.contains("diffusion", ignoreCase = true) ||
             file.name.contains("stable", ignoreCase = true)
-        return nameLooksLikeImageModel || isOnnxDiffusionDirectory(file) || isQualcommImageGenerationDirectory(file)
+        return nameLooksLikeImageModel || isOnnxDiffusionDirectory(file)
     }
 
     private fun isOnnxDiffusionDirectory(file: File): Boolean {
@@ -418,8 +455,4 @@ class ChatRepositoryImpl @Inject constructor(
         return Constants.ImageGeneration.ONNX_REQUIRED_FILES.all { relativePath -> File(file, relativePath).isFile }
     }
 
-    private fun isQualcommImageGenerationDirectory(file: File): Boolean {
-        if (!file.isDirectory) return false
-        return Constants.ImageGeneration.QUALCOMM_REQUIRED_FILES.all { fileName -> File(file, fileName).isFile }
-    }
 }

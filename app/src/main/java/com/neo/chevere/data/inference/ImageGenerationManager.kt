@@ -8,7 +8,6 @@ import com.neo.chevere.domain.InstalledModel
 import com.neo.chevere.domain.InstalledModelRegistry
 import com.neo.chevere.domain.LoadResult
 import com.neo.chevere.domain.ModelCapability
-import com.neo.chevere.domain.ModelRuntime
 import com.neo.chevere.domain.ModelTaskType
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.sync.Mutex
@@ -107,8 +106,7 @@ class ImageGenerationManager @Inject constructor(
         val activeModel = models.find { it.id == activeModelId || it.fileName == activeModelId }
         return buildList {
             if (activeModel != null) add(activeModel)
-            addAll(models.filter { it.runtime == ModelRuntime.ONNX_DIFFUSION && it.id != activeModel?.id })
-            addAll(models.filter { it.runtime == ModelRuntime.QUALCOMM && it.id != activeModel?.id })
+            addAll(models.filter { it.id != activeModel?.id })
         }
     }
 }

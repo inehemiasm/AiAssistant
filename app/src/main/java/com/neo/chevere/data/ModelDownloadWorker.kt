@@ -123,7 +123,7 @@ class ModelDownloadWorker @AssistedInject constructor(
                         tempDir.deleteRecursively()
                         installedModelRegistry.updateInstallStatus(modelId, InstallStatus.FAILED)
                         throw IOException(
-                            "Downloaded ZIP is not a supported model bundle. Missing ONNX or Qualcomm image-generation files."
+                            "Downloaded ZIP is not a supported model bundle. Missing ONNX Diffusion files."
                         )
                     }
                     if (!tempDir.renameTo(targetDir)) {
@@ -224,8 +224,7 @@ class ModelDownloadWorker @AssistedInject constructor(
     }
 
     private fun isSupportedExtractedModelBundle(directory: File): Boolean {
-        return hasRequiredFiles(directory, Constants.ImageGeneration.ONNX_REQUIRED_FILES) ||
-            hasRequiredFiles(directory, Constants.ImageGeneration.QUALCOMM_REQUIRED_FILES)
+        return hasRequiredFiles(directory, Constants.ImageGeneration.ONNX_REQUIRED_FILES)
     }
 
     private fun hasRequiredFiles(directory: File, requiredFiles: List<String>): Boolean {

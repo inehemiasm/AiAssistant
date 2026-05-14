@@ -1,5 +1,7 @@
 package com.neo.chevere.domain
 
+import android.net.Uri
+
 /**
  * Represents a machine learning model stored locally on the device.
  * This is the new source of truth for installed models.
@@ -49,7 +51,6 @@ enum class ModelRuntime {
     LITERT,
     IMAGE_GENERATOR,
     ONNX_DIFFUSION,
-    QUALCOMM,
     UNKNOWN
 }
 
@@ -60,7 +61,6 @@ enum class ModelFormat {
     LITERTLM,
     IMAGE_GENERATOR_BUNDLE,
     ONNX_DIFFUSION_BUNDLE,
-    QNN,
     BIN,
     UNKNOWN
 }
@@ -128,7 +128,7 @@ sealed interface InitializationStatus {
  */
 sealed class LoadResult {
     /** Indicates the model was loaded successfully. */
-    object Success : LoadResult()
+    data object Success : LoadResult()
     /** 
      * Indicates the model failed to load. 
      * @property message A description of the failure.
@@ -142,10 +142,17 @@ sealed class LoadResult {
  */
 sealed class InferenceResult {
     /** 
-     * Indicates the inference was successful.
+     * Indicates the inference was successful with text response.
      * @property text The generated response text.
      */
     data class Success(val text: String) : InferenceResult()
+    
+    /**
+     * Indicates the inference was successful with an image response.
+     * @property imageUri The URI of the generated image.
+     */
+    data class ImageSuccess(val imageUri: Uri) : InferenceResult()
+
     /** 
      * Indicates the inference failed.
      * @property message A description of the failure.
@@ -223,7 +230,7 @@ sealed class DownloadProgress {
     data class Progress(val percent: Int) : DownloadProgress()
     
     /** Indicates the download finished successfully. */
-    object Finished : DownloadProgress()
+    data object Finished : DownloadProgress()
     
     /** 
      * Indicates the download failed.

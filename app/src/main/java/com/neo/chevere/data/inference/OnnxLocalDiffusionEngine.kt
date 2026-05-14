@@ -54,7 +54,7 @@ private const val LATENT_SCALE = 0.18215f
  */
 @Singleton
 class OnnxLocalDiffusionEngine @Inject constructor(
-    @ApplicationContext private val context: Context
+    @param:ApplicationContext private val context: Context
 ) : ImageGenerationEngine {
     private val environment: OrtEnvironment = OrtEnvironment.getEnvironment()
     private var modelDirectory: File? = null

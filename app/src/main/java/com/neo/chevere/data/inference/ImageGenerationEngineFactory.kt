@@ -10,8 +10,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class ImageGenerationEngineFactory @Inject constructor(
-    private val onnxLocalDiffusionEngine: Provider<OnnxLocalDiffusionEngine>,
-    private val qualcommImageGenerationEngine: Provider<QualcommImageGenerationEngine>
+    private val onnxLocalDiffusionEngine: Provider<OnnxLocalDiffusionEngine>
 ) {
     /**
      * Returns an [ImageGenerationEngine] for [runtime], or `null` when the app
@@ -20,7 +19,6 @@ class ImageGenerationEngineFactory @Inject constructor(
     fun getEngine(runtime: ModelRuntime): ImageGenerationEngine? {
         return when (runtime) {
             ModelRuntime.ONNX_DIFFUSION -> onnxLocalDiffusionEngine.get()
-            ModelRuntime.QUALCOMM -> qualcommImageGenerationEngine.get()
             ModelRuntime.IMAGE_GENERATOR,
             ModelRuntime.LITERT,
             ModelRuntime.UNKNOWN -> null

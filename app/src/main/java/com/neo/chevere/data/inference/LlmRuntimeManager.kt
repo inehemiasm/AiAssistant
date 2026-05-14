@@ -24,7 +24,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class LlmRuntimeManager @Inject constructor(
-    @ApplicationContext private val context: Context,
+    @param:ApplicationContext private val context: Context,
     private val messageFactory: MultimodalMessageFactory,
     private val engineWrapper: LlmEngineWrapper,
     private val dispatcherProvider: DispatcherProvider

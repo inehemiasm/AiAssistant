@@ -28,7 +28,7 @@ interface AndroidAppActionExecutor {
  */
 @Singleton
 class DefaultAndroidAppActionExecutor @Inject constructor(
-    @ApplicationContext private val context: Context
+    @param:ApplicationContext private val context: Context
 ) : AndroidAppActionExecutor {
 
     override fun execute(request: AppActionRequest): AppActionResult {

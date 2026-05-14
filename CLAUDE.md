@@ -27,6 +27,7 @@ Chevere AI is an Android app using Clean Architecture, MVI, Room, Hilt, LiteRT-L
 - `domain/`: contracts, shared models, explicit prompt policy, model/runtime enums.
 - `data/agent/`: tool registry and Reason-Act-Observe orchestration.
 - `data/inference/`: LiteRT-LM chat and local image-generation runtimes.
+- `data/context/`: compact conversation memory and prompt slicing for small on-device models.
 - `data/download/`: WorkManager download orchestration.
 - `data/datasource/local/`: Room registry for installed models.
 - `data/datasource/`: Firestore and Hugging Face model catalogs. Kaggle discovery was removed.
@@ -42,13 +43,14 @@ Chevere AI is an Android app using Clean Architecture, MVI, Room, Hilt, LiteRT-L
 - If no healthy image-generation model is installed, image requests should show a download prompt rather than letting the agent/tool loop fail.
 - Chat models and image models are separate capabilities. Selecting/activating a chat model should not be confused with making an image model available.
 - Attached images route through chat/vision inference, not image generation. Image-only sends should use `Describe this image.` as the prompt.
+- Chat context is rebuilt through `ConversationContextManager`: older turns become compact memory, recent turns stay verbatim, and the current request is appended fresh. Avoid relying on unbounded LiteRT conversation state for long chats.
 - ONNX diffusion bundles must be extracted directories with:
   - `text_encoder/model.ort`
   - `tokenizer/vocab.json`
   - `tokenizer/merges.txt`
   - `unet/model.ort`
   - `vae_decoder/model.ort`
-- Qualcomm/QNN bundles are detected and validated, but native execution is not implemented.
+- ONNX diffusion is the only supported local image-generation backend.
 
 ## Explicit Image Flow
 

@@ -4,8 +4,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import com.neo.chevere.ui.common.parseMarkdownBlocks
 import com.neo.chevere.ui.common.parseMarkdownLogic
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -101,5 +104,36 @@ class MarkdownParserTest {
         val result = parseMarkdownLogic(input, codeBackground, primaryColor)
         assert(result.text.contains("• item 1"))
         assert(result.text.contains("• item 2"))
+    }
+
+    @Test
+    fun `test fenced code is parsed as a separate block`() {
+        val input = """
+            Here is code:
+            ```kotlin
+            val answer = listOf("[one]", "two, three")
+            println(answer)
+            ```
+            Done.
+        """.trimIndent()
+
+        val blocks = parseMarkdownBlocks(input)
+
+        assertEquals(3, blocks.size)
+        assertFalse(blocks[0].isCode)
+        assertTrue(blocks[1].isCode)
+        assertEquals("kotlin", blocks[1].language)
+        assertTrue(blocks[1].text.contains("""listOf("[one]", "two, three")"""))
+        assertFalse(blocks[2].isCode)
+    }
+
+    @Test
+    fun `test unclosed fenced code keeps remaining text as code`() {
+        val blocks = parseMarkdownBlocks("```kotlin\nval x = 1")
+
+        assertEquals(1, blocks.size)
+        assertTrue(blocks[0].isCode)
+        assertEquals("kotlin", blocks[0].language)
+        assertEquals("val x = 1", blocks[0].text)
     }
 }

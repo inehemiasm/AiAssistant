@@ -6,13 +6,13 @@ Chevere AI is a privacy-first Android assistant that runs local language models 
 
 - **Local LLM execution**: Runs LiteRT-LM models such as Gemma from app-private storage.
 - **Multimodal chat**: Users can attach gallery or camera images when the active chat model supports vision. Image attachments always route through chat/vision inference rather than the image-generation backend.
+- **Efficient context slicing**: Chat uses a rolling memory pattern for small on-device models, keeping recent turns verbatim while compacting older turns into a short deterministic summary.
 - **Agent workflow**: `AgentOrchestrator` runs a Reason-Act-Observe loop and executes registered tools.
 - **Image generation**:
   - Agent tool: `generate_image` lets Gemma improve the prompt before calling the image backend.
   - Slash commands: `/image`, `/img`, and `/imagine` bypass Gemma and call image generation directly.
   - If no healthy local image model is installed, image requests show a download prompt instead of failing inside the agent loop.
   - Local ONNX diffusion runtime for extracted Stable Diffusion bundles.
-  - Qualcomm/QNN bundle detection is present, but native QAIRT execution is not implemented yet.
 - **Explicit image handling**:
   - Debug builds can gate explicit image prompts behind an age-verification dialog.
   - Release builds block explicit image generation before it reaches any model backend.
@@ -63,9 +63,9 @@ Located under `app/src/main/java/com/neo/chevere/data/`.
 - `AgentOrchestrator`: local tool loop and confirmation flow.
 - `ToolRegistry`: exposes tools such as search, weather, app actions, clipboard/share, model inspection, and image generation.
 - `InferenceManager`: LiteRT-LM model lifecycle.
+- `ConversationContextManager`: compact memory and recent-turn prompt slicing for constrained on-device context windows.
 - `ImageGenerationManager`: chooses installed image-generation models and falls back across compatible engines.
 - `OnnxLocalDiffusionEngine`: ONNX text encoder, tokenizer, UNet scheduler loop, VAE decode, and PNG persistence.
-- `QualcommImageGenerationEngine`: validates QNN bundle shape and returns a clear unsupported-runtime failure until QAIRT execution exists.
 - `ModelDownloadWorker`: downloads, verifies, extracts, and finalizes model files.
 
 ### UI
@@ -76,6 +76,7 @@ Located under `app/src/main/java/com/neo/chevere/ui/`.
 - The chat top bar is brand/capability focused: it shows `CHEVERE AI` plus `CHAT` and `IMAGE` readiness chips rather than a single selected model name.
 - Chat model switching lives in the Models screen. Image-generation models are used automatically by `ImageGenerationManager`.
 - Attached images force the chat/vision path. If the text field is empty, the prompt defaults to `Describe this image.`.
+- Each chat turn is rebuilt from compact conversation memory and recent turns, then sent as a fresh runtime conversation to reduce context drift on small local models.
 - Attached-image previews use a larger thumbnail with a neutral remove control.
 - Slash-command image generation uses `SendState.GeneratingImage` so the UI shows `GENERATING IMAGE...`.
 - Requests that look like image generation show an image-model download dialog when no healthy image model is installed.
@@ -95,14 +96,6 @@ Supported installed model shapes:
   - `tokenizer/merges.txt`
   - `unet/model.ort`
   - `vae_decoder/model.ort`
-- Qualcomm/QNN image generation directory:
-  - `metadata.json`
-  - `text_encoder.onnx`
-  - `text_encoder_qairt_context.bin`
-  - `unet.onnx`
-  - `unet_qairt_context.bin`
-  - `vae.onnx`
-  - `vae_qairt_context.bin`
 
 ZIP downloads are extracted under `context.filesDir/<zip-name-without-extension>`.
 

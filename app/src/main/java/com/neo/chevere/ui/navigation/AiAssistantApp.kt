@@ -50,9 +50,9 @@ fun ChevereApp(
     Scaffold(
         bottomBar = {
             NavigationBar(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
                 contentColor = MaterialTheme.colorScheme.primary,
-                tonalElevation = 0.dp,
+                tonalElevation = 6.dp,
                 modifier = Modifier.height(86.dp)
             ) {
                 TopLevelDestination.entries.forEach { destination ->
@@ -91,7 +91,7 @@ fun ChevereApp(
                             )
                         },
                         colors = NavigationBarItemDefaults.colors(
-                            indicatorColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.52f)
+                            indicatorColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.72f)
                         )
                     )
                 }

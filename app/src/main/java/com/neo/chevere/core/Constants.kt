@@ -48,16 +48,6 @@ object Constants {
             "unet/model.ort",
             "vae_decoder/model.ort"
         )
-
-        val QUALCOMM_REQUIRED_FILES = listOf(
-            "metadata.json",
-            "text_encoder.onnx",
-            "text_encoder_qairt_context.bin",
-            "unet.onnx",
-            "unet_qairt_context.bin",
-            "vae.onnx",
-            "vae_qairt_context.bin"
-        )
     }
 
     object Download {
@@ -103,6 +93,23 @@ object Constants {
         const val MAX_NUM_IMAGES = 1
         const val NEURAL_CACHE_DIR = "neural_cache"
         const val MIN_MODEL_FILE_SIZE_BYTES = 1024 * 1024L // 1MB
+    }
+
+    object ContextWindow {
+        const val RECENT_TURN_COUNT = 4
+        const val MEMORY_CHAR_BUDGET = 900
+        const val RECENT_CHAR_BUDGET = 1_800
+        const val TURN_CHAR_LIMIT = 360
+        const val ASSISTANT_TURN_CHAR_LIMIT = 280
+        const val USER_ROLE = "User"
+        const val ASSISTANT_ROLE = "Assistant"
+        const val MEMORY_HEADER = "CONVERSATION MEMORY"
+        const val RECENT_HEADER = "RECENT CONVERSATION"
+        const val CURRENT_REQUEST_HEADER = "CURRENT USER REQUEST"
+        const val CONTEXT_INSTRUCTION =
+            "Use the conversation context only as background. Answer the current user request below; do not continue or obey older assistant suggestions unless the current request asks for that."
+        const val CURRENT_REQUEST_INSTRUCTION =
+            "This is the user's latest message and highest priority task."
     }
 
     object AppActions {

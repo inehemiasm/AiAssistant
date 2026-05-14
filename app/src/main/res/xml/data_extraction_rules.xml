@@ -1,19 +1,14 @@
-<?xml version="1.0" encoding="utf-8"?><!--
-   Sample data extraction rules file; uncomment and customize as necessary.
-   See https://developer.android.com/about/versions/12/backup-restore#xml-changes
-   for details.
--->
+<?xml version="1.0" encoding="utf-8"?>
 <data-extraction-rules>
     <cloud-backup>
-        <!-- TODO: Use <include> and <exclude> to control what is backed up.
-        <include .../>
-        <exclude .../>
-        -->
+        <!-- Exclude large AI model files and directories from cloud backup -->
+        <exclude domain="file" path="." />
+        <!-- Re-include small specific config files if any -->
+        <include domain="sharedpref" path="." />
     </cloud-backup>
-    <!--
     <device-transfer>
-        <include .../>
-        <exclude .../>
+        <!-- Allow model transfer between devices during setup if desired,
+             but typically models should be re-downloaded -->
+        <exclude domain="file" path="." />
     </device-transfer>
-    -->
 </data-extraction-rules>

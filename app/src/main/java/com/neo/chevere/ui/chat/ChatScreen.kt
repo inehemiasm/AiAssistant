@@ -61,6 +61,8 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.neo.chevere.core.Constants
+import com.neo.chevere.data.agent.AgentState
 import com.neo.chevere.domain.ModelCapability
 import com.neo.chevere.domain.ModelTaskType
 import com.neo.chevere.ui.chat.components.ActionConfirmationDialog
@@ -69,7 +71,6 @@ import com.neo.chevere.ui.chat.components.ChatInputBar
 import com.neo.chevere.ui.chat.components.ChatTopBar
 import com.neo.chevere.ui.chat.components.MessageList
 import com.neo.chevere.ui.chat.components.ModelInitializationScreen
-import com.neo.chevere.ui.chat.components.QuantumThinkingIndicator
 import com.neo.chevere.ui.common.ErrorSnackbar
 import com.neo.chevere.ui.designsystem.Typography
 import java.io.File
@@ -126,6 +127,14 @@ private fun ChatContent(
     val listState = rememberLazyListState()
     val snackbarHostState = remember { SnackbarHostState() }
     var showImageModelDownloadPrompt by remember { mutableStateOf(false) }
+    val isAiBusy = state.sendState is SendState.Sending ||
+        state.sendState is SendState.GeneratingImage ||
+        state.agentState is AgentState.Planning ||
+        state.agentState is AgentState.ExecutingTool
+    val inputBusyMessage = when {
+        state.sendState is SendState.GeneratingImage -> Constants.UiStatus.GENERATING_IMAGE
+        else -> Constants.UiStatus.THINKING
+    }
     
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
@@ -183,9 +192,10 @@ private fun ChatContent(
     ) { innerPadding ->
         val glassBackground = Brush.verticalGradient(
             colors = listOf(
-                MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.62f),
+                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.72f),
+                MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.42f),
                 MaterialTheme.colorScheme.background,
-                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.32f)
+                MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.86f)
             )
         )
         Column(
@@ -256,18 +266,10 @@ private fun ChatContent(
                 }
             }
 
-            QuantumThinkingIndicator(
-                visible = state.isLoading && state.runtimeState !is RuntimeState.Initializing,
-                statusMessage = state.loadingMessage,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp)
-            )
-
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 8.dp)
+                    .padding(horizontal = 14.dp, vertical = 10.dp)
                     .navigationBarsPadding()
             ) {
                 ChatInputBar(
@@ -298,10 +300,8 @@ private fun ChatContent(
                     selectedImageUri = state.selectedImageUri,
                     onRemoveImage = { viewModel.onIntent(ChatIntent.SelectImage(null)) },
                     enabled = state.isReady && !state.isLoading,
-                    isBusy = state.sendState is SendState.Sending ||
-                        state.sendState is SendState.GeneratingImage ||
-                        state.agentState is com.neo.chevere.data.agent.AgentState.Planning ||
-                        state.agentState is com.neo.chevere.data.agent.AgentState.ExecutingTool
+                    isBusy = isAiBusy,
+                    busyMessage = inputBusyMessage
                 )
             }
         }

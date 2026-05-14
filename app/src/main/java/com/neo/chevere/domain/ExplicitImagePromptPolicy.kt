@@ -1,5 +1,6 @@
 package com.neo.chevere.domain
 
+import com.neo.chevere.BuildConfig
 import java.util.Locale
 
 /**
@@ -17,7 +18,11 @@ class ExplicitImagePromptPolicy {
      */
     fun evaluate(prompt: String): ExplicitImagePromptDecision {
         return if (requiresAgeVerification(prompt)) {
-            ExplicitImagePromptDecision.Allow
+            if (BuildConfig.DEBUG) {
+                ExplicitImagePromptDecision.Allow
+            } else {
+                ExplicitImagePromptDecision.Block("Explicit content generation is restricted in this version.")
+            }
         } else {
             ExplicitImagePromptDecision.Allow
         }

@@ -11,7 +11,7 @@ import javax.inject.Singleton
 
 @Singleton
 class AndroidImageProcessor @Inject constructor(
-    @ApplicationContext private val context: Context
+    @param:ApplicationContext private val context: Context
 ) : ImageProcessor {
 
     override fun processImage(uri: Uri, targetSize: Int): ByteArray {

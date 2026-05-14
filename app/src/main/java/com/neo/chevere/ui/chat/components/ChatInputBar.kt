@@ -1,12 +1,24 @@
 package com.neo.chevere.ui.chat.components
 
 import android.net.Uri
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -34,22 +46,29 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.neo.chevere.R
+import com.neo.chevere.core.Constants
 import com.neo.chevere.ui.designsystem.Typography
 
 /**
@@ -81,9 +100,14 @@ fun ChatInputBar(
     onRemoveImage: () -> Unit,
     enabled: Boolean,
     isBusy: Boolean,
+    busyMessage: String = Constants.UiStatus.THINKING,
     modifier: Modifier = Modifier
 ) {
     var showAttachmentMenu by remember { mutableStateOf(false) }
+
+    LaunchedEffect(isBusy) {
+        if (isBusy) showAttachmentMenu = false
+    }
 
     Column(modifier = modifier) {
         if (selectedImageUri != null) {
@@ -119,84 +143,118 @@ fun ChatInputBar(
             }
         }
 
+        val inputShape = RoundedCornerShape(34.dp)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = 62.dp)
-                .clip(RoundedCornerShape(32.dp))
-                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.78f))
+                .shadow(
+                    elevation = 14.dp,
+                    shape = inputShape,
+                    ambientColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                    spotColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.14f)
+                )
+                .clip(inputShape)
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
+                            MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.90f)
+                        )
+                    )
+                )
                 .border(
                     BorderStroke(
                         1.dp,
                         if (enabled) MaterialTheme.colorScheme.primary.copy(alpha = 0.22f)
                         else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
                     ),
-                    RoundedCornerShape(32.dp)
+                    inputShape
                 )
                 .padding(horizontal = 6.dp, vertical = 6.dp),
             verticalAlignment = Alignment.Bottom 
         ) {
-            Box(modifier = Modifier.align(Alignment.CenterVertically)) {
-                IconButton(
-                    onClick = { showAttachmentMenu = true },
-                    enabled = enabled,
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.34f))
-                ) {
-                    Icon(
-                        Icons.Default.Add,
-                        stringResource(R.string.add_attachment),
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(26.dp)
-                    )
-                }
-                DropdownMenu(
-                    expanded = showAttachmentMenu,
-                    onDismissRequest = { showAttachmentMenu = false },
-                    modifier = Modifier
-                        .width(188.dp)
-                        .background(MaterialTheme.colorScheme.surfaceContainerLow),
-                    shape = RoundedCornerShape(18.dp),
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                    tonalElevation = 8.dp,
-                    shadowElevation = 8.dp
-                ) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.gallery), color = MaterialTheme.colorScheme.onSurface) },
-                        leadingIcon = {
-                            AttachmentMenuIcon {
-                                Icon(
-                                    Icons.Default.AddPhotoAlternate,
-                                    null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(20.dp)
+            AnimatedContent(
+                targetState = isBusy,
+                transitionSpec = {
+                    fadeIn(animationSpec = tween(160)).togetherWith(fadeOut(animationSpec = tween(120)))
+                },
+                label = "InputLeadingAction",
+                modifier = Modifier.align(Alignment.CenterVertically)
+            ) { busy ->
+                if (busy) {
+                    InputBusyIndicator(message = busyMessage)
+                } else {
+                    Box {
+                        IconButton(
+                            onClick = { showAttachmentMenu = true },
+                            enabled = enabled,
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    Brush.linearGradient(
+                                        colors = listOf(
+                                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.86f),
+                                            MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.72f)
+                                        )
+                                    )
                                 )
-                            }
-                        },
-                        onClick = {
-                            onGalleryClick()
-                            showAttachmentMenu = false
+                        ) {
+                            Icon(
+                                Icons.Default.Add,
+                                stringResource(R.string.add_attachment),
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(26.dp)
+                            )
                         }
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.camera), color = MaterialTheme.colorScheme.onSurface) },
-                        leadingIcon = {
-                            AttachmentMenuIcon {
-                                Icon(
-                                    Icons.Default.PhotoCamera,
-                                    null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                        },
-                        onClick = {
-                            onCameraClick()
-                            showAttachmentMenu = false
+                        DropdownMenu(
+                            expanded = showAttachmentMenu,
+                            onDismissRequest = { showAttachmentMenu = false },
+                            modifier = Modifier
+                                .width(188.dp)
+                                .background(MaterialTheme.colorScheme.surfaceContainerLow),
+                            shape = RoundedCornerShape(18.dp),
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                            tonalElevation = 8.dp,
+                            shadowElevation = 8.dp
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.gallery), color = MaterialTheme.colorScheme.onSurface) },
+                                leadingIcon = {
+                                    AttachmentMenuIcon {
+                                        Icon(
+                                            Icons.Default.AddPhotoAlternate,
+                                            null,
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                },
+                                onClick = {
+                                    onGalleryClick()
+                                    showAttachmentMenu = false
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.camera), color = MaterialTheme.colorScheme.onSurface) },
+                                leadingIcon = {
+                                    AttachmentMenuIcon {
+                                        Icon(
+                                            Icons.Default.PhotoCamera,
+                                            null,
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                },
+                                onClick = {
+                                    onCameraClick()
+                                    showAttachmentMenu = false
+                                }
+                            )
                         }
-                    )
+                    }
                 }
             }
 
@@ -205,11 +263,13 @@ fun ChatInputBar(
                 onValueChange = onTextChange,
                 modifier = Modifier.weight(1f).padding(vertical = 2.dp),
                 placeholder = {
-                    Text(
-                        stringResource(R.string.input_placeholder),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f),
-                        style = Typography.bodyMedium
-                    )
+                    if (!isBusy) {
+                        Text(
+                            stringResource(R.string.input_placeholder),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f),
+                            style = Typography.bodyMedium
+                        )
+                    }
                 },
                 // We now strictly disable the TextField when the model is busy to provide clear feedback.
                 // The keyboard is explicitly dismissed by a HideKeyboard effect from the ViewModel.
@@ -237,11 +297,7 @@ fun ChatInputBar(
             val isSendEnabled = enabled && (text.isNotBlank() || selectedImageUri != null)
             val actionEnabled = isBusy || isSendEnabled
             Surface(
-                color = when {
-                    isBusy -> MaterialTheme.colorScheme.primary
-                    isSendEnabled -> MaterialTheme.colorScheme.primary
-                    else -> MaterialTheme.colorScheme.surfaceContainerHigh
-                },
+                color = if (actionEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHigh,
                 contentColor = if (isSendEnabled || isBusy) {
                     MaterialTheme.colorScheme.onPrimary
                 } else {
@@ -252,7 +308,7 @@ fun ChatInputBar(
                     .padding(bottom = 1.dp, end = 1.dp)
                     .size(52.dp)
                     .align(Alignment.CenterVertically),
-                shadowElevation = if (actionEnabled) 3.dp else 0.dp
+                shadowElevation = if (actionEnabled) 8.dp else 0.dp
             ) {
                 IconButton(
                     onClick = {
@@ -272,6 +328,61 @@ fun ChatInputBar(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun InputBusyIndicator(message: String) {
+    val transition = rememberInfiniteTransition(label = "input_busy_indicator")
+    val dotAlpha by transition.animateFloat(
+        initialValue = 0.38f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 760, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "busy_dot_alpha"
+    )
+    val dotScale by transition.animateFloat(
+        initialValue = 0.78f,
+        targetValue = 1.18f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 760, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "busy_dot_scale"
+    )
+
+    Row(
+        modifier = Modifier
+            .heightIn(min = 48.dp)
+            .background(
+                MaterialTheme.colorScheme.primary.copy(alpha = 0.10f),
+                RoundedCornerShape(24.dp)
+            )
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .size(8.dp)
+                .graphicsLayer {
+                    scaleX = dotScale
+                    scaleY = dotScale
+                }
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = dotAlpha), CircleShape)
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(
+            text = message.uppercase(),
+            style = Typography.labelSmall.copy(
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 1.1.sp
+            ),
+            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.86f)
+        )
     }
 }
 

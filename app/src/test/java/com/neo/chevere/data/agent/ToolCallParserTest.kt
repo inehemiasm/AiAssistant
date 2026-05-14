@@ -27,6 +27,47 @@ class ToolCallParserTest {
     }
 
     @Test
+    fun parse_keepsBracketsAndCommasInsideQuotedGeneratedCode() {
+        val call = parser.parse(
+            """[TOOL_CALL: summarize_text, text="```kotlin
+fun main() {
+    println(listOf("[one]", "two, three"))
+}
+```"]"""
+        )
+
+        assertEquals("summarize_text", call?.toolName)
+        assertEquals(
+            """```kotlin
+fun main() {
+    println(listOf("[one]", "two, three"))
+}
+```""",
+            call?.arguments?.get("text")
+        )
+    }
+
+    @Test
+    fun parse_acceptsFlatJsonPayload() {
+        val call = parser.parse(
+            """[TOOL_CALL: open_url, {"url":"https://example.com?a=1&b=2","label":"docs"}]"""
+        )
+
+        assertEquals("open_url", call?.toolName)
+        assertEquals("https://example.com?a=1&b=2", call?.arguments?.get("url"))
+        assertEquals("docs", call?.arguments?.get("label"))
+    }
+
+    @Test
+    fun stripToolCall_removesOnlyStructuredCallWithBracketedArguments() {
+        val output = parser.stripToolCall(
+            """Thought first. [TOOL_CALL: summarize_text, text="value with [brackets]"] trailing"""
+        )
+
+        assertEquals("Thought first.  trailing", output)
+    }
+
+    @Test
     fun parse_returnsNullWhenNoToolCallExists() {
         assertNull(parser.parse("hello world"))
     }

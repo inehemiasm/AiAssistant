@@ -37,15 +37,33 @@ class AgentOrchestrator @Inject constructor(
     private var stepCount = 0
     private var lastToolSummary: String? = null
 
-    suspend fun processUserRequest(prompt: String, imageUri: Uri? = null): Result<String> = loopMutex.withLock {
+    suspend fun processUserRequest(
+        prompt: String,
+        imageUri: Uri? = null,
+        conversationContext: String? = null
+    ): Result<String> = loopMutex.withLock {
         _agentState.value = AgentState.Planning
         Log.i(TAG, ">>> Starting agent loop for user prompt: \"$prompt\"")
         
         val systemPrompt = toolRegistry.getToolsSystemPrompt()
+        val contextualUserPrompt = buildString {
+            if (!conversationContext.isNullOrBlank()) {
+                append(conversationContext)
+                append("\n\n")
+            }
+            append(Constants.ContextWindow.CURRENT_REQUEST_HEADER)
+            if (imageUri != null) {
+                append(" [current message includes an image]")
+            }
+            append(":\n")
+            append(Constants.ContextWindow.CURRENT_REQUEST_INSTRUCTION)
+            append("\n")
+            append(prompt)
+        }
         val initialPrompt = if (systemPrompt.isNotEmpty()) {
-            "${Constants.Agent.SYSTEM_PROMPT_PREFIX}$systemPrompt${Constants.Agent.USER_PROMPT_PREFIX}$prompt"
+            "${Constants.Agent.SYSTEM_PROMPT_PREFIX}$systemPrompt${Constants.Agent.USER_PROMPT_PREFIX}$contextualUserPrompt"
         } else {
-            prompt
+            contextualUserPrompt
         }
 
         lastPrompt = initialPrompt
@@ -75,6 +93,9 @@ class AgentOrchestrator @Inject constructor(
                         } else {
                             AssistantTurnResult.Text(parser.stripToolCall(text))
                         }
+                    }
+                    is InferenceResult.ImageSuccess -> {
+                        AssistantTurnResult.Error("Image inference result is not supported in the agent loop.")
                     }
                     is InferenceResult.Failure -> {
                         AssistantTurnResult.Error(inferenceResult.message, inferenceResult.throwable)

@@ -33,6 +33,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -43,7 +44,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.neo.chevere.R
 import com.neo.chevere.domain.ChatMessage
-import com.neo.chevere.ui.common.parseMarkdown
+import com.neo.chevere.ui.common.MarkdownContent
 import com.neo.chevere.ui.designsystem.Typography
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -99,9 +100,23 @@ fun FuturisticChatBubble(
     onShareMessage: () -> Unit = {}
 ) {
     val isUser = message.isUser
-    val bubbleColor = if (isUser) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.18f) else MaterialTheme.colorScheme.surfaceContainerLowest
+    val bubbleColor = if (isUser) {
+        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.56f)
+    } else {
+        MaterialTheme.colorScheme.surface.copy(alpha = 0.92f)
+    }
     val onBubbleColor = MaterialTheme.colorScheme.onSurface
-    val borderColor = if (isUser) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.42f)
+    val borderColor = if (isUser) {
+        MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+    } else {
+        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.34f)
+    }
+    val bubbleShape = RoundedCornerShape(
+        topStart = if (isUser) 24.dp else 10.dp,
+        topEnd = if (isUser) 10.dp else 24.dp,
+        bottomStart = 24.dp,
+        bottomEnd = 24.dp
+    )
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -128,10 +143,18 @@ fun FuturisticChatBubble(
             Surface(
                 color = bubbleColor,
                 contentColor = onBubbleColor,
-                shape = RoundedCornerShape(22.dp),
+                shape = bubbleShape,
+                tonalElevation = if (isUser) 2.dp else 0.dp,
+                shadowElevation = if (isUser) 2.dp else 5.dp,
                 modifier = Modifier
                     .widthIn(max = 340.dp)
-                    .border(1.dp, borderColor, RoundedCornerShape(22.dp))
+                    .shadow(
+                        elevation = if (isUser) 3.dp else 8.dp,
+                        shape = bubbleShape,
+                        ambientColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
+                        spotColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.08f)
+                    )
+                    .border(1.dp, borderColor, bubbleShape)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     if (message.imageUri != null) {
@@ -143,13 +166,13 @@ fun FuturisticChatBubble(
                         )
                     }
                     SelectionContainer {
-                        val styledText = parseMarkdown(message.text)
-                        Text(
-                            text = styledText,
-                            style = Typography.bodyMedium.copy(
+                        MarkdownContent(
+                            text = message.text,
+                            textStyle = Typography.bodyMedium.copy(
                                 lineHeight = 22.sp,
                                 color = onBubbleColor
-                            )
+                            ),
+                            textColor = onBubbleColor
                         )
                     }
                     
@@ -275,9 +298,10 @@ private fun GeneratedMessageImage(
 @Composable
 fun Badge(text: String) {
     Surface(
-        color = MaterialTheme.colorScheme.surfaceContainerHighest,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.82f),
         shape = RoundedCornerShape(20.dp),
-        modifier = Modifier.height(24.dp)
+        modifier = Modifier.height(24.dp),
+        shadowElevation = 1.dp
     ) {
         Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(horizontal = 8.dp)) {
             Text(

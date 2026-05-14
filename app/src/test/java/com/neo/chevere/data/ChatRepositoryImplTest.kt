@@ -5,12 +5,16 @@ import android.net.Uri
 import com.neo.chevere.core.DispatcherProvider
 import com.neo.chevere.data.agent.AgentOrchestrator
 import com.neo.chevere.data.agent.AgentState
+import com.neo.chevere.data.chat.ChatRequestRouter
+import com.neo.chevere.data.context.ConversationContextManager
 import com.neo.chevere.data.datasource.ModelCatalogDataSource
 import com.neo.chevere.data.download.WorkManagerModelDownloadManager
 import com.neo.chevere.data.inference.ImageGenerationManager
 import com.neo.chevere.data.inference.InferenceManager
 import com.neo.chevere.domain.ModelEntry
 import com.neo.chevere.domain.ModelFormat
+import com.neo.chevere.domain.InferenceRequest
+import com.neo.chevere.domain.InferenceResult
 import com.neo.chevere.domain.ModelRuntime
 import com.neo.chevere.domain.ModelSource
 import com.neo.chevere.domain.ModelTaskType
@@ -25,8 +29,10 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.mockito.kotlin.any
+import org.mockito.kotlin.argThat
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.io.File
@@ -42,6 +48,8 @@ class ChatRepositoryImplTest {
     private lateinit var agentOrchestrator: AgentOrchestrator
     private lateinit var imageGenerationManager: ImageGenerationManager
     private lateinit var installedModelRegistry: InstalledModelRegistry
+    private lateinit var conversationContextManager: ConversationContextManager
+    private lateinit var chatRequestRouter: ChatRequestRouter
     private lateinit var repository: ChatRepositoryImpl
 
     @Before
@@ -54,6 +62,8 @@ class ChatRepositoryImplTest {
         downloadManager = mock()
         imageGenerationManager = mock()
         installedModelRegistry = mock()
+        conversationContextManager = ConversationContextManager()
+        chatRequestRouter = ChatRequestRouter()
         agentOrchestrator = mock {
             on { agentState } doReturn MutableStateFlow(AgentState.Idle)
         }
@@ -66,6 +76,8 @@ class ChatRepositoryImplTest {
             agentOrchestrator = agentOrchestrator,
             imageGenerationManager = imageGenerationManager,
             installedModelRegistry = installedModelRegistry,
+            conversationContextManager = conversationContextManager,
+            chatRequestRouter = chatRequestRouter,
             dispatcherProvider = object : DispatcherProvider {
                 override val io = testDispatcher
                 override val main = testDispatcher
@@ -86,14 +98,60 @@ class ChatRepositoryImplTest {
     }
 
     @Test
-    fun sendMessage_delegatesToOrchestrator() = runTest(testDispatcher) {
+    fun sendMessage_plainTextUsesDirectInference() = runTest(testDispatcher) {
         val prompt = "hello"
-        whenever(agentOrchestrator.processUserRequest(prompt, null)).doReturn(Result.success("hi"))
+        whenever(inferenceManager.generate(any())).doReturn(InferenceResult.Success("hi"))
 
         val result = repository.sendMessage(prompt, null)
 
-        verify(agentOrchestrator).processUserRequest(prompt, null)
+        verify(inferenceManager).clearConversation()
+        verify(inferenceManager).generate(argThat {
+            imageUri == null &&
+                this.prompt.contains("You are Chevere AI") &&
+                this.prompt.endsWith(prompt)
+        })
         assertEquals("hi", result.getOrNull())
+    }
+
+    @Test
+    fun sendMessage_capabilityOverviewAnswersWithoutInferenceOrAgent() = runTest(testDispatcher) {
+        val result = repository.sendMessage("What can you do?", null)
+
+        verify(inferenceManager, never()).generate(any())
+        verify(agentOrchestrator, never()).processUserRequest(any(), any(), any())
+        assertTrue(result.getOrNull()?.contains("image generation") == true)
+        assertTrue(result.getOrNull()?.contains("weather") == true)
+    }
+
+    @Test
+    fun sendMessage_imageCapabilityQuestionDoesNotGenerateImage() = runTest(testDispatcher) {
+        val result = repository.sendMessage("Can you generate images?", null)
+
+        verify(inferenceManager, never()).generate(any())
+        verify(agentOrchestrator, never()).processUserRequest(any(), any(), any())
+        assertTrue(result.getOrNull()?.contains("Tell me what you want") == true)
+    }
+
+    @Test
+    fun sendMessage_toolLikeTextDelegatesToOrchestrator() = runTest(testDispatcher) {
+        val prompt = "what is the weather in Austin right now?"
+        whenever(agentOrchestrator.processUserRequest(prompt, null, null)).doReturn(Result.success("sunny"))
+
+        val result = repository.sendMessage(prompt, null)
+
+        verify(agentOrchestrator).processUserRequest(prompt, null, null)
+        assertEquals("sunny", result.getOrNull())
+    }
+
+    @Test
+    fun sendMessage_concreteImageRequestDelegatesToOrchestrator() = runTest(testDispatcher) {
+        val prompt = "generate an image of a neon robot"
+        whenever(agentOrchestrator.processUserRequest(prompt, null, null)).doReturn(Result.success("created"))
+
+        val result = repository.sendMessage(prompt, null)
+
+        verify(agentOrchestrator).processUserRequest(prompt, null, null)
+        assertEquals("created", result.getOrNull())
     }
 
     @Test
