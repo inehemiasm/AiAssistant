@@ -14,6 +14,7 @@
     <string name="privacy_lock">DATENSCHUTZ AKTIV</string>
     <string name="sent_status">GESENDET</string>
     <string name="share_message">Nachricht teilen</string>
+    <string name="share_failed">Keine App kann diese Nachricht teilen</string>
     <string name="save_image">Bild speichern</string>
     <string name="image_saved">Bild gespeichert</string>
     <string name="image_save_failed">Bild konnte nicht gespeichert werden</string>

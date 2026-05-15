@@ -1,6 +1,7 @@
 package com.neo.chevere.ui.chat
 
 import android.Manifest
+import android.content.ActivityNotFoundException
 import android.content.ClipData
 import android.content.ContentValues
 import android.content.Context
@@ -96,6 +97,8 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * The main Chat screen of the application.
@@ -146,6 +149,7 @@ private fun ChatContent(
     val listState = rememberLazyListState()
     val snackbarHostState = remember { SnackbarHostState() }
     var showImageModelDownloadPrompt by remember { mutableStateOf(false) }
+    val showOnboarding = state.localModels.isEmpty() && !state.isLoading
     val isAiBusy = state.sendState is SendState.Sending ||
         state.sendState is SendState.GeneratingImage ||
         state.agentState is AgentState.Planning ||
@@ -225,7 +229,7 @@ private fun ChatContent(
                 .imePadding()
         ) {
             Box(modifier = Modifier.weight(1f)) {
-                if (state.localModels.isEmpty() && !state.isLoading) {
+                if (showOnboarding) {
                     EmptyModelState(onModelsClick)
                 } else {
                     MessageList(
@@ -288,43 +292,45 @@ private fun ChatContent(
                 }
             }
 
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 10.dp)
-                    .navigationBarsPadding()
-            ) {
-                ChatInputBar(
-                    text = state.inputText,
-                    onTextChange = { viewModel.onIntent(ChatIntent.UpdateInputText(it)) },
-                    onSend = { viewModel.onIntent(ChatIntent.SendMessage(state.inputText, state.selectedImageUri)) },
-                    onStop = { viewModel.onIntent(ChatIntent.StopResponse) },
-                    onGalleryClick = { imagePickerLauncher.launch("image/*") },
-                    onCameraClick = {
-                        when (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)) {
-                            PackageManager.PERMISSION_GRANTED -> {
-                                val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
-                                val storageDir = File(context.cacheDir, "images").apply { mkdirs() }
-                                val photoFile = File(storageDir, "JPEG_${timeStamp}_.jpg")
-                                val photoUri: Uri = FileProvider.getUriForFile(
-                                    context,
-                                    "${context.packageName}.fileprovider",
-                                    photoFile
-                                )
-                                viewModel.onIntent(ChatIntent.SetTempCameraUri(photoUri))
-                                cameraLauncher.launch(photoUri)
+            if (!showOnboarding) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 10.dp)
+                        .navigationBarsPadding()
+                ) {
+                    ChatInputBar(
+                        text = state.inputText,
+                        onTextChange = { viewModel.onIntent(ChatIntent.UpdateInputText(it)) },
+                        onSend = { viewModel.onIntent(ChatIntent.SendMessage(state.inputText, state.selectedImageUri)) },
+                        onStop = { viewModel.onIntent(ChatIntent.StopResponse) },
+                        onGalleryClick = { imagePickerLauncher.launch("image/*") },
+                        onCameraClick = {
+                            when (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)) {
+                                PackageManager.PERMISSION_GRANTED -> {
+                                    val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
+                                    val storageDir = File(context.cacheDir, "images").apply { mkdirs() }
+                                    val photoFile = File(storageDir, "JPEG_${timeStamp}_.jpg")
+                                    val photoUri: Uri = FileProvider.getUriForFile(
+                                        context,
+                                        "${context.packageName}.fileprovider",
+                                        photoFile
+                                    )
+                                    viewModel.onIntent(ChatIntent.SetTempCameraUri(photoUri))
+                                    cameraLauncher.launch(photoUri)
+                                }
+                                else -> {
+                                    permissionLauncher.launch(Manifest.permission.CAMERA)
+                                }
                             }
-                            else -> {
-                                permissionLauncher.launch(Manifest.permission.CAMERA)
-                            }
-                        }
-                    },
-                    selectedImageUri = state.selectedImageUri,
-                    onRemoveImage = { viewModel.onIntent(ChatIntent.SelectImage(null)) },
-                    enabled = state.isReady && !state.isLoading,
-                    isBusy = isAiBusy,
-                    busyMessage = inputBusyMessage
-                )
+                        },
+                        selectedImageUri = state.selectedImageUri,
+                        onRemoveImage = { viewModel.onIntent(ChatIntent.SelectImage(null)) },
+                        enabled = state.isReady && !state.isLoading,
+                        isBusy = isAiBusy,
+                        busyMessage = inputBusyMessage
+                    )
+                }
             }
         }
     }
@@ -346,20 +352,18 @@ private fun ChatContent(
                     Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
                 }
                 is ChatEffect.ShareMessage -> {
-                    val sendIntent = Intent(Intent.ACTION_SEND).apply {
-                        type = if (effect.imageUri != null) "image/*" else "text/plain"
-                        putExtra(Intent.EXTRA_TEXT, effect.text)
-                        effect.imageUri?.let { imageUri ->
-                            putExtra(Intent.EXTRA_STREAM, imageUri)
-                            clipData = ClipData.newUri(context.contentResolver, "Chevere AI image", imageUri)
-                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                        }
+                    try {
+                        shareChatMessage(context, effect)
+                    } catch (_: ActivityNotFoundException) {
+                        Toast.makeText(context, context.getString(R.string.share_failed), Toast.LENGTH_SHORT).show()
                     }
-                    val chooser = Intent.createChooser(sendIntent, effect.title)
-                    context.startActivity(chooser)
                 }
                 is ChatEffect.SaveImage -> {
-                    val saved = runCatching { saveImageToGallery(context, effect.imageUri) }
+                    val saved = runCatching {
+                        withContext(Dispatchers.IO) {
+                            saveImageToGallery(context, effect.imageUri)
+                        }
+                    }
                         .getOrDefault(false)
                     Toast.makeText(
                         context,
@@ -382,6 +386,34 @@ private fun ChatContent(
             listState.animateScrollToItem(lastIndex)
         }
     }
+}
+
+private fun shareChatMessage(context: Context, effect: ChatEffect.ShareMessage) {
+    val imageUri = effect.imageUri
+    val sendIntent = Intent(Intent.ACTION_SEND).apply {
+        type = imageUri?.let { context.contentResolver.getType(it) ?: "image/*" } ?: "text/plain"
+        putExtra(Intent.EXTRA_TEXT, effect.text)
+        imageUri?.let { uri ->
+            putExtra(Intent.EXTRA_STREAM, uri)
+            clipData = ClipData.newUri(context.contentResolver, "Chevere AI image", uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+    }
+
+    imageUri?.let { uri ->
+        val targets = context.packageManager.queryIntentActivities(sendIntent, PackageManager.MATCH_DEFAULT_ONLY)
+        targets.forEach { target ->
+            context.grantUriPermission(target.activityInfo.packageName, uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+    }
+
+    val chooser = Intent.createChooser(sendIntent, effect.title).apply {
+        imageUri?.let { uri ->
+            clipData = ClipData.newUri(context.contentResolver, "Chevere AI image", uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+    }
+    context.startActivity(chooser)
 }
 
 private fun saveImageToGallery(context: Context, sourceUri: Uri): Boolean {

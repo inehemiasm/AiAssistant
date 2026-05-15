@@ -32,6 +32,7 @@ class ModelDetailsViewModel @Inject constructor(
     private val modelDetailsRoute = savedStateHandle.toRoute<Route.ModelDetails>()
     private val modelId = modelDetailsRoute.modelId
     private var handledFinishedDownload = false
+    private var startedDownloadHere = false
 
     init {
         Log.d(TAG, "--- INITIALIZING VM for Model: $modelId ---")
@@ -65,10 +66,17 @@ class ModelDetailsViewModel @Inject constructor(
                     }
                     is DownloadProgress.Finished -> {
                         Log.i(TAG, "[DOWNLOAD] Finished for $modelId. Reloading details.")
+                        val shouldAnnounceCompletion = startedDownloadHere || currentState.downloadProgress != null
                         setState { copy(downloadProgress = null, isActionInProgress = false) }
                         handleIntent(ModelDetailsIntent.LoadDetails(modelId))
                         if (!handledFinishedDownload) {
                             handledFinishedDownload = true
+                            if (shouldAnnounceCompletion) {
+                                val displayName = currentState.installedModel?.displayName
+                                    ?: currentState.modelEntry?.name
+                                    ?: modelId
+                                sendEffect { ModelDetailsEffect.ShowToast("Download complete: $displayName") }
+                            }
                             maybeAutoActivateAfterDownload()
                         }
                     }
@@ -120,6 +128,7 @@ class ModelDetailsViewModel @Inject constructor(
     private fun downloadModel() {
         val entry = currentState.modelEntry ?: return
         Log.i(TAG, "Starting download for: ${entry.name} from ${entry.url}")
+        startedDownloadHere = true
         setState { copy(showDownloadRequirements = false, isActionInProgress = true) }
         
         viewModelScope.launch {

@@ -14,6 +14,7 @@
     <string name="privacy_lock">CONFIDENTIALITE</string>
     <string name="sent_status">ENVOYE</string>
     <string name="share_message">Partager le message</string>
+    <string name="share_failed">Aucune app ne peut partager ce message</string>
     <string name="save_image">Enregistrer l image</string>
     <string name="image_saved">Image enregistree</string>
     <string name="image_save_failed">Impossible d enregistrer l image</string>

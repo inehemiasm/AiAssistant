@@ -16,6 +16,7 @@
     <string name="privacy_lock">PRIVACY LOCK</string>
     <string name="sent_status">SENT</string>
     <string name="share_message">Share message</string>
+    <string name="share_failed">No app can share this message</string>
     <string name="save_image">Save image</string>
     <string name="image_saved">Image saved</string>
     <string name="image_save_failed">Could not save image</string>

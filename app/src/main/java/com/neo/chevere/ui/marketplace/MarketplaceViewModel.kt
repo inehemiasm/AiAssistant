@@ -26,6 +26,7 @@ class MarketplaceViewModel @Inject constructor(
 ) : BaseViewModel<MarketplaceState, MarketplaceIntent, MarketplaceEffect>(application, MarketplaceState()) {
 
     private val handledFinishedDownloads = mutableSetOf<String>()
+    private val startedDownloadKeys = mutableSetOf<String>()
 
     init {
         viewModelScope.launch {
@@ -177,6 +178,8 @@ class MarketplaceViewModel @Inject constructor(
 
     private fun downloadModel(model: ModelEntry) {
         // Just trigger it. The global observer in init will handle state updates.
+        startedDownloadKeys.add(model.effectiveFileName)
+        startedDownloadKeys.add(model.effectiveInstalledId)
         viewModelScope.launch {
             repository.downloadModel(model).collectLatest { progress ->
                 if (progress is DownloadProgress.Error) {
@@ -200,6 +203,10 @@ class MarketplaceViewModel @Inject constructor(
         } ?: return
 
         if (!installedModel.isHealthy) return
+
+        if (finishedKey in startedDownloadKeys || remoteEntry?.let { it.effectiveFileName in startedDownloadKeys || it.effectiveInstalledId in startedDownloadKeys } == true) {
+            sendEffect { MarketplaceEffect.ShowToast("Download complete: ${installedModel.displayName}") }
+        }
 
         when (installedModel.activationCategory()) {
             ModelActivationCategory.CHAT -> {
