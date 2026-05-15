@@ -15,7 +15,7 @@ class SummarizeTextTool @Inject constructor() : AgentTool {
 
     override suspend fun execute(args: Map<String, String>): ToolResult {
         val text = args["text"] ?: return ToolResult.Error("Missing 'text' argument")
-        
+
         // For now, we'll just simulate a summary. In a real agent, 
         // this might be a call to a smaller/faster model.
         val words = text.split(" ")
@@ -24,7 +24,7 @@ class SummarizeTextTool @Inject constructor() : AgentTool {
         } else {
             text
         }
-        
+
         return ToolResult.Success("Summary: $summary")
     }
 }

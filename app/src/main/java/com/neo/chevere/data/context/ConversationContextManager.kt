@@ -100,7 +100,7 @@ class ConversationContextManager @Inject constructor() {
     fun buildCurrentRequest(prompt: String, imageUri: Uri?): String {
         val imageNote = if (imageUri != null) " [current message includes an image]" else ""
         return "${Constants.ContextWindow.CURRENT_REQUEST_HEADER}$imageNote:\n" +
-            "${Constants.ContextWindow.CURRENT_REQUEST_INSTRUCTION}\n$prompt"
+                "${Constants.ContextWindow.CURRENT_REQUEST_INSTRUCTION}\n$prompt"
     }
 
     private fun ConversationTurn.compactContent(): String {

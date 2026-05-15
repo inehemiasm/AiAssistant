@@ -12,8 +12,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.neo.chevere.data.PreferenceManager
 import com.neo.chevere.data.telemetry.AppTelemetry
 import com.neo.chevere.ui.LaunchAnimatedApp
-import com.neo.chevere.ui.chat.RuntimeState
 import com.neo.chevere.ui.chat.ChatViewModel
+import com.neo.chevere.ui.chat.RuntimeState
 import com.neo.chevere.ui.designsystem.HighTechAiTheme
 import com.neo.chevere.ui.navigation.ChevereApp
 import dagger.hilt.android.AndroidEntryPoint
@@ -26,7 +26,7 @@ import javax.inject.Inject
  */
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
-    
+
     @Inject
     lateinit var preferenceManager: PreferenceManager
 
@@ -42,11 +42,11 @@ class MainActivity : ComponentActivity() {
         setContent {
             val systemDark = isSystemInDarkTheme()
             val isDarkMode by preferenceManager.themePreference.collectAsState(initial = systemDark)
-            
+
             // Access ChatViewModel here to observe the global initialization state
             val chatViewModel: ChatViewModel = hiltViewModel()
             val chatState by chatViewModel.uiState.collectAsState()
-            
+
             HighTechAiTheme(darkTheme = isDarkMode) {
                 // Wrap the main app entry with the launch animation
                 // Only cover the app while a model is actively warming up. A fresh install

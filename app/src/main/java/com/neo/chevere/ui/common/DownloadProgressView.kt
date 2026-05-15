@@ -37,11 +37,20 @@ import com.neo.chevere.ui.designsystem.Typography
  */
 @Composable
 fun DownloadProgressView(modelName: String, progress: Int) {
-    Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-        AmbientGlow(MaterialTheme.colorScheme.primary, Modifier.align(Alignment.Center).size(400.dp))
-        
+    Box(modifier = Modifier
+        .fillMaxSize()
+        .background(MaterialTheme.colorScheme.background)) {
+        AmbientGlow(
+            MaterialTheme.colorScheme.primary,
+            Modifier
+                .align(Alignment.Center)
+                .size(400.dp)
+        )
+
         Column(
-            modifier = Modifier.fillMaxSize().padding(32.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(32.dp),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -54,29 +63,32 @@ fun DownloadProgressView(modelName: String, progress: Int) {
                     trackColor = MaterialTheme.colorScheme.surfaceContainerHighest
                 )
                 Text(
-                    text = "$progress%", 
-                    color = MaterialTheme.colorScheme.onSurface, 
+                    text = "$progress%",
+                    color = MaterialTheme.colorScheme.onSurface,
                     style = Typography.headlineMedium.copy(fontSize = 24.sp)
                 )
             }
-            
+
             Spacer(Modifier.height(32.dp))
-            
+
             Text(
-                stringResource(R.string.synthesizing_core), 
-                color = MaterialTheme.colorScheme.onSurface, 
-                style = Typography.labelSmall.copy(letterSpacing = 2.sp, fontWeight = FontWeight.Bold)
+                stringResource(R.string.synthesizing_core),
+                color = MaterialTheme.colorScheme.onSurface,
+                style = Typography.labelSmall.copy(
+                    letterSpacing = 2.sp,
+                    fontWeight = FontWeight.Bold
+                )
             )
-            
+
             Text(
                 modelName.replace(Constants.ModelFiles.LITERTLM_EXTENSION, "").uppercase(),
-                color = MaterialTheme.colorScheme.primary, 
+                color = MaterialTheme.colorScheme.primary,
                 style = Typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
                 modifier = Modifier.padding(top = 4.dp)
             )
-            
+
             Spacer(Modifier.height(24.dp))
-            
+
             Text(
                 stringResource(R.string.synthesizing_description),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,

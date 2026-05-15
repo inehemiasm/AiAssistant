@@ -6,5 +6,7 @@ import androidx.compose.ui.composed
 import androidx.compose.ui.layout.onGloballyPositioned
 
 fun Modifier.positionAwareImePadding() = composed {
-    this.onGloballyPositioned { _ -> }.imePadding()
+    this
+        .onGloballyPositioned { _ -> }
+        .imePadding()
 }

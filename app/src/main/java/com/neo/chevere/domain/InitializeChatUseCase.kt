@@ -20,6 +20,6 @@ class InitializeChatUseCase @Inject constructor(
      * @param notify Whether to emit an activation event on success.
      * @return A [Result] indicating whether initialization was successful.
      */
-    suspend operator fun invoke(modelPath: String, notify: Boolean = true) = 
+    suspend operator fun invoke(modelPath: String, notify: Boolean = true) =
         repository.initializeModel(modelPath, notify)
 }

@@ -34,7 +34,8 @@ class LlmRuntimeManager @Inject constructor(
     private var isVisionEnabled = false
     private var isInitialized = false
 
-    private val _initStatus = MutableStateFlow<InitializationStatus>(InitializationStatus.Uninitialized)
+    private val _initStatus =
+        MutableStateFlow<InitializationStatus>(InitializationStatus.Uninitialized)
     val initStatus: StateFlow<InitializationStatus> = _initStatus.asStateFlow()
 
     fun isVisionSupported(): Boolean = isVisionEnabled
@@ -47,8 +48,8 @@ class LlmRuntimeManager @Inject constructor(
             _initStatus.value = InitializationStatus.Initializing("RESETTING RUNTIME...")
             closeCurrentResources()
 
-            val neuralCache = File(context.cacheDir, Constants.Inference.NEURAL_CACHE_DIR).apply { 
-                if (!exists()) mkdirs() 
+            val neuralCache = File(context.cacheDir, Constants.Inference.NEURAL_CACHE_DIR).apply {
+                if (!exists()) mkdirs()
             }
 
             val backends = buildList {
@@ -73,7 +74,7 @@ class LlmRuntimeManager @Inject constructor(
                     )
 
                     engineWrapper.initialize(config)
-                    
+
                     _initStatus.value = InitializationStatus.Initializing("WARMING UP $label...")
                     performWarmup(vision != null)
                 }
@@ -116,12 +117,15 @@ class LlmRuntimeManager @Inject constructor(
         }
     }
 
-    suspend fun sendMessage(message: Message): Result<Message> = withContext(dispatcherProvider.default) {
-        engineLock.withLock {
-            val conversation = activeConversation ?: return@withContext Result.failure(IllegalStateException("No active conversation"))
-            runCatching { conversation.sendMessage(message) }
+    suspend fun sendMessage(message: Message): Result<Message> =
+        withContext(dispatcherProvider.default) {
+            engineLock.withLock {
+                val conversation = activeConversation ?: return@withContext Result.failure(
+                    IllegalStateException("No active conversation")
+                )
+                runCatching { conversation.sendMessage(message) }
+            }
         }
-    }
 
     suspend fun clearConversation() = withContext(dispatcherProvider.default) {
         engineLock.withLock {

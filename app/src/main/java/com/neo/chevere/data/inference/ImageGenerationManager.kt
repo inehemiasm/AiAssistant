@@ -74,7 +74,7 @@ class ImageGenerationManager @Inject constructor(
         val details = loadErrors.joinToString(separator = "\n")
         return ImageGenerationResult.Failure(
             "No compatible image generation model could be loaded. Download an ONNX Diffusion model from the Marketplace first." +
-                details.takeIf { it.isNotBlank() }?.let { "\n\nSkipped models:\n$it" }.orEmpty()
+                    details.takeIf { it.isNotBlank() }?.let { "\n\nSkipped models:\n$it" }.orEmpty()
         )
     }
 
@@ -97,7 +97,7 @@ class ImageGenerationManager @Inject constructor(
             .filter { engineFactory.getEngine(it.runtime) != null }
             .filter { model ->
                 model.taskType == ModelTaskType.IMAGE_GENERATION ||
-                    model.capabilities.contains(ModelCapability.IMAGE_GEN)
+                        model.capabilities.contains(ModelCapability.IMAGE_GEN)
             }
 
         if (models.isEmpty()) return emptyList()

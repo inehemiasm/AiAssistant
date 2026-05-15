@@ -3,7 +3,8 @@
 
     <!-- Post-splash screen theme. -->
     <style name="Theme.AiAssistant" parent="Theme.Material3.Dark.NoActionBar">
-        <item name="android:windowBackground">#0D47A1</item> <!-- Matches the start of our animated gradient -->
+        <item name="android:windowBackground">#0D47A1
+        </item> <!-- Matches the start of our animated gradient -->
         <item name="android:statusBarColor">#0D47A1</item>
         <item name="android:navigationBarColor">#0D47A1</item>
     </style>

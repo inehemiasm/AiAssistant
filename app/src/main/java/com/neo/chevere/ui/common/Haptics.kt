@@ -27,6 +27,7 @@ fun View.performChevereHaptic(type: ChevereHaptic) {
         } else {
             HapticFeedbackConstants.CONTEXT_CLICK
         }
+
         ChevereHaptic.Warning -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             HapticFeedbackConstants.REJECT
         } else {
@@ -40,14 +41,16 @@ fun String.hapticForFeedbackMessage(): ChevereHaptic {
     val normalized = lowercase()
     return when {
         normalized.contains("fail") ||
-            normalized.contains("error") ||
-            normalized.contains("cannot") ||
-            normalized.contains("cancel") -> ChevereHaptic.Warning
+                normalized.contains("error") ||
+                normalized.contains("cannot") ||
+                normalized.contains("cancel") -> ChevereHaptic.Warning
+
         normalized.contains("complete") ||
-            normalized.contains("ready") ||
-            normalized.contains("activated") ||
-            normalized.contains("saved") ||
-            normalized.contains("deleted") -> ChevereHaptic.Success
+                normalized.contains("ready") ||
+                normalized.contains("activated") ||
+                normalized.contains("saved") ||
+                normalized.contains("deleted") -> ChevereHaptic.Success
+
         else -> ChevereHaptic.Selection
     }
 }

@@ -11,14 +11,13 @@ import com.neo.chevere.data.datasource.ModelCatalogDataSource
 import com.neo.chevere.data.download.WorkManagerModelDownloadManager
 import com.neo.chevere.data.inference.ImageGenerationManager
 import com.neo.chevere.data.inference.InferenceManager
+import com.neo.chevere.domain.InferenceResult
+import com.neo.chevere.domain.InstalledModelRegistry
 import com.neo.chevere.domain.ModelEntry
 import com.neo.chevere.domain.ModelFormat
-import com.neo.chevere.domain.InferenceRequest
-import com.neo.chevere.domain.InferenceResult
 import com.neo.chevere.domain.ModelRuntime
 import com.neo.chevere.domain.ModelSource
 import com.neo.chevere.domain.ModelTaskType
-import com.neo.chevere.domain.InstalledModelRegistry
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
@@ -107,8 +106,8 @@ class ChatRepositoryImplTest {
         verify(inferenceManager).clearConversation()
         verify(inferenceManager).generate(argThat {
             imageUri == null &&
-                this.prompt.contains("You are Chevere AI") &&
-                this.prompt.endsWith(prompt)
+                    this.prompt.contains("You are Chevere AI") &&
+                    this.prompt.endsWith(prompt)
         })
         assertEquals("hi", result.getOrNull())
     }
@@ -135,7 +134,13 @@ class ChatRepositoryImplTest {
     @Test
     fun sendMessage_toolLikeTextDelegatesToOrchestrator() = runTest(testDispatcher) {
         val prompt = "what is the weather in Austin right now?"
-        whenever(agentOrchestrator.processUserRequest(prompt, null, null)).doReturn(Result.success("sunny"))
+        whenever(
+            agentOrchestrator.processUserRequest(
+                prompt,
+                null,
+                null
+            )
+        ).doReturn(Result.success("sunny"))
 
         val result = repository.sendMessage(prompt, null)
 
@@ -146,7 +151,13 @@ class ChatRepositoryImplTest {
     @Test
     fun sendMessage_concreteImageRequestDelegatesToOrchestrator() = runTest(testDispatcher) {
         val prompt = "generate an image of a neon robot"
-        whenever(agentOrchestrator.processUserRequest(prompt, null, null)).doReturn(Result.success("created"))
+        whenever(
+            agentOrchestrator.processUserRequest(
+                prompt,
+                null,
+                null
+            )
+        ).doReturn(Result.success("created"))
 
         val result = repository.sendMessage(prompt, null)
 
@@ -166,8 +177,8 @@ class ChatRepositoryImplTest {
         verify(agentOrchestrator, never()).processUserRequest(any(), any(), any())
         verify(inferenceManager).generate(argThat {
             imageUri == mockUri &&
-                this.prompt.contains("attached image") &&
-                this.prompt.contains("Do not generate")
+                    this.prompt.contains("attached image") &&
+                    this.prompt.contains("Do not generate")
         })
         assertEquals("I can describe the attached image.", result.getOrNull())
     }
@@ -215,12 +226,12 @@ class ChatRepositoryImplTest {
         verify(installedModelRegistry).upsertInstalledModel(
             org.mockito.kotlin.argThat {
                 id == "landscape" &&
-                    source == ModelSource.HUGGING_FACE &&
-                    format == ModelFormat.ONNX_DIFFUSION_BUNDLE &&
-                    runtime == ModelRuntime.ONNX_DIFFUSION &&
-                    taskType == ModelTaskType.IMAGE_GENERATION &&
-                    checksum == "abc123" &&
-                    license == "Community"
+                        source == ModelSource.HUGGING_FACE &&
+                        format == ModelFormat.ONNX_DIFFUSION_BUNDLE &&
+                        runtime == ModelRuntime.ONNX_DIFFUSION &&
+                        taskType == ModelTaskType.IMAGE_GENERATION &&
+                        checksum == "abc123" &&
+                        license == "Community"
             }
         )
         verify(downloadManager).downloadModel(model.url, "landscape.zip", "landscape", "abc123")

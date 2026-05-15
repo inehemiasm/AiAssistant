@@ -26,9 +26,9 @@ class ChatRequestRouter @Inject constructor() {
         if (isCapabilityOnlyQuestion(normalized)) return false
 
         return looksLikeImageGenerationRequest(normalized) ||
-            looksLikeLiveInformationRequest(normalized) ||
-            looksLikeDeviceActionRequest(normalized) ||
-            looksLikeModelManagementRequest(normalized)
+                looksLikeLiveInformationRequest(normalized) ||
+                looksLikeDeviceActionRequest(normalized) ||
+                looksLikeModelManagementRequest(normalized)
     }
 
     fun capabilityResponseFor(prompt: String): String? {
@@ -46,16 +46,16 @@ class ChatRequestRouter @Inject constructor() {
 
     private fun isCapabilityOnlyQuestion(text: String): Boolean =
         isCapabilityOverviewQuestion(text) ||
-            isImageCapabilityQuestion(text) ||
-            capabilityQuestionPrefixes.any { text.startsWith(it) }
+                isImageCapabilityQuestion(text) ||
+                capabilityQuestionPrefixes.any { text.startsWith(it) }
 
     private fun isCapabilityOverviewQuestion(text: String): Boolean =
         text == "what can you do" ||
-            text == "what can you do?" ||
-            text == "what are your capabilities" ||
-            text == "what are your capabilities?" ||
-            text == "what can chevere do" ||
-            text == "what can chevere do?"
+                text == "what can you do?" ||
+                text == "what are your capabilities" ||
+                text == "what are your capabilities?" ||
+                text == "what can chevere do" ||
+                text == "what can chevere do?"
 
     private fun isImageCapabilityQuestion(text: String): Boolean {
         if (!capabilityQuestionPrefixes.any { text.startsWith(it) }) return false
@@ -65,7 +65,15 @@ class ChatRequestRouter @Inject constructor() {
     }
 
     private fun hasConcreteImageDescription(text: String): Boolean =
-        listOf(" of ", " showing ", " with ", " in ", " at ", " wearing ", " holding ").any { it in text }
+        listOf(
+            " of ",
+            " showing ",
+            " with ",
+            " in ",
+            " at ",
+            " wearing ",
+            " holding "
+        ).any { it in text }
 
     private fun looksLikeImageGenerationRequest(text: String): Boolean {
         val hasImageNoun = imageRequestNouns.any { it in text }
@@ -90,10 +98,21 @@ class ChatRequestRouter @Inject constructor() {
     }
 
     private fun looksLikeDeviceActionRequest(text: String): Boolean {
-        val actionVerbs = listOf("copy", "share", "open", "launch", "draft", "email", "map", "navigate", "calendar")
-        val actionTargets = listOf("clipboard", "share sheet", "browser", "url", "app", "maps", "email", "calendar")
+        val actionVerbs = listOf(
+            "copy",
+            "share",
+            "open",
+            "launch",
+            "draft",
+            "email",
+            "map",
+            "navigate",
+            "calendar"
+        )
+        val actionTargets =
+            listOf("clipboard", "share sheet", "browser", "url", "app", "maps", "email", "calendar")
         return actionVerbs.any { text.startsWith("$it ") || " $it " in text } &&
-            actionTargets.any { it in text }
+                actionTargets.any { it in text }
     }
 
     private fun looksLikeModelManagementRequest(text: String): Boolean {
@@ -105,15 +124,17 @@ class ChatRequestRouter @Inject constructor() {
             "switch model",
             "select model"
         ).any { it in text }
-        val asksForModelAction = listOf("list", "show", "what", "which", "switch", "select", "recommend", "status").any {
-            text.startsWith("$it ") || " $it " in text
-        }
+        val asksForModelAction =
+            listOf("list", "show", "what", "which", "switch", "select", "recommend", "status").any {
+                text.startsWith("$it ") || " $it " in text
+            }
         return mentionsModels && asksForModelAction
     }
 
     private companion object {
         val imageRequestVerbs = listOf("create", "generate", "make", "draw", "render", "paint")
-        val imageRequestNouns = listOf("image", "picture", "photo", "art", "illustration", "portrait")
+        val imageRequestNouns =
+            listOf("image", "picture", "photo", "art", "illustration", "portrait")
         val capabilityQuestionPrefixes = listOf(
             "can you",
             "could you",

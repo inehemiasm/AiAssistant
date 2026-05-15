@@ -1,10 +1,18 @@
 package com.neo.chevere.ui.chat.components
 
-import androidx.compose.animation.core.*
+import androidx.compose.animation.core.Easing
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.keyframes
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.size
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -16,7 +24,11 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.neo.chevere.ui.designsystem.*
+import com.neo.chevere.ui.designsystem.AstroAccentBlue
+import com.neo.chevere.ui.designsystem.AstroGlowCyan
+import com.neo.chevere.ui.designsystem.AstroRobotDark
+import com.neo.chevere.ui.designsystem.AstroRobotGray
+import com.neo.chevere.ui.designsystem.AstroRobotWhite
 
 @Composable
 fun RobotIcon(
@@ -25,7 +37,7 @@ fun RobotIcon(
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "robot_animation")
     val isDark = isSystemInDarkTheme()
-    
+
     // Theme-aware colors
     val robotWhite = if (isDark) AstroRobotWhite else Color(0xFFE3F2FD)
     val robotGray = if (isDark) AstroRobotGray else Color(0xFFBBDEFB)
@@ -86,7 +98,7 @@ fun RobotIcon(
     Canvas(modifier = modifier.size(size)) {
         val w = this.size.width
         val h = this.size.height
-        
+
         withTransform({
             translate(top = floatingOffset)
         }) {
@@ -155,7 +167,7 @@ fun RobotIcon(
             val bodyCenter = Offset(w / 2, h * 0.65f)
             val bodyWidth = w * 0.42f
             val bodyHeight = h * 0.32f
-            
+
             drawOval(
                 brush = Brush.linearGradient(
                     colors = listOf(robotWhite, robotGray),
@@ -166,8 +178,16 @@ fun RobotIcon(
                 size = Size(bodyWidth, bodyHeight)
             )
 
-            drawHeart(Offset(bodyCenter.x, bodyCenter.y - 10f), 18f, glowColor.copy(alpha = glowAlpha))
-            drawHeart(Offset(bodyCenter.x, bodyCenter.y - 10f), 10f, robotWhite.copy(alpha = glowAlpha))
+            drawHeart(
+                Offset(bodyCenter.x, bodyCenter.y - 10f),
+                18f,
+                glowColor.copy(alpha = glowAlpha)
+            )
+            drawHeart(
+                Offset(bodyCenter.x, bodyCenter.y - 10f),
+                10f,
+                robotWhite.copy(alpha = glowAlpha)
+            )
 
             // --- 5. Antennas ---
             drawLine(robotGray, Offset(w * 0.38f, h * 0.25f), Offset(w * 0.3f, h * 0.12f), 5f)
@@ -186,9 +206,19 @@ fun RobotIcon(
                 size = Size(headWidth, headHeight),
                 cornerRadius = CornerRadius(100f, 100f)
             )
-            
-            drawRoundRect(AstroAccentBlue, Offset(headCenter.x - headWidth / 2 - 5f, headCenter.y - 20f), Size(15f, 50f), CornerRadius(10f, 10f))
-            drawRoundRect(AstroAccentBlue, Offset(headCenter.x + headWidth / 2 - 10f, headCenter.y - 20f), Size(15f, 50f), CornerRadius(10f, 10f))
+
+            drawRoundRect(
+                AstroAccentBlue,
+                Offset(headCenter.x - headWidth / 2 - 5f, headCenter.y - 20f),
+                Size(15f, 50f),
+                CornerRadius(10f, 10f)
+            )
+            drawRoundRect(
+                AstroAccentBlue,
+                Offset(headCenter.x + headWidth / 2 - 10f, headCenter.y - 20f),
+                Size(15f, 50f),
+                CornerRadius(10f, 10f)
+            )
 
             val faceWidth = headWidth * 0.85f
             val faceHeight = headHeight * 0.7f
@@ -202,12 +232,24 @@ fun RobotIcon(
             // --- 7. Eyes & Mouth ---
             val eyeSize = 32f
             val eyeY = headCenter.y + 15f
-            
-            drawCircle(glowColor.copy(alpha = glowAlpha), eyeSize, Offset(headCenter.x - faceWidth * 0.25f, eyeY))
-            drawCircle(robotWhite.copy(alpha = 0.8f), eyeSize * 0.4f, Offset(headCenter.x - faceWidth * 0.25f - 6f, eyeY - 6f))
+
+            drawCircle(
+                glowColor.copy(alpha = glowAlpha),
+                eyeSize,
+                Offset(headCenter.x - faceWidth * 0.25f, eyeY)
+            )
+            drawCircle(
+                robotWhite.copy(alpha = 0.8f),
+                eyeSize * 0.4f,
+                Offset(headCenter.x - faceWidth * 0.25f - 6f, eyeY - 6f)
+            )
 
             if (eyeWinkScale > 0.4f) {
-                drawCircle(glowColor.copy(alpha = glowAlpha), eyeSize * eyeWinkScale, Offset(headCenter.x + faceWidth * 0.25f, eyeY))
+                drawCircle(
+                    glowColor.copy(alpha = glowAlpha),
+                    eyeSize * eyeWinkScale,
+                    Offset(headCenter.x + faceWidth * 0.25f, eyeY)
+                )
             } else {
                 drawArc(
                     color = glowColor.copy(alpha = glowAlpha),
@@ -245,7 +287,14 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawHeart(
         moveTo(x + width / 2, y + height / 4)
         cubicTo(x + width / 2, y, x, y, x, y + height / 4)
         cubicTo(x, y + height / 2, x + width / 2, y + height * 0.75f, x + width / 2, y + height)
-        cubicTo(x + width / 2, y + height * 0.75f, x + width, y + height / 2, x + width, y + height / 4)
+        cubicTo(
+            x + width / 2,
+            y + height * 0.75f,
+            x + width,
+            y + height / 2,
+            x + width,
+            y + height / 4
+        )
         cubicTo(x + width, y, x + width / 2, y, x + width / 2, y + height / 4)
         close()
     }

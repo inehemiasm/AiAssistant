@@ -13,9 +13,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
@@ -204,7 +204,7 @@ fun parseMarkdownLogic(
         val highlightRegex = Regex("(Chevere AI|Chevere)")
 
         var currentPos = 0
-        
+
         while (currentPos < cleanText.length) {
             val bMatch = boldRegex.find(cleanText, currentPos)
             val iMatch = italicRegex.find(cleanText, currentPos)
@@ -220,7 +220,7 @@ fun parseMarkdownLogic(
             }
 
             val match = matches.first()
-            
+
             if (match.range.first > currentPos) {
                 append(cleanText.substring(currentPos, match.range.first))
             }
@@ -234,6 +234,7 @@ fun parseMarkdownLogic(
                 match.value.startsWith("**") -> {
                     addStyle(SpanStyle(fontWeight = FontWeight.Bold), start, end)
                 }
+
                 match.value.startsWith("`") -> {
                     addStyle(
                         SpanStyle(
@@ -243,14 +244,20 @@ fun parseMarkdownLogic(
                         ), start, end
                     )
                 }
+
                 match.value.startsWith("*") -> {
                     addStyle(SpanStyle(fontStyle = FontStyle.Italic), start, end)
                 }
+
                 match.value == "Chevere" || match.value == "Chevere AI" -> {
-                    addStyle(SpanStyle(color = primaryColor, fontWeight = FontWeight.Bold), start, end)
+                    addStyle(
+                        SpanStyle(color = primaryColor, fontWeight = FontWeight.Bold),
+                        start,
+                        end
+                    )
                 }
             }
-            
+
             currentPos = match.range.last + 1
         }
     }

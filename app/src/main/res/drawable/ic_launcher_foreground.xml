@@ -25,7 +25,8 @@
         android:pathData="M43,52m-4,0a4,4 0 1,1 8,0a4,4 0 1,1 -8,0" />
 
     <!-- Right Eye (Winking Group) -->
-    <group android:name="right_eye_group"
+    <group
+        android:name="right_eye_group"
         android:pivotX="65"
         android:pivotY="52"
         android:scaleX="1.0"
@@ -40,6 +41,6 @@
         android:pathData="M44,72q10,6 20,0"
         android:strokeColor="#4DD0E1"
         android:strokeLineCap="round"
-        android:strokeWidth="3.5"/>
+        android:strokeWidth="3.5" />
 
 </vector>

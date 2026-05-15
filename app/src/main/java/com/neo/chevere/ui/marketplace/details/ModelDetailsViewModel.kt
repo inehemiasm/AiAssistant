@@ -11,9 +11,9 @@ import com.neo.chevere.data.PreferenceManager
 import com.neo.chevere.domain.ChatRepository
 import com.neo.chevere.domain.DownloadProgress
 import com.neo.chevere.domain.InstalledModel
-import com.neo.chevere.ui.navigation.Route
 import com.neo.chevere.ui.marketplace.ModelActivationCategory
 import com.neo.chevere.ui.marketplace.activationCategory
+import com.neo.chevere.ui.navigation.Route
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -27,7 +27,10 @@ class ModelDetailsViewModel @Inject constructor(
     private val repository: ChatRepository,
     private val preferenceManager: PreferenceManager,
     savedStateHandle: SavedStateHandle
-) : BaseViewModel<ModelDetailsState, ModelDetailsIntent, ModelDetailsEffect>(application, ModelDetailsState()) {
+) : BaseViewModel<ModelDetailsState, ModelDetailsIntent, ModelDetailsEffect>(
+    application,
+    ModelDetailsState()
+) {
 
     private val modelDetailsRoute = savedStateHandle.toRoute<Route.ModelDetails>()
     private val modelId = modelDetailsRoute.modelId
@@ -37,17 +40,20 @@ class ModelDetailsViewModel @Inject constructor(
     init {
         Log.d(TAG, "--- INITIALIZING VM for Model: $modelId ---")
         setState { copy(modelId = modelId) }
-        
+
         // Initial data load via Intent
         viewModelScope.launch {
             handleIntent(ModelDetailsIntent.LoadDetails(modelId))
         }
-        
+
         // Reactive Observation of Active Model
         viewModelScope.launch {
             preferenceManager.selectedModelPreference.collectLatest { activeId ->
                 val isNowActive = activeId == modelId
-                Log.d(TAG, "[SYNC] Active Model in DataStore: '$activeId' | This Model: '$modelId' | Result: $isNowActive")
+                Log.d(
+                    TAG,
+                    "[SYNC] Active Model in DataStore: '$activeId' | This Model: '$modelId' | Result: $isNowActive"
+                )
                 setState { copy(isActive = isNowActive) }
             }
         }
@@ -59,14 +65,21 @@ class ModelDetailsViewModel @Inject constructor(
                     progressMap[entry.effectiveFileName] ?: progressMap[entry.effectiveInstalledId]
                 }
                 Log.v(TAG, "[DOWNLOAD] Map update for $modelId: $progress")
-                
+
                 when (progress) {
                     is DownloadProgress.Progress -> {
-                        setState { copy(downloadProgress = progress.percent, isActionInProgress = true) }
+                        setState {
+                            copy(
+                                downloadProgress = progress.percent,
+                                isActionInProgress = true
+                            )
+                        }
                     }
+
                     is DownloadProgress.Finished -> {
                         Log.i(TAG, "[DOWNLOAD] Finished for $modelId. Reloading details.")
-                        val shouldAnnounceCompletion = startedDownloadHere || currentState.downloadProgress != null
+                        val shouldAnnounceCompletion =
+                            startedDownloadHere || currentState.downloadProgress != null
                         setState { copy(downloadProgress = null, isActionInProgress = false) }
                         handleIntent(ModelDetailsIntent.LoadDetails(modelId))
                         if (!handledFinishedDownload) {
@@ -80,7 +93,9 @@ class ModelDetailsViewModel @Inject constructor(
                             maybeAutoActivateAfterDownload()
                         }
                     }
-                    else -> { /* Idle or Error */ }
+
+                    else -> { /* Idle or Error */
+                    }
                 }
             }
         }
@@ -92,7 +107,12 @@ class ModelDetailsViewModel @Inject constructor(
             is ModelDetailsIntent.LoadDetails -> loadDetails(intent.modelId)
             ModelDetailsIntent.Download -> setState { copy(showDownloadRequirements = true) }
             ModelDetailsIntent.ConfirmDownload -> downloadModel()
-            ModelDetailsIntent.DismissDownloadRequirements -> setState { copy(showDownloadRequirements = false) }
+            ModelDetailsIntent.DismissDownloadRequirements -> setState {
+                copy(
+                    showDownloadRequirements = false
+                )
+            }
+
             ModelDetailsIntent.CancelDownload -> cancelDownload()
             ModelDetailsIntent.Delete -> deleteModel()
             ModelDetailsIntent.Select -> selectModel()
@@ -103,20 +123,21 @@ class ModelDetailsViewModel @Inject constructor(
     private suspend fun loadDetails(id: String) {
         setState { copy(isLoading = true) }
         Log.d(TAG, "Loading details for $id...")
-        
+
         // Local scan
         val localModels = repository.getLocalModels()
         val installed = localModels.find {
             it.id == id || it.id == id.removeSuffix(Constants.ModelFiles.ZIP_EXTENSION) || it.fileName == id
         }
         Log.d(TAG, "Local Check: Found=${installed != null}, Status=${installed?.installStatus}")
-        
+
         // Remote scan
         val remoteModels = repository.fetchAvailableModels().getOrDefault(emptyList())
-        val entry = remoteModels.find { it.effectiveFileName == id || it.effectiveInstalledId == id || it.name == id }
+        val entry =
+            remoteModels.find { it.effectiveFileName == id || it.effectiveInstalledId == id || it.name == id }
         Log.d(TAG, "Remote Check: Found=${entry != null}, Provider=${entry?.provider}")
 
-        setState { 
+        setState {
             copy(
                 installedModel = installed,
                 modelEntry = entry,
@@ -130,7 +151,7 @@ class ModelDetailsViewModel @Inject constructor(
         Log.i(TAG, "Starting download for: ${entry.name} from ${entry.url}")
         startedDownloadHere = true
         setState { copy(showDownloadRequirements = false, isActionInProgress = true) }
-        
+
         viewModelScope.launch {
             repository.downloadModel(entry).collectLatest { progress ->
                 if (progress is DownloadProgress.Error) {
@@ -178,7 +199,7 @@ class ModelDetailsViewModel @Inject constructor(
             sendEffect { ModelDetailsEffect.ShowToast("Model is not ready") }
             return
         }
-        
+
         if (currentState.isActive) {
             Log.d(TAG, "Select ignored: Already active")
             return
@@ -191,14 +212,14 @@ class ModelDetailsViewModel @Inject constructor(
 
     private fun confirmSwitch() {
         val model = currentState.installedModel ?: return
-        
+
         if (currentState.isActive) {
             Log.d(TAG, "ConfirmSwitch ignored: Already active")
             return
         }
 
         setState { copy(isActionInProgress = true) }
-        
+
         viewModelScope.launch {
             Log.i(TAG, "[SWITCH] Initializing Engine with path: ${model.filePath}")
             repository.initializeModel(model.filePath)
@@ -220,8 +241,8 @@ class ModelDetailsViewModel @Inject constructor(
         val installedModels = repository.getLocalModels()
         val installedModel = installedModels.find {
             it.id == modelId ||
-                it.id == modelId.removeSuffix(Constants.ModelFiles.ZIP_EXTENSION) ||
-                it.fileName == modelId
+                    it.id == modelId.removeSuffix(Constants.ModelFiles.ZIP_EXTENSION) ||
+                    it.fileName == modelId
         } ?: return
 
         if (!installedModel.isHealthy) return
@@ -235,6 +256,7 @@ class ModelDetailsViewModel @Inject constructor(
                     activateChatModel(installedModel)
                 }
             }
+
             ModelActivationCategory.IMAGE_GENERATION -> {
                 val healthyImageModels = installedModels.filter {
                     it.isHealthy && it.activationCategory() == ModelActivationCategory.IMAGE_GENERATION

@@ -36,7 +36,10 @@ fun ErrorSnackbar(message: String, onDismiss: () -> Unit) {
         modifier = Modifier.padding(16.dp),
         action = {
             TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.dismiss), color = MaterialTheme.colorScheme.inversePrimary)
+                Text(
+                    stringResource(R.string.dismiss),
+                    color = MaterialTheme.colorScheme.inversePrimary
+                )
             }
         },
         containerColor = MaterialTheme.colorScheme.errorContainer,

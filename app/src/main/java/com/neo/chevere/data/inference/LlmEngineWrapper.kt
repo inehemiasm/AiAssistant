@@ -33,7 +33,8 @@ class RealLlmEngineWrapper @Inject constructor() : LlmEngineWrapper {
     }
 
     override fun createConversation(): ConversationWrapper {
-        val conversation = engine?.createConversation() ?: throw IllegalStateException("Engine not initialized")
+        val conversation =
+            engine?.createConversation() ?: throw IllegalStateException("Engine not initialized")
         return RealConversationWrapper(conversation)
     }
 

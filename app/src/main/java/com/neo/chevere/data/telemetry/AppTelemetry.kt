@@ -20,13 +20,38 @@ interface AppTelemetry {
     fun logClick(action: String, screenName: String, productArea: String)
     fun setActiveModel(modelId: String)
     fun logModelInitStarted(modelId: String)
-    fun logModelInitFinished(modelId: String, success: Boolean, durationMs: Long, errorType: String? = null)
+    fun logModelInitFinished(
+        modelId: String,
+        success: Boolean,
+        durationMs: Long,
+        errorType: String? = null
+    )
+
     fun logChatTurnStarted(hasImage: Boolean, promptLength: Int)
-    fun logChatTurnFinished(hasImage: Boolean, success: Boolean, durationMs: Long, errorType: String? = null)
+    fun logChatTurnFinished(
+        hasImage: Boolean,
+        success: Boolean,
+        durationMs: Long,
+        errorType: String? = null
+    )
+
     fun logImageGenerationStarted(hasConditionImage: Boolean, isExplicit: Boolean)
-    fun logImageGenerationFinished(success: Boolean, durationMs: Long, isExplicit: Boolean, errorType: String? = null)
+    fun logImageGenerationFinished(
+        success: Boolean,
+        durationMs: Long,
+        isExplicit: Boolean,
+        errorType: String? = null
+    )
+
     fun logModelDownloadStarted(modelId: String, fileType: String)
-    fun logModelDownloadFinished(modelId: String, success: Boolean, durationMs: Long, fileType: String, errorType: String? = null)
+    fun logModelDownloadFinished(
+        modelId: String,
+        success: Boolean,
+        durationMs: Long,
+        fileType: String,
+        errorType: String? = null
+    )
+
     fun logStopRequested(activeWork: Boolean)
     fun recordNonFatal(throwable: Throwable, context: String)
 }
@@ -69,7 +94,12 @@ class FirebaseAppTelemetry @Inject constructor(
         }
     }
 
-    override fun logModelInitFinished(modelId: String, success: Boolean, durationMs: Long, errorType: String?) {
+    override fun logModelInitFinished(
+        modelId: String,
+        success: Boolean,
+        durationMs: Long,
+        errorType: String?
+    ) {
         logEvent(TelemetryConstants.Event.MODEL_INIT_FINISH) {
             putString(TelemetryConstants.Param.MODEL_ID, modelId.safeValue())
             putString(TelemetryConstants.Param.STATUS, success.status())
@@ -80,15 +110,26 @@ class FirebaseAppTelemetry @Inject constructor(
 
     override fun logChatTurnStarted(hasImage: Boolean, promptLength: Int) {
         logEvent(TelemetryConstants.Event.CHAT_TURN_START) {
-            putString(TelemetryConstants.Param.INPUT_TYPE, if (hasImage) TelemetryConstants.Value.IMAGE_TEXT else TelemetryConstants.Value.TEXT)
+            putString(
+                TelemetryConstants.Param.INPUT_TYPE,
+                if (hasImage) TelemetryConstants.Value.IMAGE_TEXT else TelemetryConstants.Value.TEXT
+            )
             putString(TelemetryConstants.Param.PROMPT_LENGTH_BUCKET, promptLength.lengthBucket())
             putString(TelemetryConstants.Param.PRODUCT_AREA, TelemetryConstants.ProductArea.CHAT)
         }
     }
 
-    override fun logChatTurnFinished(hasImage: Boolean, success: Boolean, durationMs: Long, errorType: String?) {
+    override fun logChatTurnFinished(
+        hasImage: Boolean,
+        success: Boolean,
+        durationMs: Long,
+        errorType: String?
+    ) {
         logEvent(TelemetryConstants.Event.CHAT_TURN_FINISH) {
-            putString(TelemetryConstants.Param.INPUT_TYPE, if (hasImage) TelemetryConstants.Value.IMAGE_TEXT else TelemetryConstants.Value.TEXT)
+            putString(
+                TelemetryConstants.Param.INPUT_TYPE,
+                if (hasImage) TelemetryConstants.Value.IMAGE_TEXT else TelemetryConstants.Value.TEXT
+            )
             putString(TelemetryConstants.Param.STATUS, success.status())
             putLong(TelemetryConstants.Param.DURATION_MS, durationMs)
             putString(TelemetryConstants.Param.PRODUCT_AREA, TelemetryConstants.ProductArea.CHAT)
@@ -98,9 +139,18 @@ class FirebaseAppTelemetry @Inject constructor(
 
     override fun logImageGenerationStarted(hasConditionImage: Boolean, isExplicit: Boolean) {
         logEvent(TelemetryConstants.Event.IMAGE_GENERATION_START) {
-            putString(TelemetryConstants.Param.INPUT_TYPE, if (hasConditionImage) TelemetryConstants.Value.CONDITIONED else TelemetryConstants.Value.TEXT)
-            putString(TelemetryConstants.Param.CONTENT_MODE, if (isExplicit) TelemetryConstants.Value.AGE_RESTRICTED_DEBUG else TelemetryConstants.Value.STANDARD)
-            putString(TelemetryConstants.Param.PRODUCT_AREA, TelemetryConstants.ProductArea.IMAGE_GENERATION)
+            putString(
+                TelemetryConstants.Param.INPUT_TYPE,
+                if (hasConditionImage) TelemetryConstants.Value.CONDITIONED else TelemetryConstants.Value.TEXT
+            )
+            putString(
+                TelemetryConstants.Param.CONTENT_MODE,
+                if (isExplicit) TelemetryConstants.Value.AGE_RESTRICTED_DEBUG else TelemetryConstants.Value.STANDARD
+            )
+            putString(
+                TelemetryConstants.Param.PRODUCT_AREA,
+                TelemetryConstants.ProductArea.IMAGE_GENERATION
+            )
         }
     }
 
@@ -113,8 +163,14 @@ class FirebaseAppTelemetry @Inject constructor(
         logEvent(TelemetryConstants.Event.IMAGE_GENERATION_FINISH) {
             putString(TelemetryConstants.Param.STATUS, success.status())
             putLong(TelemetryConstants.Param.DURATION_MS, durationMs)
-            putString(TelemetryConstants.Param.CONTENT_MODE, if (isExplicit) TelemetryConstants.Value.AGE_RESTRICTED_DEBUG else TelemetryConstants.Value.STANDARD)
-            putString(TelemetryConstants.Param.PRODUCT_AREA, TelemetryConstants.ProductArea.IMAGE_GENERATION)
+            putString(
+                TelemetryConstants.Param.CONTENT_MODE,
+                if (isExplicit) TelemetryConstants.Value.AGE_RESTRICTED_DEBUG else TelemetryConstants.Value.STANDARD
+            )
+            putString(
+                TelemetryConstants.Param.PRODUCT_AREA,
+                TelemetryConstants.ProductArea.IMAGE_GENERATION
+            )
             putOptionalString(TelemetryConstants.Param.ERROR_TYPE, errorType)
         }
     }
@@ -123,7 +179,10 @@ class FirebaseAppTelemetry @Inject constructor(
         logEvent(TelemetryConstants.Event.MODEL_DOWNLOAD_START) {
             putString(TelemetryConstants.Param.MODEL_ID, modelId.safeValue())
             putString(TelemetryConstants.Param.FILE_TYPE, fileType.safeValue())
-            putString(TelemetryConstants.Param.PRODUCT_AREA, TelemetryConstants.ProductArea.MODEL_MANAGEMENT)
+            putString(
+                TelemetryConstants.Param.PRODUCT_AREA,
+                TelemetryConstants.ProductArea.MODEL_MANAGEMENT
+            )
         }
     }
 
@@ -139,7 +198,10 @@ class FirebaseAppTelemetry @Inject constructor(
             putString(TelemetryConstants.Param.FILE_TYPE, fileType.safeValue())
             putString(TelemetryConstants.Param.STATUS, success.status())
             putLong(TelemetryConstants.Param.DURATION_MS, durationMs)
-            putString(TelemetryConstants.Param.PRODUCT_AREA, TelemetryConstants.ProductArea.MODEL_MANAGEMENT)
+            putString(
+                TelemetryConstants.Param.PRODUCT_AREA,
+                TelemetryConstants.ProductArea.MODEL_MANAGEMENT
+            )
             putOptionalString(TelemetryConstants.Param.ERROR_TYPE, errorType)
         }
     }
@@ -164,7 +226,8 @@ class FirebaseAppTelemetry @Inject constructor(
         if (!value.isNullOrBlank()) putString(key, value.safeValue())
     }
 
-    private fun Boolean.status(): String = if (this) TelemetryConstants.Value.SUCCESS else TelemetryConstants.Value.FAILURE
+    private fun Boolean.status(): String =
+        if (this) TelemetryConstants.Value.SUCCESS else TelemetryConstants.Value.FAILURE
 
     private fun Int.lengthBucket(): String = when {
         this <= 0 -> TelemetryConstants.Value.EMPTY

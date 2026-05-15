@@ -15,10 +15,11 @@ import javax.inject.Singleton
 class FirestoreModelCatalogDataSource @Inject constructor(
     private val firestore: FirebaseFirestore
 ) : ModelCatalogDataSource {
-    override suspend fun fetchAvailableModels(): Result<List<ModelEntry>> = withContext(Dispatchers.IO) {
-        runCatching {
-            val snapshot = firestore.collection("models").get().await()
-            snapshot.toObjects(ModelEntry::class.java)
+    override suspend fun fetchAvailableModels(): Result<List<ModelEntry>> =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val snapshot = firestore.collection("models").get().await()
+                snapshot.toObjects(ModelEntry::class.java)
+            }
         }
-    }
 }

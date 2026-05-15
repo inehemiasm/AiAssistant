@@ -2,10 +2,10 @@ package com.neo.chevere.ui.navigation
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.material3.AlertDialog
@@ -99,7 +99,8 @@ fun ChevereApp(
                 modifier = Modifier.height(86.dp)
             ) {
                 TopLevelDestination.entries.forEach { destination ->
-                    val selected = currentDestination?.hierarchy?.any { it.hasRoute(destination.route::class) } == true
+                    val selected =
+                        currentDestination?.hierarchy?.any { it.hasRoute(destination.route::class) } == true
                     NavigationBarItem(
                         selected = selected,
                         onClick = {
@@ -164,9 +165,11 @@ private fun androidx.navigation.NavDestination?.telemetryScreen(): String = when
     else -> TelemetryConstants.Screen.UNKNOWN
 }
 
-private fun androidx.navigation.NavDestination?.telemetryProductArea(): String = when (telemetryScreen()) {
-    TelemetryConstants.Screen.MODEL_MARKETPLACE,
-    TelemetryConstants.Screen.MODEL_DETAILS -> TelemetryConstants.ProductArea.MODEL_MANAGEMENT
-    TelemetryConstants.Screen.SETTINGS -> TelemetryConstants.ProductArea.SETTINGS
-    else -> TelemetryConstants.ProductArea.CHAT
-}
+private fun androidx.navigation.NavDestination?.telemetryProductArea(): String =
+    when (telemetryScreen()) {
+        TelemetryConstants.Screen.MODEL_MARKETPLACE,
+        TelemetryConstants.Screen.MODEL_DETAILS -> TelemetryConstants.ProductArea.MODEL_MANAGEMENT
+
+        TelemetryConstants.Screen.SETTINGS -> TelemetryConstants.ProductArea.SETTINGS
+        else -> TelemetryConstants.ProductArea.CHAT
+    }

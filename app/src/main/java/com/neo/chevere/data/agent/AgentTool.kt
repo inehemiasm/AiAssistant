@@ -12,17 +12,17 @@ interface AgentTool {
      * The unique name of the tool.
      */
     val name: String
-    
+
     /**
      * A description of what the tool does, used by the LLM for tool selection.
      */
     val description: String
-    
+
     /**
      * A simplified description of the expected parameters (e.g., in JSON format).
      */
     val inputSchema: String
-    
+
     /**
      * Executes the tool with the given arguments.
      *
@@ -41,17 +41,18 @@ sealed interface ToolResult {
      * @property data The output data from the tool.
      */
     data class Success(val data: String) : ToolResult
-    
+
     /**
      * Indicates an error occurred during tool execution.
      * @property message A description of the error.
      */
     data class Error(val message: String) : ToolResult
-    
+
     /**
      * Indicates that the tool requires user confirmation before proceeding.
      * @property message A message to show the user explaining why confirmation is needed.
      * @property onConfirm A lambda to execute if the user confirms the action.
      */
-    data class NeedsConfirmation(val message: String, val onConfirm: suspend () -> ToolResult) : ToolResult
+    data class NeedsConfirmation(val message: String, val onConfirm: suspend () -> ToolResult) :
+        ToolResult
 }

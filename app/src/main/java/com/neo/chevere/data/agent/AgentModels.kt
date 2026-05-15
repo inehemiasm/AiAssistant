@@ -6,26 +6,26 @@ package com.neo.chevere.data.agent
 sealed interface AgentState {
     /** The agent is idle and waiting for user input. */
     object Idle : AgentState
-    
+
     /** The agent is currently planning its next steps or reasoning about the user's request. */
     object Planning : AgentState
-    
+
     /** 
      * The agent is currently executing a specific tool. 
      * @property toolName The name of the tool being executed.
      */
     data class ExecutingTool(val toolName: String) : AgentState
-    
+
     /** 
      * The agent is waiting for user confirmation before proceeding with a tool execution.
      * @property toolName The name of the tool requiring confirmation.
      * @property message A message to show to the user explaining why confirmation is needed.
      */
     data class WaitingForConfirmation(val toolName: String, val message: String) : AgentState
-    
+
     /** The agent has completed its task successfully. */
     object Completed : AgentState
-    
+
     /** 
      * The agent encountered an error during its reasoning or execution loop.
      * @property message A description of the error.

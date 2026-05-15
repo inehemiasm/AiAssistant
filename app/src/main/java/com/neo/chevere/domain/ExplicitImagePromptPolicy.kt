@@ -36,7 +36,7 @@ class ExplicitImagePromptPolicy {
         val normalized = prompt.lowercase(Locale.ROOT)
         if (!normalized.looksLikeImageRequest()) return false
         return explicitNudityTerms.any { normalized.contains(it) } ||
-            sexualTerms.any { normalized.contains(it) }
+                sexualTerms.any { normalized.contains(it) }
     }
 
     private fun String.looksLikeImageRequest(): Boolean {

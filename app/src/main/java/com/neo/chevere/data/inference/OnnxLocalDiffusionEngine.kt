@@ -27,11 +27,9 @@ import java.util.Random
 import java.util.regex.Pattern
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.coroutines.coroutineContext
 import kotlin.math.ln
 import kotlin.math.max
 import kotlin.math.min
-import kotlin.math.pow
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
@@ -68,7 +66,7 @@ class OnnxLocalDiffusionEngine @Inject constructor(
 
         val missingFiles = Constants.ImageGeneration.ONNX_REQUIRED_FILES.filterNot { relativePath ->
             File(directory, relativePath).isFile ||
-                File(directory, relativePath.replace("/model.ort", "/model.onnx")).isFile
+                    File(directory, relativePath.replace("/model.ort", "/model.onnx")).isFile
         }
         if (missingFiles.isNotEmpty()) {
             return@withContext LoadResult.Failure(
@@ -90,7 +88,10 @@ class OnnxLocalDiffusionEngine @Inject constructor(
             LoadResult.Success
         } catch (throwable: Throwable) {
             unload()
-            LoadResult.Failure("Failed to load ONNX diffusion model: ${throwable.message}", throwable)
+            LoadResult.Failure(
+                "Failed to load ONNX diffusion model: ${throwable.message}",
+                throwable
+            )
         }
     }
 
@@ -106,11 +107,29 @@ class OnnxLocalDiffusionEngine @Inject constructor(
                 // Optimization: use model bytes directly for initialization of ORT format models
                 addConfigEntry("session.use_ort_model_bytes_for_initialization", "1")
             }
-            
-            // Enable all graph optimizations
-            setOptimizationLevel(OrtSession.SessionOptions.OptLevel.ALL_OPT)
-            
-            // Try to add NNAPI for hardware acceleration and better support for mobile-optimized kernels (like NhwcConv)
+
+            // Enable XNNPACK for better CPU performance and support for mobile-optimized kernels.
+            try {
+                addConfigEntry("session.use_xnnpack", "1")
+                addXnnpack(emptyMap())
+            } catch (e: Exception) {
+                // XNNPACK might not be available in all builds
+            }
+
+            // Disable the NHWC transformer. This transformer attempts to fuse NCHW 
+            // convolutions into NHWC convolutions (NhwcConv). If the CPU provider 
+            // doesn't have kernels for these (common on Android), it leads to 
+            // 'Kernel not found' errors.
+            try {
+                addConfigEntry("session.disable_nhwc_transformer", "1")
+            } catch (e: Exception) {
+            }
+
+            // Use EXTENDED_OPT instead of ALL_OPT to avoid aggressive layout fusions 
+            // that trigger the NhwcConv issues.
+            setOptimizationLevel(OrtSession.SessionOptions.OptLevel.EXTENDED_OPT)
+
+            // Try to add NNAPI for hardware acceleration
             try {
                 addNnapi()
             } catch (e: Exception) {
@@ -120,67 +139,72 @@ class OnnxLocalDiffusionEngine @Inject constructor(
         return environment.createSession(modelFile.absolutePath, sessionOptions)
     }
 
-    override suspend fun generate(request: ImageGenerationRequest): ImageGenerationResult = withContext(Dispatchers.Default) {
-        val activeTokenizer = tokenizer
-            ?: return@withContext ImageGenerationResult.Failure("ONNX diffusion tokenizer is not loaded.")
-        val activeTextEncoder = textEncoder
-            ?: return@withContext ImageGenerationResult.Failure("ONNX diffusion text encoder is not loaded.")
-        val activeUnet = unet
-            ?: return@withContext ImageGenerationResult.Failure("ONNX diffusion UNet is not loaded.")
-        val activeVaeDecoder = vaeDecoder
-            ?: return@withContext ImageGenerationResult.Failure("ONNX diffusion VAE decoder is not loaded.")
+    override suspend fun generate(request: ImageGenerationRequest): ImageGenerationResult =
+        withContext(Dispatchers.Default) {
+            val activeTokenizer = tokenizer
+                ?: return@withContext ImageGenerationResult.Failure("ONNX diffusion tokenizer is not loaded.")
+            val activeTextEncoder = textEncoder
+                ?: return@withContext ImageGenerationResult.Failure("ONNX diffusion text encoder is not loaded.")
+            val activeUnet = unet
+                ?: return@withContext ImageGenerationResult.Failure("ONNX diffusion UNet is not loaded.")
+            val activeVaeDecoder = vaeDecoder
+                ?: return@withContext ImageGenerationResult.Failure("ONNX diffusion VAE decoder is not loaded.")
 
-        try {
-            val width = request.width.coerceIn(256, 512).roundDownToMultipleOf(8)
-            val height = request.height.coerceIn(256, 512).roundDownToMultipleOf(8)
-            val steps = request.steps.coerceIn(1, 40)
-            val seed = request.seed ?: System.currentTimeMillis()
-            val guidanceScale = request.guidanceScale.coerceIn(1f, 15f)
+            try {
+                val width = request.width.coerceIn(256, 512).roundDownToMultipleOf(8)
+                val height = request.height.coerceIn(256, 512).roundDownToMultipleOf(8)
+                val steps = request.steps.coerceIn(1, 40)
+                val seed = request.seed ?: System.currentTimeMillis()
+                val guidanceScale = request.guidanceScale.coerceIn(1f, 15f)
 
-            val conditionalEmbeddings = encodePrompt(
-                tokenizer = activeTokenizer,
-                textEncoder = activeTextEncoder,
-                prompt = request.prompt
-            )
-            val unconditionalEmbeddings = encodePrompt(
-                tokenizer = activeTokenizer,
-                textEncoder = activeTextEncoder,
-                prompt = request.negativePrompt.orEmpty()
-            )
-            val textEmbeddings = stackEmbeddings(unconditionalEmbeddings, conditionalEmbeddings)
-
-            val scheduler = EulerAncestralScheduler(steps)
-            var latents = createLatents(seed, height / 8, width / 8, scheduler.initNoiseSigma)
-
-            for (stepIndex in 0 until steps) {
-                coroutineContext.ensureActive()
-                val sigma = scheduler.sigma(stepIndex)
-                val scaledLatents = scaleLatents(duplicateBatch(latents), sigma)
-                val timestep = scheduler.timestep(stepIndex)
-                val noisePrediction = runUnet(
-                    session = activeUnet,
-                    sample = scaledLatents,
-                    timestep = timestep,
-                    textEmbeddings = textEmbeddings
+                val conditionalEmbeddings = encodePrompt(
+                    tokenizer = activeTokenizer,
+                    textEncoder = activeTextEncoder,
+                    prompt = request.prompt
                 )
-                val guidedNoise = applyClassifierFreeGuidance(noisePrediction, guidanceScale)
-                latents = scheduler.step(guidedNoise, latents, stepIndex, seed + stepIndex + 1L)
-            }
+                val unconditionalEmbeddings = encodePrompt(
+                    tokenizer = activeTokenizer,
+                    textEncoder = activeTextEncoder,
+                    prompt = request.negativePrompt.orEmpty()
+                )
+                val textEmbeddings = stackEmbeddings(unconditionalEmbeddings, conditionalEmbeddings)
 
-            val decoded = runVaeDecoder(activeVaeDecoder, multiplyLatents(latents, 1f / LATENT_SCALE))
-            val bitmap = decoded.toBitmap(width, height)
-            val imageUri = saveBitmap(bitmap)
-            ImageGenerationResult.Success(
-                imageUri = imageUri,
-                prompt = request.prompt,
-                width = width,
-                height = height,
-                seed = seed
-            )
-        } catch (throwable: Throwable) {
-            ImageGenerationResult.Failure("ONNX diffusion generation failed: ${throwable.message}", throwable)
+                val scheduler = EulerAncestralScheduler(steps)
+                var latents = createLatents(seed, height / 8, width / 8, scheduler.initNoiseSigma)
+
+                for (stepIndex in 0 until steps) {
+                    coroutineContext.ensureActive()
+                    val sigma = scheduler.sigma(stepIndex)
+                    val scaledLatents = scaleLatents(duplicateBatch(latents), sigma)
+                    val timestep = scheduler.timestep(stepIndex)
+                    val noisePrediction = runUnet(
+                        session = activeUnet,
+                        sample = scaledLatents,
+                        timestep = timestep,
+                        textEmbeddings = textEmbeddings
+                    )
+                    val guidedNoise = applyClassifierFreeGuidance(noisePrediction, guidanceScale)
+                    latents = scheduler.step(guidedNoise, latents, stepIndex, seed + stepIndex + 1L)
+                }
+
+                val decoded =
+                    runVaeDecoder(activeVaeDecoder, multiplyLatents(latents, 1f / LATENT_SCALE))
+                val bitmap = decoded.toBitmap(width, height)
+                val imageUri = saveBitmap(bitmap)
+                ImageGenerationResult.Success(
+                    imageUri = imageUri,
+                    prompt = request.prompt,
+                    width = width,
+                    height = height,
+                    seed = seed
+                )
+            } catch (throwable: Throwable) {
+                ImageGenerationResult.Failure(
+                    "ONNX diffusion generation failed: ${throwable.message}",
+                    throwable
+                )
+            }
         }
-    }
 
     override suspend fun unload() {
         textEncoder?.close()
@@ -199,7 +223,11 @@ class OnnxLocalDiffusionEngine @Inject constructor(
         prompt: String
     ): Array<Array<FloatArray>> {
         val tokenIds = tokenizer.encode(prompt)
-        val inputIds = OnnxTensor.createTensor(environment, IntBuffer.wrap(tokenIds), longArrayOf(1, MAX_TOKENS.toLong()))
+        val inputIds = OnnxTensor.createTensor(
+            environment,
+            IntBuffer.wrap(tokenIds),
+            longArrayOf(1, MAX_TOKENS.toLong())
+        )
         inputIds.use { tensor ->
             textEncoder.run(mapOf("input_ids" to tensor)).use { result ->
                 @Suppress("UNCHECKED_CAST")
@@ -215,7 +243,11 @@ class OnnxLocalDiffusionEngine @Inject constructor(
         textEmbeddings: Array<Array<FloatArray>>
     ): Array<Array<Array<FloatArray>>> {
         val sampleTensor = OnnxTensor.createTensor(environment, sample)
-        val timestepTensor = OnnxTensor.createTensor(environment, IntBuffer.wrap(intArrayOf(timestep)), longArrayOf(1))
+        val timestepTensor = OnnxTensor.createTensor(
+            environment,
+            IntBuffer.wrap(intArrayOf(timestep)),
+            longArrayOf(1)
+        )
         val embeddingsTensor = OnnxTensor.createTensor(environment, textEmbeddings)
         sampleTensor.use { sampleInput ->
             timestepTensor.use { timestepInput ->
@@ -248,7 +280,10 @@ class OnnxLocalDiffusionEngine @Inject constructor(
     }
 
     private fun saveBitmap(bitmap: Bitmap): android.net.Uri {
-        val outputDirectory = File(context.filesDir, Constants.ImageGeneration.GENERATED_IMAGES_DIRECTORY).apply { mkdirs() }
+        val outputDirectory = File(
+            context.filesDir,
+            Constants.ImageGeneration.GENERATED_IMAGES_DIRECTORY
+        ).apply { mkdirs() }
         val outputFile = File(
             outputDirectory,
             "${Constants.ImageGeneration.GENERATED_IMAGE_PREFIX}${System.currentTimeMillis()}${Constants.ImageGeneration.PNG_EXTENSION}"
@@ -256,7 +291,11 @@ class OnnxLocalDiffusionEngine @Inject constructor(
         FileOutputStream(outputFile).use { output ->
             bitmap.compress(Bitmap.CompressFormat.PNG, 100, output)
         }
-        return FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", outputFile)
+        return FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            outputFile
+        )
     }
 }
 
@@ -264,7 +303,8 @@ private class ClipTokenizer(
     vocabFile: File,
     mergesFile: File
 ) {
-    private val tokenPattern = Pattern.compile("""'s|'t|'re|'ve|'m|'ll|'d|[A-Za-z]+|[0-9]+|[^A-Za-z0-9\s]+""")
+    private val tokenPattern =
+        Pattern.compile("""'s|'t|'re|'ve|'m|'ll|'d|[A-Za-z]+|[0-9]+|[^A-Za-z0-9\s]+""")
     private val encoder: Map<String, Int>
     private val bpeRanks: Map<Pair<String, String>, Int>
     private val byteEncoder: Map<Int, Char> = bytesToUnicode()
@@ -289,9 +329,10 @@ private class ClipTokenizer(
         val matcher = tokenPattern.matcher(text.lowercase(Locale.ROOT))
         while (matcher.find()) {
             val token = matcher.group()
-            val encodedBytes = token.toByteArray(Charsets.UTF_8).joinToString(separator = "") { byte ->
-                byteEncoder[byte.toInt() and 0xff].toString()
-            }
+            val encodedBytes =
+                token.toByteArray(Charsets.UTF_8).joinToString(separator = "") { byte ->
+                    byteEncoder[byte.toInt() and 0xff].toString()
+                }
             val bpeTokens = bpe(encodedBytes).split(" ")
             bpeTokens.forEach { bpeToken ->
                 encoder[bpeToken]?.let(tokens::add)
@@ -395,7 +436,12 @@ private class EulerAncestralScheduler(private val steps: Int) {
         val sigmaUp = if (sigma == 0f) {
             0f
         } else {
-            sqrt(max(0f, nextSigma * nextSigma * (sigma * sigma - nextSigma * nextSigma) / (sigma * sigma)))
+            sqrt(
+                max(
+                    0f,
+                    nextSigma * nextSigma * (sigma * sigma - nextSigma * nextSigma) / (sigma * sigma)
+                )
+            )
         }
         val sigmaDown = sqrt(max(0f, nextSigma * nextSigma - sigmaUp * sigmaUp))
         val noise = createLatents(seed, sample[0][0].size, sample[0][0][0].size, 1f)
@@ -403,9 +449,11 @@ private class EulerAncestralScheduler(private val steps: Int) {
         val output = createEmptyLatents(sample[0][0].size, sample[0][0][0].size)
         forEachLatent(sample) { channel, y, x ->
             val predictedOriginal = sample[0][channel][y][x] - sigma * modelOutput[0][channel][y][x]
-            val derivative = if (sigma == 0f) 0f else (sample[0][channel][y][x] - predictedOriginal) / sigma
+            val derivative =
+                if (sigma == 0f) 0f else (sample[0][channel][y][x] - predictedOriginal) / sigma
             val dt = sigmaDown - sigma
-            output[0][channel][y][x] = sample[0][channel][y][x] + derivative * dt + noise[0][channel][y][x] * sigmaUp
+            output[0][channel][y][x] =
+                sample[0][channel][y][x] + derivative * dt + noise[0][channel][y][x] * sigmaUp
         }
         return output
     }
@@ -418,7 +466,12 @@ private class EulerAncestralScheduler(private val steps: Int) {
     }
 }
 
-private fun createLatents(seed: Long, latentHeight: Int, latentWidth: Int, scale: Float): Array<Array<Array<FloatArray>>> {
+private fun createLatents(
+    seed: Long,
+    latentHeight: Int,
+    latentWidth: Int,
+    scale: Float
+): Array<Array<Array<FloatArray>>> {
     val random = Random(seed)
     val latents = createEmptyLatents(latentHeight, latentWidth)
     forEachLatent(latents) { channel, y, x ->
@@ -430,7 +483,10 @@ private fun createLatents(seed: Long, latentHeight: Int, latentWidth: Int, scale
     return latents
 }
 
-private fun createEmptyLatents(latentHeight: Int, latentWidth: Int): Array<Array<Array<FloatArray>>> {
+private fun createEmptyLatents(
+    latentHeight: Int,
+    latentWidth: Int
+): Array<Array<Array<FloatArray>>> {
     return Array(1) { Array(4) { Array(latentHeight) { FloatArray(latentWidth) } } }
 }
 
@@ -444,7 +500,10 @@ private fun duplicateBatch(latents: Array<Array<Array<FloatArray>>>): Array<Arra
     }
 }
 
-private fun scaleLatents(latents: Array<Array<Array<FloatArray>>>, sigma: Float): Array<Array<Array<FloatArray>>> {
+private fun scaleLatents(
+    latents: Array<Array<Array<FloatArray>>>,
+    sigma: Float
+): Array<Array<Array<FloatArray>>> {
     val scale = sqrt(sigma * sigma + 1f)
     for (batch in latents.indices) {
         forEachLatent(latents, batch) { channel, y, x ->

@@ -12,9 +12,9 @@ import com.neo.chevere.data.PreferenceManager
 import com.neo.chevere.data.telemetry.AppTelemetry
 import com.neo.chevere.data.telemetry.TelemetryConstants
 import com.neo.chevere.domain.ChatMessage
+import com.neo.chevere.domain.ChatRepository
 import com.neo.chevere.domain.ExplicitImagePromptDecision
 import com.neo.chevere.domain.ExplicitImagePromptPolicy
-import com.neo.chevere.domain.ChatRepository
 import com.neo.chevere.domain.ImageGenerationRequest
 import com.neo.chevere.domain.ImageGenerationResult
 import com.neo.chevere.domain.InitializationStatus
@@ -36,6 +36,7 @@ import java.time.LocalDate
 import java.time.Period
 import javax.inject.Inject
 import kotlin.system.measureTimeMillis
+import androidx.core.net.toUri
 
 @HiltViewModel
 class ChatViewModel @Inject constructor(
@@ -57,13 +58,13 @@ class ChatViewModel @Inject constructor(
     init {
         // 1. Observe global initialization status from the repository
         observeInitStatus()
-        
+
         // 2. Observe agent state for tool executions
         observeAgentStatus()
-        
+
         // 3. React to model selection changes (Source of Truth)
         observeSelectedModel()
-        
+
         // 4. Initial load of local models metadata
         viewModelScope.launch {
             updateLocalModels()
@@ -76,7 +77,7 @@ class ChatViewModel @Inject constructor(
             // as soon as the ViewModel starts.
             preferenceManager.selectedModelPreference.collectLatest { savedModel ->
                 val currentModel = currentState.selectedModel
-                
+
                 // If there's a saved model and it's different from our current state, 
                 // or if we aren't ready yet, trigger initialization.
                 if (savedModel != null && (savedModel != currentModel || currentState.runtimeState is RuntimeState.Uninitialized)) {
@@ -91,7 +92,12 @@ class ChatViewModel @Inject constructor(
                                 preferenceManager.updateSelectedModel(chatModel.id)
                             }
                         } else {
-                            setState { copy(selectedModel = "", runtimeState = RuntimeState.Uninitialized) }
+                            setState {
+                                copy(
+                                    selectedModel = "",
+                                    runtimeState = RuntimeState.Uninitialized
+                                )
+                            }
                         }
                         return@collectLatest
                     }
@@ -149,18 +155,28 @@ class ChatViewModel @Inject constructor(
                     if (currentState.isLoading) return@withLock
                     sendMessage(intent.text, intent.imageUri)
                 }
+
                 is ChatIntent.SwitchModel -> {
                     if (currentState.isLoading) return@withLock
                     // Just update the preference. observeSelectedModel will handle the rest reactively.
                     withContext(dispatcherProvider.io) {
                         preferenceManager.updateSelectedModel(intent.modelName)
                     }
-                    setState { copy(messages = emptyList(), runtimeState = RuntimeState.Uninitialized) }
+                    setState {
+                        copy(
+                            messages = emptyList(),
+                            runtimeState = RuntimeState.Uninitialized
+                        )
+                    }
                 }
-                ChatIntent.ClearError -> setState { copy(
-                    runtimeState = if (currentState.runtimeState is RuntimeState.Error) RuntimeState.Uninitialized else currentState.runtimeState,
-                    sendState = SendState.Idle
-                ) }
+
+                ChatIntent.ClearError -> setState {
+                    copy(
+                        runtimeState = if (currentState.runtimeState is RuntimeState.Error) RuntimeState.Uninitialized else currentState.runtimeState,
+                        sendState = SendState.Idle
+                    )
+                }
+
                 ChatIntent.ClearConversation -> clearConversation()
                 is ChatIntent.UpdateInputText -> setState { copy(inputText = intent.text) }
                 is ChatIntent.SelectImage -> setState { copy(selectedImageUri = intent.uri) }
@@ -169,7 +185,12 @@ class ChatViewModel @Inject constructor(
                 ChatIntent.CancelAction -> cancelAction()
                 ChatIntent.CancelGeneration -> cancelImageGeneration()
                 ChatIntent.StopResponse -> stopActiveResponse()
-                is ChatIntent.SubmitBirthdate -> submitBirthdate(intent.year, intent.month, intent.day)
+                is ChatIntent.SubmitBirthdate -> submitBirthdate(
+                    intent.year,
+                    intent.month,
+                    intent.day
+                )
+
                 ChatIntent.DismissAgeVerification -> dismissAgeVerification()
                 is ChatIntent.ToggleExplicitImageMask -> toggleExplicitImageMask(intent.messageIndex)
                 is ChatIntent.ShareMessage -> shareMessage(intent.messageIndex)
@@ -223,7 +244,14 @@ class ChatViewModel @Inject constructor(
             if (imageUri != null) "Describe this image." else text
         }
         val userMsg = ChatMessage(promptText, isUser = true, imageUri = imageUri?.toString())
-        setState { copy(messages = messages + userMsg, sendState = SendState.Sending, inputText = "", selectedImageUri = null) }
+        setState {
+            copy(
+                messages = messages + userMsg,
+                sendState = SendState.Sending,
+                inputText = "",
+                selectedImageUri = null
+            )
+        }
         sendEffect { ChatEffect.ScrollToBottom }
 
         if (imageUri != null) {
@@ -241,7 +269,10 @@ class ChatViewModel @Inject constructor(
 
         if (explicitImagePromptPolicy.requiresAgeVerification(promptText)) {
             if (!BuildConfig.DEBUG) {
-                appendAssistantMessage(Constants.ContentPolicy.EXPLICIT_RELEASE_BLOCK_MESSAGE, modelName = "CHEVERE AI")
+                appendAssistantMessage(
+                    Constants.ContentPolicy.EXPLICIT_RELEASE_BLOCK_MESSAGE,
+                    modelName = "CHEVERE AI"
+                )
                 return
             }
 
@@ -280,7 +311,10 @@ class ChatViewModel @Inject constructor(
         val request = currentState.ageVerificationRequest ?: return
         if (!BuildConfig.DEBUG) {
             setState { copy(ageVerificationRequest = null, sendState = SendState.Idle) }
-            appendAssistantMessage(Constants.ContentPolicy.EXPLICIT_RELEASE_BLOCK_MESSAGE, modelName = "CHEVERE AI")
+            appendAssistantMessage(
+                Constants.ContentPolicy.EXPLICIT_RELEASE_BLOCK_MESSAGE,
+                modelName = "CHEVERE AI"
+            )
             return
         }
 
@@ -324,7 +358,10 @@ class ChatViewModel @Inject constructor(
         appendAssistantMessage("Age verification was canceled.", modelName = "CHEVERE AI")
     }
 
-    private suspend fun appendAssistantMessage(text: String, modelName: String? = currentState.selectedModel) {
+    private suspend fun appendAssistantMessage(
+        text: String,
+        modelName: String? = currentState.selectedModel
+    ) {
         setState {
             copy(
                 messages = messages + ChatMessage(
@@ -436,20 +473,22 @@ class ChatViewModel @Inject constructor(
         if (message.isUser) return
 
         val shareText = buildString {
-            appendLine("Chevere AI response")
-            message.modelName?.let { modelName -> appendLine("Model: $modelName") }
-            message.imageUri?.let { imageUri -> appendLine("Image: $imageUri") }
+            appendLine("Chevere AI Response")
+            message.modelName?.let { modelName ->
+                appendLine("Generated by: $modelName")
+            }
             appendLine()
             appendLine(message.text)
+            appendLine()
+            appendLine("---")
+            appendLine("Shared via Chevere AI")
         }
 
         sendEffect {
             ChatEffect.ShareMessage(
-                title = "Share Chevere AI response",
+                title = "Share AI Response",
                 text = shareText,
-                imageUri = message.imageUri
-                    ?.takeUnless { message.isExplicitImage && message.isImageMasked }
-                    ?.let(Uri::parse)
+                imageUri = message.imageUri?.toUri()
             )
         }
     }
@@ -534,7 +573,10 @@ class ChatViewModel @Inject constructor(
             isUser = false,
             inferenceTimeMs = time,
             imageUri = imagePayload?.imageUri,
-            modelName = currentState.selectedModel.replace(Constants.ModelFiles.LITERTLM_EXTENSION, "").uppercase()
+            modelName = currentState.selectedModel.replace(
+                Constants.ModelFiles.LITERTLM_EXTENSION,
+                ""
+            ).uppercase()
         )
         responseJob = null
         setState { copy(messages = messages + aiMsg, sendState = SendState.Idle) }
@@ -578,7 +620,13 @@ class ChatViewModel @Inject constructor(
                     errorType = e::class.java.simpleName
                 )
                 telemetry.recordNonFatal(e, TelemetryConstants.Context.IMAGE_GENERATION)
-                setState { copy(sendState = SendState.Error(e.message ?: "Image generation failed")) }
+                setState {
+                    copy(
+                        sendState = SendState.Error(
+                            e.message ?: "Image generation failed"
+                        )
+                    )
+                }
                 return
             }
             ?.getOrNull()
@@ -592,7 +640,8 @@ class ChatViewModel @Inject constructor(
             isUser = false,
             inferenceTimeMs = time,
             imageUri = generation.imageUri.toString(),
-            modelName = currentState.selectedModel.replace(Constants.ModelFiles.ZIP_EXTENSION, "").uppercase(),
+            modelName = currentState.selectedModel.replace(Constants.ModelFiles.ZIP_EXTENSION, "")
+                .uppercase(),
             isExplicitImage = maskExplicitImage,
             isImageMasked = maskExplicitImage
         )
@@ -625,6 +674,9 @@ class ChatViewModel @Inject constructor(
         )
     }
 
+    private fun com.neo.chevere.domain.InstalledModel.isHealthy(): Boolean =
+        installStatus == com.neo.chevere.domain.InstallStatus.INSTALLED
+
     private data class GeneratedImagePayload(
         val imageUri: String,
         val caption: String
@@ -638,7 +690,8 @@ class ChatViewModel @Inject constructor(
     private companion object {
         val imageCommandPrefixes = Constants.Commands.IMAGE_GENERATION
         val imageRequestVerbs = listOf("create", "generate", "make", "draw", "render", "paint")
-        val imageRequestNouns = listOf("image", "picture", "photo", "art", "illustration", "portrait")
+        val imageRequestNouns =
+            listOf("image", "picture", "photo", "art", "illustration", "portrait")
     }
 }
 

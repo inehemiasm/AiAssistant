@@ -33,43 +33,27 @@
     "license": "Gemma Terms of Use"
   },
   {
-    "id": "stable-diffusion-amuse-onnx",
-    "displayName": "Stable Diffusion 1.5 ONNX",
+    "id": "local-diffusion-landscape-onnx",
+    "displayName": "Local Diffusion Landscape ONNX",
     "source": "HUGGING_FACE",
-    "repoId": "TensorStack/StableDiffusion-amuse",
-    "fileName": "stable-diffusion-amuse.zip",
-    "downloadUrl": "https://huggingface.co/TensorStack/StableDiffusion-amuse",
-    "sizeBytes": 3860000000,
+    "repoId": "ShiftHackZ/Local-Diffusion-Models-SDAI-ONXX",
+    "fileName": "landscape.zip",
+    "downloadUrl": "https://github.com/ShiftHackZ/Local-Diffusion-Models-SDAI-ONXX/releases/download/patch-25022024/landscape.zip",
+    "sizeBytes": 0,
     "runtimeType": "ONNX Diffusion",
     "supportsVision": false,
-    "license": "CreativeML Open RAIL-M",
-    "repositoryFiles": [
-      "https://huggingface.co/TensorStack/StableDiffusion-amuse/resolve/main/text_encoder/model.onnx|text_encoder/model.onnx",
-      "https://huggingface.co/TensorStack/StableDiffusion-amuse/resolve/main/tokenizer/merges.txt|tokenizer/merges.txt",
-      "https://huggingface.co/TensorStack/StableDiffusion-amuse/resolve/main/tokenizer/vocab.json|tokenizer/vocab.json",
-      "https://huggingface.co/TensorStack/StableDiffusion-amuse/resolve/main/unet/model.onnx|unet/model.onnx",
-      "https://huggingface.co/TensorStack/StableDiffusion-amuse/resolve/main/unet/model.onnx.data|unet/model.onnx.data",
-      "https://huggingface.co/TensorStack/StableDiffusion-amuse/resolve/main/vae_decoder/model.onnx|vae_decoder/model.onnx"
-    ]
+    "license": "Model-specific community checkpoint license"
   },
   {
-    "id": "dreamshaper-amuse-onnx",
-    "displayName": "DreamShaper ONNX",
+    "id": "local-diffusion-dreamshaper-onnx",
+    "displayName": "Local Diffusion DreamShaper ONNX",
     "source": "HUGGING_FACE",
-    "repoId": "TensorStack/Dreamshaper-amuse",
+    "repoId": "ShiftHackZ/Local-Diffusion-Models-SDAI-ONXX",
     "fileName": "dreamshaper.zip",
-    "downloadUrl": "https://huggingface.co/TensorStack/Dreamshaper-amuse",
-    "sizeBytes": 3860000000,
+    "downloadUrl": "https://github.com/ShiftHackZ/Local-Diffusion-Models-SDAI-ONXX/releases/download/patch-25022024/dreamshaper.zip",
+    "sizeBytes": 0,
     "runtimeType": "ONNX Diffusion",
     "supportsVision": true,
-    "license": "DreamShaper community checkpoint license",
-    "repositoryFiles": [
-      "https://huggingface.co/TensorStack/Dreamshaper-amuse/resolve/main/text_encoder/model.onnx|text_encoder/model.onnx",
-      "https://huggingface.co/TensorStack/Dreamshaper-amuse/resolve/main/tokenizer/merges.txt|tokenizer/merges.txt",
-      "https://huggingface.co/TensorStack/Dreamshaper-amuse/resolve/main/tokenizer/vocab.json|tokenizer/vocab.json",
-      "https://huggingface.co/TensorStack/Dreamshaper-amuse/resolve/main/unet/model.onnx|unet/model.onnx",
-      "https://huggingface.co/TensorStack/Dreamshaper-amuse/resolve/main/unet/model.onnx.data|unet/model.onnx.data",
-      "https://huggingface.co/TensorStack/Dreamshaper-amuse/resolve/main/vae_decoder/model.onnx|vae_decoder/model.onnx"
-    ]
+    "license": "Model-specific community checkpoint license"
   }
 ]

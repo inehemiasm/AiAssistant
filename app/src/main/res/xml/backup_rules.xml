@@ -1,7 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <full-backup-content>
     <!-- Exclude large AI model files from legacy Auto Backup -->
-    <exclude domain="file" path="." />
+    <exclude
+        domain="file"
+        path="." />
     <!-- Include preferences -->
-    <include domain="sharedpref" path="." />
+    <include
+        domain="sharedpref"
+        path="." />
 </full-backup-content>

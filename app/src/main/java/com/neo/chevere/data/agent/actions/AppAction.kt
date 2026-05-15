@@ -20,13 +20,13 @@ interface AppActionRequest
 sealed interface AppActionResult {
     /** Action completed successfully. */
     data class Success(val output: String) : AppActionResult
-    
+
     /** Action failed with an error. */
     data class Error(val message: String) : AppActionResult
-    
+
     /** Action requires explicit user confirmation. */
     data class ConfirmationRequired(
-        val message: String, 
+        val message: String,
         val data: AppActionRequest
     ) : AppActionResult
 }

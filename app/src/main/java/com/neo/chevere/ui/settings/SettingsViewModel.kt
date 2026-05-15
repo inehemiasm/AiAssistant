@@ -33,6 +33,7 @@ class SettingsViewModel @Inject constructor(
             is SettingsIntent.UpdateTheme -> {
                 preferenceManager.updateTheme(intent.isDark)
             }
+
             is SettingsIntent.UpdateWeatherUnitSystem -> {
                 preferenceManager.updateWeatherUnitSystem(intent.unitSystem)
             }

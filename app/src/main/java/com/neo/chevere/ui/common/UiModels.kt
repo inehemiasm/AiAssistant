@@ -6,9 +6,11 @@ package com.neo.chevere.ui.common
 sealed interface CatalogState {
     /** The catalog is not currently being fetched. */
     data object Idle : CatalogState
+
     /** The catalog is currently being fetched from the remote source. */
     data object Loading : CatalogState
-    /** 
+
+    /**
      * An error occurred while fetching the catalog.
      * @property message A description of the error.
      */

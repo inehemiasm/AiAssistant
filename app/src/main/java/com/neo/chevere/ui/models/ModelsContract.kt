@@ -36,12 +36,13 @@ data class ModelsState(
     /**
      * Filters [remoteModels] to find those that are not yet downloaded locally.
      */
-    val availableDownloads: List<ModelEntry> get() {
-        val downloadedIds = localModels.flatMap { listOf(it.id, it.fileName) }.toSet()
-        return remoteModels.filter {
-            it.effectiveFileName !in downloadedIds && it.effectiveInstalledId !in downloadedIds
+    val availableDownloads: List<ModelEntry>
+        get() {
+            val downloadedIds = localModels.flatMap { listOf(it.id, it.fileName) }.toSet()
+            return remoteModels.filter {
+                it.effectiveFileName !in downloadedIds && it.effectiveInstalledId !in downloadedIds
+            }
         }
-    }
 
     val isSwitching: Boolean get() = switchState is ModelSwitchState.Switching || switchState is ModelSwitchState.WarmingUp
 }
@@ -52,7 +53,7 @@ data class ModelsState(
 sealed class ModelsIntent : UiIntent {
     /** Request to fetch available models from the catalog. */
     data object FetchModels : ModelsIntent()
-    
+
     /** 
      * Request to select a model in the UI (pending confirmation).
      * @property modelName The name of the model to select.
@@ -65,17 +66,17 @@ sealed class ModelsIntent : UiIntent {
      * @property modelPath The absolute path to the model file.
      */
     data class ConfirmSwitch(val modelName: String, val modelPath: String) : ModelsIntent()
-    
+
     /** 
      * Request to start downloading a model.
      * @property modelName The name of the model to download.
      * @property baseDir The directory where the model should be saved.
      */
     data class DownloadModel(val modelName: String, val baseDir: String) : ModelsIntent()
-    
+
     /** Request to clear any active error states. */
     data object ClearError : ModelsIntent()
-    
+
     /** Request to update performance metrics for the active model. */
     data object RefreshMetrics : ModelsIntent()
 

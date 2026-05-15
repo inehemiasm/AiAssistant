@@ -16,24 +16,24 @@ interface ChatRepository {
      * The current state of the AI Agent.
      */
     val agentState: StateFlow<AgentState>
-    
+
     /**
      * Returns a flow of the initialization status of the AI engine.
      */
     fun getInitStatus(): Flow<InitializationStatus>
-    
+
     /**
      * Checks if the current model/backend supports vision (image input).
      */
     fun isVisionSupported(): Boolean
-    
+
     /**
      * Initializes the AI model from the given file path.
      * @param modelPath The absolute path to the model file.
      * @param notify Whether to emit an activation event on success.
      */
     suspend fun initializeModel(modelPath: String, notify: Boolean = true): Result<Unit>
-    
+
     /**
      * Sends a message to the AI and receives a response through the agent loop.
      */
@@ -43,27 +43,27 @@ interface ChatRepository {
      * Generates an image directly from the prompt using an installed image-generation model.
      */
     suspend fun generateImage(request: ImageGenerationRequest): Result<ImageGenerationResult.Success>
-    
+
     /**
      * Confirms a pending action requested by a tool.
      */
     suspend fun confirmAction(): Result<String>
-    
+
     /**
      * Cancels a pending action requested by a tool.
      */
     suspend fun cancelAction(): Result<String>
-    
+
     /**
      * Clears the current conversation history and resets the agent state.
      */
     suspend fun clearConversation()
-    
+
     /**
      * Fetches a list of models available for download from the remote catalog.
      */
     suspend fun fetchAvailableModels(): Result<List<ModelEntry>>
-    
+
     /**
      * Downloads and registers [model] from the remote catalog.
      */
@@ -78,17 +78,17 @@ interface ChatRepository {
      * Global flow tracking all active model downloads.
      */
     val allDownloadsProgress: Flow<Map<String, DownloadProgress>>
-    
+
     /**
      * Returns a list of models currently installed on the device.
      */
     suspend fun getLocalModels(): List<InstalledModel>
-    
+
     /**
      * Deletes an installed model.
      */
     suspend fun deleteModel(modelName: String): Boolean
-    
+
     /**
      * Checks if a model file exists and is valid.
      */

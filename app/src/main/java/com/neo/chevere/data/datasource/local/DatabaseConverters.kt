@@ -40,7 +40,8 @@ class DatabaseConverters {
     fun fromModelTaskType(value: ModelTaskType) = value.name
 
     @TypeConverter
-    fun toModelTaskType(value: String) = enumValueOrDefault<ModelTaskType>(value, ModelTaskType.UNKNOWN)
+    fun toModelTaskType(value: String) =
+        enumValueOrDefault<ModelTaskType>(value, ModelTaskType.UNKNOWN)
 
     @TypeConverter
     fun fromInstallStatus(value: InstallStatus) = value.name

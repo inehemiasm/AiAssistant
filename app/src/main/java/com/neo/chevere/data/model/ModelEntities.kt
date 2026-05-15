@@ -34,5 +34,6 @@ data class LocalModelRecord(
 
 enum class RuntimeType {
     LITERT_LM,
-    MEDIAPIPE_GENAI
+    MEDIAPIPE_GENAI,
+    ONNX_DIFFUSION
 }

@@ -51,7 +51,7 @@ class ConversationContextManagerTest {
 
         assertTrue(
             prompt.indexOf(Constants.ContextWindow.CURRENT_REQUEST_HEADER) >
-                prompt.indexOf(Constants.ContextWindow.RECENT_HEADER)
+                    prompt.indexOf(Constants.ContextWindow.RECENT_HEADER)
         )
         assertTrue(prompt.endsWith("Can you grade my answers?"))
     }

@@ -117,19 +117,23 @@ fun ModelMarketplaceScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { 
+                title = {
                     Text(
-                        stringResource(R.string.ai_models).uppercase(), 
+                        stringResource(R.string.ai_models).uppercase(),
                         style = Typography.titleLarge,
                         letterSpacing = 2.sp
-                    ) 
+                    )
                 },
                 navigationIcon = {
                     IconButton(onClick = {
                         hapticView.performChevereHaptic(ChevereHaptic.Selection)
                         onBack()
                     }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back), tint = MaterialTheme.colorScheme.primary)
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            stringResource(R.string.back),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
                     }
                 },
                 actions = {
@@ -137,7 +141,11 @@ fun ModelMarketplaceScreen(
                         hapticView.performChevereHaptic(ChevereHaptic.Action)
                         viewModel.onIntent(MarketplaceIntent.FetchModels)
                     }) {
-                        Icon(Icons.Default.Refresh, stringResource(R.string.refresh), tint = MaterialTheme.colorScheme.primary)
+                        Icon(
+                            Icons.Default.Refresh,
+                            stringResource(R.string.refresh),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -150,8 +158,18 @@ fun ModelMarketplaceScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = Color.Transparent
     ) { innerPadding ->
-        Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(innerPadding)) {
-            AmbientGlow(MaterialTheme.colorScheme.primary, Modifier.align(Alignment.BottomEnd).size(400.dp))
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+                .padding(innerPadding)
+        ) {
+            AmbientGlow(
+                MaterialTheme.colorScheme.primary,
+                Modifier
+                    .align(Alignment.BottomEnd)
+                    .size(400.dp)
+            )
 
             Column(modifier = Modifier.fillMaxSize()) {
                 TabRow(
@@ -164,7 +182,13 @@ fun ModelMarketplaceScreen(
                             color = MaterialTheme.colorScheme.primary
                         )
                     },
-                    divider = { HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.1f)) }
+                    divider = {
+                        HorizontalDivider(
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(
+                                alpha = 0.1f
+                            )
+                        )
+                    }
                 ) {
                     Tab(
                         selected = selectedTab == 0,
@@ -172,7 +196,12 @@ fun ModelMarketplaceScreen(
                             hapticView.performChevereHaptic(ChevereHaptic.Selection)
                             selectedTab = 0
                         },
-                        text = { Text(stringResource(R.string.discover), style = Typography.labelSmall) }
+                        text = {
+                            Text(
+                                stringResource(R.string.discover),
+                                style = Typography.labelSmall
+                            )
+                        }
                     )
                     Tab(
                         selected = selectedTab == 1,
@@ -180,12 +209,23 @@ fun ModelMarketplaceScreen(
                             hapticView.performChevereHaptic(ChevereHaptic.Selection)
                             selectedTab = 1
                         },
-                        text = { Text(stringResource(R.string.installed), style = Typography.labelSmall) }
+                        text = {
+                            Text(
+                                stringResource(R.string.installed),
+                                style = Typography.labelSmall
+                            )
+                        }
                     )
                 }
 
                 when (selectedTab) {
-                    0 -> DiscoverModelsList(state, viewModel::onIntent, context.filesDir.absolutePath, onModelClick)
+                    0 -> DiscoverModelsList(
+                        state,
+                        viewModel::onIntent,
+                        context.filesDir.absolutePath,
+                        onModelClick
+                    )
+
                     1 -> InstalledModelsList(state, viewModel::onIntent, onModelClick)
                 }
             }
@@ -195,8 +235,8 @@ fun ModelMarketplaceScreen(
 
 @Composable
 fun DiscoverModelsList(
-    state: MarketplaceState, 
-    onIntent: (MarketplaceIntent) -> Unit, 
+    state: MarketplaceState,
+    onIntent: (MarketplaceIntent) -> Unit,
     baseDir: String,
     onModelClick: (String) -> Unit
 ) {
@@ -220,18 +260,18 @@ fun DiscoverModelsList(
                 items(models) { model ->
                     val installedVersion = state.localModels.find {
                         it.fileName == model.effectiveFileName ||
-                            it.id == model.effectiveInstalledId ||
-                            it.fileName == model.effectiveInstalledId
+                                it.id == model.effectiveInstalledId ||
+                                it.fileName == model.effectiveInstalledId
                     }
                     val isDownloading = state.downloadingModelName == model.effectiveFileName
-                    
+
                     RemoteModelCard(
                         model = model,
                         installedModel = installedVersion,
                         isDownloading = isDownloading,
                         downloadProgress = if (isDownloading) state.downloadProgress else null,
                         onDownload = {
-                            onIntent(MarketplaceIntent.DownloadModel(model, baseDir)) 
+                            onIntent(MarketplaceIntent.DownloadModel(model, baseDir))
                         },
                         onClick = { onModelClick(model.effectiveFileName) }
                     )
@@ -243,12 +283,14 @@ fun DiscoverModelsList(
 
 @Composable
 fun InstalledModelsList(
-    state: MarketplaceState, 
+    state: MarketplaceState,
     onIntent: (MarketplaceIntent) -> Unit,
     onModelClick: (String) -> Unit
 ) {
     if (state.localModels.isEmpty()) {
-        Box(Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
+        Box(Modifier
+            .fillMaxSize()
+            .padding(32.dp), contentAlignment = Alignment.Center) {
             Text(
                 stringResource(R.string.no_local_models),
                 style = Typography.bodyMedium,
@@ -269,9 +311,10 @@ fun InstalledModelsList(
                 items(state.chatLocalModels) { model ->
                     val isActive = state.activeModelId == model.id
                     val isPending = state.pendingModelId == model.id
-                    val isSwitching = (state.switchState as? ModelSwitchState.Switching)?.toModelId == model.id ||
-                                     (state.switchState as? ModelSwitchState.WarmingUp)?.modelId == model.id
-                    
+                    val isSwitching =
+                        (state.switchState as? ModelSwitchState.Switching)?.toModelId == model.id ||
+                                (state.switchState as? ModelSwitchState.WarmingUp)?.modelId == model.id
+
                     LocalModelCard(
                         model = model,
                         isActive = isActive,
@@ -313,12 +356,20 @@ fun InstalledModelsList(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(16.dp)
-                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                            .background(
+                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                RoundedCornerShape(12.dp)
+                            )
                             .padding(16.dp)
                     ) {
                         Button(
-                            onClick = { 
-                                onIntent(MarketplaceIntent.ConfirmSwitch(pendingModel.id, pendingModel.filePath)) 
+                            onClick = {
+                                onIntent(
+                                    MarketplaceIntent.ConfirmSwitch(
+                                        pendingModel.id,
+                                        pendingModel.filePath
+                                    )
+                                )
                             },
                             modifier = Modifier.fillMaxWidth(),
                             enabled = !state.isSwitching,
@@ -371,7 +422,11 @@ fun RemoteModelCard(
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.5f))
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow.copy(
+                alpha = 0.5f
+            )
+        )
     ) {
         Box(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp)) {
@@ -379,50 +434,59 @@ fun RemoteModelCard(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth(0.75f)
                 ) {
-                    Icon(Icons.Default.CloudDownload, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                    Icon(
+                        Icons.Default.CloudDownload,
+                        null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        model.name.uppercase(), 
-                        style = Typography.titleMedium, 
+                        model.name.uppercase(),
+                        style = Typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-                
+
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    model.description, 
-                    style = Typography.bodySmall, 
+                    model.description,
+                    style = Typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
-                
+
                 Spacer(Modifier.height(16.dp))
-                
+
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             InfoItem(Icons.Default.Storage, formatFileSize(model.sizeBytes))
                             Spacer(Modifier.width(16.dp))
                             InfoItem(Icons.Default.Memory, model.runtimeType)
-                            
+
                             if (model.supportsVision) {
                                 Spacer(Modifier.width(16.dp))
                                 InfoItem(Icons.Default.Visibility, "Vision")
                             }
                         }
-                        
+
                         model.license?.let { license ->
                             InfoItem(Icons.Default.Balance, license)
                         }
                     }
-                    
+
                     Spacer(Modifier.weight(1f))
-                    
+
                     if (installedModel != null && installedModel.isHealthy) {
-                        Icon(Icons.Default.FileDownloadDone, stringResource(R.string.installed), tint = Color.Green.copy(alpha = 0.7f))
+                        Icon(
+                            Icons.Default.FileDownloadDone,
+                            stringResource(R.string.installed),
+                            tint = Color.Green.copy(alpha = 0.7f)
+                        )
                     } else if (isDownloading || installedModel?.installStatus == InstallStatus.DOWNLOADING) {
                         CircularProgressIndicator(
                             progress = { (downloadProgress ?: 0) / 100f },
@@ -430,10 +494,17 @@ fun RemoteModelCard(
                             strokeWidth = 2.dp
                         )
                     } else if (installedModel?.installStatus == InstallStatus.VERIFYING) {
-                        CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            strokeWidth = 2.dp
+                        )
                     } else {
                         IconButton(onClick = onDownload, modifier = Modifier.size(32.dp)) {
-                            Icon(Icons.Default.Download, stringResource(R.string.download_required), tint = MaterialTheme.colorScheme.primary)
+                            Icon(
+                                Icons.Default.Download,
+                                stringResource(R.string.download_required),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
                         }
                     }
                 }
@@ -477,7 +548,7 @@ fun LocalModelCard(
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
         border = BorderStroke(
-            1.dp, 
+            1.dp,
             when {
                 isSwitching -> MaterialTheme.colorScheme.primary.copy(alpha = alpha)
                 !model.isHealthy -> MaterialTheme.colorScheme.error.copy(alpha = 0.5f)
@@ -506,8 +577,8 @@ fun LocalModelCard(
                             !model.isHealthy -> Icons.Default.Error
                             isActive -> Icons.Default.Check
                             else -> Icons.Default.FileDownloadDone
-                        }, 
-                        null, 
+                        },
+                        null,
                         tint = when {
                             !model.isHealthy -> MaterialTheme.colorScheme.error
                             isActive || isSwitching -> MaterialTheme.colorScheme.primary
@@ -517,8 +588,8 @@ fun LocalModelCard(
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        model.displayName.uppercase(), 
-                        style = Typography.titleMedium, 
+                        model.displayName.uppercase(),
+                        style = Typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -529,9 +600,12 @@ fun LocalModelCard(
                 if (isSwitching || model.isTransitioning) {
                     Spacer(Modifier.height(8.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        CircularProgressIndicator(modifier = Modifier.size(12.dp), strokeWidth = 1.5.dp)
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(12.dp),
+                            strokeWidth = 1.5.dp
+                        )
                         Spacer(Modifier.width(8.dp))
-                        
+
                         val statusText = when (warmupStatus) {
                             is InitializationStatus.Initializing -> warmupStatus.message
                             is InitializationStatus.Failure -> "FAILED: ${warmupStatus.message}"
@@ -539,39 +613,45 @@ fun LocalModelCard(
                             InitializationStatus.Uninitialized -> "STARTING..."
                             null -> model.installStatus.name
                         }
-                        
+
                         Text(
                             statusText,
-                            style = Typography.labelSmall, 
+                            style = Typography.labelSmall,
                             color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.alpha(alpha)
                         )
                     }
                 }
-                
+
                 Spacer(Modifier.height(16.dp))
-                
+
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         InfoItem(Icons.Default.Storage, formatFileSize(model.sizeBytes ?: 0))
-                        
+
                         model.license?.let { license ->
                             InfoItem(Icons.Default.Balance, license)
                         }
-                        
+
                         if (!model.isHealthy && !model.isTransitioning) {
-                             Text(
-                                "Status: ${model.installStatus}", 
-                                style = Typography.labelSmall, 
+                            Text(
+                                "Status: ${model.installStatus}",
+                                style = Typography.labelSmall,
                                 color = MaterialTheme.colorScheme.error
-                             )
+                            )
                         }
                     }
-                    
+
                     Spacer(Modifier.weight(1f))
-                    
+
                     IconButton(onClick = onDelete, enabled = !isActive && !isSwitching) {
-                        Icon(Icons.Default.Delete, stringResource(R.string.delete), tint = if (!isActive && !isSwitching) MaterialTheme.colorScheme.error.copy(alpha = 0.7f) else MaterialTheme.colorScheme.outline)
+                        Icon(
+                            Icons.Default.Delete,
+                            stringResource(R.string.delete),
+                            tint = if (!isActive && !isSwitching) MaterialTheme.colorScheme.error.copy(
+                                alpha = 0.7f
+                            ) else MaterialTheme.colorScheme.outline
+                        )
                     }
                 }
             }
@@ -581,14 +661,18 @@ fun LocalModelCard(
                     text = stringResource(R.string.active),
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.align(Alignment.TopEnd).padding(16.dp)
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(16.dp)
                 )
             } else if (isPending && !isSwitching) {
                 Badge(
                     text = if (model.activationCategory() == ModelActivationCategory.IMAGE_GENERATION) "READY" else "SELECTED",
                     containerColor = MaterialTheme.colorScheme.secondary,
                     contentColor = MaterialTheme.colorScheme.onSecondary,
-                    modifier = Modifier.align(Alignment.TopEnd).padding(16.dp)
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(16.dp)
                 )
             }
         }
@@ -629,9 +713,18 @@ fun Badge(
 @Composable
 fun InfoItem(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(icon, null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        Icon(
+            icon,
+            null,
+            modifier = Modifier.size(14.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
+        )
         Spacer(Modifier.width(4.dp))
-        Text(text, style = Typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            text,
+            style = Typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 

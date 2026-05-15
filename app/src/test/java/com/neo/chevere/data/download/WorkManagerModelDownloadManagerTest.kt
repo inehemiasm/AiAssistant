@@ -23,9 +23,9 @@ class WorkManagerModelDownloadManagerTest {
     fun mapWorkInfo_whenRunningWithProgress_returnsProgress() {
         val progressData = Data.Builder().putInt("progress", 45).build()
         val workInfo = createWorkInfo(WorkInfo.State.RUNNING, progressData)
-        
+
         val result = downloadManager.mapWorkInfoToDownloadProgress(workInfo)
-        
+
         assertTrue(result is DownloadProgress.Progress)
         assertEquals(45, (result as DownloadProgress.Progress).percent)
     }
@@ -33,9 +33,9 @@ class WorkManagerModelDownloadManagerTest {
     @Test
     fun mapWorkInfo_whenSucceeded_returnsFinished() {
         val workInfo = createWorkInfo(WorkInfo.State.SUCCEEDED)
-        
+
         val result = downloadManager.mapWorkInfoToDownloadProgress(workInfo)
-        
+
         assertEquals(DownloadProgress.Finished, result)
     }
 
@@ -43,9 +43,9 @@ class WorkManagerModelDownloadManagerTest {
     fun mapWorkInfo_whenFailedWithError_returnsError() {
         val errorData = Data.Builder().putString("error", "Disk Full").build()
         val workInfo = createWorkInfo(WorkInfo.State.FAILED, outputData = errorData)
-        
+
         val result = downloadManager.mapWorkInfoToDownloadProgress(workInfo)
-        
+
         assertTrue(result is DownloadProgress.Error)
         assertEquals("Disk Full", (result as DownloadProgress.Error).message)
     }
@@ -53,9 +53,9 @@ class WorkManagerModelDownloadManagerTest {
     @Test
     fun mapWorkInfo_whenEnqueued_returnsZeroProgress() {
         val workInfo = createWorkInfo(WorkInfo.State.ENQUEUED)
-        
+
         val result = downloadManager.mapWorkInfoToDownloadProgress(workInfo)
-        
+
         assertTrue(result is DownloadProgress.Progress)
         assertEquals(0, (result as DownloadProgress.Progress).percent)
     }
@@ -63,9 +63,9 @@ class WorkManagerModelDownloadManagerTest {
     @Test
     fun mapWorkInfo_whenCancelled_returnsError() {
         val workInfo = createWorkInfo(WorkInfo.State.CANCELLED)
-        
+
         val result = downloadManager.mapWorkInfoToDownloadProgress(workInfo)
-        
+
         assertTrue(result is DownloadProgress.Error)
         assertEquals("Download cancelled.", (result as DownloadProgress.Error).message)
     }

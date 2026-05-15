@@ -9,11 +9,13 @@ data class DraftEmailRequest(
     val subject: String? = null,
     val body: String? = null
 ) : AppActionRequest
+
 data class CreateCalendarEventRequest(
     val title: String,
     val startTime: Long? = null,
     val location: String? = null
 ) : AppActionRequest
+
 object PickImageRequest : AppActionRequest
 
 /**

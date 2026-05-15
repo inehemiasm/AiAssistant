@@ -81,7 +81,7 @@ class MarkdownParserTest {
         // With current regex `\*(?!\*)(.*?)\*`, it requires a closing asterisk.
         assertEquals(0, result.spanStyles.size)
     }
-    
+
     @Test
     fun `test escaped or malformed markdown does not crash`() {
         val input = "Malformed **bold *italic` code"

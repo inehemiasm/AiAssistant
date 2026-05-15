@@ -41,31 +41,34 @@ class MainViewModel @Inject constructor(
             // Observe the repository's initialization status using the typed sealed interface.
             repository.getInitStatus().collectLatest { status ->
                 Log.d("MainViewModel", "Engine status update: $status")
-                
+
                 when (status) {
-                    is InitializationStatus.Ready, 
+                    is InitializationStatus.Ready,
                     is InitializationStatus.Failure -> {
                         Log.d("MainViewModel", "Termination status reached; dismissing splash.")
                         _isInitializing.value = false
                     }
-                    
+
                     InitializationStatus.Uninitialized -> {
                         // If the engine is currently uninitialized, it might be because the
                         // ChatViewModel hasn't triggered a load yet.
                         delay(3500)
                         if (_isInitializing.value) {
-                            Log.d("MainViewModel", "Timed out waiting for init to start; dismissing splash.")
+                            Log.d(
+                                "MainViewModel",
+                                "Timed out waiting for init to start; dismissing splash."
+                            )
                             _isInitializing.value = false
                         }
                     }
-                    
+
                     is InitializationStatus.Initializing -> {
                         // Stay in the initializing state
                     }
                 }
             }
         }
-        
+
         // Safety Fallback: Ensure the splash screen is NEVER shown for more than 10 seconds.
         viewModelScope.launch {
             delay(10000)

@@ -30,7 +30,22 @@ enum class TopLevelDestination(
     val labelResId: Int,
     val telemetryAction: String
 ) {
-    CHAT(Route.Chat, Icons.Default.ChatBubble, R.string.chat_label, TelemetryConstants.Action.BOTTOM_NAV_CHAT),
-    MODELS(Route.ModelMarketplace, Icons.Default.Storage, R.string.models_label, TelemetryConstants.Action.BOTTOM_NAV_MODELS),
-    SETTINGS(Route.Settings, Icons.Default.Settings, R.string.settings_label, TelemetryConstants.Action.BOTTOM_NAV_SETTINGS)
+    CHAT(
+        Route.Chat,
+        Icons.Default.ChatBubble,
+        R.string.chat_label,
+        TelemetryConstants.Action.BOTTOM_NAV_CHAT
+    ),
+    MODELS(
+        Route.ModelMarketplace,
+        Icons.Default.Storage,
+        R.string.models_label,
+        TelemetryConstants.Action.BOTTOM_NAV_MODELS
+    ),
+    SETTINGS(
+        Route.Settings,
+        Icons.Default.Settings,
+        R.string.settings_label,
+        TelemetryConstants.Action.BOTTOM_NAV_SETTINGS
+    )
 }

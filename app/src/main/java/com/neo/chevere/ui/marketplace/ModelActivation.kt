@@ -36,6 +36,6 @@ internal fun ModelEntry.activationCategory(): ModelActivationCategory {
 
 internal fun InstalledModel.matchesEntry(entry: ModelEntry): Boolean =
     id == entry.effectiveInstalledId ||
-        id == entry.effectiveFileName ||
-        fileName == entry.effectiveFileName ||
-        fileName == entry.effectiveInstalledId
+            id == entry.effectiveFileName ||
+            fileName == entry.effectiveFileName ||
+            fileName == entry.effectiveInstalledId

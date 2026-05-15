@@ -24,14 +24,14 @@ class InferenceManager @Inject constructor(
 ) {
     private val mutex = Mutex()
     private var _currentModel: InstalledModel? = null
-    
+
     /**
      * The model currently loaded in the engine.
      */
     val currentModel: InstalledModel? get() = _currentModel
 
     private val _currentEngine = MutableStateFlow<ModelEngine?>(null)
-    
+
     /**
      * The currently active inference engine, or `null` if no model is loaded.
      */
@@ -66,7 +66,7 @@ class InferenceManager @Inject constructor(
 
         // Set the engine before loading so initStatus updates can be observed
         _currentEngine.value = engine
-        
+
         val result = try {
             engine.load(model)
         } catch (e: Exception) {

@@ -15,13 +15,14 @@ class AnalyzeImageTool @Inject constructor(
 ) : AgentTool {
     override val name: String = "analyze_image"
     override val description: String = "Performs a deep analysis of the currently attached image."
-    override val inputSchema: String = "focus: Specific aspect to look for (e.g., 'text', 'objects', 'mood')."
+    override val inputSchema: String =
+        "focus: Specific aspect to look for (e.g., 'text', 'objects', 'mood')."
 
     override suspend fun execute(args: Map<String, String>): ToolResult {
         if (!inferenceManager.isVisionSupported()) {
             return ToolResult.Error("Vision is not supported on this model.")
         }
-        
+
         val focus = args["focus"] ?: "general"
         // Since the model is already multimodal and holds the conversation, 
         // this tool mainly serves as a "mental hint" or could trigger a different

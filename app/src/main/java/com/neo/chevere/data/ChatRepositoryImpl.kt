@@ -32,10 +32,10 @@ import com.neo.chevere.domain.ModelTaskType
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.receiveAsFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.Locale
@@ -87,10 +87,10 @@ class ChatRepositoryImpl @Inject constructor(
         val installedModel = classifyModel(file) ?: return Result.failure(
             Exception(
                 "Unsupported or invalid model format. Please use a ${Constants.ModelFiles.LITERTLM_EXTENSION}, " +
-                    "${Constants.ModelFiles.BIN_EXTENSION}, or extracted image model directory."
+                        "${Constants.ModelFiles.BIN_EXTENSION}, or extracted image model directory."
             )
         )
-        
+
         // Sync with registry
         installedModelRegistry.upsertInstalledModel(installedModel)
 
@@ -98,10 +98,10 @@ class ChatRepositoryImpl @Inject constructor(
             agentOrchestrator.reset()
             return Result.success(Unit)
         }
-        
+
         agentOrchestrator.reset()
         conversationContextManager.clear()
-        
+
         return when (val result = inferenceManager.loadModel(installedModel)) {
             com.neo.chevere.domain.LoadResult.Success -> {
                 if (notify) {
@@ -109,7 +109,10 @@ class ChatRepositoryImpl @Inject constructor(
                 }
                 Result.success(Unit)
             }
-            is com.neo.chevere.domain.LoadResult.Failure -> Result.failure(result.throwable ?: Exception(result.message))
+
+            is com.neo.chevere.domain.LoadResult.Failure -> Result.failure(
+                result.throwable ?: Exception(result.message)
+            )
         }
     }
 
@@ -125,7 +128,11 @@ class ChatRepositoryImpl @Inject constructor(
         }
 
         chatRequestRouter.capabilityResponseFor(prompt)?.let { response ->
-            conversationContextManager.recordExchange(prompt, imageUri = null, assistantResponse = response)
+            conversationContextManager.recordExchange(
+                prompt,
+                imageUri = null,
+                assistantResponse = response
+            )
             return Result.success(response)
         }
 
@@ -133,7 +140,8 @@ class ChatRepositoryImpl @Inject constructor(
             return generateDirectChatResponse(prompt, imageUri = null)
         }
 
-        val conversationContext = conversationContextManager.buildContextPrefix().takeIf { it.isNotBlank() }
+        val conversationContext =
+            conversationContextManager.buildContextPrefix().takeIf { it.isNotBlank() }
         inferenceManager.clearConversation()
         val result = agentOrchestrator.processUserRequest(
             prompt = prompt,
@@ -141,11 +149,12 @@ class ChatRepositoryImpl @Inject constructor(
             conversationContext = conversationContext
         )
         result.onSuccess { response ->
-            val memoryResponse = if (response.startsWith(Constants.Agent.IMAGE_GENERATION_RESULT_PREFIX)) {
-                "Generated an image from the user's prompt."
-            } else {
-                response
-            }
+            val memoryResponse =
+                if (response.startsWith(Constants.Agent.IMAGE_GENERATION_RESULT_PREFIX)) {
+                    "Generated an image from the user's prompt."
+                } else {
+                    response
+                }
             conversationContextManager.recordExchange(prompt, imageUri, memoryResponse)
         }
         return result
@@ -168,12 +177,15 @@ class ChatRepositoryImpl @Inject constructor(
                 conversationContextManager.recordExchange(prompt, imageUri, inferenceResult.text)
                 Result.success(inferenceResult.text)
             }
+
             is InferenceResult.ImageSuccess -> Result.failure(
                 IllegalStateException("Image inference result is not supported in chat.")
             )
+
             is InferenceResult.Failure -> Result.failure(
                 inferenceResult.throwable ?: Exception(inferenceResult.message)
             )
+
             null -> Result.failure(Exception("No inference result was returned."))
         }
     }
@@ -198,7 +210,9 @@ class ChatRepositoryImpl @Inject constructor(
     override suspend fun generateImage(request: ImageGenerationRequest): Result<ImageGenerationResult.Success> {
         return when (val result = imageGenerationManager.generate(request)) {
             is ImageGenerationResult.Success -> Result.success(result)
-            is ImageGenerationResult.Failure -> Result.failure(result.throwable ?: Exception(result.message))
+            is ImageGenerationResult.Failure -> Result.failure(
+                result.throwable ?: Exception(result.message)
+            )
         }
     }
 
@@ -252,60 +266,67 @@ class ChatRepositoryImpl @Inject constructor(
     override val allDownloadsProgress: Flow<Map<String, DownloadProgress>>
         get() = downloadManager.allDownloadsProgress
 
-    override suspend fun getLocalModels(): List<InstalledModel> = withContext(dispatcherProvider.io) {
-        val filesDir = context.filesDir
-        
-        // 1. Scan for potential model files/directories
-        val potentialFiles = filesDir.listFiles { file ->
-            (file.isFile && (
-                file.name.endsWith(Constants.ModelFiles.LITERTLM_EXTENSION) ||
-                    file.name.endsWith(Constants.ModelFiles.BIN_EXTENSION) ||
-                    file.name.endsWith(Constants.ModelFiles.ZIP_EXTENSION)
-                )) ||
-                file.isDirectory && !isExcludedDirectory(file)
-        } ?: emptyArray()
+    override suspend fun getLocalModels(): List<InstalledModel> =
+        withContext(dispatcherProvider.io) {
+            val filesDir = context.filesDir
 
-        // 2. Process and validate found files locally
-        val validatedModels = potentialFiles.mapNotNull { file ->
-            if (file.name.endsWith(Constants.ModelFiles.TEMP_EXTENSION) ||
-                (file.isFile && file.length() < Constants.ModelFiles.MIN_VALID_FILE_SIZE_BYTES)
-            ) {
-                return@mapNotNull null
-            }
-            
-            val existing = installedModelRegistry.getInstalledModel(file.name)
-            classifyModel(file, existing)
-        }
-        
-        // 3. Update the Registry
-        val currentRegistry = installedModelRegistry.getInstalledModels()
-        
-        currentRegistry.forEach { registryModel ->
-            val modelFile = File(registryModel.filePath)
-            val refreshedModel = classifyModel(modelFile, registryModel)
-            if (!modelFile.exists()) {
-                if (registryModel.installStatus.shouldRemainWithoutFile()) {
-                    return@forEach
+            // 1. Scan for potential model files/directories
+            val potentialFiles = filesDir.listFiles { file ->
+                (file.isFile && (
+                        file.name.endsWith(Constants.ModelFiles.LITERTLM_EXTENSION) ||
+                                file.name.endsWith(Constants.ModelFiles.BIN_EXTENSION) ||
+                                file.name.endsWith(Constants.ModelFiles.ZIP_EXTENSION)
+                        )) ||
+                        file.isDirectory && !isExcludedDirectory(file)
+            } ?: emptyArray()
+
+            // 2. Process and validate found files locally
+            val validatedModels = potentialFiles.mapNotNull { file ->
+                if (file.name.endsWith(Constants.ModelFiles.TEMP_EXTENSION) ||
+                    (file.isFile && file.length() < Constants.ModelFiles.MIN_VALID_FILE_SIZE_BYTES)
+                ) {
+                    return@mapNotNull null
                 }
-                Log.w(TAG, "Removing orphaned registry entry: ${registryModel.id}")
-                installedModelRegistry.removeInstalledModel(registryModel.id)
-            } else if (registryModel.runtime == ModelRuntime.IMAGE_GENERATOR) {
-                Log.w(TAG, "Removing unsupported MediaPipe image-generator registry entry: ${registryModel.id}")
-                installedModelRegistry.removeInstalledModel(registryModel.id)
-            } else if (registryModel.taskType == ModelTaskType.IMAGE_GENERATION && refreshedModel == null) {
-                Log.w(TAG, "Removing invalid image-generation registry entry: ${registryModel.id}")
-                installedModelRegistry.removeInstalledModel(registryModel.id)
-            } else if (refreshedModel != null && refreshedModel != registryModel) {
-                installedModelRegistry.upsertInstalledModel(refreshedModel)
-            }
-        }
 
-        validatedModels.forEach { model ->
-            installedModelRegistry.upsertInstalledModel(model)
+                val existing = installedModelRegistry.getInstalledModel(file.name)
+                classifyModel(file, existing)
+            }
+
+            // 3. Update the Registry
+            val currentRegistry = installedModelRegistry.getInstalledModels()
+
+            currentRegistry.forEach { registryModel ->
+                val modelFile = File(registryModel.filePath)
+                val refreshedModel = classifyModel(modelFile, registryModel)
+                if (!modelFile.exists()) {
+                    if (registryModel.installStatus.shouldRemainWithoutFile()) {
+                        return@forEach
+                    }
+                    Log.w(TAG, "Removing orphaned registry entry: ${registryModel.id}")
+                    installedModelRegistry.removeInstalledModel(registryModel.id)
+                } else if (registryModel.runtime == ModelRuntime.IMAGE_GENERATOR) {
+                    Log.w(
+                        TAG,
+                        "Removing unsupported MediaPipe image-generator registry entry: ${registryModel.id}"
+                    )
+                    installedModelRegistry.removeInstalledModel(registryModel.id)
+                } else if (registryModel.taskType == ModelTaskType.IMAGE_GENERATION && refreshedModel == null) {
+                    Log.w(
+                        TAG,
+                        "Removing invalid image-generation registry entry: ${registryModel.id}"
+                    )
+                    installedModelRegistry.removeInstalledModel(registryModel.id)
+                } else if (refreshedModel != null && refreshedModel != registryModel) {
+                    installedModelRegistry.upsertInstalledModel(refreshedModel)
+                }
+            }
+
+            validatedModels.forEach { model ->
+                installedModelRegistry.upsertInstalledModel(model)
+            }
+
+            installedModelRegistry.getInstalledModels()
         }
-        
-        installedModelRegistry.getInstalledModels()
-    }
 
     override fun isModelValid(modelName: String): Boolean {
         if (modelName.isBlank()) return false
@@ -333,12 +354,18 @@ class ChatRepositoryImpl @Inject constructor(
             modelRoot = file
             format = ModelFormat.LITERTLM
             runtime = ModelRuntime.LITERT
-            capabilities = if (file.name.contains("vision", ignoreCase = true) || file.name.contains("gemma-4", ignoreCase = true)) {
-                setOf(ModelCapability.TEXT, ModelCapability.VISION)
-            } else {
-                setOf(ModelCapability.TEXT)
-            }
-            taskType = if (capabilities.contains(ModelCapability.VISION)) ModelTaskType.VISION_CHAT else ModelTaskType.CHAT
+            capabilities =
+                if (file.name.contains("vision", ignoreCase = true) || file.name.contains(
+                        "gemma-4",
+                        ignoreCase = true
+                    )
+                ) {
+                    setOf(ModelCapability.TEXT, ModelCapability.VISION)
+                } else {
+                    setOf(ModelCapability.TEXT)
+                }
+            taskType =
+                if (capabilities.contains(ModelCapability.VISION)) ModelTaskType.VISION_CHAT else ModelTaskType.CHAT
         } else if (file.isFile && file.extension.lowercase() == "bin") {
             modelRoot = file
             format = ModelFormat.BIN
@@ -362,7 +389,8 @@ class ChatRepositoryImpl @Inject constructor(
             taskType = taskType,
             capabilities = capabilities,
             installStatus = InstallStatus.INSTALLED,
-            sizeBytes = if (file.isDirectory) file.walkTopDown().filter { it.isFile }.sumOf { it.length() } else file.length(),
+            sizeBytes = if (file.isDirectory) file.walkTopDown().filter { it.isFile }
+                .sumOf { it.length() } else file.length(),
             checksum = existing?.checksum,
             installedAt = file.lastModified(),
             license = existing?.license
@@ -373,23 +401,35 @@ class ChatRepositoryImpl @Inject constructor(
 
     private fun ModelEntry.toPendingInstalledModel(id: String, filePath: String): InstalledModel {
         val (format, runtime, taskType, capabilities) = when {
-            effectiveFileName.endsWith(Constants.ModelFiles.ZIP_EXTENSION, ignoreCase = true) || repositoryFiles.isNotEmpty() -> Tuple4(
+            effectiveFileName.endsWith(
+                Constants.ModelFiles.ZIP_EXTENSION,
+                ignoreCase = true
+            ) || repositoryFiles.isNotEmpty() -> Tuple4(
                 ModelFormat.ONNX_DIFFUSION_BUNDLE,
                 ModelRuntime.ONNX_DIFFUSION,
                 ModelTaskType.IMAGE_GENERATION,
                 setOf(ModelCapability.IMAGE_GEN)
             )
-            effectiveFileName.endsWith(Constants.ModelFiles.LITERTLM_EXTENSION, ignoreCase = true) -> Tuple4(
+
+            effectiveFileName.endsWith(
+                Constants.ModelFiles.LITERTLM_EXTENSION,
+                ignoreCase = true
+            ) -> Tuple4(
                 ModelFormat.LITERTLM,
                 ModelRuntime.LITERT,
                 if (supportsVision) ModelTaskType.VISION_CHAT else ModelTaskType.CHAT,
-                if (supportsVision) setOf(ModelCapability.TEXT, ModelCapability.VISION) else setOf(ModelCapability.TEXT)
+                if (supportsVision) setOf(ModelCapability.TEXT, ModelCapability.VISION) else setOf(
+                    ModelCapability.TEXT
+                )
             )
+
             else -> Tuple4(
                 ModelFormat.BIN,
                 ModelRuntime.LITERT,
                 if (supportsVision) ModelTaskType.VISION_CHAT else ModelTaskType.CHAT,
-                if (supportsVision) setOf(ModelCapability.TEXT, ModelCapability.VISION) else setOf(ModelCapability.TEXT)
+                if (supportsVision) setOf(ModelCapability.TEXT, ModelCapability.VISION) else setOf(
+                    ModelCapability.TEXT
+                )
             )
         }
         return InstalledModel(
@@ -412,17 +452,25 @@ class ChatRepositoryImpl @Inject constructor(
 
     private fun String.toModelSource(): ModelSource {
         return when {
-            equals("Hugging Face", ignoreCase = true) || equals("HF Hub", ignoreCase = true) -> ModelSource.HUGGING_FACE
-            equals("Firebase", ignoreCase = true) || equals("Firestore", ignoreCase = true) -> ModelSource.FIREBASE
+            equals("Hugging Face", ignoreCase = true) || equals(
+                "HF Hub",
+                ignoreCase = true
+            ) -> ModelSource.HUGGING_FACE
+
+            equals("Firebase", ignoreCase = true) || equals(
+                "Firestore",
+                ignoreCase = true
+            ) -> ModelSource.FIREBASE
+
             else -> ModelSource.UNKNOWN
         }
     }
 
     private fun InstallStatus.shouldRemainWithoutFile(): Boolean {
         return this == InstallStatus.DOWNLOADING ||
-            this == InstallStatus.VERIFYING ||
-            this == InstallStatus.FAILED ||
-            this == InstallStatus.CORRUPTED
+                this == InstallStatus.VERIFYING ||
+                this == InstallStatus.FAILED ||
+                this == InstallStatus.CORRUPTED
     }
 
     private data class Tuple4<A, B, C, D>(
@@ -449,20 +497,21 @@ class ChatRepositoryImpl @Inject constructor(
 
     private fun isExcludedDirectory(file: File): Boolean {
         return file.name == Constants.ImageGeneration.GENERATED_IMAGES_DIRECTORY ||
-            file.name == Constants.Inference.NEURAL_CACHE_DIR
+                file.name == Constants.Inference.NEURAL_CACHE_DIR
     }
 
     private fun findOnnxDiffusionRoot(directory: File): File? {
         if (!directory.isDirectory) return null
         if (hasOnnxRequiredFiles(directory)) return directory
-        
-        return directory.walkTopDown().maxDepth(3).filter { it.isDirectory }.find { hasOnnxRequiredFiles(it) }
+
+        return directory.walkTopDown().maxDepth(3).filter { it.isDirectory }
+            .find { hasOnnxRequiredFiles(it) }
     }
 
     private fun hasOnnxRequiredFiles(directory: File): Boolean {
-        return Constants.ImageGeneration.ONNX_REQUIRED_FILES.all { relativePath -> 
-            File(directory, relativePath).isFile || 
-            File(directory, relativePath.replace(".ort", ".onnx")).isFile
+        return Constants.ImageGeneration.ONNX_REQUIRED_FILES.all { relativePath ->
+            File(directory, relativePath).isFile ||
+                    File(directory, relativePath.replace(".ort", ".onnx")).isFile
         }
     }
 

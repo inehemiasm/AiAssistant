@@ -31,9 +31,9 @@ import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material3.ContainedLoadingIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ContainedLoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -133,7 +133,13 @@ fun ChatInputBar(
             AnimatedContent(
                 targetState = isBusy,
                 transitionSpec = {
-                    fadeIn(animationSpec = tween(160)).togetherWith(fadeOut(animationSpec = tween(120)))
+                    fadeIn(animationSpec = tween(160)).togetherWith(
+                        fadeOut(
+                            animationSpec = tween(
+                                120
+                            )
+                        )
+                    )
                 },
                 label = "InputContent",
                 modifier = Modifier
@@ -174,11 +180,15 @@ private fun SelectedImagePreview(
     uri: Uri,
     onRemoveImage: () -> Unit
 ) {
-    Box(Modifier.size(112.dp).padding(bottom = 10.dp, start = 16.dp)) {
+    Box(Modifier
+        .size(112.dp)
+        .padding(bottom = 10.dp, start = 16.dp)) {
         AsyncImage(
             model = uri,
             contentDescription = null,
-            modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp)),
+            modifier = Modifier
+                .fillMaxSize()
+                .clip(RoundedCornerShape(12.dp)),
             contentScale = ContentScale.Crop
         )
         Surface(
@@ -189,7 +199,10 @@ private fun SelectedImagePreview(
                 .align(Alignment.TopEnd)
                 .offset(x = 8.dp, y = (-8).dp),
             shadowElevation = 2.dp,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+            border = BorderStroke(
+                1.dp,
+                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+            )
         ) {
             IconButton(
                 onClick = onRemoveImage,
@@ -230,7 +243,9 @@ private fun ComposerContent(
         TextField(
             value = text,
             onValueChange = onTextChange,
-            modifier = Modifier.weight(1f).padding(vertical = 2.dp),
+            modifier = Modifier
+                .weight(1f)
+                .padding(vertical = 2.dp),
             placeholder = {
                 Text(
                     stringResource(R.string.input_placeholder),
@@ -305,7 +320,12 @@ private fun AttachmentButton(
             shadowElevation = 8.dp
         ) {
             DropdownMenuItem(
-                text = { Text(stringResource(R.string.gallery), color = MaterialTheme.colorScheme.onSurface) },
+                text = {
+                    Text(
+                        stringResource(R.string.gallery),
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                },
                 leadingIcon = {
                     AttachmentMenuIcon {
                         Icon(
@@ -322,7 +342,12 @@ private fun AttachmentButton(
                 }
             )
             DropdownMenuItem(
-                text = { Text(stringResource(R.string.camera), color = MaterialTheme.colorScheme.onSurface) },
+                text = {
+                    Text(
+                        stringResource(R.string.camera),
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                },
                 leadingIcon = {
                     AttachmentMenuIcon {
                         Icon(

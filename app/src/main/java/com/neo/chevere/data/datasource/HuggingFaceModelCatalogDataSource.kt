@@ -49,13 +49,13 @@ class HuggingFaceModelCatalogDataSource @Inject constructor(
 
     override suspend fun fetchAvailableModels(): Result<List<ModelEntry>> {
         val allModels = mutableListOf<ModelEntry>()
-        
+
         // 1. Load curated models from assets (Highest Priority)
         try {
             val assetPath = "model_catalog/huggingface_models.json"
             val jsonString = context.assets.open(assetPath).bufferedReader().use { it.readText() }
             val hfModels = json.decodeFromString<List<HFModelDto>>(jsonString)
-            
+
             allModels.addAll(hfModels.map { dto ->
                 ModelEntry(
                     name = dto.displayName,
@@ -81,18 +81,18 @@ class HuggingFaceModelCatalogDataSource @Inject constructor(
                 parameter("search", "litertlm")
                 parameter("full", "true")
             }
-            
+
             if (response.status.value in 200..299) {
                 val hubModels: List<HFHubModel> = response.body()
                 val discoveredEntries = hubModels.mapNotNull { hubModel ->
                     // Find a file ending in .litertlm or .bin
-                    val sibling = hubModel.siblings.firstOrNull { 
+                    val sibling = hubModel.siblings.firstOrNull {
                         it.rfilename.endsWith(Constants.ModelFiles.LITERTLM_EXTENSION) ||
-                            it.rfilename.endsWith(Constants.ModelFiles.BIN_EXTENSION)
+                                it.rfilename.endsWith(Constants.ModelFiles.BIN_EXTENSION)
                     } ?: return@mapNotNull null
-                    
+
                     val targetFile = sibling.rfilename
-                    
+
                     // Phase 5: Duplicate handling - skip if already in curated list
                     if (allModels.any { it.url.contains(hubModel.id) }) {
                         Log.d(TAG, "Skipping duplicate discovered model: ${hubModel.id}")
@@ -106,7 +106,8 @@ class HuggingFaceModelCatalogDataSource @Inject constructor(
                     }
 
                     // Extract license from tags if available
-                    val license = hubModel.tags.find { it.startsWith("license:") }?.removePrefix("license:")
+                    val license =
+                        hubModel.tags.find { it.startsWith("license:") }?.removePrefix("license:")
 
                     ModelEntry(
                         name = hubModel.id.split("/").last(),
@@ -115,7 +116,12 @@ class HuggingFaceModelCatalogDataSource @Inject constructor(
                         provider = "HF Hub",
                         fileName = targetFile,
                         sizeBytes = sibling.size,
-                        supportsVision = hubModel.tags.any { it.contains("vision", ignoreCase = true) },
+                        supportsVision = hubModel.tags.any {
+                            it.contains(
+                                "vision",
+                                ignoreCase = true
+                            )
+                        },
                         license = license,
                         runtimeType = if (targetFile.endsWith(Constants.ModelFiles.LITERTLM_EXTENSION)) "LiteRT" else "TFLite/Other"
                     )

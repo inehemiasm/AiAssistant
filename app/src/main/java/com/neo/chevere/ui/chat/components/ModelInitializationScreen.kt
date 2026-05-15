@@ -1,10 +1,27 @@
 package com.neo.chevere.ui.chat.components
 
-import androidx.compose.animation.core.*
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.InfiniteTransition
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Sync
@@ -25,7 +42,13 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.neo.chevere.R
-import com.neo.chevere.ui.designsystem.*
+import com.neo.chevere.ui.designsystem.AstroBrightCyan
+import com.neo.chevere.ui.designsystem.AstroDeepBlue
+import com.neo.chevere.ui.designsystem.AstroGlowCyan
+import com.neo.chevere.ui.designsystem.AstroPeach
+import com.neo.chevere.ui.designsystem.AstroRobotWhite
+import com.neo.chevere.ui.designsystem.AstroSoftCyan
+import com.neo.chevere.ui.designsystem.Typography
 
 @Composable
 fun ModelInitializationScreen(
@@ -34,7 +57,7 @@ fun ModelInitializationScreen(
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "loading")
     val isDark = isSystemInDarkTheme()
-    
+
     // Theme-aware Background Brush
     val backgroundBrush = if (isDark) {
         Brush.verticalGradient(
@@ -57,7 +80,8 @@ fun ModelInitializationScreen(
     }
 
     val textColor = if (isDark) AstroRobotWhite else AstroDeepBlue
-    val subtitleColor = if (isDark) AstroRobotWhite.copy(alpha = 0.7f) else AstroDeepBlue.copy(alpha = 0.7f)
+    val subtitleColor =
+        if (isDark) AstroRobotWhite.copy(alpha = 0.7f) else AstroDeepBlue.copy(alpha = 0.7f)
 
     Box(
         modifier = modifier
@@ -70,7 +94,9 @@ fun ModelInitializationScreen(
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
-            modifier = Modifier.fillMaxWidth().padding(32.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(32.dp)
         ) {
             Spacer(modifier = Modifier.weight(1f))
 
@@ -124,10 +150,16 @@ fun ModelInitializationScreen(
                     val width = size.width
                     val barWidth = width * 0.4f
                     val x = progressAnimation * width
-                    
+
                     drawRect(
                         brush = Brush.horizontalGradient(
-                            listOf(Color.Transparent, AstroGlowCyan, textColor, AstroGlowCyan, Color.Transparent)
+                            listOf(
+                                Color.Transparent,
+                                AstroGlowCyan,
+                                textColor,
+                                AstroGlowCyan,
+                                Color.Transparent
+                            )
                         ),
                         topLeft = Offset(x, 0f),
                         size = androidx.compose.ui.geometry.Size(barWidth, size.height)
@@ -160,9 +192,9 @@ fun ModelInitializationScreen(
                         .size(16.dp)
                         .graphicsLayer { rotationZ = rotation }
                 )
-                
+
                 Spacer(modifier = Modifier.width(12.dp))
-                
+
                 Text(
                     text = statusMessage.uppercase(),
                     style = Typography.labelSmall.copy(
@@ -172,7 +204,7 @@ fun ModelInitializationScreen(
                     )
                 )
             }
-            
+
             Spacer(modifier = Modifier.height(64.dp))
         }
     }
@@ -199,7 +231,7 @@ private fun DynamicLightTrails(infiniteTransition: InfiniteTransition) {
             val startY = (h * (i / 10f))
             val xOffset = (moveFactor * w * 2) - w
             val currentX = (xOffset + (i * 150)) % (w * 1.5f) - (w * 0.25f)
-            
+
             drawLine(
                 brush = Brush.horizontalGradient(
                     0.0f to Color.Transparent,

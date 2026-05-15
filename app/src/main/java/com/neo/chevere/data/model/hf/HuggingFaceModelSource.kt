@@ -34,11 +34,18 @@ class HuggingFaceModelSource @Inject constructor(
     private val baseUrl = "https://huggingface.co/api/models"
 
     override suspend fun searchModels(query: String): Result<List<MarketplaceModel>> = runCatching {
+        // We search for both 'litert' and potentially 'stable-diffusion' or 'onnx' related tags
+        // However, HF API 'filter' parameter usually takes one value. 
+        // We'll broaden the search by removing the strict 'litert' filter if a query is provided,
+        // or we can perform two fetches. For now, let's allow general search but prioritize our formats.
         val response: List<HFModelResponse> = httpClient.get(baseUrl) {
             parameter("search", query)
-            parameter("filter", "litert") 
+            // If query is empty, default to litert models. If searching, don't filter to allow finding image models.
+            if (query.isBlank()) {
+                parameter("filter", "litert")
+            }
             parameter("full", "true")
-            parameter("limit", 20)
+            parameter("limit", 30)
         }.body()
 
         response.mapNotNull { it.toMarketplaceModel() }
@@ -48,27 +55,56 @@ class HuggingFaceModelSource @Inject constructor(
         val response: HFModelResponse = httpClient.get("$baseUrl/$modelId") {
             parameter("full", "true")
         }.body()
-        
+
         response.toMarketplaceModel() ?: throw Exception("Incompatible model format")
     }
 
     private fun HFModelResponse.toMarketplaceModel(): MarketplaceModel? {
-        val supportedFile = siblings.find { 
+        // 1. Check for LiteRT/TFLite models (Chat/Vision)
+        val liteRtFile = siblings.find {
             it.rfilename.endsWith(Constants.ModelFiles.LITERTLM_EXTENSION) ||
-            it.rfilename.endsWith(Constants.ModelFiles.BIN_EXTENSION) ||
-            it.rfilename.endsWith(".tflite") 
-        } ?: return null
+                    it.rfilename.endsWith(Constants.ModelFiles.BIN_EXTENSION) ||
+                    it.rfilename.endsWith(".tflite")
+        }
 
-        return MarketplaceModel(
-            id = id,
-            name = id.substringAfter("/"),
-            description = "On-device model by ${author ?: "HF User"}. Downloads: $downloads",
-            author = author ?: "Unknown",
-            fileSize = 0,
-            downloadUrl = "https://huggingface.co/$id/resolve/main/${supportedFile.rfilename}",
-            repoUrl = "https://huggingface.co/$id",
-            tags = tags,
-            runtimeType = RuntimeType.LITERT_LM
-        )
+        if (liteRtFile != null) {
+            return MarketplaceModel(
+                id = id,
+                name = id.substringAfter("/"),
+                description = "On-device LLM by ${author ?: "HF User"}. Downloads: $downloads",
+                author = author ?: "Unknown",
+                fileSize = 0,
+                downloadUrl = "https://huggingface.co/$id/resolve/main/${liteRtFile.rfilename}",
+                repoUrl = "https://huggingface.co/$id",
+                tags = tags,
+                runtimeType = RuntimeType.LITERT_LM
+            )
+        }
+
+        // 2. Check for ONNX Diffusion bundles (ZIP)
+        // We look for .zip files if the model tags suggest it's a diffusion/image model
+        val isDiffusion = tags.any {
+            it.contains(
+                "stable-diffusion",
+                ignoreCase = true
+            ) || it.contains("diffusion", ignoreCase = true)
+        }
+        val zipFile = siblings.find { it.rfilename.endsWith(Constants.ModelFiles.ZIP_EXTENSION) }
+
+        if (isDiffusion && zipFile != null) {
+            return MarketplaceModel(
+                id = id,
+                name = id.substringAfter("/"),
+                description = "Image generation model by ${author ?: "HF User"}. Downloads: $downloads",
+                author = author ?: "Unknown",
+                fileSize = 0,
+                downloadUrl = "https://huggingface.co/$id/resolve/main/${zipFile.rfilename}",
+                repoUrl = "https://huggingface.co/$id",
+                tags = tags,
+                runtimeType = RuntimeType.ONNX_DIFFUSION
+            )
+        }
+
+        return null
     }
 }

@@ -24,8 +24,10 @@ class ImageGenerationTool @Inject constructor(
     private val explicitImagePromptPolicy = ExplicitImagePromptPolicy()
 
     override val name: String = Constants.Agent.IMAGE_GENERATION_TOOL_NAME
-    override val description: String = "Generates an image from a text prompt using an installed image generation model. Before calling this tool, rewrite short user requests into a concise visual prompt with subject, setting, style, lighting, composition, and quality details."
-    override val inputSchema: String = "prompt: Improved visual prompt, not the raw user request. Optional: negativePrompt, width, height, steps, guidanceScale, seed, conditionImageUri."
+    override val description: String =
+        "Generates an image from a text prompt using an installed image generation model. Before calling this tool, rewrite short user requests into a concise visual prompt with subject, setting, style, lighting, composition, and quality details."
+    override val inputSchema: String =
+        "prompt: Improved visual prompt, not the raw user request. Optional: negativePrompt, width, height, steps, guidanceScale, seed, conditionImageUri."
 
     override suspend fun execute(args: Map<String, String>): ToolResult {
         val prompt = args["prompt"]?.trim().orEmpty()
@@ -57,12 +59,18 @@ class ImageGenerationTool @Inject constructor(
                 listOf(
                     IMAGE_GENERATION_RESULT_PREFIX,
                     "uri=${result.imageUri}",
-                    "prompt=${result.prompt.replace(Constants.Agent.IMAGE_GENERATION_RESULT_SEPARATOR, " ")}",
+                    "prompt=${
+                        result.prompt.replace(
+                            Constants.Agent.IMAGE_GENERATION_RESULT_SEPARATOR,
+                            " "
+                        )
+                    }",
                     "width=${result.width}",
                     "height=${result.height}",
                     "seed=${result.seed ?: ""}"
                 ).joinToString(Constants.Agent.IMAGE_GENERATION_RESULT_SEPARATOR)
             )
+
             is ImageGenerationResult.Failure -> ToolResult.Error(result.message)
         }
     }

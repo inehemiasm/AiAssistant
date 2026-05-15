@@ -46,7 +46,7 @@ class DefaultRemoteModelDataSource @Inject constructor(
             if (!response.status.isSuccess()) {
                 throw IOException("HTTP error: ${response.status}")
             }
-            
+
             // Check if we accidentally downloaded an HTML error page from a blocked or expired link.
             val contentType = response.contentType()
             if (contentType != null && contentType.contentType == ContentType.Text.Html.contentType && contentType.contentSubtype == ContentType.Text.Html.contentSubtype) {
@@ -57,7 +57,7 @@ class DefaultRemoteModelDataSource @Inject constructor(
             val totalBytes = response.contentLength() ?: 0L
             var bytesRead = 0L
             val buffer = ByteArray(128 * 1024)
-            
+
             var lastEmittedProgress = -1
 
             FileOutputStream(file).use { output ->

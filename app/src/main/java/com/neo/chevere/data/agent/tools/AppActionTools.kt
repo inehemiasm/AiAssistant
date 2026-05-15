@@ -24,7 +24,7 @@ import javax.inject.Inject
 abstract class BaseAppActionTool(
     private val actionExecutor: AndroidAppActionExecutor
 ) : AgentTool {
-    
+
     protected fun handleActionResult(result: AppActionResult): ToolResult {
         return when (result) {
             is AppActionResult.Success -> ToolResult.Success(result.output)
@@ -93,7 +93,8 @@ class DraftEmailTool @Inject constructor(
 ) : BaseAppActionTool(actionExecutor) {
     override val name: String = "draft_email"
     override val description: String = "Opens an email app with a pre-filled draft."
-    override val inputSchema: String = "to: Optional recipient email. subject: Optional subject line. body: Optional email body text."
+    override val inputSchema: String =
+        "to: Optional recipient email. subject: Optional subject line. body: Optional email body text."
 
     override suspend fun execute(args: Map<String, String>): ToolResult {
         val request = DraftEmailRequest(
@@ -110,7 +111,8 @@ class CreateCalendarEventTool @Inject constructor(
 ) : BaseAppActionTool(actionExecutor) {
     override val name: String = "create_calendar_event"
     override val description: String = "Opens the calendar app to create a new event."
-    override val inputSchema: String = "title: The title of the event. startTime: Optional start time in milliseconds (Long). location: Optional location."
+    override val inputSchema: String =
+        "title: The title of the event. startTime: Optional start time in milliseconds (Long). location: Optional location."
 
     override suspend fun execute(args: Map<String, String>): ToolResult {
         val title = args["title"] ?: return ToolResult.Error("Missing 'title' argument")
@@ -127,8 +129,10 @@ class SearchAppsTool @Inject constructor(
     private val actionExecutor: AndroidAppActionExecutor
 ) : BaseAppActionTool(actionExecutor) {
     override val name: String = "search_apps"
-    override val description: String = "Searches for installed apps that can handle a specific action or content type."
-    override val inputSchema: String = "action: The Android Intent action (e.g. android.intent.action.SEND). mimeType: Optional MIME type (e.g. text/plain)."
+    override val description: String =
+        "Searches for installed apps that can handle a specific action or content type."
+    override val inputSchema: String =
+        "action: The Android Intent action (e.g. android.intent.action.SEND). mimeType: Optional MIME type (e.g. text/plain)."
 
     override suspend fun execute(args: Map<String, String>): ToolResult {
         val action = args["action"] ?: return ToolResult.Error("Missing 'action' argument")
@@ -154,10 +158,12 @@ class LaunchAppTool @Inject constructor(
 ) : BaseAppActionTool(actionExecutor) {
     override val name: String = "launch_app"
     override val description: String = "Launches an installed app by its unique package name."
-    override val inputSchema: String = "packageName: The Android package name (e.g. com.google.android.gm)."
+    override val inputSchema: String =
+        "packageName: The Android package name (e.g. com.google.android.gm)."
 
     override suspend fun execute(args: Map<String, String>): ToolResult {
-        val packageName = args["packageName"] ?: return ToolResult.Error("Missing 'packageName' argument")
+        val packageName =
+            args["packageName"] ?: return ToolResult.Error("Missing 'packageName' argument")
         return handleActionResult(actionExecutor.execute(LaunchAppRequest(packageName)))
     }
 }
@@ -166,7 +172,8 @@ class OpenAppTool @Inject constructor(
     private val actionExecutor: AndroidAppActionExecutor
 ) : BaseAppActionTool(actionExecutor) {
     override val name: String = "launch_app_home_screen"
-    override val description: String = "Use ONLY to open the basic home screen of an app. NEVER use this for specific tasks like 'create invoice' or 'view order'. If the user mentions any specific action, you MUST use perform_app_action instead."
+    override val description: String =
+        "Use ONLY to open the basic home screen of an app. NEVER use this for specific tasks like 'create invoice' or 'view order'. If the user mentions any specific action, you MUST use perform_app_action instead."
     override val inputSchema: String = "name: The common name of the app (e.g., 'Settings')."
 
     override suspend fun execute(args: Map<String, String>): ToolResult {
@@ -179,8 +186,10 @@ class OpenDeepLinkTool @Inject constructor(
     private val actionExecutor: AndroidAppActionExecutor
 ) : BaseAppActionTool(actionExecutor) {
     override val name: String = "perform_app_action"
-    override val description: String = "MANDATORY for specific actions inside an app. For Squarespace: use uri='squarespace://invoices/create' to create an invoice, uri='squarespace://pay-links/create' for pay links, or uri='squarespace://orders' to view orders."
-    override val inputSchema: String = "uri: The action URI (required). packageName: Optional package name (e.g. 'com.squarespace.android')."
+    override val description: String =
+        "MANDATORY for specific actions inside an app. For Squarespace: use uri='squarespace://invoices/create' to create an invoice, uri='squarespace://pay-links/create' for pay links, or uri='squarespace://orders' to view orders."
+    override val inputSchema: String =
+        "uri: The action URI (required). packageName: Optional package name (e.g. 'com.squarespace.android')."
 
     override suspend fun execute(args: Map<String, String>): ToolResult {
         val uri = args["uri"] ?: return ToolResult.Error("Missing 'uri' argument")
@@ -193,7 +202,8 @@ class GetAppCapabilitiesTool @Inject constructor(
     private val actionExecutor: AndroidAppActionExecutor
 ) : BaseAppActionTool(actionExecutor) {
     override val name: String = "get_app_capabilities"
-    override val description: String = "Returns the specific actions and intents an app can handle (e.g., sharing, viewing links, mapping)."
+    override val description: String =
+        "Returns the specific actions and intents an app can handle (e.g., sharing, viewing links, mapping)."
     override val inputSchema: String = "name: The common name of the app to analyze."
 
     override suspend fun execute(args: Map<String, String>): ToolResult {

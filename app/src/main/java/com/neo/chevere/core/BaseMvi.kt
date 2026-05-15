@@ -30,22 +30,22 @@ abstract class BaseViewModel<S : UiState, I : UiIntent, E : UiEffect>(
 ) : AndroidViewModel(application) {
 
     private val tag = this::class.java.simpleName
-    
+
     /**
      * The current state of the UI.
      */
     val currentState: S
         get() = uiState.value
-    
+
     private val _uiState = MutableStateFlow(initialState)
-    
+
     /**
      * A [StateFlow] emitting the current UI state.
      */
     val uiState: StateFlow<S> = _uiState.asStateFlow()
-    
+
     private val _effect: Channel<E> = Channel(Channel.BUFFERED)
-    
+
     /**
      * A [Flow] emitting one-time side effects.
      */
@@ -76,7 +76,7 @@ abstract class BaseViewModel<S : UiState, I : UiIntent, E : UiEffect>(
      * @param reducer A function that takes the current state and returns the new state.
      */
     protected fun setState(reducer: S.() -> S) {
-        _uiState.update { 
+        _uiState.update {
             val newState = it.reducer()
             if (newState != it) {
                 Log.d(tag, "State: $newState")

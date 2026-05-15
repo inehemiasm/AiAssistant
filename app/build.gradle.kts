@@ -20,7 +20,7 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        
+
         val serperApiKey: String = project.findProperty("SERPER_API_KEY")?.toString() ?: ""
         buildConfigField("String", "SERPER_API_KEY", "\"$serperApiKey\"")
     }
@@ -76,7 +76,7 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.hilt.navigation.compose)
     implementation(libs.okhttp)
-    
+
     implementation(libs.material)
     implementation(libs.androidx.core.splashscreen)
 
@@ -84,33 +84,33 @@ dependencies {
     ksp(libs.hilt.compiler)
     implementation(libs.androidx.hilt.work)
     ksp(libs.androidx.hilt.compiler)
-    
+
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
     ksp(libs.room.compiler)
-    
+
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.analytics)
     implementation(libs.firebase.crashlytics)
     implementation(libs.firebase.firestore)
     implementation(libs.kotlinx.coroutines.play.services)
-    
+
     implementation(libs.ktor.client.core)
     implementation(libs.ktor.client.okhttp)
     implementation(libs.ktor.client.content.negotiation)
     implementation(libs.ktor.serialization.kotlinx.json)
     implementation(libs.kotlinx.serialization.json)
-    
+
     implementation(libs.coil.compose)
-    
+
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.guava.listenablefuture)
-    
+
     implementation(libs.google.ai.edge.litertlm)
     implementation(libs.mediapipe.tasks.genai)
     implementation(libs.onnxruntime.android)
     implementation(libs.onnxruntime.extensions.android)
-    
+
     implementation(libs.androidx.exifinterface)
     implementation(libs.androidx.datastore.preferences)
 

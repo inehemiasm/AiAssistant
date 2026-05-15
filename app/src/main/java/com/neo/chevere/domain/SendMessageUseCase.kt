@@ -21,5 +21,6 @@ class SendMessageUseCase @Inject constructor(
      * @param imageUri Optional URI of an image to be processed by the AI.
      * @return A [Result] containing the AI's response text.
      */
-    suspend operator fun invoke(text: String, imageUri: Uri? = null) = repository.sendMessage(text, imageUri)
+    suspend operator fun invoke(text: String, imageUri: Uri? = null) =
+        repository.sendMessage(text, imageUri)
 }

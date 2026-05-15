@@ -1,7 +1,7 @@
 package com.neo.chevere.ui.chat.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -153,7 +153,8 @@ private fun TopBarIconButton(
 
 @Composable
 private fun CapabilityChip(label: String, ready: Boolean) {
-    val contentColor = if (ready) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+    val contentColor =
+        if (ready) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
     val containerColor = if (ready) {
         MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
     } else {

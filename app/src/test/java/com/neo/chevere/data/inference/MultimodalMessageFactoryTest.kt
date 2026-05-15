@@ -1,9 +1,9 @@
 package com.neo.chevere.data.inference
 
+import android.content.Context
 import android.net.Uri
 import com.google.ai.edge.litertlm.Content
 import com.google.ai.edge.litertlm.Role
-import android.content.Context
 import com.neo.chevere.R
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -34,7 +34,7 @@ class MultimodalMessageFactoryTest {
     fun createTextMessage_returnsUserMessageWithCorrectText() {
         val text = "Hello AI"
         val message = factory.createTextMessage(text)
-        
+
         assertEquals(Role.USER, message.role)
         assertEquals(1, message.contents.contents.size)
         val textContent = message.contents.contents[0] as Content.Text
@@ -45,7 +45,7 @@ class MultimodalMessageFactoryTest {
     fun createMessage_withNullImage_returnsTextMessage() {
         val prompt = "Just text"
         val message = factory.createMessage(prompt, null)
-        
+
         assertEquals(Role.USER, message.role)
         assertEquals(1, message.contents.contents.size)
         assertTrue(message.contents.contents[0] is Content.Text)
@@ -57,17 +57,17 @@ class MultimodalMessageFactoryTest {
         val prompt = "What is this?"
         val mockUri = mock<Uri>()
         val mockBytes = byteArrayOf(1, 2, 3)
-        
+
         whenever(imageProcessor.processImage(any(), any())).doReturn(mockBytes)
-        
+
         val message = factory.createMessage(prompt, mockUri)
-        
+
         verify(imageProcessor).processImage(mockUri, 448)
         assertEquals(Role.USER, message.role)
         assertEquals(2, message.contents.contents.size)
         assertTrue(message.contents.contents[0] is Content.ImageBytes)
         assertTrue(message.contents.contents[1] is Content.Text)
-        
+
         val imageContent = message.contents.contents[0] as Content.ImageBytes
         assertEquals(mockBytes.toList(), imageContent.bytes.toList())
         assertEquals(prompt, (message.contents.contents[1] as Content.Text).text)
@@ -77,9 +77,9 @@ class MultimodalMessageFactoryTest {
     fun createWarmupMessage_callsDummyImageAndReturnsWarmupMessage() {
         val mockBytes = byteArrayOf(0)
         whenever(imageProcessor.createDummyImage(any())).doReturn(mockBytes)
-        
+
         val message = factory.createWarmupMessage()
-        
+
         verify(imageProcessor).createDummyImage(448)
         assertEquals(Role.USER, message.role)
         assertEquals(2, message.contents.contents.size)

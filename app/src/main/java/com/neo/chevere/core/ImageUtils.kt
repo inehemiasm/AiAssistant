@@ -8,7 +8,7 @@ import android.net.Uri
 import androidx.exifinterface.media.ExifInterface
 
 object ImageUtils {
-    
+
     fun loadAndProcessImage(context: Context, uri: Uri, targetSize: Int): Bitmap {
         val orientation = context.contentResolver.openInputStream(uri)?.use { input ->
             val exif = ExifInterface(input)
@@ -34,7 +34,11 @@ object ImageUtils {
         return centerCropAndScale(bitmap, targetSize)
     }
 
-    private fun calculateInSampleSize(options: BitmapFactory.Options, reqWidth: Int, reqHeight: Int): Int {
+    private fun calculateInSampleSize(
+        options: BitmapFactory.Options,
+        reqWidth: Int,
+        reqHeight: Int
+    ): Int {
         val (height: Int, width: Int) = options.outHeight to options.outWidth
         var inSampleSize = 1
         if (height > reqHeight || width > reqWidth) {
@@ -58,7 +62,8 @@ object ImageUtils {
             else -> return bitmap
         }
         return try {
-            val rotated = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+            val rotated =
+                Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
             bitmap.recycle()
             rotated
         } catch (e: OutOfMemoryError) {

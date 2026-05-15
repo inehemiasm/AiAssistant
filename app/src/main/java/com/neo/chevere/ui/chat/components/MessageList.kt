@@ -34,9 +34,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -137,7 +136,10 @@ fun FuturisticChatBubble(
                 modifier = Modifier
                     .padding(end = 12.dp, top = 8.dp)
                     .size(28.dp)
-                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.42f), CircleShape)
+                    .background(
+                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.42f),
+                        CircleShape
+                    )
                     .padding(5.dp)
             )
         }
@@ -181,7 +183,7 @@ fun FuturisticChatBubble(
                             textColor = onBubbleColor
                         )
                     }
-                    
+
                     if (!isUser) {
                         Row(
                             modifier = Modifier
@@ -193,7 +195,8 @@ fun FuturisticChatBubble(
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 message.inferenceTimeMs?.let { timeMs ->
                                     val seconds = timeMs / 1000.0
-                                    val tps = if (seconds > 0) message.text.length / (seconds * 4) else 0.0
+                                    val tps =
+                                        if (seconds > 0) message.text.length / (seconds * 4) else 0.0
 
                                     Badge(text = "%.2fs".format(Locale.US, seconds))
                                     Badge(text = "%.1f tk/s".format(Locale.US, tps))
@@ -211,7 +214,9 @@ fun FuturisticChatBubble(
                                         Icon(
                                             imageVector = Icons.Default.Download,
                                             contentDescription = stringResource(R.string.save_image),
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                                alpha = 0.7f
+                                            ),
                                             modifier = Modifier.size(18.dp)
                                         )
                                     }
@@ -232,14 +237,14 @@ fun FuturisticChatBubble(
                     }
                 }
             }
-            
+
             val footerText = if (isUser) {
                 val time = SimpleDateFormat("h:mm a", Locale.getDefault()).format(Date())
                 "$time • ${stringResource(R.string.sent_status)}"
             } else {
                 message.modelName ?: stringResource(R.string.model_optimization_info)
             }
-            
+
             Text(
                 text = footerText.uppercase(),
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
@@ -302,7 +307,10 @@ private fun GeneratedMessageImage(
                     Text(
                         text = "EXPLICIT IMAGE",
                         color = MaterialTheme.colorScheme.onSurface,
-                        style = Typography.labelSmall.copy(fontSize = 10.sp, fontWeight = FontWeight.Bold),
+                        style = Typography.labelSmall.copy(
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold
+                        ),
                         modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
                     )
                 }
@@ -328,7 +336,11 @@ fun Badge(text: String) {
             Text(
                 text = text,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                style = Typography.labelSmall.copy(fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp)
+                style = Typography.labelSmall.copy(
+                    fontSize = 8.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 0.5.sp
+                )
             )
         }
     }

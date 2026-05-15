@@ -45,27 +45,30 @@ data class ChatState(
     val ageVerificationRequest: AgeVerificationRequest? = null
 ) : UiState {
     val isReady: Boolean get() = runtimeState is RuntimeState.Ready
-    
-    val isLoading: Boolean get() = runtimeState is RuntimeState.Initializing ||
-            sendState is SendState.Sending ||
-            sendState is SendState.GeneratingImage ||
-            (agentState is AgentState.Planning || agentState is AgentState.ExecutingTool)
-    
-    val loadingMessage: String? get() = when {
-        agentState is AgentState.Planning -> Constants.UiStatus.PLANNING
-        agentState is AgentState.ExecutingTool -> "${Constants.UiStatus.EXECUTING_PREFIX}${agentState.toolName.uppercase()}"
-        sendState is SendState.GeneratingImage -> Constants.UiStatus.GENERATING_IMAGE
-        sendState is SendState.Sending -> Constants.UiStatus.THINKING
-        runtimeState is RuntimeState.Initializing -> runtimeState.message
-        else -> null
-    }
 
-    val error: String? get() = when {
-        runtimeState is RuntimeState.Error -> runtimeState.message
-        sendState is SendState.Error -> sendState.message
-        agentState is AgentState.Error -> agentState.message
-        else -> null
-    }
+    val isLoading: Boolean
+        get() = runtimeState is RuntimeState.Initializing ||
+                sendState is SendState.Sending ||
+                sendState is SendState.GeneratingImage ||
+                (agentState is AgentState.Planning || agentState is AgentState.ExecutingTool)
+
+    val loadingMessage: String?
+        get() = when {
+            agentState is AgentState.Planning -> Constants.UiStatus.PLANNING
+            agentState is AgentState.ExecutingTool -> "${Constants.UiStatus.EXECUTING_PREFIX}${agentState.toolName.uppercase()}"
+            sendState is SendState.GeneratingImage -> Constants.UiStatus.GENERATING_IMAGE
+            sendState is SendState.Sending -> Constants.UiStatus.THINKING
+            runtimeState is RuntimeState.Initializing -> runtimeState.message
+            else -> null
+        }
+
+    val error: String?
+        get() = when {
+            runtimeState is RuntimeState.Error -> runtimeState.message
+            sendState is SendState.Error -> sendState.message
+            agentState is AgentState.Error -> agentState.message
+            else -> null
+        }
 
     val isWaitingForConfirmation: Boolean get() = agentState is AgentState.WaitingForConfirmation
     val confirmationMessage: String? get() = (agentState as? AgentState.WaitingForConfirmation)?.message
@@ -94,7 +97,9 @@ sealed class ChatIntent : UiIntent {
 sealed class ChatEffect : UiEffect {
     data object ScrollToBottom : ChatEffect()
     data class ShowToast(val message: String) : ChatEffect()
-    data class ShareMessage(val title: String, val text: String, val imageUri: Uri? = null) : ChatEffect()
+    data class ShareMessage(val title: String, val text: String, val imageUri: Uri? = null) :
+        ChatEffect()
+
     data class SaveImage(val imageUri: Uri) : ChatEffect()
     data object ShowImageModelDownloadPrompt : ChatEffect()
     data object HideKeyboard : ChatEffect()

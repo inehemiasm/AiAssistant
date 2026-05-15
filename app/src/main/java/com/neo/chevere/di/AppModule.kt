@@ -97,11 +97,11 @@ abstract class AppModule {
                         isLenient = true
                     })
                 }
-                
+
                 install(HttpRedirect) {
                     checkHttpMethod = false
                 }
-                
+
                 // Keep catalog and model downloads looking like normal browser requests.
                 install(DefaultRequest) {
                     header(HttpHeaders.UserAgent, Constants.Network.DEFAULT_USER_AGENT)

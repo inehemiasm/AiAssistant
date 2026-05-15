@@ -24,36 +24,40 @@ class WeatherTool @Inject constructor(
     private val preferenceManager: PreferenceManager
 ) : AgentTool {
     override val name: String = "get_weather"
-    override val description: String = "Fetches the current weather and forecast for a given location using the user's weather unit setting."
+    override val description: String =
+        "Fetches the current weather and forecast for a given location using the user's weather unit setting."
     override val inputSchema: String = "location: The name of the city or place to get weather for."
 
     override suspend fun execute(args: Map<String, String>): ToolResult {
-        val location = args["location"]?.trim() ?: return ToolResult.Error("Missing 'location' argument")
+        val location =
+            args["location"]?.trim() ?: return ToolResult.Error("Missing 'location' argument")
 
         return try {
             val units = WeatherUnits.from(preferenceManager.weatherUnitPreference.first())
 
             // 1. Geocoding: Convert location name to coordinates
-            val geocodeResponse: GeocodeResponse = httpClient.get("https://geocoding-api.open-meteo.com/v1/search") {
-                parameter("name", location)
-                parameter("count", "1")
-                parameter("language", "en")
-                parameter("format", "json")
-            }.body()
+            val geocodeResponse: GeocodeResponse =
+                httpClient.get("https://geocoding-api.open-meteo.com/v1/search") {
+                    parameter("name", location)
+                    parameter("count", "1")
+                    parameter("language", "en")
+                    parameter("format", "json")
+                }.body()
 
-            val city = geocodeResponse.results?.firstOrNull() 
+            val city = geocodeResponse.results?.firstOrNull()
                 ?: return ToolResult.Error("Could not find location: $location")
 
             // 2. Fetch Weather using coordinates
-            val weatherResponse: WeatherResponse = httpClient.get("https://api.open-meteo.com/v1/forecast") {
-                parameter("latitude", city.latitude)
-                parameter("longitude", city.longitude)
-                parameter("current_weather", "true")
-                parameter("timezone", "auto")
-                parameter("daily", "weathercode,temperature_2m_max,temperature_2m_min")
-                parameter("temperature_unit", units.temperatureApiValue)
-                parameter("wind_speed_unit", units.windSpeedApiValue)
-            }.body()
+            val weatherResponse: WeatherResponse =
+                httpClient.get("https://api.open-meteo.com/v1/forecast") {
+                    parameter("latitude", city.latitude)
+                    parameter("longitude", city.longitude)
+                    parameter("current_weather", "true")
+                    parameter("timezone", "auto")
+                    parameter("daily", "weathercode,temperature_2m_max,temperature_2m_min")
+                    parameter("temperature_unit", units.temperatureApiValue)
+                    parameter("wind_speed_unit", units.windSpeedApiValue)
+                }.body()
 
             val current = weatherResponse.current_weather
             val result = buildString {
@@ -61,7 +65,7 @@ class WeatherTool @Inject constructor(
                 append("- Temperature: ${current.temperature} ${units.temperatureLabel}\n")
                 append("- Condition: ${getWeatherCondition(current.weathercode)}\n")
                 append("- Wind Speed: ${current.windspeed} ${units.windSpeedLabel}\n")
-                
+
                 weatherResponse.daily?.let { daily ->
                     append("\nForecast for today:\n")
                     append("- High: ${daily.temperature_2m_max.firstOrNull()} ${units.temperatureLabel}\n")
@@ -139,6 +143,7 @@ class WeatherTool @Inject constructor(
                         temperatureLabel = "C",
                         windSpeedLabel = "km/h"
                     )
+
                     WeatherUnitSystem.IMPERIAL -> WeatherUnits(
                         temperatureApiValue = "fahrenheit",
                         windSpeedApiValue = "mph",

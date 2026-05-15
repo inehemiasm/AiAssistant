@@ -45,8 +45,12 @@ class ModelsViewModel @Inject constructor(
             repository.getInitStatus().collectLatest { status ->
                 if (currentState.isSwitching) {
                     Log.d(TAG, "Warmup status: $status")
-                    setState { 
-                        copy(switchState = ModelSwitchState.WarmingUp(currentState.pendingModel ?: currentState.selectedModel, status))
+                    setState {
+                        copy(
+                            switchState = ModelSwitchState.WarmingUp(
+                                currentState.pendingModel ?: currentState.selectedModel, status
+                            )
+                        )
                     }
                 }
             }
@@ -65,27 +69,32 @@ class ModelsViewModel @Inject constructor(
                 Log.d(TAG, "Model selected in UI: ${intent.modelName}")
                 setState { copy(pendingModel = intent.modelName) }
             }
+
             is ModelsIntent.ConfirmSwitch -> {
                 confirmSwitch(intent.modelName, intent.modelPath)
             }
+
             is ModelsIntent.SwitchModel -> {
                 // Legacy support - directly updating preference, but we should use ConfirmSwitch
                 preferenceManager.updateSelectedModel(intent.modelName)
             }
+
             is ModelsIntent.DownloadModel -> {
                 downloadModel(intent.modelName, intent.baseDir)
             }
+
             ModelsIntent.ClearError -> setState { copy(catalogState = CatalogState.Idle) }
-            ModelsIntent.RefreshMetrics -> { /* Logic to update metrics */ }
+            ModelsIntent.RefreshMetrics -> { /* Logic to update metrics */
+            }
         }
     }
 
     private fun confirmSwitch(modelName: String, modelPath: String) {
         Log.d(TAG, "Confirming switch to $modelName")
         val fromModel = currentState.selectedModel
-        
-        setState { 
-            copy(switchState = ModelSwitchState.Switching(fromModel, modelName)) 
+
+        setState {
+            copy(switchState = ModelSwitchState.Switching(fromModel, modelName))
         }
 
         viewModelScope.launch {
@@ -94,7 +103,7 @@ class ModelsViewModel @Inject constructor(
                 .onSuccess {
                     Log.d(TAG, "Model switch successful: $modelName")
                     preferenceManager.updateSelectedModel(modelName)
-                    setState { 
+                    setState {
                         copy(
                             selectedModel = modelName,
                             pendingModel = null,
@@ -104,8 +113,13 @@ class ModelsViewModel @Inject constructor(
                 }
                 .onFailure { e ->
                     Log.e(TAG, "Model switch failed", e)
-                    setState { 
-                        copy(switchState = ModelSwitchState.Error(modelName, e.message ?: "Unknown error")) 
+                    setState {
+                        copy(
+                            switchState = ModelSwitchState.Error(
+                                modelName,
+                                e.message ?: "Unknown error"
+                            )
+                        )
                     }
                     sendEffect { ModelsEffect.ShowToast("Switch failed: ${e.message}") }
                 }
@@ -124,10 +138,12 @@ class ModelsViewModel @Inject constructor(
     }
 
     private fun downloadModel(modelName: String, baseDir: String) {
-        val modelEntry = currentState.remoteModels.find { it.effectiveFileName == modelName || it.name == modelName } ?: return
-        
+        val modelEntry =
+            currentState.remoteModels.find { it.effectiveFileName == modelName || it.name == modelName }
+                ?: return
+
         setState { copy(isDownloading = true, downloadProgress = 0) }
-        
+
         viewModelScope.launch {
             repository.downloadModel(modelEntry).collect { progress ->
                 when (progress) {
@@ -136,6 +152,7 @@ class ModelsViewModel @Inject constructor(
                         setState { copy(isDownloading = false, downloadProgress = null) }
                         loadLocalModels()
                     }
+
                     is DownloadProgress.Error -> {
                         setState { copy(isDownloading = false, downloadProgress = null) }
                         sendEffect { ModelsEffect.ShowToast(progress.message) }

@@ -34,12 +34,13 @@ class WebSearchTool @Inject constructor(
     private val searchCacheDao: SearchCacheDao
 ) : AgentTool {
     override val name: String = "web_search"
-    override val description: String = "Searches the web for real-time information, news, or general knowledge that might be after the model's cutoff date."
+    override val description: String =
+        "Searches the web for real-time information, news, or general knowledge that might be after the model's cutoff date."
     override val inputSchema: String = "query: The search term or question to look up."
 
     override suspend fun execute(args: Map<String, String>): ToolResult {
         val query = args["query"]?.trim() ?: return ToolResult.Error("Missing 'query' argument")
-        
+
         // 1. Check Persistent Cache (Can work offline)
         val now = System.currentTimeMillis()
         try {
@@ -71,7 +72,7 @@ class WebSearchTool @Inject constructor(
             }.body()
 
             val formattedResults = formatSerperResults(response)
-            
+
             // 4. Update Cache with LRU pruning
             try {
                 searchCacheDao.insertAndPrune(
@@ -81,7 +82,7 @@ class WebSearchTool @Inject constructor(
             } catch (e: Exception) {
                 Log.e("WebSearchTool", "Error saving to cache", e)
             }
-            
+
             ToolResult.Success(formattedResults)
         } catch (e: Exception) {
             Log.e("WebSearchTool", "Search failed", e)
@@ -90,10 +91,11 @@ class WebSearchTool @Inject constructor(
     }
 
     private fun isNetworkAvailable(): Boolean {
-        val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val connectivityManager =
+            context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         val network = connectivityManager.activeNetwork ?: return false
         val activeNetwork = connectivityManager.getNetworkCapabilities(network) ?: return false
-        
+
         return when {
             activeNetwork.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> true
             activeNetwork.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> true

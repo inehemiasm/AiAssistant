@@ -47,22 +47,27 @@ class ToolCallParser @Inject constructor() {
                         quoteChar = null
                     }
                 }
+
                 char == '"' || char == '\'' -> {
                     quoteChar = char
                     current.append(char)
                 }
+
                 char == '{' || char == '[' || char == '(' -> {
                     nestingDepth++
                     current.append(char)
                 }
+
                 char == '}' || char == ']' || char == ')' -> {
                     nestingDepth = (nestingDepth - 1).coerceAtLeast(0)
                     current.append(char)
                 }
+
                 char == ',' && nestingDepth == 0 -> {
                     params.add(current.toString())
                     current.clear()
                 }
+
                 else -> current.append(char)
             }
             index++
@@ -74,7 +79,7 @@ class ToolCallParser @Inject constructor() {
 
         return params
     }
-    
+
     fun stripToolCall(text: String): String {
         val span = findToolCallSpan(text) ?: return text.trim()
         return (text.substring(0, span.start) + text.substring(span.endExclusive)).trim()
@@ -172,12 +177,14 @@ class ToolCallParser @Inject constructor() {
                         quoteChar = null
                     }
                 }
+
                 char == '"' || char == '\'' -> quoteChar = char
                 char == '[' || char == '{' || char == '(' -> nestingDepth++
                 char == ']' -> {
                     if (nestingDepth == 0) return index
                     nestingDepth--
                 }
+
                 char == '}' || char == ')' -> nestingDepth = (nestingDepth - 1).coerceAtLeast(0)
             }
             index++

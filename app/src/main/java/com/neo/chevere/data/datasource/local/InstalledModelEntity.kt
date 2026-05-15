@@ -38,7 +38,8 @@ fun InstalledModelEntity.toDomain(): InstalledModel {
         format = format,
         runtime = runtime,
         taskType = taskType,
-        capabilities = capabilities.split(",").filter { it.isNotEmpty() }.map { ModelCapability.valueOf(it) }.toSet(),
+        capabilities = capabilities.split(",").filter { it.isNotEmpty() }
+            .map { ModelCapability.valueOf(it) }.toSet(),
         installStatus = installStatus,
         sizeBytes = sizeBytes,
         checksum = checksum,

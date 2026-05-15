@@ -14,7 +14,11 @@ import com.neo.chevere.ui.common.CatalogState
 sealed class ModelSwitchState {
     data object Idle : ModelSwitchState()
     data class Switching(val fromModelId: String?, val toModelId: String) : ModelSwitchState()
-    data class WarmingUp(val modelId: String, val progress: InitializationStatus = InitializationStatus.Uninitialized) : ModelSwitchState()
+    data class WarmingUp(
+        val modelId: String,
+        val progress: InitializationStatus = InitializationStatus.Uninitialized
+    ) : ModelSwitchState()
+
     data class Ready(val modelId: String) : ModelSwitchState()
     data class Error(val modelId: String, val message: String) : ModelSwitchState()
 }
@@ -34,7 +38,7 @@ data class MarketplaceState(
 ) : UiState {
     val isDownloading: Boolean get() = downloadingModelName != null
     val isSwitching: Boolean get() = switchState is ModelSwitchState.Switching || switchState is ModelSwitchState.WarmingUp
-    
+
     val chatRemoteModels: List<ModelEntry>
         get() = remoteModels.filter { it.activationCategory() == ModelActivationCategory.CHAT }
 

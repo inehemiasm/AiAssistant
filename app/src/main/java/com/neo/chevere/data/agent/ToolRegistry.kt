@@ -27,12 +27,12 @@ class ToolRegistry @Inject constructor(
      * @return The [AgentTool] if found, or `null` otherwise.
      */
     fun getTool(name: String): AgentTool? = tools.find { it.name == name }
-    
+
     /**
      * Returns a list of all registered tools.
      */
     fun getAllTools(): List<AgentTool> = tools.toList()
-    
+
     /**
      * Generates a system prompt section describing all available tools.
      *
@@ -45,7 +45,7 @@ class ToolRegistry @Inject constructor(
 
     private fun buildToolsSystemPrompt(): String {
         if (tools.isEmpty()) return ""
-        
+
         return buildString {
             append("Agent protocol:\n")
             append("1. Treat the latest CURRENT USER REQUEST as the task to complete now.\n")

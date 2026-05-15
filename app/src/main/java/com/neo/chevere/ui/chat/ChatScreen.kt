@@ -17,10 +17,8 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -38,6 +36,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CloudOff
@@ -95,14 +95,14 @@ import com.neo.chevere.ui.common.ErrorSnackbar
 import com.neo.chevere.ui.common.hapticForFeedbackMessage
 import com.neo.chevere.ui.common.performChevereHaptic
 import com.neo.chevere.ui.designsystem.Typography
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 /**
  * The main Chat screen of the application.
@@ -115,7 +115,7 @@ fun ChatScreen(
     onSettingsClick: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
-    
+
     // Check if the model is initializing to show the full-screen loading state
     val isInitializing = state.runtimeState is RuntimeState.Initializing
 
@@ -128,7 +128,8 @@ fun ChatScreen(
     ) { initializing ->
         if (initializing) {
             ModelInitializationScreen(
-                statusMessage = (state.runtimeState as? RuntimeState.Initializing)?.message ?: "INITIALIZING..."
+                statusMessage = (state.runtimeState as? RuntimeState.Initializing)?.message
+                    ?: "INITIALIZING..."
             )
         } else {
             ChatContent(
@@ -157,14 +158,14 @@ private fun ChatContent(
     var wasAiBusy by remember { mutableStateOf(false) }
     val showOnboarding = state.localModels.isEmpty() && !state.isLoading
     val isAiBusy = state.sendState is SendState.Sending ||
-        state.sendState is SendState.GeneratingImage ||
-        state.agentState is AgentState.Planning ||
-        state.agentState is AgentState.ExecutingTool
+            state.sendState is SendState.GeneratingImage ||
+            state.agentState is AgentState.Planning ||
+            state.agentState is AgentState.ExecutingTool
     val inputBusyMessage = when {
         state.sendState is SendState.GeneratingImage -> Constants.UiStatus.GENERATING_IMAGE
         else -> Constants.UiStatus.THINKING
     }
-    
+
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
 
@@ -188,7 +189,11 @@ private fun ChatContent(
         if (isGranted) {
             Toast.makeText(context, "Permission granted. Try again.", Toast.LENGTH_SHORT).show()
         } else {
-            Toast.makeText(context, "Camera permission is required to take photos.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+                context,
+                "Camera permission is required to take photos.",
+                Toast.LENGTH_SHORT
+            ).show()
         }
     }
 
@@ -332,7 +337,12 @@ private fun ChatContent(
                         onTextChange = { viewModel.onIntent(ChatIntent.UpdateInputText(it)) },
                         onSend = {
                             hapticView.performChevereHaptic(ChevereHaptic.Action)
-                            viewModel.onIntent(ChatIntent.SendMessage(state.inputText, state.selectedImageUri))
+                            viewModel.onIntent(
+                                ChatIntent.SendMessage(
+                                    state.inputText,
+                                    state.selectedImageUri
+                                )
+                            )
                         },
                         onStop = {
                             hapticView.performChevereHaptic(ChevereHaptic.Warning)
@@ -344,10 +354,17 @@ private fun ChatContent(
                         },
                         onCameraClick = {
                             hapticView.performChevereHaptic(ChevereHaptic.Selection)
-                            when (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)) {
+                            when (ContextCompat.checkSelfPermission(
+                                context,
+                                Manifest.permission.CAMERA
+                            )) {
                                 PackageManager.PERMISSION_GRANTED -> {
-                                    val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
-                                    val storageDir = File(context.cacheDir, "images").apply { mkdirs() }
+                                    val timeStamp = SimpleDateFormat(
+                                        "yyyyMMdd_HHmmss",
+                                        Locale.US
+                                    ).format(Date())
+                                    val storageDir =
+                                        File(context.cacheDir, "images").apply { mkdirs() }
                                     val photoFile = File(storageDir, "JPEG_${timeStamp}_.jpg")
                                     val photoUri: Uri = FileProvider.getUriForFile(
                                         context,
@@ -357,6 +374,7 @@ private fun ChatContent(
                                     viewModel.onIntent(ChatIntent.SetTempCameraUri(photoUri))
                                     cameraLauncher.launch(photoUri)
                                 }
+
                                 else -> {
                                     permissionLauncher.launch(Manifest.permission.CAMERA)
                                 }
@@ -385,21 +403,29 @@ private fun ChatContent(
                         listState.animateScrollToItem(lastIndex)
                     }
                 }
+
                 is ChatEffect.HideKeyboard -> {
                     keyboardController?.hide()
                     focusManager.clearFocus()
                 }
+
                 is ChatEffect.ShowToast -> {
                     hapticView.performChevereHaptic(effect.message.hapticForFeedbackMessage())
                     Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
                 }
+
                 is ChatEffect.ShareMessage -> {
                     try {
                         shareChatMessage(context, effect)
                     } catch (_: ActivityNotFoundException) {
-                        Toast.makeText(context, context.getString(R.string.share_failed), Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            context,
+                            context.getString(R.string.share_failed),
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
                 }
+
                 is ChatEffect.SaveImage -> {
                     val saved = runCatching {
                         withContext(Dispatchers.IO) {
@@ -414,6 +440,7 @@ private fun ChatContent(
                     ).show()
                     hapticView.performChevereHaptic(if (saved) ChevereHaptic.Success else ChevereHaptic.Warning)
                 }
+
                 ChatEffect.ShowImageModelDownloadPrompt -> {
                     hapticView.performChevereHaptic(ChevereHaptic.Warning)
                     showImageModelDownloadPrompt = true
@@ -454,9 +481,16 @@ private fun shareChatMessage(context: Context, effect: ChatEffect.ShareMessage) 
     }
 
     imageUri?.let { uri ->
-        val targets = context.packageManager.queryIntentActivities(sendIntent, PackageManager.MATCH_DEFAULT_ONLY)
+        val targets = context.packageManager.queryIntentActivities(
+            sendIntent,
+            PackageManager.MATCH_DEFAULT_ONLY
+        )
         targets.forEach { target ->
-            context.grantUriPermission(target.activityInfo.packageName, uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            context.grantUriPermission(
+                target.activityInfo.packageName,
+                uri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION
+            )
         }
     }
 
@@ -478,7 +512,10 @@ private fun saveImageToGallery(context: Context, sourceUri: Uri): Boolean {
         else -> "png"
     }
     val values = ContentValues().apply {
-        put(MediaStore.Images.Media.DISPLAY_NAME, "chevere_ai_${System.currentTimeMillis()}.$extension")
+        put(
+            MediaStore.Images.Media.DISPLAY_NAME,
+            "chevere_ai_${System.currentTimeMillis()}.$extension"
+        )
         put(MediaStore.Images.Media.MIME_TYPE, mimeType)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/Chevere AI")
@@ -533,9 +570,9 @@ private fun EmptyModelState(onModelsClick: () -> Unit) {
                 )
             }
         }
-        
+
         Spacer(Modifier.height(24.dp))
-        
+
         Text(
             text = stringResource(R.string.onboarding_title),
             style = Typography.headlineMedium.copy(fontWeight = FontWeight.ExtraBold),
@@ -543,9 +580,9 @@ private fun EmptyModelState(onModelsClick: () -> Unit) {
             textAlign = TextAlign.Center,
             letterSpacing = 0.sp
         )
-        
+
         Spacer(Modifier.height(10.dp))
-        
+
         Text(
             text = stringResource(R.string.onboarding_subtitle),
             style = Typography.bodyMedium,
@@ -553,7 +590,7 @@ private fun EmptyModelState(onModelsClick: () -> Unit) {
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(horizontal = 8.dp)
         )
-        
+
         Spacer(Modifier.height(24.dp))
 
         Column(
@@ -583,7 +620,7 @@ private fun EmptyModelState(onModelsClick: () -> Unit) {
         }
 
         Spacer(Modifier.height(28.dp))
-        
+
         Button(
             onClick = onModelsClick,
             shape = MaterialTheme.shapes.large,
@@ -594,7 +631,10 @@ private fun EmptyModelState(onModelsClick: () -> Unit) {
             Spacer(Modifier.width(12.dp))
             Text(
                 stringResource(R.string.onboarding_download_cta),
-                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                style = MaterialTheme.typography.labelLarge.copy(
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp
+                )
             )
         }
 

@@ -27,8 +27,8 @@ object DatabaseModule {
             AppDatabase::class.java,
             "ai_assistant_db"
         )
-        .fallbackToDestructiveMigration()
-        .build()
+            .fallbackToDestructiveMigration()
+            .build()
     }
 
     @Provides

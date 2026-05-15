@@ -1,5 +1,6 @@
 package com.neo.chevere.ui.settings
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -14,10 +15,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DarkMode
@@ -72,13 +72,23 @@ fun SettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.system_settings), style = Typography.titleLarge, letterSpacing = 2.sp) },
+                title = {
+                    Text(
+                        stringResource(R.string.system_settings),
+                        style = Typography.titleLarge,
+                        letterSpacing = 2.sp
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = {
                         hapticView.performChevereHaptic(ChevereHaptic.Selection)
                         onBackClick()
                     }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back), tint = MaterialTheme.colorScheme.primary)
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            stringResource(R.string.back),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -90,7 +100,12 @@ fun SettingsScreen(
         },
         containerColor = Color.Transparent
     ) { innerPadding ->
-        Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(innerPadding)) {
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+                .padding(innerPadding)
+        ) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -98,16 +113,19 @@ fun SettingsScreen(
                     .verticalScroll(rememberScrollState())
             ) {
                 Text(
-                    stringResource(R.string.interface_configuration), 
-                    style = Typography.labelSmall, 
+                    stringResource(R.string.interface_configuration),
+                    style = Typography.labelSmall,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
-                
+
                 Surface(
                     color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.5f),
                     shape = RoundedCornerShape(16.dp),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.1f))
+                    border = BorderStroke(
+                        1.dp,
+                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.1f)
+                    )
                 ) {
                     Row(
                         modifier = Modifier
@@ -125,9 +143,15 @@ fun SettingsScreen(
                             )
                             Spacer(Modifier.width(16.dp))
                             Column {
-                                Text(stringResource(R.string.high_tech_mode), style = Typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
                                 Text(
-                                    if (state.isDarkMode) stringResource(R.string.neural_dark_active) else stringResource(R.string.standard_light_active),
+                                    stringResource(R.string.high_tech_mode),
+                                    style = Typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    if (state.isDarkMode) stringResource(R.string.neural_dark_active) else stringResource(
+                                        R.string.standard_light_active
+                                    ),
                                     style = Typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -158,18 +182,18 @@ fun SettingsScreen(
                         viewModel.onIntent(SettingsIntent.UpdateWeatherUnitSystem(it))
                     }
                 )
-                
+
                 Spacer(Modifier.height(32.dp))
-                
+
                 Text(
-                    stringResource(R.string.system_info), 
-                    style = Typography.labelSmall, 
+                    stringResource(R.string.system_info),
+                    style = Typography.labelSmall,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
-                
+
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.1f))
-                
+
                 SystemInfoRow(stringResource(R.string.version_label), state.appVersion)
                 SystemInfoRow(stringResource(R.string.engine_label), state.engineInfo)
                 SystemInfoRow(stringResource(R.string.protocol_label), state.protocolInfo)
@@ -379,7 +403,15 @@ fun SystemInfoRow(label: String, value: String) {
             .padding(vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(label, style = Typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(value, style = Typography.bodyMedium.copy(fontFamily = FontFamily.Monospace), color = MaterialTheme.colorScheme.onSurface)
+        Text(
+            label,
+            style = Typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            value,
+            style = Typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
+            color = MaterialTheme.colorScheme.onSurface
+        )
     }
 }

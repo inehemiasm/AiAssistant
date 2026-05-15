@@ -26,12 +26,13 @@ data class InstalledModel(
      * Helper to check if the model is in a healthy, usable state.
      */
     val isHealthy: Boolean get() = installStatus == InstallStatus.INSTALLED
-    
+
     /**
      * Helper to check if the model is currently undergoing a lifecycle transition.
      */
-    val isTransitioning: Boolean get() = installStatus == InstallStatus.DOWNLOADING || 
-            installStatus == InstallStatus.VERIFYING
+    val isTransitioning: Boolean
+        get() = installStatus == InstallStatus.DOWNLOADING ||
+                installStatus == InstallStatus.VERIFYING
 }
 
 /**
@@ -105,16 +106,16 @@ enum class InstallStatus {
 sealed interface InitializationStatus {
     /** The engine is not initialized and no initialization is in progress. */
     data object Uninitialized : InitializationStatus
-    
+
     /** 
      * The engine is currently being initialized.
      * @property message A descriptive message of the current step (e.g., "WARMING UP").
      */
     data class Initializing(val message: String) : InitializationStatus
-    
+
     /** The engine is ready to receive requests. */
     data object Ready : InitializationStatus
-    
+
     /** 
      * Initialization failed.
      * @property message A description of the error.
@@ -129,7 +130,8 @@ sealed interface InitializationStatus {
 sealed class LoadResult {
     /** Indicates the model was loaded successfully. */
     data object Success : LoadResult()
-    /** 
+
+    /**
      * Indicates the model failed to load. 
      * @property message A description of the failure.
      * @property throwable The exception that caused the failure, if any.
@@ -146,7 +148,7 @@ sealed class InferenceResult {
      * @property text The generated response text.
      */
     data class Success(val text: String) : InferenceResult()
-    
+
     /**
      * Indicates the inference was successful with an image response.
      * @property imageUri The URI of the generated image.
@@ -228,10 +230,10 @@ sealed class DownloadProgress {
      * @property percent The download percentage (0-100).
      */
     data class Progress(val percent: Int) : DownloadProgress()
-    
+
     /** Indicates the download finished successfully. */
     data object Finished : DownloadProgress()
-    
+
     /** 
      * Indicates the download failed.
      * @property message A description of the failure.

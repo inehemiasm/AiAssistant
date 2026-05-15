@@ -33,7 +33,6 @@ import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.util.concurrent.atomic.AtomicLong
 import java.util.zip.ZipInputStream
-import kotlin.coroutines.coroutineContext
 
 private const val TAG = "ModelDownloadWorker"
 
@@ -63,35 +62,39 @@ class ModelDownloadWorker @AssistedInject constructor(
         val repositoryFiles = inputData.getStringArray(Constants.Download.INPUT_REPOSITORY_FILES)
             ?.filter { it.isNotBlank() }
             .orEmpty()
-        
+
         Log.d(TAG, "Worker started. Name: $modelName, URL: $uri")
 
         if (uri == null || modelName == null || modelId == null) {
             return@withContext Result.failure(workDataOf(Constants.Download.OUTPUT_ERROR to "Missing metadata"))
         }
-        
+
         if (!modelName.endsWith(Constants.ModelFiles.LITERTLM_EXTENSION) &&
             !modelName.endsWith(Constants.ModelFiles.BIN_EXTENSION) &&
             !modelName.endsWith(Constants.ModelFiles.ZIP_EXTENSION)
         ) {
-             return@withContext Result.failure(workDataOf(Constants.Download.OUTPUT_ERROR to "Unsupported file type"))
+            return@withContext Result.failure(workDataOf(Constants.Download.OUTPUT_ERROR to "Unsupported file type"))
         }
 
         val targetFile = File(applicationContext.filesDir, modelName)
-        val tempFile = File(applicationContext.filesDir, "$modelName${Constants.ModelFiles.TEMP_EXTENSION}")
+        val tempFile =
+            File(applicationContext.filesDir, "$modelName${Constants.ModelFiles.TEMP_EXTENSION}")
         val fileType = modelName.substringAfterLast('.', missingDelimiterValue = "directory")
         val startedAtMs = System.currentTimeMillis()
         telemetry.logModelDownloadStarted(modelId = modelId, fileType = fileType)
-        
+
         try {
             setForeground(getForegroundInfo())
-            
+
             // Mark as downloading in registry
             installedModelRegistry.updateInstallStatus(modelId, InstallStatus.DOWNLOADING)
 
             if (repositoryFiles.isNotEmpty()) {
                 val targetDir = File(applicationContext.filesDir, modelId)
-                val tempDir = File(applicationContext.filesDir, "${targetDir.name}${Constants.ModelFiles.TEMP_DIRECTORY_EXTENSION}")
+                val tempDir = File(
+                    applicationContext.filesDir,
+                    "${targetDir.name}${Constants.ModelFiles.TEMP_DIRECTORY_EXTENSION}"
+                )
                 if (targetDir.exists()) targetDir.deleteRecursively()
                 if (tempDir.exists()) tempDir.deleteRecursively()
                 tempDir.mkdirs()
@@ -126,11 +129,11 @@ class ModelDownloadWorker @AssistedInject constructor(
                 coroutineContext.ensureActive()
                 emitDownloadProgress(status)
             }
-            
+
             if (tempFile.exists() && tempFile.length() > Constants.ModelFiles.MIN_VALID_FILE_SIZE_BYTES) {
                 // Phase 4: Integrity check
                 installedModelRegistry.updateInstallStatus(modelId, InstallStatus.VERIFYING)
-                
+
                 if (expectedSha256 != null) {
                     val actualSha256 = calculateSha256(tempFile)
                     if (!actualSha256.equals(expectedSha256, ignoreCase = true)) {
@@ -143,7 +146,10 @@ class ModelDownloadWorker @AssistedInject constructor(
 
                 if (modelName.endsWith(Constants.ModelFiles.ZIP_EXTENSION)) {
                     val targetDir = File(applicationContext.filesDir, modelId)
-                    val tempDir = File(applicationContext.filesDir, "${targetDir.name}${Constants.ModelFiles.TEMP_DIRECTORY_EXTENSION}")
+                    val tempDir = File(
+                        applicationContext.filesDir,
+                        "${targetDir.name}${Constants.ModelFiles.TEMP_DIRECTORY_EXTENSION}"
+                    )
                     if (targetDir.exists()) targetDir.deleteRecursively()
                     if (tempDir.exists()) tempDir.deleteRecursively()
                     tempDir.mkdirs()
@@ -192,7 +198,10 @@ class ModelDownloadWorker @AssistedInject constructor(
         } catch (e: CancellationException) {
             Log.d(TAG, "Download canceled: ${e.message}")
             if (tempFile.exists()) tempFile.delete()
-            File(applicationContext.filesDir, "${modelId}${Constants.ModelFiles.TEMP_DIRECTORY_EXTENSION}").deleteRecursively()
+            File(
+                applicationContext.filesDir,
+                "${modelId}${Constants.ModelFiles.TEMP_DIRECTORY_EXTENSION}"
+            ).deleteRecursively()
             telemetry.logModelDownloadFinished(
                 modelId = modelId,
                 success = false,
@@ -204,7 +213,10 @@ class ModelDownloadWorker @AssistedInject constructor(
         } catch (e: Exception) {
             Log.e(TAG, "Download failed: ${e.message}")
             if (tempFile.exists()) tempFile.delete()
-            File(applicationContext.filesDir, "${modelId}${Constants.ModelFiles.TEMP_DIRECTORY_EXTENSION}").deleteRecursively()
+            File(
+                applicationContext.filesDir,
+                "${modelId}${Constants.ModelFiles.TEMP_DIRECTORY_EXTENSION}"
+            ).deleteRecursively()
             installedModelRegistry.updateInstallStatus(modelId, InstallStatus.FAILED)
             telemetry.logModelDownloadFinished(
                 modelId = modelId,
@@ -214,7 +226,12 @@ class ModelDownloadWorker @AssistedInject constructor(
                 errorType = e::class.java.simpleName
             )
             telemetry.recordNonFatal(e, TelemetryConstants.Context.MODEL_DOWNLOAD)
-            Result.failure(workDataOf(Constants.Download.OUTPUT_ERROR to (e.localizedMessage ?: Constants.Download.UNKNOWN_ERROR)))
+            Result.failure(
+                workDataOf(
+                    Constants.Download.OUTPUT_ERROR to (e.localizedMessage
+                        ?: Constants.Download.UNKNOWN_ERROR)
+                )
+            )
         }
     }
 
@@ -296,14 +313,15 @@ class ModelDownloadWorker @AssistedInject constructor(
     private fun findModelRoot(directory: File): File? {
         if (!directory.isDirectory) return null
         if (hasRequiredFiles(directory)) return directory
-        
-        return directory.walkTopDown().maxDepth(3).filter { it.isDirectory }.find { hasRequiredFiles(it) }
+
+        return directory.walkTopDown().maxDepth(3).filter { it.isDirectory }
+            .find { hasRequiredFiles(it) }
     }
 
     private fun hasRequiredFiles(directory: File): Boolean {
         return Constants.ImageGeneration.ONNX_REQUIRED_FILES.all { relativePath ->
             File(directory, relativePath).isFile ||
-                File(directory, relativePath.replace(".ort", ".onnx")).isFile
+                    File(directory, relativePath.replace(".ort", ".onnx")).isFile
         }
     }
 
@@ -337,15 +355,24 @@ class ModelDownloadWorker @AssistedInject constructor(
             .build()
 
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            ForegroundInfo(notificationId, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+            ForegroundInfo(
+                notificationId,
+                notification,
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+            )
         } else {
             ForegroundInfo(notificationId, notification)
         }
     }
 
     private fun createNotificationChannel() {
-        val channel = NotificationChannel(channelId, Constants.Download.NOTIFICATION_CHANNEL_NAME, NotificationManager.IMPORTANCE_LOW)
-        val manager = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val channel = NotificationChannel(
+            channelId,
+            Constants.Download.NOTIFICATION_CHANNEL_NAME,
+            NotificationManager.IMPORTANCE_LOW
+        )
+        val manager =
+            applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         manager.createNotificationChannel(channel)
     }
 }

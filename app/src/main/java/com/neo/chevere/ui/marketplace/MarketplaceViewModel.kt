@@ -12,7 +12,6 @@ import com.neo.chevere.domain.ModelEntry
 import com.neo.chevere.ui.common.CatalogState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -23,7 +22,10 @@ class MarketplaceViewModel @Inject constructor(
     private val application: Application,
     private val repository: ChatRepository,
     private val preferenceManager: PreferenceManager
-) : BaseViewModel<MarketplaceState, MarketplaceIntent, MarketplaceEffect>(application, MarketplaceState()) {
+) : BaseViewModel<MarketplaceState, MarketplaceIntent, MarketplaceEffect>(
+    application,
+    MarketplaceState()
+) {
 
     private val handledFinishedDownloads = mutableSetOf<String>()
     private val startedDownloadKeys = mutableSetOf<String>()
@@ -45,9 +47,10 @@ class MarketplaceViewModel @Inject constructor(
             repository.allDownloadsProgress.collectLatest { progressMap ->
                 // Update local state based on all active downloads
                 // If a download for a specific model is in progress, update its state
-                val downloadingModel = progressMap.entries.firstOrNull { it.value is DownloadProgress.Progress }
-                
-                setState { 
+                val downloadingModel =
+                    progressMap.entries.firstOrNull { it.value is DownloadProgress.Progress }
+
+                setState {
                     copy(
                         downloadingModelName = downloadingModel?.key,
                         downloadProgress = (downloadingModel?.value as? DownloadProgress.Progress)?.percent,
@@ -79,7 +82,7 @@ class MarketplaceViewModel @Inject constructor(
                         is ModelSwitchState.WarmingUp -> currentSwitchState.modelId
                         else -> currentState.pendingModelId ?: ""
                     }
-                    setState { 
+                    setState {
                         copy(switchState = ModelSwitchState.WarmingUp(modelId, status))
                     }
                 }
@@ -114,12 +117,13 @@ class MarketplaceViewModel @Inject constructor(
                 }
                 downloadModel(intent.model)
             }
+
             is MarketplaceIntent.DeleteModel -> {
                 if (intent.modelId == currentState.activeModelId) {
                     sendEffect { MarketplaceEffect.ShowToast("Cannot delete active model. Switch models first.") }
                     return
                 }
-                
+
                 val model = currentState.localModels.find { it.id == intent.modelId }
                 if (model?.isTransitioning == true || currentState.isSwitching) {
                     sendEffect { MarketplaceEffect.ShowToast("Cannot delete while model is busy.") }
@@ -130,9 +134,10 @@ class MarketplaceViewModel @Inject constructor(
                     loadLocalModels()
                 }
             }
+
             is MarketplaceIntent.SelectModel -> {
                 val model = currentState.localModels.find { it.id == intent.modelId }
-                
+
                 if (model?.installStatus != InstallStatus.INSTALLED) {
                     sendEffect { MarketplaceEffect.ShowToast("Model is not ready for selection.") }
                     return
@@ -142,9 +147,10 @@ class MarketplaceViewModel @Inject constructor(
                     sendEffect { MarketplaceEffect.ShowToast("Image models are used automatically when you generate images.") }
                     return
                 }
-                
+
                 setState { copy(pendingModelId = intent.modelId) }
             }
+
             is MarketplaceIntent.ConfirmSwitch -> {
                 confirmSwitch(intent.modelId, intent.modelPath)
             }
@@ -153,7 +159,7 @@ class MarketplaceViewModel @Inject constructor(
 
     private fun confirmSwitch(modelId: String, modelPath: String) {
         if (currentState.isSwitching) return
-        
+
         val fromModelId = currentState.activeModelId
         setState { copy(switchState = ModelSwitchState.Switching(fromModelId, modelId)) }
 
@@ -161,7 +167,7 @@ class MarketplaceViewModel @Inject constructor(
             repository.initializeModel(modelPath)
                 .onSuccess {
                     preferenceManager.updateSelectedModel(modelId)
-                    setState { 
+                    setState {
                         copy(
                             activeModelId = modelId,
                             pendingModelId = null,
@@ -170,7 +176,14 @@ class MarketplaceViewModel @Inject constructor(
                     }
                 }
                 .onFailure { e ->
-                    setState { copy(switchState = ModelSwitchState.Error(modelId, e.message ?: "Unknown error")) }
+                    setState {
+                        copy(
+                            switchState = ModelSwitchState.Error(
+                                modelId,
+                                e.message ?: "Unknown error"
+                            )
+                        )
+                    }
                     sendEffect { MarketplaceEffect.ShowToast("Failed to switch: ${e.message}") }
                 }
         }
@@ -198,8 +211,8 @@ class MarketplaceViewModel @Inject constructor(
         }
         val installedModel = installedModels.find { model ->
             model.id == finishedKey ||
-                model.fileName == finishedKey ||
-                (remoteEntry != null && model.matchesEntry(remoteEntry))
+                    model.fileName == finishedKey ||
+                    (remoteEntry != null && model.matchesEntry(remoteEntry))
         } ?: return
 
         if (!installedModel.isHealthy) return
@@ -216,6 +229,7 @@ class MarketplaceViewModel @Inject constructor(
                     activateChatModel(installedModel)
                 }
             }
+
             ModelActivationCategory.IMAGE_GENERATION -> {
                 val healthyImageModels = installedModels
                     .filter { it.isHealthy && it.activationCategory() == ModelActivationCategory.IMAGE_GENERATION }

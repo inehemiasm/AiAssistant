@@ -87,6 +87,7 @@ fun ModelDetailsScreen(
                     hapticView.performChevereHaptic(effect.message.hapticForFeedbackMessage())
                     snackbarHostState.showSnackbar(effect.message)
                 }
+
                 ModelDetailsEffect.NavigateBack -> {
                     hapticView.performChevereHaptic(ChevereHaptic.Selection)
                     onBack()
@@ -98,13 +99,23 @@ fun ModelDetailsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("MODEL DETAILS", style = Typography.titleLarge, letterSpacing = 2.sp) },
+                title = {
+                    Text(
+                        "MODEL DETAILS",
+                        style = Typography.titleLarge,
+                        letterSpacing = 2.sp
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = {
                         hapticView.performChevereHaptic(ChevereHaptic.Selection)
                         onBack()
                     }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back), tint = MaterialTheme.colorScheme.primary)
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            stringResource(R.string.back),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -117,9 +128,19 @@ fun ModelDetailsScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = Color.Transparent
     ) { innerPadding ->
-        Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(innerPadding)) {
-            AmbientGlow(MaterialTheme.colorScheme.primary, Modifier.align(Alignment.TopEnd).size(300.dp))
-            
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+                .padding(innerPadding)
+        ) {
+            AmbientGlow(
+                MaterialTheme.colorScheme.primary,
+                Modifier
+                    .align(Alignment.TopEnd)
+                    .size(300.dp)
+            )
+
             if (state.isLoading) {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
             } else {
@@ -130,21 +151,21 @@ fun ModelDetailsScreen(
                         .padding(24.dp)
                 ) {
                     HeaderSection(state)
-                    
+
                     Spacer(Modifier.height(32.dp))
-                    
+
                     StatusSection(state)
-                    
+
                     Spacer(Modifier.height(32.dp))
-                    
+
                     CompatibilitySection(state)
-                    
+
                     Spacer(Modifier.height(32.dp))
-                    
+
                     MetadataSection(state)
-                    
+
                     Spacer(Modifier.height(48.dp))
-                    
+
                     ActionSection(
                         state = state,
                         onIntent = { intent ->
@@ -152,13 +173,14 @@ fun ModelDetailsScreen(
                                 when (intent) {
                                     ModelDetailsIntent.CancelDownload,
                                     ModelDetailsIntent.Delete -> ChevereHaptic.Warning
+
                                     else -> ChevereHaptic.Action
                                 }
                             )
                             viewModel.onIntent(intent)
                         }
                     )
-                    
+
                     Spacer(Modifier.height(24.dp))
                 }
             }
@@ -199,9 +221,9 @@ fun HeaderSection(state: ModelDetailsState) {
                 color = MaterialTheme.colorScheme.onSurface
             )
         }
-        
+
         Spacer(Modifier.height(8.dp))
-        
+
         Text(
             text = state.modelEntry?.description ?: "Local neural engine component.",
             style = Typography.bodyMedium,
@@ -213,7 +235,7 @@ fun HeaderSection(state: ModelDetailsState) {
 @Composable
 fun StatusSection(state: ModelDetailsState) {
     SectionHeader("RUNTIME STATUS")
-    
+
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.5f),
         shape = RoundedCornerShape(12.dp),
@@ -225,11 +247,15 @@ fun StatusSection(state: ModelDetailsState) {
                 value = state.installedModel?.installStatus?.name ?: "NOT INSTALLED",
                 color = if (state.isInstalled) Color.Green else MaterialTheme.colorScheme.primary
             )
-            
+
             if (state.isActive) {
-                StatusRow(label = "Engine Role", value = "ACTIVE ENGINE", color = MaterialTheme.colorScheme.primary)
+                StatusRow(
+                    label = "Engine Role",
+                    value = "ACTIVE ENGINE",
+                    color = MaterialTheme.colorScheme.primary
+                )
             }
-            
+
             state.downloadProgress?.let { progress ->
                 Spacer(Modifier.height(12.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -239,7 +265,11 @@ fun StatusSection(state: ModelDetailsState) {
                         strokeWidth = 2.dp
                     )
                     Spacer(Modifier.width(12.dp))
-                    Text("Downloading: $progress%", style = Typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                    Text(
+                        "Downloading: $progress%",
+                        style = Typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
                 }
             }
         }
@@ -249,9 +279,10 @@ fun StatusSection(state: ModelDetailsState) {
 @Composable
 fun CompatibilitySection(state: ModelDetailsState) {
     SectionHeader("HARDWARE COMPATIBILITY")
-    
-    val isCompatible = state.modelEntry?.runtimeType == "LiteRT" || state.installedModel?.runtime?.name == "LITERT"
-    
+
+    val isCompatible =
+        state.modelEntry?.runtimeType == "LiteRT" || state.installedModel?.runtime?.name == "LITERT"
+
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.5f),
         shape = RoundedCornerShape(12.dp),
@@ -267,7 +298,10 @@ fun CompatibilitySection(state: ModelDetailsState) {
             CompatibilityRow(
                 icon = Icons.Default.Visibility,
                 label = "Multimodal Support",
-                value = if (state.modelEntry?.supportsVision == true || state.installedModel?.capabilities?.contains(com.neo.chevere.domain.ModelCapability.VISION) == true) "Vision Enabled" else "Text Only",
+                value = if (state.modelEntry?.supportsVision == true || state.installedModel?.capabilities?.contains(
+                        com.neo.chevere.domain.ModelCapability.VISION
+                    ) == true
+                ) "Vision Enabled" else "Text Only",
                 isOk = true
             )
             CompatibilityRow(
@@ -283,12 +317,18 @@ fun CompatibilitySection(state: ModelDetailsState) {
 @Composable
 fun MetadataSection(state: ModelDetailsState) {
     SectionHeader("TECHNICAL SPECIFICATIONS")
-    
+
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         MetadataRow("Model ID", state.modelId)
-        MetadataRow("Provider", state.modelEntry?.provider ?: state.installedModel?.source?.name ?: "Local")
+        MetadataRow(
+            "Provider",
+            state.modelEntry?.provider ?: state.installedModel?.source?.name ?: "Local"
+        )
         MetadataRow("Format", state.installedModel?.format?.name ?: "LITERTLM")
-        MetadataRow("Size", formatFileSize(state.installedModel?.sizeBytes ?: state.modelEntry?.sizeBytes ?: 0))
+        MetadataRow(
+            "Size",
+            formatFileSize(state.installedModel?.sizeBytes ?: state.modelEntry?.sizeBytes ?: 0)
+        )
         state.modelEntry?.license?.let { MetadataRow("License", it) }
     }
 }
@@ -311,7 +351,7 @@ fun ActionSection(state: ModelDetailsState, onIntent: (ModelDetailsIntent) -> Un
                 onClick = { onIntent(ModelDetailsIntent.CancelDownload) }
             )
         }
-        
+
         if (state.isInstalled && !state.isActive && !state.isActionInProgress) {
             PrimaryAction(
                 label = "ACTIVATE ENGINE",
@@ -326,7 +366,7 @@ fun ActionSection(state: ModelDetailsState, onIntent: (ModelDetailsIntent) -> Un
                 enabled = false
             )
         }
-        
+
         if (state.isInstalled && !state.isActive && !state.isActionInProgress) {
             SecondaryAction(
                 label = "DELETE COMPONENT",
@@ -334,9 +374,11 @@ fun ActionSection(state: ModelDetailsState, onIntent: (ModelDetailsIntent) -> Un
                 onClick = { onIntent(ModelDetailsIntent.Delete) }
             )
         }
-        
+
         if (state.isActionInProgress) {
-            Box(Modifier.fillMaxWidth().height(48.dp), contentAlignment = Alignment.Center) {
+            Box(Modifier
+                .fillMaxWidth()
+                .height(48.dp), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(modifier = Modifier.size(24.dp))
             }
         }
@@ -351,10 +393,15 @@ private fun DownloadRequirementsDialog(
     onDismiss: () -> Unit
 ) {
     val modelSize = state.modelEntry?.sizeBytes ?: state.installedModel?.sizeBytes ?: 0L
-    val requiredBytes = recommendedRequiredBytes(modelSize, state.modelEntry?.effectiveFileName.orEmpty())
+    val requiredBytes =
+        recommendedRequiredBytes(modelSize, state.modelEntry?.effectiveFileName.orEmpty())
     val hasEnoughSpace = modelSize <= 0L || availableBytes >= requiredBytes
     val modelKind = when {
-        state.modelEntry?.runtimeType?.contains("ONNX", ignoreCase = true) == true -> "Image generation models are large and can take several minutes per image."
+        state.modelEntry?.runtimeType?.contains(
+            "ONNX",
+            ignoreCase = true
+        ) == true -> "Image generation models are large and can take several minutes per image."
+
         state.modelEntry?.supportsVision == true -> "Vision models need extra memory when processing images."
         else -> "Chat models run locally and may be slow on older devices."
     }
@@ -403,10 +450,16 @@ fun SectionHeader(title: String) {
 @Composable
 fun StatusRow(label: String, value: String, color: Color) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(label, style = Typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            label,
+            style = Typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
         Text(value, style = Typography.labelSmall, color = color, fontWeight = FontWeight.Bold)
     }
 }
@@ -414,17 +467,23 @@ fun StatusRow(label: String, value: String, color: Color) {
 @Composable
 fun CompatibilityRow(icon: ImageVector, label: String, value: String, isOk: Boolean) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
-            icon, 
-            null, 
-            modifier = Modifier.size(16.dp), 
+            icon,
+            null,
+            modifier = Modifier.size(16.dp),
             tint = if (isOk) Color.Green.copy(0.7f) else MaterialTheme.colorScheme.error
         )
         Spacer(Modifier.width(8.dp))
-        Text(label, style = Typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            label,
+            style = Typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
         Spacer(Modifier.weight(1f))
         Text(value, style = Typography.labelSmall, color = MaterialTheme.colorScheme.onSurface)
     }
@@ -436,22 +495,33 @@ fun MetadataRow(label: String, value: String) {
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(label, style = Typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(value, style = Typography.bodySmall, color = MaterialTheme.colorScheme.onSurface, fontFamily = FontFamily.Monospace)
+        Text(
+            label,
+            style = Typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            value,
+            style = Typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurface,
+            fontFamily = FontFamily.Monospace
+        )
     }
 }
 
 @Composable
 fun PrimaryAction(
-    label: String, 
-    icon: ImageVector, 
+    label: String,
+    icon: ImageVector,
     onClick: () -> Unit,
     enabled: Boolean = true
 ) {
     Button(
         onClick = onClick,
         enabled = enabled,
-        modifier = Modifier.fillMaxWidth().height(56.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(56.dp),
         shape = RoundedCornerShape(12.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = MaterialTheme.colorScheme.primary,
@@ -468,7 +538,9 @@ fun PrimaryAction(
 fun SecondaryAction(label: String, icon: ImageVector, onClick: () -> Unit) {
     androidx.compose.material3.OutlinedButton(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth().height(56.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(56.dp),
         shape = RoundedCornerShape(12.dp),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(0.5f)),
         colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
@@ -491,13 +563,21 @@ private fun recommendedStorageText(state: ModelDetailsState): String {
     return if (modelSize <= 0L) {
         "Check device storage"
     } else {
-        "${formatFileSize(recommendedRequiredBytes(modelSize, state.modelEntry?.effectiveFileName.orEmpty()))} free recommended"
+        "${
+            formatFileSize(
+                recommendedRequiredBytes(
+                    modelSize,
+                    state.modelEntry?.effectiveFileName.orEmpty()
+                )
+            )
+        } free recommended"
     }
 }
 
 private fun recommendedRequiredBytes(modelSize: Long, fileName: String): Long {
     if (modelSize <= 0L) return 0L
-    val extractionMultiplier = if (fileName.endsWith(Constants.ModelFiles.ZIP_EXTENSION, ignoreCase = true)) 2.5 else 1.25
+    val extractionMultiplier =
+        if (fileName.endsWith(Constants.ModelFiles.ZIP_EXTENSION, ignoreCase = true)) 2.5 else 1.25
     return (modelSize * extractionMultiplier).toLong()
 }
 

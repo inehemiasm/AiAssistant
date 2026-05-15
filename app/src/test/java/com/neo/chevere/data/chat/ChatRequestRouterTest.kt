@@ -43,7 +43,8 @@ class ChatRequestRouterTest {
 
     @Test
     fun visionChatPrompt_instructsModelToAnalyzeAttachment() {
-        val prompt = router.buildVisionChatPrompt("CURRENT USER REQUEST:\nWhat can you tell me about this image")
+        val prompt =
+            router.buildVisionChatPrompt("CURRENT USER REQUEST:\nWhat can you tell me about this image")
 
         assertTrue(prompt.contains("attached image"))
         assertTrue(prompt.contains("Do not generate"))
