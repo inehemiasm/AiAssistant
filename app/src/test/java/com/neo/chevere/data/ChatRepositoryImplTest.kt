@@ -155,6 +155,24 @@ class ChatRepositoryImplTest {
     }
 
     @Test
+    fun sendMessage_withAttachmentAlwaysUsesVisionDirectInference() = runTest(testDispatcher) {
+        val prompt = "generate an image based on this image"
+        val mockUri = mock<Uri>()
+        whenever(inferenceManager.isVisionSupported()).doReturn(true)
+        whenever(inferenceManager.generate(any())).doReturn(InferenceResult.Success("I can describe the attached image."))
+
+        val result = repository.sendMessage(prompt, mockUri)
+
+        verify(agentOrchestrator, never()).processUserRequest(any(), any(), any())
+        verify(inferenceManager).generate(argThat {
+            imageUri == mockUri &&
+                this.prompt.contains("attached image") &&
+                this.prompt.contains("Do not generate")
+        })
+        assertEquals("I can describe the attached image.", result.getOrNull())
+    }
+
+    @Test
     fun fetchAvailableModels_delegatesToCatalog() = runTest(testDispatcher) {
         val models = listOf(ModelEntry("gemma", "url"))
         whenever(modelCatalog.fetchAvailableModels()).doReturn(Result.success(models))

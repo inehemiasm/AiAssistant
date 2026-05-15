@@ -80,6 +80,10 @@
     <string name="chat_label">Chat</string>
     <string name="models_label">Modelos</string>
     <string name="settings_label">Ajustes</string>
+    <string name="exit_app_title">Salir de Chevere AI?</string>
+    <string name="exit_app_message">Tu chat actual permanece en este dispositivo, pero cualquier respuesta sin terminar se detendra.</string>
+    <string name="exit_app_cancel">Quedarme</string>
+    <string name="exit_app_confirm">Salir</string>
     <string name="neural_repository">REPOSITORIO NEURAL</string>
     <string name="refresh">Actualizar</string>
     <string name="discover">DESCUBRIR</string>

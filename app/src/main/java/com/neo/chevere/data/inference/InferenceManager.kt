@@ -23,8 +23,13 @@ class InferenceManager @Inject constructor(
     private val engineFactory: ModelEngineFactory
 ) {
     private val mutex = Mutex()
-    private var currentModel: InstalledModel? = null
+    private var _currentModel: InstalledModel? = null
     
+    /**
+     * The model currently loaded in the engine.
+     */
+    val currentModel: InstalledModel? get() = _currentModel
+
     private val _currentEngine = MutableStateFlow<ModelEngine?>(null)
     
     /**
@@ -44,14 +49,14 @@ class InferenceManager @Inject constructor(
      * Loads the specified [InstalledModel] into an appropriate engine.
      */
     suspend fun loadModel(model: InstalledModel): LoadResult = mutex.withLock {
-        if (currentModel?.id == model.id && _currentEngine.value != null) {
+        if (_currentModel?.id == model.id && _currentEngine.value != null) {
             return LoadResult.Success
         }
 
         // Unload previous engine if it exists
         _currentEngine.value?.unload()
         _currentEngine.value = null
-        currentModel = null
+        _currentModel = null
 
         val engine = try {
             engineFactory.getEngine(model.runtime)
@@ -69,7 +74,7 @@ class InferenceManager @Inject constructor(
         }
 
         if (result is LoadResult.Success) {
-            currentModel = model
+            _currentModel = model
         } else {
             _currentEngine.value = null
         }
@@ -88,7 +93,7 @@ class InferenceManager @Inject constructor(
     suspend fun unload() = mutex.withLock {
         _currentEngine.value?.unload()
         _currentEngine.value = null
-        currentModel = null
+        _currentModel = null
     }
 
     fun isVisionSupported(): Boolean {

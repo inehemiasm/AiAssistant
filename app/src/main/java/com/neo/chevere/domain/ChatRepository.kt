@@ -29,8 +29,10 @@ interface ChatRepository {
     
     /**
      * Initializes the AI model from the given file path.
+     * @param modelPath The absolute path to the model file.
+     * @param notify Whether to emit an activation event on success.
      */
-    suspend fun initializeModel(modelPath: String): Result<Unit>
+    suspend fun initializeModel(modelPath: String, notify: Boolean = true): Result<Unit>
     
     /**
      * Sends a message to the AI and receives a response through the agent loop.
@@ -91,4 +93,14 @@ interface ChatRepository {
      * Checks if a model file exists and is valid.
      */
     fun isModelValid(modelName: String): Boolean
+
+    /**
+     * A flow of one-time events emitted when a model is successfully activated.
+     */
+    val modelActivationEvents: Flow<String>
+
+    /**
+     * The model currently loaded and active in the inference engine.
+     */
+    val activeModel: InstalledModel?
 }

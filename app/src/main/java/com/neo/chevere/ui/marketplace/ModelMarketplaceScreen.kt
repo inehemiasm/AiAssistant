@@ -70,6 +70,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -81,6 +82,9 @@ import com.neo.chevere.domain.InstallStatus
 import com.neo.chevere.domain.InstalledModel
 import com.neo.chevere.domain.ModelEntry
 import com.neo.chevere.ui.common.CatalogState
+import com.neo.chevere.ui.common.ChevereHaptic
+import com.neo.chevere.ui.common.hapticForFeedbackMessage
+import com.neo.chevere.ui.common.performChevereHaptic
 import com.neo.chevere.ui.designsystem.AmbientGlow
 import com.neo.chevere.ui.designsystem.Typography
 import kotlin.math.log10
@@ -96,12 +100,16 @@ fun ModelMarketplaceScreen(
     val state by viewModel.uiState.collectAsState()
     var selectedTab by remember { mutableIntStateOf(0) }
     val context = LocalContext.current
+    val hapticView = LocalView.current
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(viewModel.effect) {
         viewModel.effect.collect { effect ->
             when (effect) {
-                is MarketplaceEffect.ShowToast -> snackbarHostState.showSnackbar(effect.message)
+                is MarketplaceEffect.ShowToast -> {
+                    hapticView.performChevereHaptic(effect.message.hapticForFeedbackMessage())
+                    snackbarHostState.showSnackbar(effect.message)
+                }
             }
         }
     }
@@ -117,12 +125,18 @@ fun ModelMarketplaceScreen(
                     ) 
                 },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(onClick = {
+                        hapticView.performChevereHaptic(ChevereHaptic.Selection)
+                        onBack()
+                    }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back), tint = MaterialTheme.colorScheme.primary)
                     }
                 },
                 actions = {
-                    IconButton(onClick = { viewModel.onIntent(MarketplaceIntent.FetchModels) }) {
+                    IconButton(onClick = {
+                        hapticView.performChevereHaptic(ChevereHaptic.Action)
+                        viewModel.onIntent(MarketplaceIntent.FetchModels)
+                    }) {
                         Icon(Icons.Default.Refresh, stringResource(R.string.refresh), tint = MaterialTheme.colorScheme.primary)
                     }
                 },
@@ -154,12 +168,18 @@ fun ModelMarketplaceScreen(
                 ) {
                     Tab(
                         selected = selectedTab == 0,
-                        onClick = { selectedTab = 0 },
+                        onClick = {
+                            hapticView.performChevereHaptic(ChevereHaptic.Selection)
+                            selectedTab = 0
+                        },
                         text = { Text(stringResource(R.string.discover), style = Typography.labelSmall) }
                     )
                     Tab(
                         selected = selectedTab == 1,
-                        onClick = { selectedTab = 1 },
+                        onClick = {
+                            hapticView.performChevereHaptic(ChevereHaptic.Selection)
+                            selectedTab = 1
+                        },
                         text = { Text(stringResource(R.string.installed), style = Typography.labelSmall) }
                     )
                 }

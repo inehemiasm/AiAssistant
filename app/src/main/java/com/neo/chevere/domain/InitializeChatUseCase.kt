@@ -17,7 +17,9 @@ class InitializeChatUseCase @Inject constructor(
      * Executes the use case to initialize the model.
      *
      * @param modelPath The absolute path to the model file on device.
+     * @param notify Whether to emit an activation event on success.
      * @return A [Result] indicating whether initialization was successful.
      */
-    suspend operator fun invoke(modelPath: String) = repository.initializeModel(modelPath)
+    suspend operator fun invoke(modelPath: String, notify: Boolean = true) = 
+        repository.initializeModel(modelPath, notify)
 }

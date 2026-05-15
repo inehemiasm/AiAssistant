@@ -28,6 +28,8 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileInputStream
 import java.io.IOException
+import java.net.URLDecoder
+import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.util.concurrent.atomic.AtomicLong
 import java.util.zip.ZipInputStream
@@ -58,6 +60,9 @@ class ModelDownloadWorker @AssistedInject constructor(
         val modelId = inputData.getString(Constants.Download.INPUT_MODEL_ID)
             ?: modelName?.removeSuffix(Constants.ModelFiles.ZIP_EXTENSION)
         val expectedSha256 = inputData.getString(Constants.Download.INPUT_SHA256)
+        val repositoryFiles = inputData.getStringArray(Constants.Download.INPUT_REPOSITORY_FILES)
+            ?.filter { it.isNotBlank() }
+            .orEmpty()
         
         Log.d(TAG, "Worker started. Name: $modelName, URL: $uri")
 
@@ -84,17 +89,42 @@ class ModelDownloadWorker @AssistedInject constructor(
             // Mark as downloading in registry
             installedModelRegistry.updateInstallStatus(modelId, InstallStatus.DOWNLOADING)
 
+            if (repositoryFiles.isNotEmpty()) {
+                val targetDir = File(applicationContext.filesDir, modelId)
+                val tempDir = File(applicationContext.filesDir, "${targetDir.name}${Constants.ModelFiles.TEMP_DIRECTORY_EXTENSION}")
+                if (targetDir.exists()) targetDir.deleteRecursively()
+                if (tempDir.exists()) tempDir.deleteRecursively()
+                tempDir.mkdirs()
+
+                downloadRepositoryBundle(repositoryFiles, tempDir)
+
+                installedModelRegistry.updateInstallStatus(modelId, InstallStatus.VERIFYING)
+                if (!isSupportedExtractedModelBundle(tempDir)) {
+                    tempDir.deleteRecursively()
+                    installedModelRegistry.updateInstallStatus(modelId, InstallStatus.FAILED)
+                    throw IOException("Downloaded repository is not a supported image model bundle.")
+                }
+                if (!tempDir.renameTo(targetDir)) {
+                    tempDir.deleteRecursively()
+                    installedModelRegistry.updateInstallStatus(modelId, InstallStatus.FAILED)
+                    throw IOException("Failed to finalize downloaded image model")
+                }
+                installedModelRegistry.updateInstallStatus(modelId, InstallStatus.INSTALLED)
+                setProgress(workDataOf(Constants.Download.PROGRESS to 100))
+                telemetry.logModelDownloadFinished(
+                    modelId = modelId,
+                    success = true,
+                    durationMs = System.currentTimeMillis() - startedAtMs,
+                    fileType = "repository"
+                )
+                return@withContext Result.success()
+            }
+
             val downloadUrl = remoteModelDataSource.getDownloadUrl(uri)
 
             remoteModelDataSource.downloadToFile(downloadUrl, tempFile).collect { status ->
                 coroutineContext.ensureActive()
-                if (status is DownloadStatus.Progress) {
-                    val currentTime = System.currentTimeMillis()
-                    if (currentTime - lastUpdateMs.get() >= throttleIntervalMs) {
-                        setProgress(workDataOf(Constants.Download.PROGRESS to status.percent))
-                        lastUpdateMs.set(currentTime)
-                    }
-                }
+                emitDownloadProgress(status)
             }
             
             if (tempFile.exists() && tempFile.length() > Constants.ModelFiles.MIN_VALID_FILE_SIZE_BYTES) {
@@ -123,7 +153,7 @@ class ModelDownloadWorker @AssistedInject constructor(
                         tempDir.deleteRecursively()
                         installedModelRegistry.updateInstallStatus(modelId, InstallStatus.FAILED)
                         throw IOException(
-                            "Downloaded ZIP is not a supported model bundle. Missing ONNX Diffusion files."
+                            "Downloaded ZIP is not a supported model bundle. Missing required component files."
                         )
                     }
                     if (!tempDir.renameTo(targetDir)) {
@@ -162,6 +192,7 @@ class ModelDownloadWorker @AssistedInject constructor(
         } catch (e: CancellationException) {
             Log.d(TAG, "Download canceled: ${e.message}")
             if (tempFile.exists()) tempFile.delete()
+            File(applicationContext.filesDir, "${modelId}${Constants.ModelFiles.TEMP_DIRECTORY_EXTENSION}").deleteRecursively()
             telemetry.logModelDownloadFinished(
                 modelId = modelId,
                 success = false,
@@ -173,6 +204,7 @@ class ModelDownloadWorker @AssistedInject constructor(
         } catch (e: Exception) {
             Log.e(TAG, "Download failed: ${e.message}")
             if (tempFile.exists()) tempFile.delete()
+            File(applicationContext.filesDir, "${modelId}${Constants.ModelFiles.TEMP_DIRECTORY_EXTENSION}").deleteRecursively()
             installedModelRegistry.updateInstallStatus(modelId, InstallStatus.FAILED)
             telemetry.logModelDownloadFinished(
                 modelId = modelId,
@@ -223,12 +255,77 @@ class ModelDownloadWorker @AssistedInject constructor(
         }
     }
 
-    private fun isSupportedExtractedModelBundle(directory: File): Boolean {
-        return hasRequiredFiles(directory, Constants.ImageGeneration.ONNX_REQUIRED_FILES)
+    private suspend fun downloadRepositoryBundle(repositoryFiles: List<String>, targetDir: File) {
+        repositoryFiles.forEachIndexed { index, spec ->
+            coroutineContext.ensureActive()
+            val repositoryFile = RepositoryFileSpec.parse(spec)
+            val destination = File(targetDir, repositoryFile.relativePath).canonicalFile
+            val canonicalTarget = targetDir.canonicalFile
+            if (!destination.path.startsWith(canonicalTarget.path + File.separator)) {
+                throw IOException("Unsafe repository file path: ${repositoryFile.relativePath}")
+            }
+            destination.parentFile?.mkdirs()
+
+            val url = remoteModelDataSource.getDownloadUrl(repositoryFile.url)
+            remoteModelDataSource.downloadToFile(url, destination).collect { status ->
+                coroutineContext.ensureActive()
+                if (status is DownloadStatus.Progress) {
+                    val aggregateProgress = ((index * 100) + status.percent) / repositoryFiles.size
+                    emitDownloadProgress(DownloadStatus.Progress(aggregateProgress.coerceIn(0, 99)))
+                }
+            }
+        }
     }
 
-    private fun hasRequiredFiles(directory: File, requiredFiles: List<String>): Boolean {
-        return requiredFiles.all { relativePath -> File(directory, relativePath).isFile }
+    private suspend fun emitDownloadProgress(status: DownloadStatus) {
+        if (status is DownloadStatus.Progress) {
+            val currentTime = System.currentTimeMillis()
+            if (currentTime - lastUpdateMs.get() >= throttleIntervalMs) {
+                setProgress(workDataOf(Constants.Download.PROGRESS to status.percent))
+                lastUpdateMs.set(currentTime)
+            }
+        }
+    }
+
+    private fun isSupportedExtractedModelBundle(directory: File): Boolean {
+        // Find if any subdirectory (up to 3 deep) contains the required ONNX files
+        val root = findModelRoot(directory)
+        return root != null
+    }
+
+    private fun findModelRoot(directory: File): File? {
+        if (!directory.isDirectory) return null
+        if (hasRequiredFiles(directory)) return directory
+        
+        return directory.walkTopDown().maxDepth(3).filter { it.isDirectory }.find { hasRequiredFiles(it) }
+    }
+
+    private fun hasRequiredFiles(directory: File): Boolean {
+        return Constants.ImageGeneration.ONNX_REQUIRED_FILES.all { relativePath ->
+            File(directory, relativePath).isFile ||
+                File(directory, relativePath.replace(".ort", ".onnx")).isFile
+        }
+    }
+
+    private data class RepositoryFileSpec(
+        val url: String,
+        val relativePath: String
+    ) {
+        companion object {
+            fun parse(value: String): RepositoryFileSpec {
+                val parts = value.split("|", limit = 2)
+                val url = parts[0].trim()
+                val relativePath = parts.getOrNull(1)?.trim()?.takeIf { it.isNotBlank() }
+                    ?: inferRelativePath(url)
+                return RepositoryFileSpec(url, relativePath)
+            }
+
+            private fun inferRelativePath(url: String): String {
+                val pathAfterResolve = url.substringAfter("/resolve/", missingDelimiterValue = url)
+                    .substringAfter("/")
+                return URLDecoder.decode(pathAfterResolve, StandardCharsets.UTF_8.name())
+            }
+        }
     }
 
     override suspend fun getForegroundInfo(): ForegroundInfo {

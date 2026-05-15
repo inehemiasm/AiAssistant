@@ -47,7 +47,8 @@ class WorkManagerModelDownloadManager @Inject constructor(
         url: String,
         modelName: String,
         modelId: String = modelName.removeSuffix(Constants.ModelFiles.ZIP_EXTENSION),
-        sha256: String? = null
+        sha256: String? = null,
+        repositoryFiles: List<String> = emptyList()
     ): Flow<DownloadProgress> {
         Log.d("DownloadManager", "Creating WorkManager request for $modelName from $url")
         
@@ -55,6 +56,7 @@ class WorkManagerModelDownloadManager @Inject constructor(
             .putString(Constants.Download.INPUT_URL, url)
             .putString(Constants.Download.INPUT_MODEL_NAME, modelName)
             .putString(Constants.Download.INPUT_MODEL_ID, modelId)
+            .putStringArray(Constants.Download.INPUT_REPOSITORY_FILES, repositoryFiles.toTypedArray())
             .apply {
                 if (sha256 != null) {
                     putString(Constants.Download.INPUT_SHA256, sha256)

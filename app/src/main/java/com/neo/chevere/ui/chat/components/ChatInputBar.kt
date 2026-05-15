@@ -2,11 +2,6 @@ package com.neo.chevere.ui.chat.components
 
 import android.net.Uri
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -38,6 +33,8 @@ import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ContainedLoadingIndicator
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -57,7 +54,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -386,31 +382,12 @@ private fun ComposerActionButton(
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun InputBusyIndicator(
     message: String,
     modifier: Modifier = Modifier
 ) {
-    val transition = rememberInfiniteTransition(label = "input_busy_indicator")
-    val dotAlpha by transition.animateFloat(
-        initialValue = 0.38f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 760, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "busy_dot_alpha"
-    )
-    val dotScale by transition.animateFloat(
-        initialValue = 0.78f,
-        targetValue = 1.18f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 760, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "busy_dot_scale"
-    )
-
     Surface(
         modifier = modifier.heightIn(min = 48.dp),
         color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.72f),
@@ -421,20 +398,16 @@ private fun InputBusyIndicator(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 18.dp, vertical = 10.dp),
+                .padding(horizontal = 14.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Start
         ) {
-            Box(
-                modifier = Modifier
-                    .size(9.dp)
-                    .graphicsLayer {
-                        scaleX = dotScale
-                        scaleY = dotScale
-                    }
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = dotAlpha), CircleShape)
+            ContainedLoadingIndicator(
+                modifier = Modifier.size(34.dp),
+                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.72f),
+                indicatorColor = MaterialTheme.colorScheme.primary
             )
-            Spacer(Modifier.width(10.dp))
+            Spacer(Modifier.width(12.dp))
             Text(
                 text = message.uppercase(),
                 style = Typography.labelSmall.copy(

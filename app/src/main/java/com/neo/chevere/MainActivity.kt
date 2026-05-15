@@ -55,7 +55,10 @@ class MainActivity : ComponentActivity() {
                     isInitializing = chatState.runtimeState is RuntimeState.Initializing,
                     statusMessage = chatState.loadingMessage ?: "INITIALIZING..."
                 ) {
-                    ChevereApp(telemetry = telemetry)
+                    ChevereApp(
+                        telemetry = telemetry,
+                        onExitConfirmed = { finish() }
+                    )
                 }
             }
         }

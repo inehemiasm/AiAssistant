@@ -52,6 +52,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -60,6 +61,9 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.neo.chevere.R
 import com.neo.chevere.core.Constants
+import com.neo.chevere.ui.common.ChevereHaptic
+import com.neo.chevere.ui.common.hapticForFeedbackMessage
+import com.neo.chevere.ui.common.performChevereHaptic
 import com.neo.chevere.ui.designsystem.AmbientGlow
 import com.neo.chevere.ui.designsystem.Typography
 import kotlin.math.log10
@@ -73,13 +77,20 @@ fun ModelDetailsScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+    val hapticView = LocalView.current
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(viewModel.effect) {
         viewModel.effect.collect { effect ->
             when (effect) {
-                is ModelDetailsEffect.ShowToast -> snackbarHostState.showSnackbar(effect.message)
-                ModelDetailsEffect.NavigateBack -> onBack()
+                is ModelDetailsEffect.ShowToast -> {
+                    hapticView.performChevereHaptic(effect.message.hapticForFeedbackMessage())
+                    snackbarHostState.showSnackbar(effect.message)
+                }
+                ModelDetailsEffect.NavigateBack -> {
+                    hapticView.performChevereHaptic(ChevereHaptic.Selection)
+                    onBack()
+                }
             }
         }
     }
@@ -89,7 +100,10 @@ fun ModelDetailsScreen(
             TopAppBar(
                 title = { Text("MODEL DETAILS", style = Typography.titleLarge, letterSpacing = 2.sp) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(onClick = {
+                        hapticView.performChevereHaptic(ChevereHaptic.Selection)
+                        onBack()
+                    }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back), tint = MaterialTheme.colorScheme.primary)
                     }
                 },
@@ -131,7 +145,19 @@ fun ModelDetailsScreen(
                     
                     Spacer(Modifier.height(48.dp))
                     
-                    ActionSection(state, onIntent = viewModel::onIntent)
+                    ActionSection(
+                        state = state,
+                        onIntent = { intent ->
+                            hapticView.performChevereHaptic(
+                                when (intent) {
+                                    ModelDetailsIntent.CancelDownload,
+                                    ModelDetailsIntent.Delete -> ChevereHaptic.Warning
+                                    else -> ChevereHaptic.Action
+                                }
+                            )
+                            viewModel.onIntent(intent)
+                        }
+                    )
                     
                     Spacer(Modifier.height(24.dp))
                 }
@@ -141,8 +167,14 @@ fun ModelDetailsScreen(
                 DownloadRequirementsDialog(
                     state = state,
                     availableBytes = getAvailableBytes(context.filesDir.absolutePath),
-                    onConfirm = { viewModel.onIntent(ModelDetailsIntent.ConfirmDownload) },
-                    onDismiss = { viewModel.onIntent(ModelDetailsIntent.DismissDownloadRequirements) }
+                    onConfirm = {
+                        hapticView.performChevereHaptic(ChevereHaptic.Action)
+                        viewModel.onIntent(ModelDetailsIntent.ConfirmDownload)
+                    },
+                    onDismiss = {
+                        hapticView.performChevereHaptic(ChevereHaptic.Warning)
+                        viewModel.onIntent(ModelDetailsIntent.DismissDownloadRequirements)
+                    }
                 )
             }
         }

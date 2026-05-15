@@ -24,7 +24,6 @@ internal fun ModelEntry.activationCategory(): ModelActivationCategory {
         "image" in runtime ||
         "diffusion" in runtime ||
         "onnx" in runtime ||
-        "qnn" in runtime ||
         "stable diffusion" in name ||
         "image generation" in name ||
         "diffusion" in name

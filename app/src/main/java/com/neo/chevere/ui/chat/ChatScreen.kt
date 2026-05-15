@@ -69,6 +69,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -89,7 +90,10 @@ import com.neo.chevere.ui.chat.components.ChatInputBar
 import com.neo.chevere.ui.chat.components.ChatTopBar
 import com.neo.chevere.ui.chat.components.MessageList
 import com.neo.chevere.ui.chat.components.ModelInitializationScreen
+import com.neo.chevere.ui.common.ChevereHaptic
 import com.neo.chevere.ui.common.ErrorSnackbar
+import com.neo.chevere.ui.common.hapticForFeedbackMessage
+import com.neo.chevere.ui.common.performChevereHaptic
 import com.neo.chevere.ui.designsystem.Typography
 import java.io.File
 import java.io.IOException
@@ -146,9 +150,11 @@ private fun ChatContent(
     onSettingsClick: () -> Unit
 ) {
     val context = LocalContext.current
+    val hapticView = LocalView.current
     val listState = rememberLazyListState()
     val snackbarHostState = remember { SnackbarHostState() }
     var showImageModelDownloadPrompt by remember { mutableStateOf(false) }
+    var wasAiBusy by remember { mutableStateOf(false) }
     val showOnboarding = state.localModels.isEmpty() && !state.isLoading
     val isAiBusy = state.sendState is SendState.Sending ||
         state.sendState is SendState.GeneratingImage ||
@@ -197,10 +203,17 @@ private fun ChatContent(
                     it.isHealthy && (it.taskType == ModelTaskType.IMAGE_GENERATION || ModelCapability.IMAGE_GEN in it.capabilities)
                 },
                 onClearChat = {
+                    hapticView.performChevereHaptic(ChevereHaptic.Warning)
                     viewModel.onIntent(ChatIntent.ClearConversation)
                 },
-                onModelsClick = onModelsClick,
-                onSettingsClick = onSettingsClick
+                onModelsClick = {
+                    hapticView.performChevereHaptic(ChevereHaptic.Selection)
+                    onModelsClick()
+                },
+                onSettingsClick = {
+                    hapticView.performChevereHaptic(ChevereHaptic.Selection)
+                    onSettingsClick()
+                }
             )
         },
         snackbarHost = {
@@ -236,12 +249,15 @@ private fun ChatContent(
                         messages = state.messages,
                         listState = listState,
                         onToggleExplicitImageMask = { index ->
+                            hapticView.performChevereHaptic(ChevereHaptic.Selection)
                             viewModel.onIntent(ChatIntent.ToggleExplicitImageMask(index))
                         },
                         onShareMessage = { index ->
+                            hapticView.performChevereHaptic(ChevereHaptic.Action)
                             viewModel.onIntent(ChatIntent.ShareMessage(index))
                         },
                         onSaveImage = { index ->
+                            hapticView.performChevereHaptic(ChevereHaptic.Action)
                             viewModel.onIntent(ChatIntent.SaveImage(index))
                         }
                     )
@@ -250,17 +266,25 @@ private fun ChatContent(
                 if (state.isWaitingForConfirmation) {
                     ActionConfirmationDialog(
                         message = state.confirmationMessage ?: "Are you sure you want to proceed?",
-                        onConfirm = { viewModel.onIntent(ChatIntent.ConfirmAction) },
-                        onDismiss = { viewModel.onIntent(ChatIntent.CancelAction) }
+                        onConfirm = {
+                            hapticView.performChevereHaptic(ChevereHaptic.Success)
+                            viewModel.onIntent(ChatIntent.ConfirmAction)
+                        },
+                        onDismiss = {
+                            hapticView.performChevereHaptic(ChevereHaptic.Warning)
+                            viewModel.onIntent(ChatIntent.CancelAction)
+                        }
                     )
                 }
 
                 if (state.ageVerificationRequest != null) {
                     AgeVerificationDialog(
                         onSubmit = { year, month, day ->
+                            hapticView.performChevereHaptic(ChevereHaptic.Action)
                             viewModel.onIntent(ChatIntent.SubmitBirthdate(year, month, day))
                         },
                         onDismiss = {
+                            hapticView.performChevereHaptic(ChevereHaptic.Warning)
                             viewModel.onIntent(ChatIntent.DismissAgeVerification)
                         }
                     )
@@ -276,6 +300,7 @@ private fun ChatContent(
                         confirmButton = {
                             TextButton(
                                 onClick = {
+                                    hapticView.performChevereHaptic(ChevereHaptic.Selection)
                                     showImageModelDownloadPrompt = false
                                     onModelsClick()
                                 }
@@ -284,7 +309,10 @@ private fun ChatContent(
                             }
                         },
                         dismissButton = {
-                            TextButton(onClick = { showImageModelDownloadPrompt = false }) {
+                            TextButton(onClick = {
+                                hapticView.performChevereHaptic(ChevereHaptic.Warning)
+                                showImageModelDownloadPrompt = false
+                            }) {
                                 Text("Not now")
                             }
                         }
@@ -302,10 +330,20 @@ private fun ChatContent(
                     ChatInputBar(
                         text = state.inputText,
                         onTextChange = { viewModel.onIntent(ChatIntent.UpdateInputText(it)) },
-                        onSend = { viewModel.onIntent(ChatIntent.SendMessage(state.inputText, state.selectedImageUri)) },
-                        onStop = { viewModel.onIntent(ChatIntent.StopResponse) },
-                        onGalleryClick = { imagePickerLauncher.launch("image/*") },
+                        onSend = {
+                            hapticView.performChevereHaptic(ChevereHaptic.Action)
+                            viewModel.onIntent(ChatIntent.SendMessage(state.inputText, state.selectedImageUri))
+                        },
+                        onStop = {
+                            hapticView.performChevereHaptic(ChevereHaptic.Warning)
+                            viewModel.onIntent(ChatIntent.StopResponse)
+                        },
+                        onGalleryClick = {
+                            hapticView.performChevereHaptic(ChevereHaptic.Selection)
+                            imagePickerLauncher.launch("image/*")
+                        },
                         onCameraClick = {
+                            hapticView.performChevereHaptic(ChevereHaptic.Selection)
                             when (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)) {
                                 PackageManager.PERMISSION_GRANTED -> {
                                     val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
@@ -325,7 +363,10 @@ private fun ChatContent(
                             }
                         },
                         selectedImageUri = state.selectedImageUri,
-                        onRemoveImage = { viewModel.onIntent(ChatIntent.SelectImage(null)) },
+                        onRemoveImage = {
+                            hapticView.performChevereHaptic(ChevereHaptic.Warning)
+                            viewModel.onIntent(ChatIntent.SelectImage(null))
+                        },
                         enabled = state.isReady && !state.isLoading,
                         isBusy = isAiBusy,
                         busyMessage = inputBusyMessage
@@ -349,6 +390,7 @@ private fun ChatContent(
                     focusManager.clearFocus()
                 }
                 is ChatEffect.ShowToast -> {
+                    hapticView.performChevereHaptic(effect.message.hapticForFeedbackMessage())
                     Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
                 }
                 is ChatEffect.ShareMessage -> {
@@ -370,12 +412,23 @@ private fun ChatContent(
                         if (saved) context.getString(R.string.image_saved) else context.getString(R.string.image_save_failed),
                         Toast.LENGTH_SHORT
                     ).show()
+                    hapticView.performChevereHaptic(if (saved) ChevereHaptic.Success else ChevereHaptic.Warning)
                 }
                 ChatEffect.ShowImageModelDownloadPrompt -> {
+                    hapticView.performChevereHaptic(ChevereHaptic.Warning)
                     showImageModelDownloadPrompt = true
                 }
             }
         }
+    }
+
+    LaunchedEffect(isAiBusy, state.error, state.messages.size) {
+        if (wasAiBusy && !isAiBusy) {
+            hapticView.performChevereHaptic(
+                if (state.error == null) ChevereHaptic.Success else ChevereHaptic.Warning
+            )
+        }
+        wasAiBusy = isAiBusy
     }
 
     LaunchedEffect(state.messages.size) {

@@ -10,12 +10,12 @@ plugins {
 
 android {
     namespace = "com.neo.chevere"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "dev.neo.chevere"
         minSdk = 28
-        targetSdk = 35
+        targetSdk = 37
         versionCode = 1
         versionName = "1.0"
 
@@ -109,6 +109,7 @@ dependencies {
     implementation(libs.google.ai.edge.litertlm)
     implementation(libs.mediapipe.tasks.genai)
     implementation(libs.onnxruntime.android)
+    implementation(libs.onnxruntime.extensions.android)
     
     implementation(libs.androidx.exifinterface)
     implementation(libs.androidx.datastore.preferences)

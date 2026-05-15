@@ -15,6 +15,8 @@ import com.neo.chevere.core.Constants
  * @property fileName The name of the file on disk.
  * @property supportsVision Whether the model supports vision tasks.
  * @property license Optional license information (e.g., "Apache 2.0").
+ * @property repositoryFiles Optional direct file URLs for directory-style model bundles.
+ * Each item may be either a direct URL or `url|relative/path/in/model`.
  */
 data class ModelEntry(
     val name: String = "",
@@ -26,7 +28,8 @@ data class ModelEntry(
     val sha256: String? = null,
     val fileName: String? = null,
     val supportsVision: Boolean = false,
-    val license: String? = null
+    val license: String? = null,
+    val repositoryFiles: List<String> = emptyList()
 ) {
     /**
      * The effective file name to use for this model, derived from [fileName] or [name].

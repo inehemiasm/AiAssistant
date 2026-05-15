@@ -55,6 +55,7 @@ object Constants {
         const val INPUT_MODEL_NAME = "modelName"
         const val INPUT_MODEL_ID = "modelId"
         const val INPUT_SHA256 = "sha256"
+        const val INPUT_REPOSITORY_FILES = "repositoryFiles"
         const val OUTPUT_ERROR = "error"
         const val PROGRESS = "progress"
         const val TAG_MODEL_DOWNLOAD = "MODEL_DOWNLOAD_TASK"

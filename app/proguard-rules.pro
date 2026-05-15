@@ -6,10 +6,6 @@
 -keep class ai.onnxruntime.** { *; }
 -keep class ai.onnxruntime.internal.** { *; }
 
-# Qualcomm QNN / AI Stack
--keep class com.qualcomm.qti.** { *; }
--keep class com.qualcomm.qti.qnn.** { *; }
-
 # Hilt / Dagger
 -keep class androidx.hilt.** { *; }
 -keep class dagger.hilt.** { *; }

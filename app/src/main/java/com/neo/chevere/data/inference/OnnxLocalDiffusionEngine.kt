@@ -35,11 +35,8 @@ import kotlin.math.pow
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
-private val TEXT_ENCODER_MODEL = Constants.ImageGeneration.ONNX_REQUIRED_FILES[0]
 private val TOKENIZER_VOCAB = Constants.ImageGeneration.ONNX_REQUIRED_FILES[1]
 private val TOKENIZER_MERGES = Constants.ImageGeneration.ONNX_REQUIRED_FILES[2]
-private val UNET_MODEL = Constants.ImageGeneration.ONNX_REQUIRED_FILES[3]
-private val VAE_DECODER_MODEL = Constants.ImageGeneration.ONNX_REQUIRED_FILES[4]
 private const val MAX_TOKENS = 77
 private const val START_TOKEN = 49406
 private const val END_TOKEN = 49407
@@ -48,9 +45,9 @@ private const val LATENT_SCALE = 0.18215f
 /**
  * Local Stable Diffusion backend for Android ONNX Runtime bundles.
  *
- * The expected bundle shape matches the public SDAI ONNX model layout:
- * `text_encoder/model.ort`, `tokenizer/vocab.json`, `tokenizer/merges.txt`,
- * `unet/model.ort`, and `vae_decoder/model.ort`.
+ * The expected bundle shape matches common Android ONNX diffusion layouts:
+ * `text_encoder/model.(ort|onnx)`, `tokenizer/vocab.json`, `tokenizer/merges.txt`,
+ * `unet/model.(ort|onnx)`, and `vae_decoder/model.(ort|onnx)`.
  */
 @Singleton
 class OnnxLocalDiffusionEngine @Inject constructor(
@@ -69,7 +66,10 @@ class OnnxLocalDiffusionEngine @Inject constructor(
             return@withContext LoadResult.Failure("ONNX diffusion model must be an extracted model directory.")
         }
 
-        val missingFiles = Constants.ImageGeneration.ONNX_REQUIRED_FILES.filterNot { relativePath -> File(directory, relativePath).isFile }
+        val missingFiles = Constants.ImageGeneration.ONNX_REQUIRED_FILES.filterNot { relativePath ->
+            File(directory, relativePath).isFile ||
+                File(directory, relativePath.replace("/model.ort", "/model.onnx")).isFile
+        }
         if (missingFiles.isNotEmpty()) {
             return@withContext LoadResult.Failure(
                 "ONNX diffusion model is missing required files: ${missingFiles.joinToString(", ")}"
@@ -79,12 +79,9 @@ class OnnxLocalDiffusionEngine @Inject constructor(
         unload()
 
         try {
-            val sessionOptions = OrtSession.SessionOptions().apply {
-                addConfigEntry("session.load_model_format", "ORT")
-            }
-            textEncoder = environment.createSession(File(directory, TEXT_ENCODER_MODEL).absolutePath, sessionOptions)
-            unet = environment.createSession(File(directory, UNET_MODEL).absolutePath, sessionOptions)
-            vaeDecoder = environment.createSession(File(directory, VAE_DECODER_MODEL).absolutePath, sessionOptions)
+            textEncoder = createSession(resolveModelFile(directory, "text_encoder"))
+            unet = createSession(resolveModelFile(directory, "unet"))
+            vaeDecoder = createSession(resolveModelFile(directory, "vae_decoder"))
             tokenizer = ClipTokenizer(
                 vocabFile = File(directory, TOKENIZER_VOCAB),
                 mergesFile = File(directory, TOKENIZER_MERGES)
@@ -95,6 +92,32 @@ class OnnxLocalDiffusionEngine @Inject constructor(
             unload()
             LoadResult.Failure("Failed to load ONNX diffusion model: ${throwable.message}", throwable)
         }
+    }
+
+    private fun resolveModelFile(directory: File, component: String): File {
+        val ortFile = File(directory, "$component/model.ort")
+        return if (ortFile.isFile) ortFile else File(directory, "$component/model.onnx")
+    }
+
+    private fun createSession(modelFile: File): OrtSession {
+        val sessionOptions = OrtSession.SessionOptions().apply {
+            if (modelFile.extension.equals("ort", ignoreCase = true)) {
+                addConfigEntry("session.load_model_format", "ORT")
+                // Optimization: use model bytes directly for initialization of ORT format models
+                addConfigEntry("session.use_ort_model_bytes_for_initialization", "1")
+            }
+            
+            // Enable all graph optimizations
+            setOptimizationLevel(OrtSession.SessionOptions.OptLevel.ALL_OPT)
+            
+            // Try to add NNAPI for hardware acceleration and better support for mobile-optimized kernels (like NhwcConv)
+            try {
+                addNnapi()
+            } catch (e: Exception) {
+                // NNAPI might not be available on all devices or emulators, fallback to CPU is automatic
+            }
+        }
+        return environment.createSession(modelFile.absolutePath, sessionOptions)
     }
 
     override suspend fun generate(request: ImageGenerationRequest): ImageGenerationResult = withContext(Dispatchers.Default) {

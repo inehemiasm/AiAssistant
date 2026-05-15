@@ -40,4 +40,13 @@ class ChatRequestRouterTest {
         assertTrue(prompt.contains("You are Chevere AI"))
         assertTrue(prompt.endsWith("CURRENT USER REQUEST:\nhello"))
     }
+
+    @Test
+    fun visionChatPrompt_instructsModelToAnalyzeAttachment() {
+        val prompt = router.buildVisionChatPrompt("CURRENT USER REQUEST:\nWhat can you tell me about this image")
+
+        assertTrue(prompt.contains("attached image"))
+        assertTrue(prompt.contains("Do not generate"))
+        assertTrue(prompt.endsWith("What can you tell me about this image"))
+    }
 }

@@ -226,6 +226,19 @@ class ChatViewModel @Inject constructor(
         setState { copy(messages = messages + userMsg, sendState = SendState.Sending, inputText = "", selectedImageUri = null) }
         sendEffect { ChatEffect.ScrollToBottom }
 
+        if (imageUri != null) {
+            telemetry.logChatTurnStarted(hasImage = true, promptLength = promptText.length)
+            responseJob?.cancel()
+            responseJob = viewModelScope.launch {
+                processAgentTurn(hasImage = true) {
+                    withContext(dispatcherProvider.default) {
+                        sendMessageUseCase(promptText, imageUri)
+                    }
+                }
+            }
+            return
+        }
+
         if (explicitImagePromptPolicy.requiresAgeVerification(promptText)) {
             if (!BuildConfig.DEBUG) {
                 appendAssistantMessage(Constants.ContentPolicy.EXPLICIT_RELEASE_BLOCK_MESSAGE, modelName = "CHEVERE AI")
@@ -242,22 +255,22 @@ class ChatViewModel @Inject constructor(
         }
 
         val imageCommand = parseImageCommand(promptText)
-        if (imageUri == null && (imageCommand != null || looksLikeImageGenerationRequest(promptText)) && !hasInstalledImageGenerationModel()) {
+        if ((imageCommand != null || looksLikeImageGenerationRequest(promptText)) && !hasInstalledImageGenerationModel()) {
             promptForImageModelDownload()
             return
         }
 
-        if (imageUri == null && imageCommand != null) {
-            startImageGenerationTurn(imageCommand.prompt, imageUri)
+        if (imageCommand != null) {
+            startImageGenerationTurn(imageCommand.prompt, conditionImageUri = null)
             return
         }
 
-        telemetry.logChatTurnStarted(hasImage = imageUri != null, promptLength = promptText.length)
+        telemetry.logChatTurnStarted(hasImage = false, promptLength = promptText.length)
         responseJob?.cancel()
         responseJob = viewModelScope.launch {
-            processAgentTurn(hasImage = imageUri != null) {
+            processAgentTurn(hasImage = false) {
                 withContext(dispatcherProvider.default) {
-                    sendMessageUseCase(promptText, imageUri)
+                    sendMessageUseCase(promptText, imageUri = null)
                 }
             }
         }
