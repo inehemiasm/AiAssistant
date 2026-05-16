@@ -81,6 +81,7 @@ import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.neo.chevere.R
 import com.neo.chevere.core.Constants
+import com.neo.chevere.core.PiiUtils
 import com.neo.chevere.data.agent.AgentState
 import com.neo.chevere.domain.ModelCapability
 import com.neo.chevere.domain.ModelTaskType
@@ -107,7 +108,6 @@ import java.util.Locale
 /**
  * The main Chat screen of the application.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatScreen(
     viewModel: ChatViewModel = hiltViewModel(),
@@ -129,7 +129,7 @@ fun ChatScreen(
         if (initializing) {
             ModelInitializationScreen(
                 statusMessage = (state.runtimeState as? RuntimeState.Initializing)?.message
-                    ?: "INITIALIZING..."
+                    ?: stringResource(R.string.initializing)
             )
         } else {
             ChatContent(
@@ -187,11 +187,15 @@ private fun ChatContent(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
         if (isGranted) {
-            Toast.makeText(context, "Permission granted. Try again.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+                context,
+                context.getString(R.string.permission_granted_try_again),
+                Toast.LENGTH_SHORT
+            ).show()
         } else {
             Toast.makeText(
                 context,
-                "Camera permission is required to take photos.",
+                context.getString(R.string.camera_permission_required),
                 Toast.LENGTH_SHORT
             ).show()
         }
@@ -270,7 +274,8 @@ private fun ChatContent(
 
                 if (state.isWaitingForConfirmation) {
                     ActionConfirmationDialog(
-                        message = state.confirmationMessage ?: "Are you sure you want to proceed?",
+                        message = state.confirmationMessage
+                            ?: stringResource(R.string.confirm_proceed),
                         onConfirm = {
                             hapticView.performChevereHaptic(ChevereHaptic.Success)
                             viewModel.onIntent(ChatIntent.ConfirmAction)
@@ -298,9 +303,9 @@ private fun ChatContent(
                 if (showImageModelDownloadPrompt) {
                     AlertDialog(
                         onDismissRequest = { showImageModelDownloadPrompt = false },
-                        title = { Text("Download image model?") },
+                        title = { Text(stringResource(R.string.download_image_model_title)) },
                         text = {
-                            Text("Chevere AI needs a local image generation model before it can create images on this device.")
+                            Text(stringResource(R.string.download_image_model_body))
                         },
                         confirmButton = {
                             TextButton(
@@ -310,7 +315,7 @@ private fun ChatContent(
                                     onModelsClick()
                                 }
                             ) {
-                                Text("Open Models")
+                                Text(stringResource(R.string.open_models))
                             }
                         },
                         dismissButton = {
@@ -318,7 +323,7 @@ private fun ChatContent(
                                 hapticView.performChevereHaptic(ChevereHaptic.Warning)
                                 showImageModelDownloadPrompt = false
                             }) {
-                                Text("Not now")
+                                Text(stringResource(R.string.not_now))
                             }
                         }
                     )
@@ -411,7 +416,8 @@ private fun ChatContent(
 
                 is ChatEffect.ShowToast -> {
                     hapticView.performChevereHaptic(effect.message.hapticForFeedbackMessage())
-                    Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
+                    // Scrub toast messages to ensure no PII is accidentally leaked in the UI overlay
+                    Toast.makeText(context, PiiUtils.scrub(effect.message), Toast.LENGTH_SHORT).show()
                 }
 
                 is ChatEffect.ShareMessage -> {
@@ -435,7 +441,9 @@ private fun ChatContent(
                         .getOrDefault(false)
                     Toast.makeText(
                         context,
-                        if (saved) context.getString(R.string.image_saved) else context.getString(R.string.image_save_failed),
+                        if (saved) context.getString(R.string.image_saved) else context.getString(
+                            R.string.image_save_failed
+                        ),
                         Toast.LENGTH_SHORT
                     ).show()
                     hapticView.performChevereHaptic(if (saved) ChevereHaptic.Success else ChevereHaptic.Warning)
@@ -695,5 +703,4 @@ private fun OnboardingPoint(
             }
         }
     }
-
 }

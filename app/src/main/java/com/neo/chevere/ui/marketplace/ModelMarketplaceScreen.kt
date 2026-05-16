@@ -288,9 +288,11 @@ fun InstalledModelsList(
     onModelClick: (String) -> Unit
 ) {
     if (state.localModels.isEmpty()) {
-        Box(Modifier
-            .fillMaxSize()
-            .padding(32.dp), contentAlignment = Alignment.Center) {
+        Box(
+            Modifier
+                .fillMaxSize()
+                .padding(32.dp), contentAlignment = Alignment.Center
+        ) {
             Text(
                 stringResource(R.string.no_local_models),
                 style = Typography.bodyMedium,

@@ -11,9 +11,9 @@ import com.neo.chevere.ui.designsystem.Typography
 /**
  * Base components for the UI.
  * Most specific components have been moved to their respective feature packages:
- * - com.neo.aiassistant.ui.chat.components
- * - com.neo.aiassistant.ui.models.components
- * - com.neo.aiassistant.ui.common
+ * - com.neo.chevere.ui.chat.components
+ * - com.neo.chevere.ui.models.components
+ * - com.neo.chevere.ui.common
  */
 
 @Composable

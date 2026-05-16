@@ -376,9 +376,11 @@ fun ActionSection(state: ModelDetailsState, onIntent: (ModelDetailsIntent) -> Un
         }
 
         if (state.isActionInProgress) {
-            Box(Modifier
-                .fillMaxWidth()
-                .height(48.dp), contentAlignment = Alignment.Center) {
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(48.dp), contentAlignment = Alignment.Center
+            ) {
                 CircularProgressIndicator(modifier = Modifier.size(24.dp))
             }
         }

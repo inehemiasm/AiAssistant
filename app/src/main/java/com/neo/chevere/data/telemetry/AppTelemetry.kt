@@ -5,6 +5,7 @@ import android.os.Bundle
 import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.neo.chevere.BuildConfig
+import com.neo.chevere.core.PiiUtils
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -237,6 +238,7 @@ class FirebaseAppTelemetry @Inject constructor(
         else -> TelemetryConstants.Value.VERY_LONG
     }
 
-    private fun String.safeValue(): String = take(96)
+    private fun String.safeValue(): String = PiiUtils.scrub(this)
+        .take(96)
         .replace(Regex("[^A-Za-z0-9_.:-]"), "_")
 }

@@ -3,6 +3,7 @@ package com.neo.chevere.data.agent
 import android.net.Uri
 import android.util.Log
 import com.neo.chevere.core.Constants
+import com.neo.chevere.core.PiiUtils
 import com.neo.chevere.data.inference.InferenceManager
 import com.neo.chevere.domain.InferenceRequest
 import com.neo.chevere.domain.InferenceResult
@@ -43,7 +44,8 @@ class AgentOrchestrator @Inject constructor(
         conversationContext: String? = null
     ): Result<String> = loopMutex.withLock {
         _agentState.value = AgentState.Planning
-        Log.i(TAG, ">>> Starting agent loop for user prompt: \"$prompt\"")
+        // Scrub log output to avoid PII in logcat
+        Log.i(TAG, ">>> Starting agent loop for user prompt: \"${PiiUtils.scrub(prompt)}\"")
 
         val systemPrompt = toolRegistry.getToolsSystemPrompt()
         val contextualUserPrompt = buildString {
@@ -86,7 +88,8 @@ class AgentOrchestrator @Inject constructor(
                 val turnResult = when (inferenceResult) {
                     is InferenceResult.Success -> {
                         val text = inferenceResult.text
-                        Log.d(TAG, "Model raw output: \"$text\"")
+                        // Log scrubbed text
+                        Log.d(TAG, "Model raw output: \"${PiiUtils.scrub(text)}\"")
                         val toolCall = parser.parse(text)
                         if (toolCall != null) {
                             AssistantTurnResult.ToolRequest(toolCall)
@@ -123,7 +126,8 @@ class AgentOrchestrator @Inject constructor(
                             continue
                         }
 
-                        Log.i(TAG, "<<< Loop finished. Final text: \"$processedText\"")
+                        // Log scrubbed final text
+                        Log.i(TAG, "<<< Loop finished. Final text: \"${PiiUtils.scrub(processedText)}\"")
                         _agentState.value = AgentState.Completed
                         return Result.success(processedText)
                     }
@@ -131,7 +135,7 @@ class AgentOrchestrator @Inject constructor(
                     is AssistantTurnResult.ToolRequest -> {
                         stepCount++
                         val toolCall = turnResult.toolCall
-                        Log.i(TAG, "Tool request: ${toolCall.toolName} with ${toolCall.arguments}")
+                        Log.i(TAG, "Tool request: ${toolCall.toolName} with ${PiiUtils.scrub(toolCall.arguments.toString())}")
 
                         val tool = toolRegistry.getTool(toolCall.toolName)
                         if (tool == null) {
@@ -214,7 +218,7 @@ class AgentOrchestrator @Inject constructor(
     private suspend fun handleToolResult(tool: AgentTool, toolResult: ToolResult): Result<String>? {
         return when (toolResult) {
             is ToolResult.Success -> {
-                Log.d(TAG, "Tool ${tool.name} SUCCESS: ${toolResult.data}")
+                Log.d(TAG, "Tool ${tool.name} SUCCESS: ${PiiUtils.scrub(toolResult.data)}")
                 lastToolSummary = toolResult.data
                 if (toolResult.data.startsWith(Constants.Agent.IMAGE_GENERATION_RESULT_PREFIX)) {
                     _agentState.value = AgentState.Completed

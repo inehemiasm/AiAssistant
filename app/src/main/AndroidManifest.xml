@@ -75,7 +75,7 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.AiAssistant">
+        android:theme="@style/Theme.Chevere">
 
         <activity
             android:name="com.neo.chevere.MainActivity"

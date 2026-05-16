@@ -1,4 +1,4 @@
-package com.neo.aiassistant.domain
+package com.neo.chevere.domain
 
 /**
  * Represents a machine learning model stored locally on the device.
@@ -80,10 +80,7 @@ enum class ModelTaskType {
  * Defines the capabilities a model might possess.
  */
 enum class ModelCapability {
-    TEXT,
-    VISION,
-    AUDIO,
-    IMAGE_GEN
+    TEXT, VISION, AUDIO, IMAGE_GEN
 }
 
 /**

@@ -1,6 +1,7 @@
 package com.neo.chevere.data.agent.tools
 
 import android.util.Log
+import com.neo.chevere.core.PiiUtils
 import com.neo.chevere.data.PreferenceManager
 import com.neo.chevere.data.agent.AgentTool
 import com.neo.chevere.data.agent.ToolResult
@@ -29,8 +30,11 @@ class WeatherTool @Inject constructor(
     override val inputSchema: String = "location: The name of the city or place to get weather for."
 
     override suspend fun execute(args: Map<String, String>): ToolResult {
-        val location =
+        val rawLocation =
             args["location"]?.trim() ?: return ToolResult.Error("Missing 'location' argument")
+
+        // Scrub PII from location to ensure privacy before sending to external geocoding API
+        val location = PiiUtils.scrub(rawLocation)
 
         return try {
             val units = WeatherUnits.from(preferenceManager.weatherUnitPreference.first())

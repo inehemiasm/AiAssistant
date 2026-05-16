@@ -17,6 +17,6 @@ class ExampleInstrumentedTest {
     fun useAppContext() {
         // Context of the app under test.
         val appContext = InstrumentationRegistry.getInstrumentation().targetContext
-        assertEquals("com.neo.aiassistant", appContext.packageName)
+        assertEquals("dev.neo.chevereai", appContext.packageName)
     }
 }

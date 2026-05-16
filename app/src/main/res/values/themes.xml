@@ -2,9 +2,8 @@
 <resources>
 
     <!-- Post-splash screen theme. -->
-    <style name="Theme.AiAssistant" parent="Theme.Material3.Dark.NoActionBar">
-        <item name="android:windowBackground">#0D47A1
-        </item> <!-- Matches the start of our animated gradient -->
+    <style name="Theme.Chevere" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="android:windowBackground">#0D47A1</item> <!-- Matches the start of our animated gradient -->
         <item name="android:statusBarColor">#0D47A1</item>
         <item name="android:navigationBarColor">#0D47A1</item>
     </style>
@@ -14,6 +13,6 @@
         <!-- Deep Blue (#0D47A1) matches the top of our custom Robot Splash gradient -->
         <item name="windowSplashScreenBackground">#0D47A1</item>
         <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
-        <item name="postSplashScreenTheme">@style/Theme.AiAssistant</item>
+        <item name="postSplashScreenTheme">@style/Theme.Chevere</item>
     </style>
 </resources>

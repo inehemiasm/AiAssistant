@@ -1,5 +1,6 @@
 package com.neo.chevere.data.agent.tools
 
+import com.neo.chevere.core.PiiUtils
 import com.neo.chevere.data.agent.AgentTool
 import com.neo.chevere.data.agent.ToolResult
 import com.neo.chevere.data.inference.InferenceManager
@@ -23,7 +24,10 @@ class AnalyzeImageTool @Inject constructor(
             return ToolResult.Error("Vision is not supported on this model.")
         }
 
-        val focus = args["focus"] ?: "general"
+        val rawFocus = args["focus"] ?: "general"
+        // Scrub input to prevent leakage of any text extracted by the model into logs
+        val focus = PiiUtils.scrub(rawFocus)
+
         // Since the model is already multimodal and holds the conversation, 
         // this tool mainly serves as a "mental hint" or could trigger a different
         // specialized vision model/endpoint if one existed.

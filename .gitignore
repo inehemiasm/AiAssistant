@@ -52,3 +52,6 @@ gradle/gradle-daemon-jvm.properties
 # Claude Code
 .claude/
 .aiexclude
+
+# Distribution & Store Assets
+distribution/

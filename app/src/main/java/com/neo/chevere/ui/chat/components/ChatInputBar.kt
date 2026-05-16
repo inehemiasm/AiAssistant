@@ -180,9 +180,11 @@ private fun SelectedImagePreview(
     uri: Uri,
     onRemoveImage: () -> Unit
 ) {
-    Box(Modifier
-        .size(112.dp)
-        .padding(bottom = 10.dp, start = 16.dp)) {
+    Box(
+        Modifier
+            .size(112.dp)
+            .padding(bottom = 10.dp, start = 16.dp)
+    ) {
         AsyncImage(
             model = uri,
             contentDescription = null,

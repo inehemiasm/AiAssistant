@@ -3,6 +3,7 @@ package com.neo.chevere.ui.chat
 import android.app.Application
 import android.net.Uri
 import android.util.Log
+import androidx.core.net.toUri
 import androidx.lifecycle.viewModelScope
 import com.neo.chevere.BuildConfig
 import com.neo.chevere.core.BaseViewModel
@@ -36,7 +37,6 @@ import java.time.LocalDate
 import java.time.Period
 import javax.inject.Inject
 import kotlin.system.measureTimeMillis
-import androidx.core.net.toUri
 
 @HiltViewModel
 class ChatViewModel @Inject constructor(

@@ -13,7 +13,7 @@ android {
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "dev.neo.chevere"
+        applicationId = "dev.neo.chevereai"
         minSdk = 28
         targetSdk = 37
         versionCode = 1

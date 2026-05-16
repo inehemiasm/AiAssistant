@@ -130,4 +130,13 @@
     <string name="error_inference_failed">Inference failed</string>
     <string name="error_warmup">warmup</string>
     <string name="ai_models">Ai Models</string>
+
+    <!-- Dialogs & Prompts -->
+    <string name="confirm_proceed">Are you sure you want to proceed?</string>
+    <string name="download_image_model_title">Download image model?</string>
+    <string name="download_image_model_body">Chevere AI needs a local image generation model before it can create images on this device.</string>
+    <string name="open_models">Open Models</string>
+    <string name="not_now">Not now</string>
+    <string name="permission_granted_try_again">Permission granted. Try again.</string>
+    <string name="camera_permission_required">Camera permission is required to take photos.</string>
 </resources>

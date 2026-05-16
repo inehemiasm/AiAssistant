@@ -37,9 +37,11 @@ import com.neo.chevere.ui.designsystem.Typography
  */
 @Composable
 fun DownloadProgressView(modelName: String, progress: Int) {
-    Box(modifier = Modifier
-        .fillMaxSize()
-        .background(MaterialTheme.colorScheme.background)) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
         AmbientGlow(
             MaterialTheme.colorScheme.primary,
             Modifier

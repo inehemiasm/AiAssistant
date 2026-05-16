@@ -6,6 +6,7 @@ import android.net.NetworkCapabilities
 import android.util.Log
 import com.neo.chevere.BuildConfig
 import com.neo.chevere.core.Constants
+import com.neo.chevere.core.PiiUtils
 import com.neo.chevere.data.agent.AgentTool
 import com.neo.chevere.data.agent.ToolResult
 import com.neo.chevere.data.datasource.local.SearchCacheDao
@@ -39,7 +40,10 @@ class WebSearchTool @Inject constructor(
     override val inputSchema: String = "query: The search term or question to look up."
 
     override suspend fun execute(args: Map<String, String>): ToolResult {
-        val query = args["query"]?.trim() ?: return ToolResult.Error("Missing 'query' argument")
+        val rawQuery = args["query"]?.trim() ?: return ToolResult.Error("Missing 'query' argument")
+        
+        // Scrub PII before any processing to ensure privacy
+        val query = PiiUtils.scrub(rawQuery)
 
         // 1. Check Persistent Cache (Can work offline)
         val now = System.currentTimeMillis()
