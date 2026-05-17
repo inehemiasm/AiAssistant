@@ -1,3 +1,4 @@
+import com.google.firebase.appdistribution.gradle.firebaseAppDistribution
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -26,6 +27,24 @@ android {
         buildConfigField("String", "SERPER_API_KEY", "\"$serperApiKey\"")
     }
 
+    signingConfigs {
+        create("release") {
+            // 1. Check Environment Variables (CI/CD and your PowerShell Profile)
+            // 2. Fallback to Project properties (can be set in local.properties)
+            val storeFilePath = System.getenv("RELEASE_STORE_FILE") ?: project.findProperty("RELEASE_STORE_FILE")?.toString()
+            val storePwd = System.getenv("RELEASE_STORE_PASSWORD") ?: project.findProperty("RELEASE_STORE_PASSWORD")?.toString()
+            val keyAs = System.getenv("RELEASE_KEY_ALIAS") ?: project.findProperty("RELEASE_KEY_ALIAS")?.toString()
+            val keyPwd = System.getenv("RELEASE_KEY_PASSWORD") ?: project.findProperty("RELEASE_KEY_PASSWORD")?.toString()
+
+            if (storeFilePath != null) {
+                storeFile = file(storeFilePath)
+                storePassword = storePwd
+                keyAlias = keyAs
+                keyPassword = keyPwd
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -34,7 +53,14 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = signingConfigs.getByName("debug")
+            
+            // Only use release signing if config is actually provided
+            val releaseSigning = signingConfigs.getByName("release")
+            signingConfig = if (releaseSigning.storeFile?.exists() == true) {
+                releaseSigning
+            } else {
+                signingConfigs.getByName("debug")
+            }
             
             firebaseAppDistribution {
                 artifactType = "APK"
@@ -42,6 +68,7 @@ android {
             }
         }
         debug {
+            signingConfig = signingConfigs.getByName("debug")
             firebaseAppDistribution {
                 artifactType = "APK"
                 groups = "internal-testers"
@@ -72,8 +99,6 @@ android {
         }
     }
 }
-
-
 
 dependencies {
     implementation(project(":ui-designsystem"))
