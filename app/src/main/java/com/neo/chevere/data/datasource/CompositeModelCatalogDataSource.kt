@@ -1,10 +1,10 @@
 package com.neo.chevere.data.datasource
 
-import android.util.Log
 import com.neo.chevere.domain.ModelEntry
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -41,7 +41,7 @@ class CompositeModelCatalogDataSource @Inject constructor(
         } else {
             // Deduplicate by URL to be safe
             val distinctModels = allModels.distinctBy { it.url }
-            Log.d("CompositeCatalog", "merged catalog count: ${distinctModels.size}")
+            Timber.tag("CompositeCatalog").d("merged catalog count: ${distinctModels.size}")
             Result.success(distinctModels)
         }
     }

@@ -1,26 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <data-extraction-rules>
     <cloud-backup>
-        <!-- Exclude large AI model files and directories from cloud backup -->
-        <exclude
-            domain="file"
-            path="." />
-        <!-- Exclude chat history and cache from cloud backup for maximum privacy -->
-        <exclude
-            domain="database"
-            path="." />
-        <!-- Re-include small specific config files if any -->
+        <!-- By including only sharedpref, other domains like 'file' and 'database' are excluded by default -->
         <include
             domain="sharedpref"
             path="." />
     </cloud-backup>
     <device-transfer>
-        <!-- Exclude models and private data from direct device-to-device transfer -->
-        <exclude
-            domain="file"
-            path="." />
-        <exclude
-            domain="database"
+        <!-- For device transfer, we can also limit it to shared preferences if that's the intent -->
+        <include
+            domain="sharedpref"
             path="." />
     </device-transfer>
 </data-extraction-rules>

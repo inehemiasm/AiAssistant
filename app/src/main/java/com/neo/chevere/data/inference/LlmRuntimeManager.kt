@@ -1,7 +1,6 @@
 package com.neo.chevere.data.inference
 
 import android.content.Context
-import android.util.Log
 import com.google.ai.edge.litertlm.Backend
 import com.google.ai.edge.litertlm.EngineConfig
 import com.google.ai.edge.litertlm.Message
@@ -15,6 +14,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import timber.log.Timber
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -80,7 +80,7 @@ class LlmRuntimeManager @Inject constructor(
                 }
 
                 if (result.isSuccess) {
-                    Log.i("LlmRuntimeManager", "Successfully initialized with $label")
+                    Timber.tag("LlmRuntimeManager").i("Successfully initialized with $label")
                     isVisionEnabled = vision != null
                     activeConversation = engineWrapper.createConversation()
                     isInitialized = true
@@ -89,7 +89,7 @@ class LlmRuntimeManager @Inject constructor(
                 }
 
                 lastError = result.exceptionOrNull()
-                Log.e("LlmRuntimeManager", "$label failed: ${lastError?.message}")
+                Timber.tag("LlmRuntimeManager").e("$label failed: ${lastError?.message}")
                 engineWrapper.close()
                 neuralCache.deleteRecursively()
                 neuralCache.mkdirs()
@@ -111,7 +111,7 @@ class LlmRuntimeManager @Inject constructor(
             }
             warmupConv.sendMessage(message)
         } catch (e: Exception) {
-            Log.w("LlmRuntimeManager", "Warmup skipped: ${e.message}")
+            Timber.tag("LlmRuntimeManager").w("Warmup skipped: ${e.message}")
         } finally {
             warmupConv.close()
         }

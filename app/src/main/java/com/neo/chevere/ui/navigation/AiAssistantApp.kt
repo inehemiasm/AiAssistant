@@ -5,13 +5,14 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarDefaults
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
@@ -95,8 +96,8 @@ fun ChevereApp(
             NavigationBar(
                 containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
                 contentColor = MaterialTheme.colorScheme.primary,
-                tonalElevation = 6.dp,
-                modifier = Modifier.height(86.dp)
+                tonalElevation = 8.dp,
+                windowInsets = NavigationBarDefaults.windowInsets
             ) {
                 TopLevelDestination.entries.forEach { destination ->
                     val selected =

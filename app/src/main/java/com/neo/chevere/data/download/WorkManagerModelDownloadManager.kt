@@ -1,6 +1,5 @@
 package com.neo.chevere.data.download
 
-import android.util.Log
 import androidx.work.Data
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
@@ -11,6 +10,7 @@ import com.neo.chevere.data.ModelDownloadWorker
 import com.neo.chevere.domain.DownloadProgress
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -50,7 +50,7 @@ class WorkManagerModelDownloadManager @Inject constructor(
         sha256: String? = null,
         repositoryFiles: List<String> = emptyList()
     ): Flow<DownloadProgress> {
-        Log.d("DownloadManager", "Creating WorkManager request for $modelName from $url")
+        Timber.tag("DownloadManager").d("Creating WorkManager request for $modelName from $url")
 
         val inputData = Data.Builder()
             .putString(Constants.Download.INPUT_URL, url)

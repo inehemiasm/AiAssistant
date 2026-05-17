@@ -1,6 +1,5 @@
 package com.neo.chevere.ui
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.neo.chevere.domain.ChatRepository
@@ -12,6 +11,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import javax.inject.Inject
 
 /**
@@ -33,19 +33,19 @@ class MainViewModel @Inject constructor(
             // First, check if there's even anything to wait for.
             val models = repository.getLocalModels()
             if (models.isEmpty()) {
-                Log.d("MainViewModel", "No local models found; skipping initialization splash.")
+                Timber.tag("MainViewModel").d("No local models found; skipping initialization splash.")
                 _isInitializing.value = false
                 return@launch
             }
 
             // Observe the repository's initialization status using the typed sealed interface.
             repository.getInitStatus().collectLatest { status ->
-                Log.d("MainViewModel", "Engine status update: $status")
+                Timber.tag("MainViewModel").d("Engine status update: $status")
 
                 when (status) {
                     is InitializationStatus.Ready,
                     is InitializationStatus.Failure -> {
-                        Log.d("MainViewModel", "Termination status reached; dismissing splash.")
+                        Timber.tag("MainViewModel").d("Termination status reached; dismissing splash.")
                         _isInitializing.value = false
                     }
 
@@ -54,8 +54,7 @@ class MainViewModel @Inject constructor(
                         // ChatViewModel hasn't triggered a load yet.
                         delay(3500)
                         if (_isInitializing.value) {
-                            Log.d(
-                                "MainViewModel",
+                            Timber.tag("MainViewModel").d(
                                 "Timed out waiting for init to start; dismissing splash."
                             )
                             _isInitializing.value = false
@@ -73,7 +72,7 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             delay(10000)
             if (_isInitializing.value) {
-                Log.w("MainViewModel", "Hard safety timeout reached; forcing splash dismissal.")
+                Timber.tag("MainViewModel").w("Hard safety timeout reached; forcing splash dismissal.")
                 _isInitializing.value = false
             }
         }

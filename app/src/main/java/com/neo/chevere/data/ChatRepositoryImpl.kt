@@ -2,7 +2,6 @@ package com.neo.chevere.data
 
 import android.content.Context
 import android.net.Uri
-import android.util.Log
 import com.neo.chevere.core.Constants
 import com.neo.chevere.core.DispatcherProvider
 import com.neo.chevere.data.agent.AgentOrchestrator
@@ -37,6 +36,7 @@ import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.withContext
+import timber.log.Timber
 import java.io.File
 import java.util.Locale
 import javax.inject.Inject
@@ -200,11 +200,7 @@ class ChatRepositoryImpl @Inject constructor(
     }
 
     private fun logDebug(message: String) {
-        try {
-            Log.d(TAG, message)
-        } catch (_: RuntimeException) {
-            // Android Log is not mocked in local JVM tests.
-        }
+        Timber.tag(TAG).d(message)
     }
 
     override suspend fun generateImage(request: ImageGenerationRequest): Result<ImageGenerationResult.Success> {
@@ -302,17 +298,15 @@ class ChatRepositoryImpl @Inject constructor(
                     if (registryModel.installStatus.shouldRemainWithoutFile()) {
                         return@forEach
                     }
-                    Log.w(TAG, "Removing orphaned registry entry: ${registryModel.id}")
+                    Timber.tag(TAG).w("Removing orphaned registry entry: ${registryModel.id}")
                     installedModelRegistry.removeInstalledModel(registryModel.id)
                 } else if (registryModel.runtime == ModelRuntime.IMAGE_GENERATOR) {
-                    Log.w(
-                        TAG,
+                    Timber.tag(TAG).w(
                         "Removing unsupported MediaPipe image-generator registry entry: ${registryModel.id}"
                     )
                     installedModelRegistry.removeInstalledModel(registryModel.id)
                 } else if (registryModel.taskType == ModelTaskType.IMAGE_GENERATION && refreshedModel == null) {
-                    Log.w(
-                        TAG,
+                    Timber.tag(TAG).w(
                         "Removing invalid image-generation registry entry: ${registryModel.id}"
                     )
                     installedModelRegistry.removeInstalledModel(registryModel.id)

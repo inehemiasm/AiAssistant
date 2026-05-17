@@ -1,7 +1,6 @@
 package com.neo.chevere.ui.models
 
 import android.app.Application
-import android.util.Log
 import androidx.lifecycle.viewModelScope
 import com.neo.chevere.core.BaseViewModel
 import com.neo.chevere.data.PreferenceManager
@@ -12,6 +11,7 @@ import com.neo.chevere.ui.marketplace.ModelSwitchState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import javax.inject.Inject
 
 private const val TAG = "ModelsViewModel"
@@ -34,7 +34,7 @@ class ModelsViewModel @Inject constructor(
     private fun observeSelectedModel() {
         viewModelScope.launch {
             preferenceManager.selectedModelPreference.collectLatest { model ->
-                Log.d(TAG, "Active model updated: $model")
+                Timber.tag(TAG).d("Active model updated: $model")
                 if (model != null) setState { copy(selectedModel = model) }
             }
         }
@@ -44,7 +44,7 @@ class ModelsViewModel @Inject constructor(
         viewModelScope.launch {
             repository.getInitStatus().collectLatest { status ->
                 if (currentState.isSwitching) {
-                    Log.d(TAG, "Warmup status: $status")
+                    Timber.tag(TAG).d("Warmup status: $status")
                     setState {
                         copy(
                             switchState = ModelSwitchState.WarmingUp(
@@ -66,7 +66,7 @@ class ModelsViewModel @Inject constructor(
         when (intent) {
             ModelsIntent.FetchModels -> fetchRemoteModels()
             is ModelsIntent.SelectModel -> {
-                Log.d(TAG, "Model selected in UI: ${intent.modelName}")
+                Timber.tag(TAG).d("Model selected in UI: ${intent.modelName}")
                 setState { copy(pendingModel = intent.modelName) }
             }
 
@@ -90,7 +90,7 @@ class ModelsViewModel @Inject constructor(
     }
 
     private fun confirmSwitch(modelName: String, modelPath: String) {
-        Log.d(TAG, "Confirming switch to $modelName")
+        Timber.tag(TAG).d("Confirming switch to $modelName")
         val fromModel = currentState.selectedModel
 
         setState {
@@ -98,10 +98,10 @@ class ModelsViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            Log.d(TAG, "Initializing model at $modelPath")
+            Timber.tag(TAG).d("Initializing model at $modelPath")
             repository.initializeModel(modelPath)
                 .onSuccess {
-                    Log.d(TAG, "Model switch successful: $modelName")
+                    Timber.tag(TAG).d("Model switch successful: $modelName")
                     preferenceManager.updateSelectedModel(modelName)
                     setState {
                         copy(
@@ -112,7 +112,7 @@ class ModelsViewModel @Inject constructor(
                     }
                 }
                 .onFailure { e ->
-                    Log.e(TAG, "Model switch failed", e)
+                    Timber.tag(TAG).e(e, "Model switch failed")
                     setState {
                         copy(
                             switchState = ModelSwitchState.Error(

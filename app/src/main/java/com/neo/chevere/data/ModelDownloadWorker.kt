@@ -5,7 +5,6 @@ import android.app.NotificationManager
 import android.content.Context
 import android.content.pm.ServiceInfo
 import android.os.Build
-import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
@@ -25,6 +24,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
+import timber.log.Timber
 import java.io.File
 import java.io.FileInputStream
 import java.io.IOException
@@ -63,7 +63,7 @@ class ModelDownloadWorker @AssistedInject constructor(
             ?.filter { it.isNotBlank() }
             .orEmpty()
 
-        Log.d(TAG, "Worker started. Name: $modelName, URL: $uri")
+        Timber.tag(TAG).d("Worker started. Name: $modelName, URL: $uri")
 
         if (uri == null || modelName == null || modelId == null) {
             return@withContext Result.failure(workDataOf(Constants.Download.OUTPUT_ERROR to "Missing metadata"))
@@ -196,7 +196,7 @@ class ModelDownloadWorker @AssistedInject constructor(
                 throw IOException("Empty file")
             }
         } catch (e: CancellationException) {
-            Log.d(TAG, "Download canceled: ${e.message}")
+            Timber.tag(TAG).d("Download canceled: ${e.message}")
             if (tempFile.exists()) tempFile.delete()
             File(
                 applicationContext.filesDir,
@@ -211,7 +211,7 @@ class ModelDownloadWorker @AssistedInject constructor(
             )
             throw e
         } catch (e: Exception) {
-            Log.e(TAG, "Download failed: ${e.message}")
+            Timber.tag(TAG).e(e, "Download failed: ${e.message}")
             if (tempFile.exists()) tempFile.delete()
             File(
                 applicationContext.filesDir,

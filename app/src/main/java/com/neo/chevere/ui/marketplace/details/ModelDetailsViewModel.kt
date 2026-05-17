@@ -1,7 +1,6 @@
 package com.neo.chevere.ui.marketplace.details
 
 import android.app.Application
-import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
@@ -17,6 +16,7 @@ import com.neo.chevere.ui.navigation.Route
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import javax.inject.Inject
 
 private const val TAG = "ModelDetailsVM"
@@ -38,7 +38,7 @@ class ModelDetailsViewModel @Inject constructor(
     private var startedDownloadHere = false
 
     init {
-        Log.d(TAG, "--- INITIALIZING VM for Model: $modelId ---")
+        Timber.tag(TAG).d("--- INITIALIZING VM for Model: $modelId ---")
         setState { copy(modelId = modelId) }
 
         // Initial data load via Intent
@@ -50,8 +50,7 @@ class ModelDetailsViewModel @Inject constructor(
         viewModelScope.launch {
             preferenceManager.selectedModelPreference.collectLatest { activeId ->
                 val isNowActive = activeId == modelId
-                Log.d(
-                    TAG,
+                Timber.tag(TAG).d(
                     "[SYNC] Active Model in DataStore: '$activeId' | This Model: '$modelId' | Result: $isNowActive"
                 )
                 setState { copy(isActive = isNowActive) }
@@ -64,7 +63,7 @@ class ModelDetailsViewModel @Inject constructor(
                 val progress = progressMap[modelId] ?: currentState.modelEntry?.let { entry ->
                     progressMap[entry.effectiveFileName] ?: progressMap[entry.effectiveInstalledId]
                 }
-                Log.v(TAG, "[DOWNLOAD] Map update for $modelId: $progress")
+                Timber.tag(TAG).v("[DOWNLOAD] Map update for $modelId: $progress")
 
                 when (progress) {
                     is DownloadProgress.Progress -> {
@@ -77,7 +76,7 @@ class ModelDetailsViewModel @Inject constructor(
                     }
 
                     is DownloadProgress.Finished -> {
-                        Log.i(TAG, "[DOWNLOAD] Finished for $modelId. Reloading details.")
+                        Timber.tag(TAG).i("[DOWNLOAD] Finished for $modelId. Reloading details.")
                         val shouldAnnounceCompletion =
                             startedDownloadHere || currentState.downloadProgress != null
                         setState { copy(downloadProgress = null, isActionInProgress = false) }
@@ -102,7 +101,7 @@ class ModelDetailsViewModel @Inject constructor(
     }
 
     override suspend fun handleIntent(intent: ModelDetailsIntent) {
-        Log.d(TAG, "Handling Intent: ${intent::class.simpleName}")
+        Timber.tag(TAG).d("Handling Intent: ${intent::class.simpleName}")
         when (intent) {
             is ModelDetailsIntent.LoadDetails -> loadDetails(intent.modelId)
             ModelDetailsIntent.Download -> setState { copy(showDownloadRequirements = true) }
@@ -122,20 +121,20 @@ class ModelDetailsViewModel @Inject constructor(
 
     private suspend fun loadDetails(id: String) {
         setState { copy(isLoading = true) }
-        Log.d(TAG, "Loading details for $id...")
+        Timber.tag(TAG).d("Loading details for $id...")
 
         // Local scan
         val localModels = repository.getLocalModels()
         val installed = localModels.find {
             it.id == id || it.id == id.removeSuffix(Constants.ModelFiles.ZIP_EXTENSION) || it.fileName == id
         }
-        Log.d(TAG, "Local Check: Found=${installed != null}, Status=${installed?.installStatus}")
+        Timber.tag(TAG).d("Local Check: Found=${installed != null}, Status=${installed?.installStatus}")
 
         // Remote scan
         val remoteModels = repository.fetchAvailableModels().getOrDefault(emptyList())
         val entry =
             remoteModels.find { it.effectiveFileName == id || it.effectiveInstalledId == id || it.name == id }
-        Log.d(TAG, "Remote Check: Found=${entry != null}, Provider=${entry?.provider}")
+        Timber.tag(TAG).d("Remote Check: Found=${entry != null}, Provider=${entry?.provider}")
 
         setState {
             copy(
@@ -148,14 +147,14 @@ class ModelDetailsViewModel @Inject constructor(
 
     private fun downloadModel() {
         val entry = currentState.modelEntry ?: return
-        Log.i(TAG, "Starting download for: ${entry.name} from ${entry.url}")
+        Timber.tag(TAG).i("Starting download for: ${entry.name} from ${entry.url}")
         startedDownloadHere = true
         setState { copy(showDownloadRequirements = false, isActionInProgress = true) }
 
         viewModelScope.launch {
             repository.downloadModel(entry).collectLatest { progress ->
                 if (progress is DownloadProgress.Error) {
-                    Log.e(TAG, "Download Error: ${progress.message}")
+                    Timber.tag(TAG).e("Download Error: ${progress.message}")
                     setState { copy(isActionInProgress = false, downloadProgress = null) }
                     sendEffect { ModelDetailsEffect.ShowToast(progress.message) }
                 }
@@ -174,19 +173,19 @@ class ModelDetailsViewModel @Inject constructor(
 
     private fun deleteModel() {
         if (currentState.isActive) {
-            Log.w(TAG, "Delete aborted: Model is active")
+            Timber.tag(TAG).w("Delete aborted: Model is active")
             sendEffect { ModelDetailsEffect.ShowToast("Cannot delete active model") }
             return
         }
 
         viewModelScope.launch {
             setState { copy(isActionInProgress = true) }
-            Log.i(TAG, "Deleting model: $modelId")
+            Timber.tag(TAG).i("Deleting model: $modelId")
             if (repository.deleteModel(modelId)) {
                 sendEffect { ModelDetailsEffect.ShowToast("Model deleted") }
                 handleIntent(ModelDetailsIntent.LoadDetails(modelId))
             } else {
-                Log.e(TAG, "Delete failed for $modelId")
+                Timber.tag(TAG).e("Delete failed for $modelId")
                 sendEffect { ModelDetailsEffect.ShowToast("Failed to delete model") }
             }
             setState { copy(isActionInProgress = false) }
@@ -195,13 +194,13 @@ class ModelDetailsViewModel @Inject constructor(
 
     private fun selectModel() {
         if (currentState.installedModel?.isHealthy != true) {
-            Log.w(TAG, "Select aborted: Model not healthy")
+            Timber.tag(TAG).w("Select aborted: Model not healthy")
             sendEffect { ModelDetailsEffect.ShowToast("Model is not ready") }
             return
         }
 
         if (currentState.isActive) {
-            Log.d(TAG, "Select ignored: Already active")
+            Timber.tag(TAG).d("Select ignored: Already active")
             return
         }
 
@@ -214,23 +213,23 @@ class ModelDetailsViewModel @Inject constructor(
         val model = currentState.installedModel ?: return
 
         if (currentState.isActive) {
-            Log.d(TAG, "ConfirmSwitch ignored: Already active")
+            Timber.tag(TAG).d("ConfirmSwitch ignored: Already active")
             return
         }
 
         setState { copy(isActionInProgress = true) }
 
         viewModelScope.launch {
-            Log.i(TAG, "[SWITCH] Initializing Engine with path: ${model.filePath}")
+            Timber.tag(TAG).i("[SWITCH] Initializing Engine with path: ${model.filePath}")
             repository.initializeModel(model.filePath)
                 .onSuccess {
-                    Log.i(TAG, "[SWITCH] Engine Ready. Updating DataStore to: $modelId")
+                    Timber.tag(TAG).i("[SWITCH] Engine Ready. Updating DataStore to: $modelId")
                     preferenceManager.updateSelectedModel(modelId)
                     setState { copy(isActionInProgress = false) }
                     sendEffect { ModelDetailsEffect.ShowToast("Model activated") }
                 }
                 .onFailure { e ->
-                    Log.e(TAG, "[SWITCH] Engine Init FAILED", e)
+                    Timber.tag(TAG).e(e, "[SWITCH] Engine Init FAILED")
                     setState { copy(isActionInProgress = false) }
                     sendEffect { ModelDetailsEffect.ShowToast("Switch failed: ${e.message}") }
                 }

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -75,8 +76,9 @@ fun ChatTopBar(
                         )
                     )
                 )
-                .height(82.dp)
-                .padding(horizontal = 18.dp, vertical = 10.dp),
+                .statusBarsPadding() // Ensures content doesn't overlap status bar
+                .height(72.dp)
+                .padding(horizontal = 18.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             TopBarIconButton(onClick = onModelsClick) {

@@ -27,6 +27,7 @@ Thumbs.db
 # Firebase configuration (Sensitive)
 google-services.json
 app/google-services.json
+service-account.json
 
 # AI Models (Large files)
 *.bin
@@ -55,3 +56,7 @@ gradle/gradle-daemon-jvm.properties
 
 # Distribution & Store Assets
 distribution/
+app/release/app-release.apk
+app/release/baselineProfiles/0/app-release.dm
+app/release/baselineProfiles/1/app-release.dm
+app/release/output-metadata.json

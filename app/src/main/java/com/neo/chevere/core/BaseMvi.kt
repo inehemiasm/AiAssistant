@@ -1,7 +1,6 @@
 package com.neo.chevere.core
 
 import android.app.Application
-import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.channels.Channel
@@ -11,6 +10,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import timber.log.Timber
 
 /**
  * Base ViewModel class implementing the Model-View-Intent (MVI) pattern.
@@ -57,7 +57,7 @@ abstract class BaseViewModel<S : UiState, I : UiIntent, E : UiEffect>(
      * @param intent The intent to be processed.
      */
     fun onIntent(intent: I) {
-        Log.d(tag, "Intent: $intent")
+        Timber.tag(tag).d("Intent: $intent")
         viewModelScope.launch {
             handleIntent(intent)
         }
@@ -79,7 +79,7 @@ abstract class BaseViewModel<S : UiState, I : UiIntent, E : UiEffect>(
         _uiState.update {
             val newState = it.reducer()
             if (newState != it) {
-                Log.d(tag, "State: $newState")
+                Timber.tag(tag).d("State: $newState")
             }
             newState
         }
@@ -93,7 +93,7 @@ abstract class BaseViewModel<S : UiState, I : UiIntent, E : UiEffect>(
     protected fun sendEffect(builder: () -> E) {
         viewModelScope.launch {
             val effectValue = builder()
-            Log.d(tag, "Effect: $effectValue")
+            Timber.tag(tag).d("Effect: $effectValue")
             _effect.send(effectValue)
         }
     }

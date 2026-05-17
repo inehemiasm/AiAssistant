@@ -1,6 +1,5 @@
 package com.neo.chevere.data.agent.tools
 
-import android.util.Log
 import com.neo.chevere.core.PiiUtils
 import com.neo.chevere.data.PreferenceManager
 import com.neo.chevere.data.agent.AgentTool
@@ -12,6 +11,7 @@ import io.ktor.client.request.get
 import io.ktor.client.request.parameter
 import kotlinx.coroutines.flow.first
 import kotlinx.serialization.Serializable
+import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -79,7 +79,7 @@ class WeatherTool @Inject constructor(
 
             ToolResult.Success(result)
         } catch (e: Exception) {
-            Log.e("WeatherTool", "Failed to get weather for $location", e)
+            Timber.tag("WeatherTool").e(e, "Failed to get weather for $location")
             ToolResult.Error("Failed to fetch weather: ${e.message}")
         }
     }

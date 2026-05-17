@@ -7,10 +7,10 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.provider.CalendarContract
-import android.util.Log
 import androidx.core.net.toUri
 import com.neo.chevere.core.Constants
 import dagger.hilt.android.qualifiers.ApplicationContext
+import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -32,7 +32,7 @@ class DefaultAndroidAppActionExecutor @Inject constructor(
 ) : AndroidAppActionExecutor {
 
     override fun execute(request: AppActionRequest): AppActionResult {
-        Log.i(TAG, "Executing action request: ${request::class.simpleName}")
+        Timber.tag(TAG).i("Executing action request: ${request::class.simpleName}")
         return try {
             when (request) {
                 is CopyToClipboardRequest -> copyToClipboard(request.text)
@@ -51,7 +51,7 @@ class DefaultAndroidAppActionExecutor @Inject constructor(
                 else -> AppActionResult.Error("Unknown action request type")
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error executing action: ${request::class.simpleName}", e)
+            Timber.tag(TAG).e(e, "Error executing action: ${request::class.simpleName}")
             AppActionResult.Error(e.message ?: "Unknown error")
         }
     }
@@ -63,7 +63,7 @@ class DefaultAndroidAppActionExecutor @Inject constructor(
         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         val clip = ClipData.newPlainText("Assistant Copy", sanitizedText)
         clipboard.setPrimaryClip(clip)
-        Log.d(TAG, "Successfully copied to clipboard: ${sanitizedText.take(20)}...")
+        Timber.tag(TAG).d("Successfully copied to clipboard: ${sanitizedText.take(20)}...")
         return AppActionResult.Success("Copied to clipboard")
     }
 
@@ -95,7 +95,7 @@ class DefaultAndroidAppActionExecutor @Inject constructor(
             sanitizedUrl
         }
 
-        Log.d(TAG, "Normalizing URL: '$url' -> '$normalizedUrl'")
+        Timber.tag(TAG).d("Normalizing URL: '$url' -> '$normalizedUrl'")
 
         return try {
             val intent = Intent(Intent.ACTION_VIEW, Uri.parse(normalizedUrl)).apply {
@@ -106,11 +106,11 @@ class DefaultAndroidAppActionExecutor @Inject constructor(
                 context.startActivity(intent)
                 AppActionResult.Success("Opened URL: $normalizedUrl")
             } else {
-                Log.w(TAG, "No activity found to handle URL: $normalizedUrl")
+                Timber.tag(TAG).w("No activity found to handle URL: $normalizedUrl")
                 AppActionResult.Error("No browser application found to open this URL")
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to open URL: $normalizedUrl", e)
+            Timber.tag(TAG).e(e, "Failed to open URL: $normalizedUrl")
             AppActionResult.Error("Invalid URL format: $normalizedUrl")
         }
     }

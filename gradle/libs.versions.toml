@@ -18,6 +18,7 @@ onnxruntimeExtensions = "0.13.0"
 okhttp = "4.12.0"
 firebaseBom = "33.5.1"
 firebaseCrashlyticsPlugin = "3.0.2"
+firebaseAppDistribution = "5.2.1"
 workManager = "2.10.0"
 hilt = "2.59.2"
 hiltWork = "1.3.0"
@@ -36,6 +37,7 @@ navigationCompose = "2.8.5"
 robolectric = "4.14.1"
 room = "2.8.4"
 material = "1.12.0"
+timber = "5.0.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -89,6 +91,7 @@ room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "
 room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
 room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
+timber = { group = "com.jakewharton.timber", name = "timber", version.ref = "timber" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
@@ -96,6 +99,7 @@ android-library = { id = "com.android.library", version.ref = "agp" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 google-services = { id = "com.google.gms.google-services", version = "4.4.2" }
 firebase-crashlytics = { id = "com.google.firebase.crashlytics", version.ref = "firebaseCrashlyticsPlugin" }
+firebase-appdistribution = { id = "com.google.firebase.appdistribution", version.ref = "firebaseAppDistribution" }
 hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }

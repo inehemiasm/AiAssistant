@@ -2,7 +2,6 @@ package com.neo.chevere.ui.chat
 
 import android.app.Application
 import android.net.Uri
-import android.util.Log
 import androidx.core.net.toUri
 import androidx.lifecycle.viewModelScope
 import com.neo.chevere.BuildConfig
@@ -31,6 +30,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import timber.log.Timber
 import java.io.File
 import java.time.DateTimeException
 import java.time.LocalDate
@@ -123,7 +123,7 @@ class ChatViewModel @Inject constructor(
     private fun observeInitStatus() {
         viewModelScope.launch {
             repository.getInitStatus().collectLatest { status ->
-                Log.d("ChatViewModel", "Init status update: $status")
+                Timber.tag("ChatViewModel").d("Init status update: $status")
                 val runtimeState = when (status) {
                     is InitializationStatus.Ready -> RuntimeState.Ready
                     is InitializationStatus.Uninitialized -> RuntimeState.Uninitialized

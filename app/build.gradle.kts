@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.google.services)
     alias(libs.plugins.firebase.crashlytics)
+    alias(libs.plugins.firebase.appdistribution)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
     alias(libs.plugins.kotlin.serialization)
@@ -33,6 +34,18 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("debug")
+            
+            firebaseAppDistribution {
+                artifactType = "APK"
+                groups = "internal-testers"
+            }
+        }
+        debug {
+            firebaseAppDistribution {
+                artifactType = "APK"
+                groups = "internal-testers"
+            }
         }
     }
     compileOptions {
@@ -76,6 +89,7 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.hilt.navigation.compose)
     implementation(libs.okhttp)
+    implementation(libs.timber)
 
     implementation(libs.material)
     implementation(libs.androidx.core.splashscreen)

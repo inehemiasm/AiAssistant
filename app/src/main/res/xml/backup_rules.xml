@@ -1,10 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <full-backup-content>
-    <!-- Exclude large AI model files from legacy Auto Backup -->
-    <exclude
-        domain="file"
-        path="." />
-    <!-- Include preferences -->
+    <!-- Include only preferences; other domains like 'file' are excluded by default when an include is present -->
     <include
         domain="sharedpref"
         path="." />

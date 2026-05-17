@@ -3,7 +3,6 @@ package com.neo.chevere.data.agent.tools
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
-import android.util.Log
 import com.neo.chevere.BuildConfig
 import com.neo.chevere.core.Constants
 import com.neo.chevere.core.PiiUtils
@@ -20,6 +19,7 @@ import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import kotlinx.serialization.Serializable
+import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -51,14 +51,14 @@ class WebSearchTool @Inject constructor(
             val cachedEntry = searchCacheDao.getCachedResult(query)
             if (cachedEntry != null) {
                 if (now - cachedEntry.timestamp < Constants.WebSearch.CACHE_EXPIRATION_MS) {
-                    Log.d("WebSearchTool", "Returning persistent cached results for: $query")
+                    Timber.tag("WebSearchTool").d("Returning persistent cached results for: $query")
                     return ToolResult.Success(cachedEntry.results)
                 } else {
-                    Log.d("WebSearchTool", "Cache expired for: $query")
+                    Timber.tag("WebSearchTool").d("Cache expired for: $query")
                 }
             }
         } catch (e: Exception) {
-            Log.e("WebSearchTool", "Error reading from cache", e)
+            Timber.tag("WebSearchTool").e(e, "Error reading from cache")
         }
 
         // 2. Check Internet Connectivity
@@ -68,7 +68,7 @@ class WebSearchTool @Inject constructor(
 
         // 3. Call Serper API
         return try {
-            Log.d("WebSearchTool", "Calling Serper API for: $query")
+            Timber.tag("WebSearchTool").d("Calling Serper API for: $query")
             val response: SerperResponse = httpClient.post(Constants.WebSearch.SERPER_API_URL) {
                 header("X-API-KEY", BuildConfig.SERPER_API_KEY)
                 contentType(ContentType.Application.Json)
@@ -84,12 +84,12 @@ class WebSearchTool @Inject constructor(
                     Constants.WebSearch.MAX_CACHE_SIZE
                 )
             } catch (e: Exception) {
-                Log.e("WebSearchTool", "Error saving to cache", e)
+                Timber.tag("WebSearchTool").e(e, "Error saving to cache")
             }
 
             ToolResult.Success(formattedResults)
         } catch (e: Exception) {
-            Log.e("WebSearchTool", "Search failed", e)
+            Timber.tag("WebSearchTool").e(e, "Search failed")
             ToolResult.Error("Failed to search the web: ${e.message}")
         }
     }

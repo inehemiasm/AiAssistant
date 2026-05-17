@@ -1,7 +1,6 @@
 package com.neo.chevere.data.datasource
 
 import android.content.Context
-import android.util.Log
 import com.neo.chevere.core.Constants
 import com.neo.chevere.domain.ModelEntry
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -11,6 +10,7 @@ import io.ktor.client.request.get
 import io.ktor.client.request.parameter
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -72,7 +72,7 @@ class HuggingFaceModelCatalogDataSource @Inject constructor(
                 )
             })
         } catch (e: Exception) {
-            Log.e(TAG, "Error loading curated models", e)
+            Timber.tag(TAG).e(e, "Error loading curated models")
         }
 
         // 2. Search Hugging Face Hub for compatible models dynamically (Discovery)
@@ -95,13 +95,13 @@ class HuggingFaceModelCatalogDataSource @Inject constructor(
 
                     // Phase 5: Duplicate handling - skip if already in curated list
                     if (allModels.any { it.url.contains(hubModel.id) }) {
-                        Log.d(TAG, "Skipping duplicate discovered model: ${hubModel.id}")
+                        Timber.tag(TAG).d("Skipping duplicate discovered model: ${hubModel.id}")
                         return@mapNotNull null
                     }
 
                     // Phase 2: Aggressive filtering for raw items
                     if (sibling.size == null || sibling.size < 100 * 1024 * 1024) { // Filter < 100MB
-                        Log.d(TAG, "Filtered out low-quality/invalid model: ${hubModel.id}")
+                        Timber.tag(TAG).d("Filtered out low-quality/invalid model: ${hubModel.id}")
                         return@mapNotNull null
                     }
 
@@ -129,7 +129,7 @@ class HuggingFaceModelCatalogDataSource @Inject constructor(
                 allModels.addAll(discoveredEntries)
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error searching HF Hub", e)
+            Timber.tag(TAG).e(e, "Error searching HF Hub")
         }
 
         return if (allModels.isEmpty()) {
