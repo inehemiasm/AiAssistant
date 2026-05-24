@@ -253,6 +253,10 @@ class ChatRepositoryImpl @Inject constructor(
         inferenceManager.clearConversation()
     }
 
+    override fun resetAgentState() {
+        agentOrchestrator.reset()
+    }
+
     override suspend fun fetchAvailableModels(): Result<List<ModelEntry>> {
         return modelCatalog.fetchAvailableModels()
     }

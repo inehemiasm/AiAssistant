@@ -46,6 +46,7 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.StopCircle
 import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Visibility
@@ -108,6 +109,7 @@ fun MessageList(
     streamingText: String = "",
     streamingModelName: String = "",
     agentState: AgentState = AgentState.Idle,
+    speakingMessageIndex: Int? = null,
     onToggleExplicitImageMask: (Int) -> Unit = {},
     onShareMessage: (Int) -> Unit = {},
     onSaveImage: (Int) -> Unit = {},
@@ -120,8 +122,12 @@ fun MessageList(
         verticalArrangement = Arrangement.spacedBy(22.dp)
     ) {
         itemsIndexed(messages) { index, message ->
+            if (message.agentState != null && message.agentState !is AgentState.Idle) {
+                AgentThoughtCard(agentState = message.agentState)
+            }
             FuturisticChatBubble(
                 message = message,
+                isSpeaking = speakingMessageIndex == index,
                 onToggleExplicitImageMask = { onToggleExplicitImageMask(index) },
                 onShareMessage = { onShareMessage(index) },
                 onSaveImage = { onSaveImage(index) },
@@ -129,7 +135,10 @@ fun MessageList(
             )
         }
 
-        if (agentState !is AgentState.Idle) {
+        if (agentState is AgentState.Planning ||
+            agentState is AgentState.ExecutingTool ||
+            agentState is AgentState.WaitingForConfirmation
+        ) {
             item {
                 AgentThoughtCard(agentState = agentState)
             }
@@ -169,6 +178,7 @@ fun FuturisticChatBubble(
     onShareMessage: () -> Unit = {},
     onSaveImage: () -> Unit = {},
     onReadMessageAloud: () -> Unit = {},
+    isSpeaking: Boolean = false,
     showCursor: Boolean = false
 ) {
     val isUser = message.isUser
@@ -294,9 +304,23 @@ fun FuturisticChatBubble(
                                     modifier = Modifier.size(32.dp)
                                 ) {
                                     Icon(
-                                        imageVector = Icons.AutoMirrored.Filled.VolumeUp,
-                                        contentDescription = stringResource(R.string.read_message_aloud),
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                        imageVector = if (isSpeaking) {
+                                            Icons.Default.StopCircle
+                                        } else {
+                                            Icons.AutoMirrored.Filled.VolumeUp
+                                        },
+                                        contentDescription = stringResource(
+                                            if (isSpeaking) {
+                                                R.string.stop_reading_aloud
+                                            } else {
+                                                R.string.read_message_aloud
+                                            }
+                                        ),
+                                        tint = if (isSpeaking) {
+                                            MaterialTheme.colorScheme.primary
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                        },
                                         modifier = Modifier.size(18.dp)
                                     )
                                 }

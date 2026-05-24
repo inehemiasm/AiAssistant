@@ -60,6 +60,11 @@ interface ChatRepository {
     suspend fun clearConversation()
 
     /**
+     * Resets the agent's internal state to Idle.
+     */
+    fun resetAgentState()
+
+    /**
      * Fetches a list of models available for download from the remote catalog.
      */
     suspend fun fetchAvailableModels(): Result<List<ModelEntry>>

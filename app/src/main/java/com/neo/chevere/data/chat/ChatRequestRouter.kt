@@ -46,8 +46,7 @@ class ChatRequestRouter @Inject constructor() {
 
     private fun isCapabilityOnlyQuestion(text: String): Boolean =
         isCapabilityOverviewQuestion(text) ||
-                isImageCapabilityQuestion(text) ||
-                capabilityQuestionPrefixes.any { text.startsWith(it) }
+                isImageCapabilityQuestion(text)
 
     private fun isCapabilityOverviewQuestion(text: String): Boolean =
         text == "what can you do" ||
@@ -76,9 +75,22 @@ class ChatRequestRouter @Inject constructor() {
         ).any { it in text }
 
     private fun looksLikeImageGenerationRequest(text: String): Boolean {
+        val words = text.split(Regex("[\\s,\\.\\?!]+"))
+        val hasSpecificImageVerb = words.any { it in listOf("draw", "paint", "imagine", "depict", "sketch") }
+        if (hasSpecificImageVerb) return true
+
         val hasImageNoun = imageRequestNouns.any { it in text }
         val hasCreateVerb = imageRequestVerbs.any { it in text }
-        return hasImageNoun && hasCreateVerb
+        if (hasImageNoun && hasCreateVerb) return true
+
+        // Also match visual prompts like "create a wolf..." or "generate a sunset..."
+        val isVisualCreation = (text.contains("create a") || text.contains("generate a") || text.contains("make a") || text.contains("render a")) &&
+                !text.contains("event") && !text.contains("calendar") && !text.contains("email") &&
+                !text.contains("code") && !text.contains("file") && !text.contains("text") && !text.contains("app") &&
+                !text.contains("playlist") && !text.contains("reminder") && !text.contains("alarm") &&
+                !text.contains("timer") && !text.contains("note")
+
+        return isVisualCreation
     }
 
     private fun looksLikeLiveInformationRequest(text: String): Boolean {

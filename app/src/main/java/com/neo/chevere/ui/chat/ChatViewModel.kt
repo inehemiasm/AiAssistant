@@ -16,6 +16,7 @@ import com.neo.chevere.data.telemetry.AppTelemetry
 import com.neo.chevere.data.telemetry.TelemetryConstants
 import com.neo.chevere.data.voice.VoiceInputManager
 import com.neo.chevere.data.voice.VoiceResult
+import com.neo.chevere.data.agent.AgentState
 import com.neo.chevere.domain.ChatMessage
 import com.neo.chevere.domain.ChatRepository
 import com.neo.chevere.domain.ContactsPermissionException
@@ -58,6 +59,12 @@ class ChatViewModel @Inject constructor(
 ) : BaseViewModel<ChatState, ChatIntent, ChatEffect>(application, ChatState()) {
 
     private val explicitImagePromptPolicy = ExplicitImagePromptPolicy()
+
+    override fun shouldLogStateChange(oldState: ChatState, newState: ChatState): Boolean {
+        val cleanOld = oldState.copy(inputText = "", streamingText = "")
+        val cleanNew = newState.copy(inputText = "", streamingText = "")
+        return cleanOld != cleanNew
+    }
     private val intentMutex = Mutex()
     private var initJob: Job? = null
     private var imageGenerationJob: Job? = null
@@ -461,9 +468,22 @@ class ChatViewModel @Inject constructor(
 
     private fun looksLikeImageGenerationRequest(text: String): Boolean {
         val normalized = text.lowercase()
+        val words = normalized.split(Regex("[\\s,\\.\\?!]+"))
+        val hasSpecificImageVerb = words.any { it in listOf("draw", "paint", "imagine", "depict", "sketch") }
+        if (hasSpecificImageVerb) return true
+
         val hasImageNoun = imageRequestNouns.any { it in normalized }
         val hasCreateVerb = imageRequestVerbs.any { it in normalized }
-        return hasImageNoun && hasCreateVerb
+        if (hasImageNoun && hasCreateVerb) return true
+
+        // Also match visual prompts like "create a wolf..." or "generate a sunset..."
+        val isVisualCreation = (normalized.contains("create a") || normalized.contains("generate a") || normalized.contains("make a") || normalized.contains("render a")) &&
+                !normalized.contains("event") && !normalized.contains("calendar") && !normalized.contains("email") &&
+                !normalized.contains("code") && !normalized.contains("file") && !normalized.contains("text") && !normalized.contains("app") &&
+                !normalized.contains("playlist") && !normalized.contains("reminder") && !normalized.contains("alarm") &&
+                !normalized.contains("timer") && !normalized.contains("note")
+
+        return isVisualCreation
     }
 
     /**
@@ -515,6 +535,7 @@ class ChatViewModel @Inject constructor(
         responseJob = null
         imageGenerationJob?.cancel()
         imageGenerationJob = null
+        repository.resetAgentState()
         setState { copy(sendState = SendState.Idle) }
         if (hadActiveWork) {
             appendAssistantMessage("Response stopped.", modelName = "CHEVERE AI")
@@ -608,7 +629,7 @@ class ChatViewModel @Inject constructor(
         if (message.isUser || message.text.isBlank()) return
 
         viewModelScope.launch {
-            sendEffect { ChatEffect.ReadMessageAloud(message.text) }
+            sendEffect { ChatEffect.ReadMessageAloud(messageIndex, message.text) }
         }
     }
 
@@ -647,6 +668,9 @@ class ChatViewModel @Inject constructor(
             }
         }
 
+        val currentAgentState = repository.agentState.value
+        repository.resetAgentState()
+
         val responseText = result
             ?.onSuccess {
                 telemetry.logChatTurnFinished(hasImage, success = true, durationMs = time)
@@ -659,23 +683,26 @@ class ChatViewModel @Inject constructor(
                     errorType = e::class.java.simpleName
                 )
                 telemetry.recordNonFatal(e, TelemetryConstants.Context.CHAT_TURN)
-                if (e is LocationPermissionException) {
-                    sendEffect { ChatEffect.RequestLocationPermission }
-                    appendAssistantMessage(
-                        "Location permission is required to get local weather automatically. Please grant the permission or specify a city name (e.g. 'weather in Paris').",
-                        modelName = "CHEVERE AI"
-                    )
-                    return
+                val errorMsg = when (e) {
+                    is LocationPermissionException -> {
+                        sendEffect { ChatEffect.RequestLocationPermission }
+                        "Location permission is required to get local weather automatically. Please grant the permission or specify a city name (e.g. 'weather in Paris')."
+                    }
+                    is ContactsPermissionException -> {
+                        sendEffect { ChatEffect.RequestContactsPermission }
+                        "Contacts permission is required to look up people on this device. Please grant the permission or provide the email address directly."
+                    }
+                    else -> e.message ?: "Action failed"
                 }
-                if (e is ContactsPermissionException) {
-                    sendEffect { ChatEffect.RequestContactsPermission }
-                    appendAssistantMessage(
-                        "Contacts permission is required to look up people on this device. Please grant the permission or provide the email address directly.",
-                        modelName = "CHEVERE AI"
-                    )
-                    return
-                }
-                appendAssistantMessage(e.message ?: "Action failed", modelName = "CHEVERE AI")
+                val aiMsg = ChatMessage(
+                    text = errorMsg,
+                    isUser = false,
+                    inferenceTimeMs = time,
+                    modelName = "CHEVERE AI",
+                    agentState = currentAgentState.takeIf { it !is AgentState.Idle }
+                )
+                setState { copy(messages = messages + aiMsg, sendState = SendState.Idle) }
+                sendEffect { ChatEffect.ScrollToBottom }
                 return
             }
             ?.getOrNull()
@@ -693,7 +720,8 @@ class ChatViewModel @Inject constructor(
             modelName = currentState.selectedModel.replace(
                 Constants.ModelFiles.LITERTLM_EXTENSION,
                 ""
-            ).uppercase()
+            ).uppercase(),
+            agentState = currentAgentState.takeIf { it !is AgentState.Idle }
         )
         responseJob = null
         setState { copy(messages = messages + aiMsg, sendState = SendState.Idle, streamingText = "") }

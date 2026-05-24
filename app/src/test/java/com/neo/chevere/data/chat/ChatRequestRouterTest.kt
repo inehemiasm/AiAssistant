@@ -34,6 +34,22 @@ class ChatRequestRouterTest {
     }
 
     @Test
+    fun visualImageRequestWithoutImageNoun_usesAgent() {
+        val prompt = "create a wolf walking next to a man under the moon in cyberpunk city environment"
+
+        assertNull(router.capabilityResponseFor(prompt))
+        assertTrue(router.shouldUseAgent(prompt))
+    }
+
+    @Test
+    fun politeImageRequestWithCanYouPrefix_usesAgent() {
+        val prompt = "Can you generate a white wolf walking alongside a man in the city"
+
+        assertNull(router.capabilityResponseFor(prompt))
+        assertTrue(router.shouldUseAgent(prompt))
+    }
+
+    @Test
     fun directChatPrompt_includesCapabilityContext() {
         val prompt = router.buildDirectChatPrompt("CURRENT USER REQUEST:\nhello")
 

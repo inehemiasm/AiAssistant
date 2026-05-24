@@ -250,12 +250,6 @@ private fun ComposerContent(
             onCameraClick = onCameraClick
         )
 
-        VoiceInputButton(
-            enabled = enabled,
-            isListening = isListening,
-            onClick = onVoiceInputClick
-        )
-
         TextField(
             value = text,
             onValueChange = onTextChange,
@@ -288,6 +282,12 @@ private fun ComposerContent(
                 keyboardType = KeyboardType.Text,
                 imeAction = ImeAction.Default
             )
+        )
+
+        VoiceInputButton(
+            enabled = enabled,
+            isListening = isListening,
+            onClick = onVoiceInputClick
         )
     }
 }

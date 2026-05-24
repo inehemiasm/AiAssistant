@@ -17,6 +17,7 @@
     <string name="sent_status">SENT</string>
     <string name="share_message">Share message</string>
     <string name="read_message_aloud">Read aloud</string>
+    <string name="stop_reading_aloud">Stop reading</string>
     <string name="share_failed">No app can share this message</string>
     <string name="save_image">Save image</string>
     <string name="image_saved">Image saved</string>

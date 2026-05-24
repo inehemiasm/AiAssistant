@@ -71,6 +71,12 @@ abstract class BaseViewModel<S : UiState, I : UiIntent, E : UiEffect>(
     protected abstract suspend fun handleIntent(intent: I)
 
     /**
+     * Determines whether a state change should be logged.
+     * ViewModels can override this to suppress high-frequency or verbose state updates.
+     */
+    protected open fun shouldLogStateChange(oldState: S, newState: S): Boolean = true
+
+    /**
      * Updates the current UI state.
      *
      * @param reducer A function that takes the current state and returns the new state.
@@ -78,7 +84,7 @@ abstract class BaseViewModel<S : UiState, I : UiIntent, E : UiEffect>(
     protected fun setState(reducer: S.() -> S) {
         _uiState.update {
             val newState = it.reducer()
-            if (newState != it) {
+            if (newState != it && shouldLogStateChange(it, newState)) {
                 Timber.tag(tag).d("State: $newState")
             }
             newState

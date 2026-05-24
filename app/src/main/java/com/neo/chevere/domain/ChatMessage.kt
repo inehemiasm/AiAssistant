@@ -1,5 +1,7 @@
 package com.neo.chevere.domain
 
+import com.neo.chevere.data.agent.AgentState
+
 /**
  * Represents a single message in a chat conversation.
  *
@@ -10,6 +12,7 @@ package com.neo.chevere.domain
  * @property modelName Optional name of the AI model that generated the message.
  * @property isExplicitImage `true` when the attached image should support explicit-content masking.
  * @property isImageMasked `true` when an explicit image attachment is currently hidden behind a mask.
+ * @property agentState Optional AI Agent state/steps associated with this message.
  */
 data class ChatMessage(
     val text: String,
@@ -18,5 +21,6 @@ data class ChatMessage(
     val imageUri: String? = null,
     val modelName: String? = null,
     val isExplicitImage: Boolean = false,
-    val isImageMasked: Boolean = false
+    val isImageMasked: Boolean = false,
+    val agentState: AgentState? = null
 )

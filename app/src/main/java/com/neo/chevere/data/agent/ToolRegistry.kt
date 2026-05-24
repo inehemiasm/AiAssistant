@@ -52,14 +52,15 @@ class ToolRegistry @Inject constructor(
             append("2. Use conversation history only for context, not as a task list.\n")
             append("3. Answer directly when no external action is needed.\n")
             append("4. Call one tool only when the current request requires that tool's external capability.\n")
-            append("5. After an observation, return a concise final answer for the user. Do not expose tool syntax in the final answer.\n")
+            append("5. Proactively make sensible assumptions to fulfill requests immediately instead of asking the user for details, clarifications, or confirmation (unless permission or safety checks are strictly triggered).\n")
+            append("6. After an observation, return a concise final answer for the user. Do not expose tool syntax in the final answer.\n")
             append("\n\nYou have access to the following tools:\n")
             tools.sortedBy { it.name }.forEach { tool ->
                 append("- ${tool.name}: ${tool.description}. Input: ${tool.inputSchema}\n")
             }
             append("\nDo not use tools for private reasoning, grading, rewriting, explaining code, or summarizing the chat unless the latest user request explicitly asks for that specific tool-backed action.\n")
             append("If the user asks whether you can do something, answer the capability question instead of calling the tool.\n")
-            append("For generate_image, improve the user's image request before the tool call. Expand vague prompts into a clear visual prompt with subject, environment, medium/style, lighting, camera/composition, and quality terms while preserving the user's intent.\n")
+            append("For generate_image, improve the user's image request before the tool call. Expand vague prompts into a clear visual prompt with subject, environment, medium/style, lighting, camera/composition, and quality terms while preserving the user's intent. Do NOT ask the user for details or ask them questions; make creative, fitting assumptions and generate the image immediately.\n")
             append("\nTo call a tool, use the format: ${Constants.Agent.TOOL_CALL_PREFIX} tool_name, param1=value1, param2=value2]\n")
             append("For long or code-heavy arguments, quote the full value or use JSON-like arguments: ${Constants.Agent.TOOL_CALL_PREFIX} tool_name, {\"param\":\"value\"}]\n")
         }

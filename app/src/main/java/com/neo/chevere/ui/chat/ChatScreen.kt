@@ -9,8 +9,11 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.provider.MediaStore
 import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -155,8 +158,10 @@ private fun ChatContent(
     val context = LocalContext.current
     val hapticView = LocalView.current
     val listState = rememberLazyListState()
+    val mainHandler = remember { Handler(Looper.getMainLooper()) }
     var textToSpeech by remember { mutableStateOf<TextToSpeech?>(null) }
     var isTextToSpeechReady by remember { mutableStateOf(false) }
+    var speakingMessageIndex by remember { mutableStateOf<Int?>(null) }
 
     DisposableEffect(context) {
         var tts: TextToSpeech? = null
@@ -164,6 +169,18 @@ private fun ChatContent(
             isTextToSpeechReady = status == TextToSpeech.SUCCESS
             if (status == TextToSpeech.SUCCESS) {
                 tts?.language = Locale.getDefault()
+                tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+                    override fun onStart(utteranceId: String?) = Unit
+
+                    override fun onDone(utteranceId: String?) {
+                        mainHandler.post { speakingMessageIndex = null }
+                    }
+
+                    @Deprecated("Required by the Android TextToSpeech callback API.")
+                    override fun onError(utteranceId: String?) {
+                        mainHandler.post { speakingMessageIndex = null }
+                    }
+                })
             }
         }
         textToSpeech = tts
@@ -171,6 +188,7 @@ private fun ChatContent(
         onDispose {
             tts.stop()
             tts.shutdown()
+            speakingMessageIndex = null
             if (textToSpeech === tts) {
                 textToSpeech = null
             }
@@ -361,6 +379,7 @@ private fun ChatContent(
                             ""
                         ).uppercase(),
                         agentState = state.agentState,
+                        speakingMessageIndex = speakingMessageIndex,
                         onToggleExplicitImageMask = { index ->
                             hapticView.performChevereHaptic(ChevereHaptic.Selection)
                             viewModel.onIntent(ChatIntent.ToggleExplicitImageMask(index))
@@ -569,12 +588,15 @@ private fun ChatContent(
                 }
 
                 is ChatEffect.ReadMessageAloud -> {
-                    speakAssistantMessage(
+                    val stopped = stopOrSpeakAssistantMessage(
                         context = context,
                         textToSpeech = textToSpeech,
                         isReady = isTextToSpeechReady,
+                        messageIndex = effect.messageIndex,
+                        currentSpeakingMessageIndex = speakingMessageIndex,
                         text = effect.text
                     )
+                    speakingMessageIndex = stopped
                 }
 
                 ChatEffect.ShowImageModelDownloadPrompt -> {
@@ -665,31 +687,39 @@ private fun shareChatMessage(context: Context, effect: ChatEffect.ShareMessage) 
     context.startActivity(chooser)
 }
 
-private fun speakAssistantMessage(
+private fun stopOrSpeakAssistantMessage(
     context: Context,
     textToSpeech: TextToSpeech?,
     isReady: Boolean,
+    messageIndex: Int,
+    currentSpeakingMessageIndex: Int?,
     text: String
-) {
+): Int? {
     val tts = textToSpeech
     if (tts == null || !isReady) {
         Toast.makeText(context, "Read aloud is still warming up.", Toast.LENGTH_SHORT).show()
-        return
+        return currentSpeakingMessageIndex
+    }
+
+    if (currentSpeakingMessageIndex == messageIndex) {
+        tts.stop()
+        return null
     }
 
     val scrubbedText = text
         .replace(Regex("""https?://\S+"""), "link")
         .trim()
 
-    if (scrubbedText.isBlank()) return
+    if (scrubbedText.isBlank()) return currentSpeakingMessageIndex
 
     tts.stop()
     tts.speak(
         scrubbedText,
         TextToSpeech.QUEUE_FLUSH,
         null,
-        "chevere_response_${System.currentTimeMillis()}"
+        "chevere_response_${messageIndex}_${System.currentTimeMillis()}"
     )
+    return messageIndex
 }
 
 private fun saveImageToGallery(context: Context, sourceUri: Uri): Boolean {
