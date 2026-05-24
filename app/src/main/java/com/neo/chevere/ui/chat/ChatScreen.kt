@@ -187,15 +187,45 @@ private fun ChatContent(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
         if (isGranted) {
-            Toast.makeText(
+            val timeStamp = SimpleDateFormat(
+                "yyyyMMdd_HHmmss",
+                Locale.US
+            ).format(Date())
+            val storageDir =
+                File(context.cacheDir, "images").apply { mkdirs() }
+            val photoFile = File(storageDir, "JPEG_${timeStamp}_.jpg")
+            val photoUri: Uri = FileProvider.getUriForFile(
                 context,
-                context.getString(R.string.permission_granted_try_again),
-                Toast.LENGTH_SHORT
-            ).show()
+                "${context.packageName}.fileprovider",
+                photoFile
+            )
+            viewModel.onIntent(ChatIntent.SetTempCameraUri(photoUri))
+            cameraLauncher.launch(photoUri)
         } else {
             Toast.makeText(
                 context,
                 context.getString(R.string.camera_permission_required),
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val isCoarseGranted = permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+        val isFineGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true
+        if (isCoarseGranted || isFineGranted) {
+            Toast.makeText(
+                context,
+                context.getString(R.string.location_permission_granted),
+                Toast.LENGTH_SHORT
+            ).show()
+            viewModel.onIntent(ChatIntent.RetryLastMessage)
+        } else {
+            Toast.makeText(
+                context,
+                context.getString(R.string.location_permission_denied),
                 Toast.LENGTH_SHORT
             ).show()
         }
@@ -452,6 +482,15 @@ private fun ChatContent(
                 ChatEffect.ShowImageModelDownloadPrompt -> {
                     hapticView.performChevereHaptic(ChevereHaptic.Warning)
                     showImageModelDownloadPrompt = true
+                }
+
+                ChatEffect.RequestLocationPermission -> {
+                    locationPermissionLauncher.launch(
+                        arrayOf(
+                            Manifest.permission.ACCESS_COARSE_LOCATION,
+                            Manifest.permission.ACCESS_FINE_LOCATION
+                        )
+                    )
                 }
             }
         }

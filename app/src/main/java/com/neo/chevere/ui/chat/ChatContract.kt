@@ -92,6 +92,7 @@ sealed class ChatIntent : UiIntent {
     data class ToggleExplicitImageMask(val messageIndex: Int) : ChatIntent()
     data class ShareMessage(val messageIndex: Int) : ChatIntent()
     data class SaveImage(val messageIndex: Int) : ChatIntent()
+    data object RetryLastMessage : ChatIntent()
 }
 
 sealed class ChatEffect : UiEffect {
@@ -103,6 +104,7 @@ sealed class ChatEffect : UiEffect {
     data class SaveImage(val imageUri: Uri) : ChatEffect()
     data object ShowImageModelDownloadPrompt : ChatEffect()
     data object HideKeyboard : ChatEffect()
+    data object RequestLocationPermission : ChatEffect()
 }
 
 /**

@@ -6,6 +6,7 @@ import com.neo.chevere.core.PiiUtils
 import com.neo.chevere.data.inference.InferenceManager
 import com.neo.chevere.domain.InferenceRequest
 import com.neo.chevere.domain.InferenceResult
+import com.neo.chevere.domain.LocationPermissionException
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -229,6 +230,10 @@ class AgentOrchestrator @Inject constructor(
 
             is ToolResult.Error -> {
                 Timber.tag(TAG).e("Tool ${tool.name} ERROR: ${toolResult.message}")
+                if (toolResult.message == "LOCATION_PERMISSION_REQUIRED") {
+                    _agentState.value = AgentState.Idle
+                    return Result.failure(LocationPermissionException())
+                }
                 lastToolSummary = "Error: ${toolResult.message}"
                 lastPrompt =
                     "${Constants.Agent.TOOL_ERROR_FROM_PREFIX}${tool.name}: ${toolResult.message}\n\nPlease explain the error to the user or try an alternative."

@@ -21,6 +21,7 @@ import com.neo.chevere.domain.InitializationStatus
 import com.neo.chevere.domain.InitializeChatUseCase
 import com.neo.chevere.domain.ModelCapability
 import com.neo.chevere.domain.ModelTaskType
+import com.neo.chevere.domain.LocationPermissionException
 import com.neo.chevere.domain.SendMessageUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
@@ -54,6 +55,7 @@ class ChatViewModel @Inject constructor(
     private var initJob: Job? = null
     private var imageGenerationJob: Job? = null
     private var responseJob: Job? = null
+    private var lastUserMessage: String? = null
 
     init {
         // 1. Observe global initialization status from the repository
@@ -195,6 +197,13 @@ class ChatViewModel @Inject constructor(
                 is ChatIntent.ToggleExplicitImageMask -> toggleExplicitImageMask(intent.messageIndex)
                 is ChatIntent.ShareMessage -> shareMessage(intent.messageIndex)
                 is ChatIntent.SaveImage -> saveImage(intent.messageIndex)
+                ChatIntent.RetryLastMessage -> {
+                    if (currentState.isLoading) return@withLock
+                    val query = lastUserMessage
+                    if (query != null) {
+                        sendMessage(query, null)
+                    }
+                }
             }
         }
     }
@@ -243,6 +252,7 @@ class ChatViewModel @Inject constructor(
         val promptText = text.ifBlank {
             if (imageUri != null) "Describe this image." else text
         }
+        lastUserMessage = promptText
         val userMsg = ChatMessage(promptText, isUser = true, imageUri = imageUri?.toString())
         setState {
             copy(
@@ -558,6 +568,14 @@ class ChatViewModel @Inject constructor(
                     errorType = e::class.java.simpleName
                 )
                 telemetry.recordNonFatal(e, TelemetryConstants.Context.CHAT_TURN)
+                if (e is LocationPermissionException) {
+                    sendEffect { ChatEffect.RequestLocationPermission }
+                    appendAssistantMessage(
+                        "Location permission is required to get local weather automatically. Please grant the permission or specify a city name (e.g. 'weather in Paris').",
+                        modelName = "CHEVERE AI"
+                    )
+                    return
+                }
                 appendAssistantMessage(e.message ?: "Action failed", modelName = "CHEVERE AI")
                 return
             }

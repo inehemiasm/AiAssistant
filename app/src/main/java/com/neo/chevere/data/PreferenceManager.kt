@@ -80,8 +80,18 @@ class PreferenceManager @Inject constructor(@ApplicationContext context: Context
         .map { preferences ->
             preferences[WEATHER_UNIT_KEY]
                 ?.let { value -> WeatherUnitSystem.entries.firstOrNull { it.name == value } }
-                ?: WeatherUnitSystem.METRIC
+                ?: getDefaultWeatherUnitSystem()
         }
+
+    private fun getDefaultWeatherUnitSystem(): WeatherUnitSystem {
+        val country = java.util.Locale.getDefault().country.uppercase()
+        // US, Myanmar (MM), Liberia (LR) use Imperial system
+        return if (country == "US" || country == "MM" || country == "LR") {
+            WeatherUnitSystem.IMPERIAL
+        } else {
+            WeatherUnitSystem.METRIC
+        }
+    }
 
     /**
      * Updates the user's theme preference.

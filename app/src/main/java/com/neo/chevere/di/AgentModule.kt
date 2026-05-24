@@ -15,6 +15,7 @@ import com.neo.chevere.data.agent.tools.ImageGenerationTool
 import com.neo.chevere.data.agent.tools.LaunchAppTool
 import com.neo.chevere.data.agent.tools.ListAppsTool
 import com.neo.chevere.data.agent.tools.ListModelsTool
+import com.neo.chevere.data.location.LocationProvider
 import com.neo.chevere.data.agent.tools.OpenAppTool
 import com.neo.chevere.data.agent.tools.OpenDeepLinkTool
 import com.neo.chevere.data.agent.tools.OpenMapsTool
@@ -71,9 +72,11 @@ abstract class AgentModule {
         @IntoSet
         fun provideWeatherTool(
             httpClient: HttpClient,
-            preferenceManager: PreferenceManager
+            preferenceManager: PreferenceManager,
+            locationProvider: LocationProvider,
+            @ApplicationContext context: Context
         ): AgentTool {
-            return WeatherTool(httpClient, preferenceManager)
+            return WeatherTool(httpClient, preferenceManager, locationProvider, context)
         }
 
         @Provides

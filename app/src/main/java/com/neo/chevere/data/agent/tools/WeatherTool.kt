@@ -4,6 +4,7 @@ import com.neo.chevere.core.PiiUtils
 import com.neo.chevere.data.PreferenceManager
 import com.neo.chevere.data.agent.AgentTool
 import com.neo.chevere.data.agent.ToolResult
+import com.neo.chevere.data.location.LocationProvider
 import com.neo.chevere.domain.WeatherUnitSystem
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -22,40 +23,68 @@ import javax.inject.Singleton
 @Singleton
 class WeatherTool @Inject constructor(
     private val httpClient: HttpClient,
-    private val preferenceManager: PreferenceManager
+    private val preferenceManager: PreferenceManager,
+    private val locationProvider: LocationProvider,
+    @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context
 ) : AgentTool {
     override val name: String = "get_weather"
     override val description: String =
-        "Fetches the current weather and forecast for a given location using the user's weather unit setting."
-    override val inputSchema: String = "location: The name of the city or place to get weather for."
+        "Fetches the current weather and forecast. Can fetch for a specified city name, or for the user's current location if no location is specified or if 'current' is passed."
+    override val inputSchema: String =
+        "location: [Optional] The name of the city or place to get weather for (e.g. 'Paris'). If the user is asking about the weather at their current location, or does not specify a location, omit this parameter or pass 'current'."
 
     override suspend fun execute(args: Map<String, String>): ToolResult {
-        val rawLocation =
-            args["location"]?.trim() ?: return ToolResult.Error("Missing 'location' argument")
-
-        // Scrub PII from location to ensure privacy before sending to external geocoding API
-        val location = PiiUtils.scrub(rawLocation)
+        val rawLocation = args["location"]?.trim()
+        val isCurrent = rawLocation.isNullOrBlank() || isCurrentLocationRequest(rawLocation)
 
         return try {
             val units = WeatherUnits.from(preferenceManager.weatherUnitPreference.first())
+            val lat: Double
+            val lon: Double
+            val cityName: String
 
-            // 1. Geocoding: Convert location name to coordinates
-            val geocodeResponse: GeocodeResponse =
-                httpClient.get("https://geocoding-api.open-meteo.com/v1/search") {
-                    parameter("name", location)
-                    parameter("count", "1")
-                    parameter("language", "en")
-                    parameter("format", "json")
-                }.body()
+            if (isCurrent) {
+                if (!locationProvider.isPermissionGranted()) {
+                    return ToolResult.Error("LOCATION_PERMISSION_REQUIRED")
+                }
+                val location = locationProvider.getCurrentLocation()
+                    ?: return ToolResult.Error("Could not retrieve current location. Please ensure location services are enabled.")
+                lat = location.latitude
+                lon = location.longitude
+                cityName = try {
+                    val geocoder = android.location.Geocoder(context, java.util.Locale.getDefault())
+                    @Suppress("DEPRECATION")
+                    val addresses = geocoder.getFromLocation(lat, lon, 1)
+                    addresses?.firstOrNull()?.locality ?: addresses?.firstOrNull()?.subAdminArea ?: "Current Location"
+                } catch (e: Exception) {
+                    "Current Location"
+                }
+            } else {
+                // Scrub PII from location to ensure privacy before sending to external geocoding API
+                val location = PiiUtils.scrub(rawLocation)
 
-            val city = geocodeResponse.results?.firstOrNull()
-                ?: return ToolResult.Error("Could not find location: $location")
+                // 1. Geocoding: Convert location name to coordinates
+                val geocodeResponse: GeocodeResponse =
+                    httpClient.get("https://geocoding-api.open-meteo.com/v1/search") {
+                        parameter("name", location)
+                        parameter("count", "1")
+                        parameter("language", "en")
+                        parameter("format", "json")
+                    }.body()
+
+                val city = geocodeResponse.results?.firstOrNull()
+                    ?: return ToolResult.Error("Could not find location: $location")
+
+                lat = city.latitude
+                lon = city.longitude
+                cityName = city.name
+            }
 
             // 2. Fetch Weather using coordinates
             val weatherResponse: WeatherResponse =
                 httpClient.get("https://api.open-meteo.com/v1/forecast") {
-                    parameter("latitude", city.latitude)
-                    parameter("longitude", city.longitude)
+                    parameter("latitude", lat)
+                    parameter("longitude", lon)
                     parameter("current_weather", "true")
                     parameter("timezone", "auto")
                     parameter("daily", "weathercode,temperature_2m_max,temperature_2m_min")
@@ -65,7 +94,7 @@ class WeatherTool @Inject constructor(
 
             val current = weatherResponse.current_weather
             val result = buildString {
-                append("Current weather in ${city.name}, ${city.country ?: ""}:\n")
+                append("Current weather in $cityName:\n")
                 append("- Temperature: ${current.temperature} ${units.temperatureLabel}\n")
                 append("- Condition: ${getWeatherCondition(current.weathercode)}\n")
                 append("- Wind Speed: ${current.windspeed} ${units.windSpeedLabel}\n")
@@ -79,9 +108,20 @@ class WeatherTool @Inject constructor(
 
             ToolResult.Success(result)
         } catch (e: Exception) {
-            Timber.tag("WeatherTool").e(e, "Failed to get weather for $location")
+            Timber.tag("WeatherTool").e(e, "Failed to get weather for $rawLocation")
             ToolResult.Error("Failed to fetch weather: ${e.message}")
         }
+    }
+
+    private fun isCurrentLocationRequest(location: String): Boolean {
+        val normalized = location.lowercase(java.util.Locale.ROOT).trim()
+        return normalized.isEmpty() ||
+                normalized == "current" ||
+                normalized == "current location" ||
+                normalized == "my location" ||
+                normalized == "here" ||
+                normalized == "device" ||
+                normalized == "local"
     }
 
     private fun getWeatherCondition(code: Int): String {

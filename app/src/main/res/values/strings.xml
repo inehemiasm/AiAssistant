@@ -139,4 +139,7 @@
     <string name="not_now">Not now</string>
     <string name="permission_granted_try_again">Permission granted. Try again.</string>
     <string name="camera_permission_required">Camera permission is required to take photos.</string>
+    <string name="location_permission_required">Location permission is required to get local weather.</string>
+    <string name="location_permission_granted">Location permission granted.</string>
+    <string name="location_permission_denied">Location permission denied.</string>
 </resources>
