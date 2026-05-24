@@ -78,4 +78,32 @@ class ConversationContextManagerTest {
         assertFalse(prompt.contains("remember this"))
         assertTrue(prompt == "fresh")
     }
+
+    @Test
+    fun getMemoryTurnsTranscript_returnsTranscriptOfOldTurns() {
+        val manager = ConversationContextManager()
+        manager.recordExchange("q0", null, "a0")
+        manager.recordExchange("q1", null, "a1")
+        manager.recordExchange("q2", null, "a2")
+
+        val transcript = manager.getMemoryTurnsTranscript()
+        assertTrue(transcript != null)
+        assertTrue(transcript!!.contains("User: q0"))
+        assertTrue(transcript.contains("Assistant: a0"))
+        assertFalse(transcript.contains("q1"))
+    }
+
+    @Test
+    fun buildPrompt_whenPersistentMemorySet_usesPersistentMemory() {
+        val manager = ConversationContextManager()
+        manager.recordExchange("q0", null, "a0")
+        manager.recordExchange("q1", null, "a1")
+        manager.recordExchange("q2", null, "a2")
+
+        manager.persistentMemory = "This is a custom persistent memory summary."
+        val prompt = manager.buildPrompt("current request")
+
+        assertTrue(prompt.contains("This is a custom persistent memory summary."))
+        assertFalse(prompt.contains("User: q0"))
+    }
 }

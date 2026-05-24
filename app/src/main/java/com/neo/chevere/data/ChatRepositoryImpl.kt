@@ -29,7 +29,11 @@ import com.neo.chevere.domain.ModelRuntime
 import com.neo.chevere.domain.ModelSource
 import com.neo.chevere.domain.ModelTaskType
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -37,6 +41,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import timber.log.Timber
 import java.io.File
@@ -67,6 +72,8 @@ class ChatRepositoryImpl @Inject constructor(
 
     private val _modelActivationEvents = Channel<String>(Channel.BUFFERED)
     override val modelActivationEvents: Flow<String> = _modelActivationEvents.receiveAsFlow()
+
+    private var summarizationJob: Job? = null
 
     override val agentState: StateFlow<AgentState> = agentOrchestrator.agentState
 
@@ -128,6 +135,7 @@ class ChatRepositoryImpl @Inject constructor(
     }
 
     override suspend fun sendMessage(prompt: String, imageUri: Uri?): Result<String> {
+        cancelSummarization()
         _directPartialResponse.value = ""
         if (imageUri != null && !isVisionSupported()) {
             return Result.failure(
@@ -168,6 +176,7 @@ class ChatRepositoryImpl @Inject constructor(
                     response
                 }
             conversationContextManager.recordExchange(prompt, imageUri, memoryResponse)
+            triggerBackgroundSummarization()
         }
         return result
     }
@@ -194,6 +203,7 @@ class ChatRepositoryImpl @Inject constructor(
         return when (val inferenceResult = lastResult) {
             is InferenceResult.Success -> {
                 conversationContextManager.recordExchange(prompt, imageUri, inferenceResult.text)
+                triggerBackgroundSummarization()
                 Result.success(inferenceResult.text)
             }
 
@@ -523,6 +533,50 @@ class ChatRepositoryImpl @Inject constructor(
         return Constants.ImageGeneration.ONNX_REQUIRED_FILES.all { relativePath ->
             File(directory, relativePath).isFile ||
                     File(directory, relativePath.replace(".ort", ".onnx")).isFile
+        }
+    }
+
+    private fun cancelSummarization() {
+        summarizationJob?.cancel()
+        summarizationJob = null
+    }
+
+    private fun triggerBackgroundSummarization() {
+        cancelSummarization()
+
+        val transcript = conversationContextManager.getMemoryTurnsTranscript() ?: return
+        if (inferenceManager.currentModel == null) return
+
+        summarizationJob = CoroutineScope(dispatcherProvider.default).launch {
+            try {
+                // Wait for the system to be idle
+                delay(3000)
+
+                val prompt = "You are Chevere AI's memory manager. Condense the following message exchange " +
+                        "into a concise bulleted paragraph under 90 words that captures all key details, " +
+                        "preferences, and facts discussed. Do not add intro/outro text, just output the condensed paragraph.\n\n" +
+                        "Turns to summarize:\n$transcript\n\n" +
+                        "Condensed Paragraph:"
+
+                val request = InferenceRequest(prompt = prompt, imageUri = null)
+
+                inferenceManager.clearConversation()
+                val response = inferenceManager.generate(request)
+                if (response is InferenceResult.Success) {
+                    val summary = response.text.trim()
+                    if (summary.isNotEmpty()) {
+                        conversationContextManager.persistentMemory = summary
+                        Timber.tag(TAG).d("Background context summarization succeeded: $summary")
+                    }
+                }
+            } catch (e: CancellationException) {
+                Timber.tag(TAG).d("Background context summarization was cancelled.")
+            } catch (e: Exception) {
+                Timber.tag(TAG).e(e, "Background context summarization failed")
+            } finally {
+                // Always clear conversation afterwards to avoid polluting future chat turns
+                runCatching { inferenceManager.clearConversation() }
+            }
         }
     }
 

@@ -47,6 +47,8 @@ class ConversationContextManager @Inject constructor() {
         return sections.joinToString(separator = "\n\n")
     }
 
+    var persistentMemory: String? = null
+
     /**
      * Records a completed user/assistant exchange after a successful response.
      */
@@ -68,9 +70,28 @@ class ConversationContextManager @Inject constructor() {
      */
     fun clear() {
         turns.clear()
+        persistentMemory = null
+    }
+
+    /**
+     * Gets a formatted transcript of the turns that are older than the recent window,
+     * to be passed to the LLM for background summarization.
+     */
+    fun getMemoryTurnsTranscript(): String? {
+        val recentTurns = turns.takeLast(Constants.ContextWindow.RECENT_TURN_COUNT)
+        val memoryTurns = turns.dropLast(recentTurns.size)
+        if (memoryTurns.isEmpty()) return null
+        return memoryTurns.joinToString("\n") { turn ->
+            "${turn.role}: ${turn.content}"
+        }
     }
 
     private fun buildMemorySection(memoryTurns: List<ConversationTurn>): String? {
+        val memoryStr = persistentMemory
+        if (memoryStr != null && memoryStr.isNotBlank()) {
+            return "${Constants.ContextWindow.MEMORY_HEADER}:\n$memoryStr"
+        }
+
         if (memoryTurns.isEmpty()) return null
 
         val bullets = memoryTurns

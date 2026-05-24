@@ -12,6 +12,8 @@ import com.neo.chevere.data.download.WorkManagerModelDownloadManager
 import com.neo.chevere.data.inference.ImageGenerationManager
 import com.neo.chevere.data.inference.InferenceManager
 import com.neo.chevere.domain.InferenceResult
+import com.neo.chevere.domain.InstallStatus
+import com.neo.chevere.domain.InstalledModel
 import com.neo.chevere.domain.InstalledModelRegistry
 import com.neo.chevere.domain.ModelEntry
 import com.neo.chevere.domain.ModelFormat
@@ -149,6 +151,41 @@ class ChatRepositoryImplTest {
 
         verify(agentOrchestrator).processUserRequest(prompt, null, null)
         assertEquals("sunny", result.getOrNull())
+    }
+
+    @Test
+    fun sendMessage_triggersBackgroundSummarizationWhenHistoryExceedsRecentWindow() = runTest(testDispatcher) {
+        val mockModel = InstalledModel(
+            id = "gemma",
+            displayName = "Gemma",
+            filePath = "gemma.bin",
+            fileName = "gemma.bin",
+            source = ModelSource.LOCAL,
+            format = ModelFormat.LITERTLM,
+            runtime = ModelRuntime.LITERT,
+            taskType = ModelTaskType.CHAT,
+            capabilities = emptySet(),
+            installStatus = InstallStatus.INSTALLED
+        )
+        whenever(inferenceManager.currentModel).doReturn(mockModel)
+        whenever(inferenceManager.generate(any())).doReturn(InferenceResult.Success("This is the summarized text."))
+        whenever(inferenceManager.generateStream(any())).doReturn(flowOf(InferenceResult.Success("response text")))
+
+        // Populate the conversation history past RECENT_TURN_COUNT (4 turns / 2 exchanges)
+        conversationContextManager.recordExchange("q0", null, "a0")
+        conversationContextManager.recordExchange("q1", null, "a1")
+        conversationContextManager.recordExchange("q2", null, "a2")
+
+        val result = repository.sendMessage("new prompt", null)
+
+        // Initially delay has not passed
+        assertTrue(conversationContextManager.persistentMemory == null)
+
+        // Advance time to execute background job
+        testScheduler.advanceTimeBy(3500)
+        testScheduler.runCurrent()
+
+        assertEquals("This is the summarized text.", conversationContextManager.persistentMemory)
     }
 
     @Test
