@@ -38,11 +38,13 @@ import androidx.navigation.compose.rememberNavController
 import com.neo.chevere.R
 import com.neo.chevere.data.telemetry.AppTelemetry
 import com.neo.chevere.data.telemetry.TelemetryConstants
+import com.neo.chevere.ui.chat.ChatViewModel
 import com.neo.chevere.ui.common.ChevereHaptic
 import com.neo.chevere.ui.common.performChevereHaptic
 
 @Composable
 fun ChevereApp(
+    chatViewModel: ChatViewModel,
     telemetry: AppTelemetry,
     onExitConfirmed: () -> Unit = {}
 ) {
@@ -152,7 +154,8 @@ fun ChevereApp(
                 .consumeWindowInsets(innerPadding)
         ) {
             ChevereNavHost(
-                navController = navController
+                navController = navController,
+                chatViewModel = chatViewModel
             )
         }
     }

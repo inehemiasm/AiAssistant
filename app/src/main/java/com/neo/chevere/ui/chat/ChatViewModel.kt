@@ -608,7 +608,7 @@ class ChatViewModel @Inject constructor(
             ).uppercase()
         )
         responseJob = null
-        setState { copy(messages = messages + aiMsg, sendState = SendState.Idle) }
+        setState { copy(messages = messages + aiMsg, sendState = SendState.Idle, streamingText = "") }
         sendEffect { ChatEffect.ScrollToBottom }
     }
 

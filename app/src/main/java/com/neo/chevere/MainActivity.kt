@@ -56,6 +56,7 @@ class MainActivity : ComponentActivity() {
                     statusMessage = chatState.loadingMessage ?: "INITIALIZING..."
                 ) {
                     ChevereApp(
+                        chatViewModel = chatViewModel,
                         telemetry = telemetry,
                         onExitConfirmed = { finish() }
                     )

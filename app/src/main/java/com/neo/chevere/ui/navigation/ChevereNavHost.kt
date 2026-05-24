@@ -7,6 +7,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.neo.chevere.ui.chat.ChatScreen
+import com.neo.chevere.ui.chat.ChatViewModel
 import com.neo.chevere.ui.marketplace.MarketplaceViewModel
 import com.neo.chevere.ui.marketplace.ModelMarketplaceScreen
 import com.neo.chevere.ui.marketplace.details.ModelDetailsScreen
@@ -15,6 +16,7 @@ import com.neo.chevere.ui.settings.SettingsScreen
 @Composable
 fun ChevereNavHost(
     navController: NavHostController,
+    chatViewModel: ChatViewModel,
     modifier: Modifier = Modifier
 ) {
     NavHost(
@@ -24,6 +26,7 @@ fun ChevereNavHost(
     ) {
         composable<Route.Chat> {
             ChatScreen(
+                viewModel = chatViewModel,
                 onSettingsClick = { navController.navigate(Route.Settings) },
                 onModelsClick = { navController.navigate(Route.ModelMarketplace) }
             )

@@ -41,6 +41,7 @@ class AgentOrchestrator @Inject constructor(
     private var lastImageUri: Uri? = null
     private var stepCount = 0
     private var lastToolSummary: String? = null
+    private val currentSteps = mutableListOf<AgentStep>()
 
     suspend fun processUserRequest(
         prompt: String,
@@ -48,7 +49,8 @@ class AgentOrchestrator @Inject constructor(
         conversationContext: String? = null
     ): Result<String> = loopMutex.withLock {
         _activePartialResponse.value = ""
-        _agentState.value = AgentState.Planning
+        currentSteps.clear()
+        _agentState.value = AgentState.Planning(currentSteps.toList())
         // Scrub log output to avoid PII in logcat
         Timber.tag(TAG).i(">>> Starting agent loop for user prompt: \"${PiiUtils.scrub(prompt)}\"")
 
@@ -142,6 +144,23 @@ class AgentOrchestrator @Inject constructor(
                     }
                 }
 
+                // Record intermediate reasoning steps
+                when (turnResult) {
+                    is AssistantTurnResult.ToolRequest -> {
+                        val toolCall = turnResult.toolCall
+                        val rawText = (inferenceResult as InferenceResult.Success).text
+                        val thought = parser.stripToolCall(rawText)
+                        val step = AgentStep(
+                            thought = thought.takeIf { it.isNotBlank() },
+                            toolCall = toolCall,
+                            result = null
+                        )
+                        currentSteps.add(step)
+                        _agentState.value = AgentState.Planning(currentSteps.toList())
+                    }
+                    else -> {}
+                }
+
                 when (turnResult) {
                     is AssistantTurnResult.Text -> {
                         val originalText = turnResult.content
@@ -159,7 +178,8 @@ class AgentOrchestrator @Inject constructor(
 
                         // Log scrubbed final text
                         Timber.tag(TAG).i("<<< Loop finished. Final text: \"${PiiUtils.scrub(processedText)}\"")
-                        _agentState.value = AgentState.Completed
+                        _activePartialResponse.value = ""
+                        _agentState.value = AgentState.Completed(currentSteps.toList())
                         return Result.success(processedText)
                     }
 
@@ -174,10 +194,17 @@ class AgentOrchestrator @Inject constructor(
                             lastPrompt =
                                 "${Constants.Agent.TOOL_ERROR_PREFIX}Tool '${toolCall.toolName}' not found. Please proceed without it or inform the user."
                             lastImageUri = null
+                            
+                            val lastIndex = currentSteps.indexOfLast { it.toolCall == toolCall }
+                            if (lastIndex != -1) {
+                                currentSteps[lastIndex] = currentSteps[lastIndex].copy(
+                                    result = ToolResult.Error("Tool '${toolCall.toolName}' not found.")
+                                )
+                            }
                             continue
                         }
 
-                        _agentState.value = AgentState.ExecutingTool(tool.name)
+                        _agentState.value = AgentState.ExecutingTool(tool.name, currentSteps.toList())
 
                         val toolResult = try {
                             withTimeout(tool.executionTimeoutMs()) {
@@ -191,6 +218,11 @@ class AgentOrchestrator @Inject constructor(
                             ToolResult.Error("Tool execution failed: ${e.message}")
                         }
 
+                        val lastIndex = currentSteps.indexOfLast { it.toolCall == toolCall }
+                        if (lastIndex != -1) {
+                            currentSteps[lastIndex] = currentSteps[lastIndex].copy(result = toolResult)
+                        }
+
                         val stopLoopResult = handleToolResult(tool, toolResult)
                         if (stopLoopResult != null) return stopLoopResult
 
@@ -199,7 +231,7 @@ class AgentOrchestrator @Inject constructor(
 
                     is AssistantTurnResult.Error -> {
                         Timber.tag(TAG).e("Inference error: ${turnResult.message}")
-                        _agentState.value = AgentState.Error(turnResult.message)
+                        _agentState.value = AgentState.Error(turnResult.message, currentSteps.toList())
                         return Result.failure(turnResult.throwable ?: Exception(turnResult.message))
                     }
                 }
@@ -207,12 +239,12 @@ class AgentOrchestrator @Inject constructor(
 
             Timber.tag(TAG).w("Reached max tool calls (${Constants.Agent.MAX_TOOL_CALLS_PER_TURN}).")
             val finalFallback = lastToolSummary ?: "I've completed the requested actions."
-            _agentState.value = AgentState.Completed
+            _agentState.value = AgentState.Completed(currentSteps.toList())
             return Result.success(finalFallback)
 
         } catch (e: Exception) {
             Timber.tag(TAG).e(e, "Unexpected error in agent loop")
-            _agentState.value = AgentState.Error("Unexpected error: ${e.message}")
+            _agentState.value = AgentState.Error("Unexpected error: ${e.message}", currentSteps.toList())
             return Result.failure(e)
         }
     }
@@ -251,7 +283,7 @@ class AgentOrchestrator @Inject constructor(
                 Timber.tag(TAG).d("Tool ${tool.name} SUCCESS: ${PiiUtils.scrub(toolResult.data)}")
                 lastToolSummary = toolResult.data
                 if (toolResult.data.startsWith(Constants.Agent.IMAGE_GENERATION_RESULT_PREFIX)) {
-                    _agentState.value = AgentState.Completed
+                    _agentState.value = AgentState.Completed(currentSteps.toList())
                     return Result.success(toolResult.data)
                 }
                 lastPrompt =
@@ -274,7 +306,7 @@ class AgentOrchestrator @Inject constructor(
             is ToolResult.NeedsConfirmation -> {
                 Timber.tag(TAG).i("Tool ${tool.name} needs confirmation: ${toolResult.message}")
                 pendingConfirmation = toolResult.onConfirm
-                _agentState.value = AgentState.WaitingForConfirmation(tool.name, toolResult.message)
+                _agentState.value = AgentState.WaitingForConfirmation(tool.name, toolResult.message, currentSteps.toList())
                 Result.success("I need your confirmation to proceed with ${tool.name}: ${toolResult.message}")
             }
         }
@@ -285,12 +317,17 @@ class AgentOrchestrator @Inject constructor(
             ?: return Result.failure(IllegalStateException("No pending confirmation"))
         pendingConfirmation = null
 
-        _agentState.value = AgentState.ExecutingTool("confirming...")
+        _agentState.value = AgentState.ExecutingTool("confirming...", currentSteps.toList())
 
         val toolResult = try {
             onConfirm()
         } catch (e: Exception) {
             ToolResult.Error("Action confirmation failed: ${e.message}")
+        }
+
+        val lastIndex = currentSteps.indexOfLast { it.result is ToolResult.NeedsConfirmation }
+        if (lastIndex != -1) {
+            currentSteps[lastIndex] = currentSteps[lastIndex].copy(result = toolResult)
         }
 
         when (toolResult) {
@@ -308,7 +345,7 @@ class AgentOrchestrator @Inject constructor(
 
             is ToolResult.NeedsConfirmation -> {
                 pendingConfirmation = toolResult.onConfirm
-                _agentState.value = AgentState.WaitingForConfirmation("nested", toolResult.message)
+                _agentState.value = AgentState.WaitingForConfirmation("nested", toolResult.message, currentSteps.toList())
                 return Result.success("Additional confirmation needed: ${toolResult.message}")
             }
         }
@@ -327,5 +364,6 @@ class AgentOrchestrator @Inject constructor(
         pendingConfirmation = null
         stepCount = 0
         lastToolSummary = null
+        currentSteps.clear()
     }
 }

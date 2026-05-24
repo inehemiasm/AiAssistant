@@ -58,7 +58,7 @@ class LiteRtEngine @Inject constructor(
             runtimeManager.sendMessageAsync(message).collect { result ->
                 if (result.isSuccess) {
                     val response = result.getOrThrow()
-                    val chunkText = responseMapper.mapToString(response)
+                    val chunkText = responseMapper.mapToString(response, trim = false)
                     accumulatedText += chunkText
                     emit(InferenceResult.Success(accumulatedText))
                 } else {

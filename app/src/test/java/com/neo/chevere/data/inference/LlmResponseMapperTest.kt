@@ -24,6 +24,13 @@ class LlmResponseMapperTest {
     }
 
     @Test
+    fun mapToString_withoutTrim_returnsUntrimmedText() {
+        val message = Message.model("  Hello World  ")
+        val result = mapper.mapToString(message, trim = false)
+        assertEquals("  Hello World  ", result)
+    }
+
+    @Test
     fun mapToString_withMultipleTextParts_joinsThem() {
         val contents = Contents.of(
             Content.Text("Hello "),

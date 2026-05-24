@@ -186,6 +186,7 @@ class ChatRepositoryImpl @Inject constructor(
                 }
             }
         }
+        _directPartialResponse.value = ""
         logDebug(
             "Direct chat turn completed in ${elapsedMs}ms. promptChars=${prompt.length}, contextChars=${contextualPrompt.length}, hasImage=${imageUri != null}"
         )

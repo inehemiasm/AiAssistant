@@ -153,6 +153,17 @@ private fun ChatContent(
     val context = LocalContext.current
     val hapticView = LocalView.current
     val listState = rememberLazyListState()
+
+    // Auto-scroll to bottom during token streaming
+    LaunchedEffect(state.streamingText) {
+        if (state.streamingText.isNotEmpty()) {
+            val lastIndex = listState.layoutInfo.totalItemsCount - 1
+            if (lastIndex >= 0) {
+                listState.scrollToItem(lastIndex)
+            }
+        }
+    }
+
     val snackbarHostState = remember { SnackbarHostState() }
     var showImageModelDownloadPrompt by remember { mutableStateOf(false) }
     var wasAiBusy by remember { mutableStateOf(false) }
@@ -292,6 +303,7 @@ private fun ChatContent(
                             Constants.ModelFiles.LITERTLM_EXTENSION,
                             ""
                         ).uppercase(),
+                        agentState = state.agentState,
                         onToggleExplicitImageMask = { index ->
                             hapticView.performChevereHaptic(ChevereHaptic.Selection)
                             viewModel.onIntent(ChatIntent.ToggleExplicitImageMask(index))

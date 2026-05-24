@@ -4,33 +4,41 @@ package com.neo.chevere.data.agent
  * Represents the current state of the AI Agent's reasoning and execution loop.
  */
 sealed interface AgentState {
+    val steps: List<AgentStep>
+
     /** The agent is idle and waiting for user input. */
-    object Idle : AgentState
+    object Idle : AgentState {
+        override val steps: List<AgentStep> = emptyList()
+    }
 
     /** The agent is currently planning its next steps or reasoning about the user's request. */
-    object Planning : AgentState
+    data class Planning(override val steps: List<AgentStep> = emptyList()) : AgentState
 
     /** 
      * The agent is currently executing a specific tool. 
      * @property toolName The name of the tool being executed.
      */
-    data class ExecutingTool(val toolName: String) : AgentState
+    data class ExecutingTool(val toolName: String, override val steps: List<AgentStep> = emptyList()) : AgentState
 
     /** 
      * The agent is waiting for user confirmation before proceeding with a tool execution.
      * @property toolName The name of the tool requiring confirmation.
      * @property message A message to show to the user explaining why confirmation is needed.
      */
-    data class WaitingForConfirmation(val toolName: String, val message: String) : AgentState
+    data class WaitingForConfirmation(
+        val toolName: String, 
+        val message: String,
+        override val steps: List<AgentStep> = emptyList()
+    ) : AgentState
 
     /** The agent has completed its task successfully. */
-    object Completed : AgentState
+    data class Completed(override val steps: List<AgentStep> = emptyList()) : AgentState
 
     /** 
      * The agent encountered an error during its reasoning or execution loop.
      * @property message A description of the error.
      */
-    data class Error(val message: String) : AgentState
+    data class Error(val message: String, override val steps: List<AgentStep> = emptyList()) : AgentState
 }
 
 /**
@@ -54,8 +62,9 @@ sealed class AssistantTurnResult {
  * Represents a single step in the agent's execution history.
  */
 data class AgentStep(
-    val toolCall: ToolCall,
-    val result: ToolResult
+    val thought: String?,
+    val toolCall: ToolCall?,
+    val result: ToolResult?
 )
 
 /**

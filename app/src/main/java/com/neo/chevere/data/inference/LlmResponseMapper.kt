@@ -14,11 +14,11 @@ class LlmResponseMapper @Inject constructor() {
     /**
      * Extracts text content from a LiteRT-LM Message response.
      */
-    fun mapToString(message: Message): String {
+    fun mapToString(message: Message, trim: Boolean = true): String {
         val contents = message.contents.contents
         if (contents.isEmpty()) return ""
 
-        return contents.joinToString("") { content ->
+        val rawText = contents.joinToString("") { content ->
             when (content) {
                 is Content.Text -> content.text
                 else -> {
@@ -39,6 +39,7 @@ class LlmResponseMapper @Inject constructor() {
                     }
                 }
             }
-        }.trim()
+        }
+        return if (trim) rawText.trim() else rawText
     }
 }
