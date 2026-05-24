@@ -8,9 +8,12 @@ import com.neo.chevere.core.Constants
 import com.neo.chevere.core.DispatcherProvider
 import com.neo.chevere.domain.InitializationStatus
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -126,6 +129,22 @@ class LlmRuntimeManager @Inject constructor(
                 runCatching { conversation.sendMessage(message) }
             }
         }
+
+    fun sendMessageAsync(message: Message): Flow<Result<Message>> = flow {
+        engineLock.withLock {
+            val conversation = activeConversation ?: run {
+                emit(Result.failure(IllegalStateException("No active conversation")))
+                return@withLock
+            }
+            try {
+                conversation.sendMessageAsync(message).collect { chunk ->
+                    emit(Result.success(chunk))
+                }
+            } catch (e: Exception) {
+                emit(Result.failure(e))
+            }
+        }
+    }
 
     suspend fun clearConversation() = withContext(dispatcherProvider.default) {
         engineLock.withLock {

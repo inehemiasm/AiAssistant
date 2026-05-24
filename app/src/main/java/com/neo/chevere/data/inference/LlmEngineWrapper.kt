@@ -4,6 +4,7 @@ import com.google.ai.edge.litertlm.Conversation
 import com.google.ai.edge.litertlm.Engine
 import com.google.ai.edge.litertlm.EngineConfig
 import com.google.ai.edge.litertlm.Message
+import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -21,6 +22,7 @@ interface LlmEngineWrapper {
  */
 interface ConversationWrapper {
     suspend fun sendMessage(message: Message): Message
+    fun sendMessageAsync(message: Message): Flow<Message>
     fun close()
 }
 
@@ -47,6 +49,10 @@ class RealLlmEngineWrapper @Inject constructor() : LlmEngineWrapper {
 class RealConversationWrapper(private val conversation: Conversation) : ConversationWrapper {
     override suspend fun sendMessage(message: Message): Message {
         return conversation.sendMessage(message)
+    }
+
+    override fun sendMessageAsync(message: Message): Flow<Message> {
+        return conversation.sendMessageAsync(message)
     }
 
     override fun close() {

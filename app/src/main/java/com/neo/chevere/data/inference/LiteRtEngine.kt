@@ -6,12 +6,10 @@ import com.neo.chevere.domain.InitializationStatus
 import com.neo.chevere.domain.InstalledModel
 import com.neo.chevere.domain.LoadResult
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/**
- * An implementation of [ModelEngine] that uses the LiteRT (TensorFlow Lite) runtime.
- */
 @Singleton
 class LiteRtEngine @Inject constructor(
     private val runtimeManager: LlmRuntimeManager,
@@ -50,6 +48,25 @@ class LiteRtEngine @Inject constructor(
             }
         } catch (e: Exception) {
             InferenceResult.Failure(e.message ?: "Exception during generation", e)
+        }
+    }
+
+    override fun generateStream(request: InferenceRequest): Flow<InferenceResult> = flow {
+        try {
+            val message = messageFactory.createMessage(request.prompt, request.imageUri)
+            var accumulatedText = ""
+            runtimeManager.sendMessageAsync(message).collect { result ->
+                if (result.isSuccess) {
+                    val response = result.getOrThrow()
+                    val chunkText = responseMapper.mapToString(response)
+                    accumulatedText += chunkText
+                    emit(InferenceResult.Success(accumulatedText))
+                } else {
+                    emit(InferenceResult.Failure(result.exceptionOrNull()?.message ?: "Inference failed"))
+                }
+            }
+        } catch (e: Exception) {
+            emit(InferenceResult.Failure(e.message ?: "Exception during generation", e))
         }
     }
 

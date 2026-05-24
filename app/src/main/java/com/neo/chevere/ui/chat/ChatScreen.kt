@@ -287,6 +287,11 @@ private fun ChatContent(
                     MessageList(
                         messages = state.messages,
                         listState = listState,
+                        streamingText = state.streamingText,
+                        streamingModelName = state.selectedModel.replace(
+                            Constants.ModelFiles.LITERTLM_EXTENSION,
+                            ""
+                        ).uppercase(),
                         onToggleExplicitImageMask = { index ->
                             hapticView.performChevereHaptic(ChevereHaptic.Selection)
                             viewModel.onIntent(ChatIntent.ToggleExplicitImageMask(index))

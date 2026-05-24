@@ -27,6 +27,11 @@ interface ModelEngine {
     suspend fun generate(request: InferenceRequest): InferenceResult
 
     /**
+     * Executes a streaming inference request and emits results.
+     */
+    fun generateStream(request: InferenceRequest): Flow<InferenceResult>
+
+    /**
      * Unloads the current model and releases engine resources.
      */
     suspend fun unload()

@@ -31,7 +31,9 @@ import com.neo.chevere.domain.ModelTaskType
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -73,6 +75,15 @@ class ChatRepositoryImpl @Inject constructor(
     override fun isVisionSupported(): Boolean = inferenceManager.isVisionSupported()
 
     override val activeModel: InstalledModel? get() = inferenceManager.currentModel
+
+    private val _directPartialResponse = MutableStateFlow("")
+
+    override val activePartialResponse: Flow<String> = combine(
+        _directPartialResponse,
+        agentOrchestrator.activePartialResponse
+    ) { direct, agent ->
+        if (direct.isNotEmpty()) direct else agent
+    }
 
     override suspend fun initializeModel(modelPath: String, notify: Boolean): Result<Unit> {
         if (modelPath.isBlank()) {
@@ -117,6 +128,7 @@ class ChatRepositoryImpl @Inject constructor(
     }
 
     override suspend fun sendMessage(prompt: String, imageUri: Uri?): Result<String> {
+        _directPartialResponse.value = ""
         if (imageUri != null && !isVisionSupported()) {
             return Result.failure(
                 IllegalArgumentException("Vision is not supported by the current model/backend.")
@@ -162,17 +174,23 @@ class ChatRepositoryImpl @Inject constructor(
 
     private suspend fun generateDirectChatResponse(prompt: String, imageUri: Uri?): Result<String> {
         var contextualPrompt = ""
-        var result: InferenceResult? = null
+        var lastResult: InferenceResult = InferenceResult.Failure("No output generated")
+        _directPartialResponse.value = ""
         val elapsedMs = measureTimeMillis {
             contextualPrompt = buildDirectChatPrompt(prompt, imageUri)
             inferenceManager.clearConversation()
-            result = inferenceManager.generate(InferenceRequest(contextualPrompt, imageUri))
+            inferenceManager.generateStream(InferenceRequest(contextualPrompt, imageUri)).collect { res ->
+                lastResult = res
+                if (res is InferenceResult.Success) {
+                    _directPartialResponse.value = res.text
+                }
+            }
         }
         logDebug(
             "Direct chat turn completed in ${elapsedMs}ms. promptChars=${prompt.length}, contextChars=${contextualPrompt.length}, hasImage=${imageUri != null}"
         )
 
-        return when (val inferenceResult = result) {
+        return when (val inferenceResult = lastResult) {
             is InferenceResult.Success -> {
                 conversationContextManager.recordExchange(prompt, imageUri, inferenceResult.text)
                 Result.success(inferenceResult.text)
@@ -185,8 +203,6 @@ class ChatRepositoryImpl @Inject constructor(
             is InferenceResult.Failure -> Result.failure(
                 inferenceResult.throwable ?: Exception(inferenceResult.message)
             )
-
-            null -> Result.failure(Exception("No inference result was returned."))
         }
     }
 

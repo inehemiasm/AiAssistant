@@ -65,6 +65,8 @@ fun MessageList(
     messages: List<ChatMessage>,
     modifier: Modifier = Modifier,
     listState: LazyListState,
+    streamingText: String = "",
+    streamingModelName: String = "",
     onToggleExplicitImageMask: (Int) -> Unit = {},
     onShareMessage: (Int) -> Unit = {},
     onSaveImage: (Int) -> Unit = {}
@@ -82,6 +84,19 @@ fun MessageList(
                 onShareMessage = { onShareMessage(index) },
                 onSaveImage = { onSaveImage(index) }
             )
+        }
+
+        if (streamingText.isNotBlank()) {
+            item {
+                FuturisticChatBubble(
+                    message = ChatMessage(
+                        text = streamingText,
+                        isUser = false,
+                        modelName = streamingModelName.ifBlank { "CHEVERE AI" }
+                    ),
+                    showCursor = true
+                )
+            }
         }
     }
 }
@@ -102,7 +117,8 @@ fun FuturisticChatBubble(
     message: ChatMessage,
     onToggleExplicitImageMask: () -> Unit = {},
     onShareMessage: () -> Unit = {},
-    onSaveImage: () -> Unit = {}
+    onSaveImage: () -> Unit = {},
+    showCursor: Boolean = false
 ) {
     val isUser = message.isUser
     val bubbleColor = if (isUser) {
@@ -180,7 +196,8 @@ fun FuturisticChatBubble(
                                 lineHeight = 22.sp,
                                 color = onBubbleColor
                             ),
-                            textColor = onBubbleColor
+                            textColor = onBubbleColor,
+                            showCursor = showCursor
                         )
                     }
 

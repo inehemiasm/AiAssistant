@@ -42,7 +42,8 @@ data class ChatState(
     val inputText: String = "",
     val selectedImageUri: Uri? = null,
     val tempCameraUri: Uri? = null,
-    val ageVerificationRequest: AgeVerificationRequest? = null
+    val ageVerificationRequest: AgeVerificationRequest? = null,
+    val streamingText: String = ""
 ) : UiState {
     val isReady: Boolean get() = runtimeState is RuntimeState.Ready
 
@@ -54,6 +55,7 @@ data class ChatState(
 
     val loadingMessage: String?
         get() = when {
+            streamingText.isNotEmpty() -> "GENERATING..."
             agentState is AgentState.Planning -> Constants.UiStatus.PLANNING
             agentState is AgentState.ExecutingTool -> "${Constants.UiStatus.EXECUTING_PREFIX}${agentState.toolName.uppercase()}"
             sendState is SendState.GeneratingImage -> Constants.UiStatus.GENERATING_IMAGE

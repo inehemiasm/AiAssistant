@@ -67,9 +67,20 @@ class ChatViewModel @Inject constructor(
         // 3. React to model selection changes (Source of Truth)
         observeSelectedModel()
 
-        // 4. Initial load of local models metadata
+        // 4. Observe active partial response for token streaming
+        observeActivePartialResponse()
+
+        // 5. Initial load of local models metadata
         viewModelScope.launch {
             updateLocalModels()
+        }
+    }
+
+    private fun observeActivePartialResponse() {
+        viewModelScope.launch {
+            repository.activePartialResponse.collectLatest { partialText ->
+                setState { copy(streamingText = partialText) }
+            }
         }
     }
 

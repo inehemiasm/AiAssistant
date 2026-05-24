@@ -32,6 +32,9 @@ class AgentOrchestrator @Inject constructor(
     private val _agentState = MutableStateFlow<AgentState>(AgentState.Idle)
     val agentState: StateFlow<AgentState> = _agentState.asStateFlow()
 
+    private val _activePartialResponse = MutableStateFlow("")
+    val activePartialResponse: StateFlow<String> = _activePartialResponse.asStateFlow()
+
     private val loopMutex = Mutex()
     private var pendingConfirmation: (suspend () -> ToolResult)? = null
     private var lastPrompt: String = ""
@@ -44,6 +47,7 @@ class AgentOrchestrator @Inject constructor(
         imageUri: Uri? = null,
         conversationContext: String? = null
     ): Result<String> = loopMutex.withLock {
+        _activePartialResponse.value = ""
         _agentState.value = AgentState.Planning
         // Scrub log output to avoid PII in logcat
         Timber.tag(TAG).i(">>> Starting agent loop for user prompt: \"${PiiUtils.scrub(prompt)}\"")
@@ -84,7 +88,34 @@ class AgentOrchestrator @Inject constructor(
                 Timber.tag(TAG).d("Loop iteration ${stepCount + 1}")
 
                 val request = InferenceRequest(lastPrompt, lastImageUri)
-                val inferenceResult = inferenceManager.generate(request)
+                var lastResult: InferenceResult = InferenceResult.Failure("No output generated")
+                var isStreamingEnabled = true
+
+                _activePartialResponse.value = ""
+
+                inferenceManager.generateStream(request).collect { result ->
+                    lastResult = result
+                    if (result is InferenceResult.Success) {
+                        val text = result.text
+                        val trimmed = text.trimStart()
+                        if (trimmed.contains(Constants.Agent.TOOL_CALL_PREFIX)) {
+                            isStreamingEnabled = false
+                            _activePartialResponse.value = ""
+                        } else if (isStreamingEnabled) {
+                            val prefix = Constants.Agent.TOOL_CALL_PREFIX
+                            val isPrefix = if (trimmed.length < prefix.length) {
+                                prefix.startsWith(trimmed)
+                            } else {
+                                trimmed.startsWith(prefix)
+                            }
+                            if (!isPrefix) {
+                                _activePartialResponse.value = text
+                            }
+                        }
+                    }
+                }
+
+                val inferenceResult = lastResult
 
                 val turnResult = when (inferenceResult) {
                     is InferenceResult.Success -> {

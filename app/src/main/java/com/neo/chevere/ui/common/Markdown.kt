@@ -11,6 +11,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
@@ -23,6 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.neo.chevere.ui.designsystem.Typography
+import kotlinx.coroutines.delay
 
 data class MarkdownBlock(
     val text: String,
@@ -51,8 +57,19 @@ fun MarkdownContent(
     text: String,
     modifier: Modifier = Modifier,
     textStyle: TextStyle = Typography.bodyMedium,
-    textColor: Color = MaterialTheme.colorScheme.onSurface
+    textColor: Color = MaterialTheme.colorScheme.onSurface,
+    showCursor: Boolean = false
 ) {
+    var cursorVisible by remember { mutableStateOf(true) }
+    if (showCursor) {
+        LaunchedEffect(Unit) {
+            while (true) {
+                delay(500)
+                cursorVisible = !cursorVisible
+            }
+        }
+    }
+
     val blocks = parseMarkdownBlocks(text)
     val codeBackground = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.72f)
     val codeBorder = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
@@ -62,17 +79,25 @@ fun MarkdownContent(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        blocks.forEach { block ->
+        blocks.forEachIndexed { index, block ->
+            val isLast = index == blocks.lastIndex
             if (block.isCode) {
                 CodeBlock(
-                    block = block,
+                    block = if (isLast && showCursor) {
+                        block.copy(text = block.text + (if (cursorVisible) "▊" else ""))
+                    } else block,
                     background = codeBackground,
                     border = codeBorder,
                     contentColor = codeText
                 )
             } else {
+                val blockText = if (isLast && showCursor) {
+                    block.text + (if (cursorVisible) " ▊" else " \u200B")
+                } else {
+                    block.text
+                }
                 Text(
-                    text = parseMarkdown(block.text),
+                    text = parseMarkdown(blockText),
                     style = textStyle.copy(color = textColor)
                 )
             }

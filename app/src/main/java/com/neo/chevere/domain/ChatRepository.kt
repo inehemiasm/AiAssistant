@@ -103,4 +103,10 @@ interface ChatRepository {
      * The model currently loaded and active in the inference engine.
      */
     val activeModel: InstalledModel?
+
+    /**
+     * A flow emitting the active partial response text as it streams from the model.
+     * Emits an empty string when no active generation is occurring.
+     */
+    val activePartialResponse: Flow<String>
 }

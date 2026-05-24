@@ -21,6 +21,7 @@ import com.neo.chevere.domain.ModelTaskType
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -40,6 +41,7 @@ import java.io.File
 class ChatRepositoryImplTest {
 
     private val testDispatcher = StandardTestDispatcher()
+    private val agentPartialResponseFlow = MutableStateFlow("")
     private lateinit var context: Context
     private lateinit var inferenceManager: InferenceManager
     private lateinit var modelCatalog: ModelCatalogDataSource
@@ -65,6 +67,7 @@ class ChatRepositoryImplTest {
         chatRequestRouter = ChatRequestRouter()
         agentOrchestrator = mock {
             on { agentState } doReturn MutableStateFlow(AgentState.Idle)
+            on { activePartialResponse } doReturn agentPartialResponseFlow
         }
 
         repository = ChatRepositoryImpl(
@@ -99,12 +102,12 @@ class ChatRepositoryImplTest {
     @Test
     fun sendMessage_plainTextUsesDirectInference() = runTest(testDispatcher) {
         val prompt = "hello"
-        whenever(inferenceManager.generate(any())).doReturn(InferenceResult.Success("hi"))
+        whenever(inferenceManager.generateStream(any())).doReturn(flowOf(InferenceResult.Success("hi")))
 
         val result = repository.sendMessage(prompt, null)
 
         verify(inferenceManager).clearConversation()
-        verify(inferenceManager).generate(argThat {
+        verify(inferenceManager).generateStream(argThat {
             imageUri == null &&
                     this.prompt.contains("You are Chevere AI") &&
                     this.prompt.endsWith(prompt)
@@ -170,12 +173,12 @@ class ChatRepositoryImplTest {
         val prompt = "generate an image based on this image"
         val mockUri = mock<Uri>()
         whenever(inferenceManager.isVisionSupported()).doReturn(true)
-        whenever(inferenceManager.generate(any())).doReturn(InferenceResult.Success("I can describe the attached image."))
+        whenever(inferenceManager.generateStream(any())).doReturn(flowOf(InferenceResult.Success("I can describe the attached image.")))
 
         val result = repository.sendMessage(prompt, mockUri)
 
         verify(agentOrchestrator, never()).processUserRequest(any(), any(), any())
-        verify(inferenceManager).generate(argThat {
+        verify(inferenceManager).generateStream(argThat {
             imageUri == mockUri &&
                     this.prompt.contains("attached image") &&
                     this.prompt.contains("Do not generate")
@@ -235,5 +238,42 @@ class ChatRepositoryImplTest {
             }
         )
         verify(downloadManager).downloadModel(model.url, "landscape.zip", "landscape", "abc123")
+    }
+
+    @Test
+    fun activePartialResponse_combinesDirectAndAgentFlows() = runTest(testDispatcher) {
+        val directFlow = MutableStateFlow<InferenceResult>(InferenceResult.Success(""))
+        whenever(inferenceManager.generateStream(any())).doReturn(directFlow)
+
+        val emissions = mutableListOf<String>()
+        val job = this.launch {
+            repository.activePartialResponse.collect {
+                emissions.add(it)
+            }
+        }
+
+        // Initially both empty
+        testScheduler.advanceUntilIdle()
+
+        // Agent streams text
+        agentPartialResponseFlow.value = "hello agent"
+        testScheduler.advanceUntilIdle()
+
+        // Direct streams text by starting direct chat turn
+        val sendJob = this.launch {
+            repository.sendMessage("hello", null)
+        }
+        testScheduler.advanceUntilIdle()
+
+        directFlow.value = InferenceResult.Success("hello direct")
+        testScheduler.advanceUntilIdle()
+
+        assertTrue(emissions.contains("hello agent"))
+        assertTrue(emissions.contains("hello direct"))
+
+        // Reset flow values
+        agentPartialResponseFlow.value = ""
+        job.cancel()
+        sendJob.cancel()
     }
 }

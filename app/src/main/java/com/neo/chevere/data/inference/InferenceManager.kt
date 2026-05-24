@@ -86,6 +86,11 @@ class InferenceManager @Inject constructor(
         return engine.generate(request)
     }
 
+    fun generateStream(request: InferenceRequest): Flow<InferenceResult> {
+        val engine = _currentEngine.value ?: return flowOf(InferenceResult.Failure("No model loaded"))
+        return engine.generateStream(request)
+    }
+
     suspend fun clearConversation() = mutex.withLock {
         _currentEngine.value?.clearConversation()
     }
