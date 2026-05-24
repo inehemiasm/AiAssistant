@@ -96,6 +96,7 @@ sealed class ChatIntent : UiIntent {
     data class ToggleExplicitImageMask(val messageIndex: Int) : ChatIntent()
     data class ShareMessage(val messageIndex: Int) : ChatIntent()
     data class SaveImage(val messageIndex: Int) : ChatIntent()
+    data class ReadMessageAloud(val messageIndex: Int) : ChatIntent()
     data object RetryLastMessage : ChatIntent()
     /** Start offline speech-to-text recording. */
     data object StartVoiceInput : ChatIntent()
@@ -112,6 +113,7 @@ sealed class ChatEffect : UiEffect {
         ChatEffect()
 
     data class SaveImage(val imageUri: Uri) : ChatEffect()
+    data class ReadMessageAloud(val text: String) : ChatEffect()
     data object ShowImageModelDownloadPrompt : ChatEffect()
     data object HideKeyboard : ChatEffect()
     data object RequestLocationPermission : ChatEffect()

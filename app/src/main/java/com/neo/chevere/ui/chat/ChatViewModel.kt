@@ -237,6 +237,7 @@ class ChatViewModel @Inject constructor(
                 is ChatIntent.ToggleExplicitImageMask -> toggleExplicitImageMask(intent.messageIndex)
                 is ChatIntent.ShareMessage -> shareMessage(intent.messageIndex)
                 is ChatIntent.SaveImage -> saveImage(intent.messageIndex)
+                is ChatIntent.ReadMessageAloud -> readMessageAloud(intent.messageIndex)
                 ChatIntent.RetryLastMessage -> {
                     if (currentState.isLoading) return@withLock
                     val query = lastUserMessage
@@ -596,6 +597,18 @@ class ChatViewModel @Inject constructor(
 
         viewModelScope.launch {
             sendEffect { ChatEffect.SaveImage(Uri.parse(imageUri)) }
+        }
+    }
+
+    /**
+     * Requests native text-to-speech playback for an assistant response.
+     */
+    private fun readMessageAloud(messageIndex: Int) {
+        val message = currentState.messages.getOrNull(messageIndex) ?: return
+        if (message.isUser || message.text.isBlank()) return
+
+        viewModelScope.launch {
+            sendEffect { ChatEffect.ReadMessageAloud(message.text) }
         }
     }
 

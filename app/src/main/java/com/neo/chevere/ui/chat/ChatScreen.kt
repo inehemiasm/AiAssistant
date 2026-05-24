@@ -10,6 +10,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
+import android.speech.tts.TextToSpeech
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -57,6 +58,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -153,6 +155,28 @@ private fun ChatContent(
     val context = LocalContext.current
     val hapticView = LocalView.current
     val listState = rememberLazyListState()
+    var textToSpeech by remember { mutableStateOf<TextToSpeech?>(null) }
+    var isTextToSpeechReady by remember { mutableStateOf(false) }
+
+    DisposableEffect(context) {
+        var tts: TextToSpeech? = null
+        tts = TextToSpeech(context.applicationContext) { status ->
+            isTextToSpeechReady = status == TextToSpeech.SUCCESS
+            if (status == TextToSpeech.SUCCESS) {
+                tts?.language = Locale.getDefault()
+            }
+        }
+        textToSpeech = tts
+
+        onDispose {
+            tts.stop()
+            tts.shutdown()
+            if (textToSpeech === tts) {
+                textToSpeech = null
+            }
+            isTextToSpeechReady = false
+        }
+    }
 
     // Auto-scroll to bottom during token streaming
     LaunchedEffect(state.streamingText) {
@@ -348,6 +372,10 @@ private fun ChatContent(
                         onSaveImage = { index ->
                             hapticView.performChevereHaptic(ChevereHaptic.Action)
                             viewModel.onIntent(ChatIntent.SaveImage(index))
+                        },
+                        onReadMessageAloud = { index ->
+                            hapticView.performChevereHaptic(ChevereHaptic.Selection)
+                            viewModel.onIntent(ChatIntent.ReadMessageAloud(index))
                         }
                     )
                 }
@@ -540,6 +568,15 @@ private fun ChatContent(
                     hapticView.performChevereHaptic(if (saved) ChevereHaptic.Success else ChevereHaptic.Warning)
                 }
 
+                is ChatEffect.ReadMessageAloud -> {
+                    speakAssistantMessage(
+                        context = context,
+                        textToSpeech = textToSpeech,
+                        isReady = isTextToSpeechReady,
+                        text = effect.text
+                    )
+                }
+
                 ChatEffect.ShowImageModelDownloadPrompt -> {
                     hapticView.performChevereHaptic(ChevereHaptic.Warning)
                     showImageModelDownloadPrompt = true
@@ -626,6 +663,33 @@ private fun shareChatMessage(context: Context, effect: ChatEffect.ShareMessage) 
         }
     }
     context.startActivity(chooser)
+}
+
+private fun speakAssistantMessage(
+    context: Context,
+    textToSpeech: TextToSpeech?,
+    isReady: Boolean,
+    text: String
+) {
+    val tts = textToSpeech
+    if (tts == null || !isReady) {
+        Toast.makeText(context, "Read aloud is still warming up.", Toast.LENGTH_SHORT).show()
+        return
+    }
+
+    val scrubbedText = text
+        .replace(Regex("""https?://\S+"""), "link")
+        .trim()
+
+    if (scrubbedText.isBlank()) return
+
+    tts.stop()
+    tts.speak(
+        scrubbedText,
+        TextToSpeech.QUEUE_FLUSH,
+        null,
+        "chevere_response_${System.currentTimeMillis()}"
+    )
 }
 
 private fun saveImageToGallery(context: Context, sourceUri: Uri): Boolean {
