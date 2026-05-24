@@ -57,3 +57,12 @@ data class OpenDeepLinkRequest(
     val uri: String,
     val packageName: String? = null
 ) : AppActionRequest
+
+/**
+ * Request to perform a small user-confirmed device control action.
+ */
+data class DeviceControlRequest(
+    val control: String,
+    val action: String,
+    val value: Int? = null
+) : AppActionRequest

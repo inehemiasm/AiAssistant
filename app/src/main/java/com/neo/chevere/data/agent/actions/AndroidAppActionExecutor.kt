@@ -5,8 +5,10 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.media.AudioManager
 import android.net.Uri
 import android.provider.CalendarContract
+import android.provider.Settings
 import androidx.core.net.toUri
 import com.neo.chevere.core.Constants
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -47,6 +49,7 @@ class DefaultAndroidAppActionExecutor @Inject constructor(
                 is ListAppsRequest -> listInstalledApps()
                 is GetAppCapabilitiesRequest -> getAppCapabilities(request.appName)
                 is OpenDeepLinkRequest -> openDeepLink(request)
+                is DeviceControlRequest -> controlDevice(request)
                 is PickImageRequest -> AppActionResult.Error("Pick Image not implemented yet via Intent in this layer")
                 else -> AppActionResult.Error("Unknown action request type")
             }
@@ -354,6 +357,66 @@ class DefaultAndroidAppActionExecutor @Inject constructor(
             }
         } catch (t: Throwable) {
             AppActionResult.Error("Failed to open deep link: ${t.message}")
+        }
+    }
+
+    private fun controlDevice(request: DeviceControlRequest): AppActionResult {
+        return when (request.control.lowercase()) {
+            "volume" -> controlVolume(request)
+            "brightness" -> openSystemSettings(
+                action = Settings.ACTION_DISPLAY_SETTINGS,
+                successMessage = "Opened Display settings so you can adjust screen brightness."
+            )
+            "do_not_disturb", "dnd" -> openSystemSettings(
+                action = Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS,
+                successMessage = "Opened Do Not Disturb access settings."
+            )
+            else -> AppActionResult.Error(
+                "Unsupported device control '${request.control}'. Supported controls: volume, brightness, do_not_disturb."
+            )
+        }
+    }
+
+    private fun controlVolume(request: DeviceControlRequest): AppActionResult {
+        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        val stream = AudioManager.STREAM_MUSIC
+        val flags = AudioManager.FLAG_SHOW_UI
+        when (request.action.lowercase()) {
+            "up", "increase" -> audioManager.adjustStreamVolume(
+                stream,
+                AudioManager.ADJUST_RAISE,
+                flags
+            )
+            "down", "decrease" -> audioManager.adjustStreamVolume(
+                stream,
+                AudioManager.ADJUST_LOWER,
+                flags
+            )
+            "mute" -> audioManager.adjustStreamVolume(stream, AudioManager.ADJUST_MUTE, flags)
+            "unmute" -> audioManager.adjustStreamVolume(stream, AudioManager.ADJUST_UNMUTE, flags)
+            "set" -> {
+                val max = audioManager.getStreamMaxVolume(stream)
+                val value = request.value?.coerceIn(0, 100)
+                    ?: return AppActionResult.Error("Missing volume value from 0 to 100.")
+                val volume = ((value / 100.0) * max).toInt().coerceIn(0, max)
+                audioManager.setStreamVolume(stream, volume, flags)
+            }
+            else -> return AppActionResult.Error(
+                "Unsupported volume action '${request.action}'. Use up, down, mute, unmute, or set."
+            )
+        }
+        return AppActionResult.Success("Updated media volume.")
+    }
+
+    private fun openSystemSettings(action: String, successMessage: String): AppActionResult {
+        val intent = Intent(action).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        return if (intent.resolveActivity(context.packageManager) != null) {
+            context.startActivity(intent)
+            AppActionResult.Success(successMessage)
+        } else {
+            AppActionResult.Error("No system settings screen found for this control.")
         }
     }
 }

@@ -27,6 +27,8 @@
     <string name="input_placeholder">Ask Chevere AI…</string>
     <string name="send">Send</string>
     <string name="stop_response">Stop response</string>
+    <string name="start_voice_input">Start voice input</string>
+    <string name="stop_voice_input">Stop voice input</string>
     <string name="local_compute_engine">Local Compute Engine</string>
     <string name="engine_description">Select a neural architecture optimized for your local hardware. High-efficiency, zero-latency inference.</string>
     <string name="scanning_repositories">SCANNING REPOSITORIES…</string>
@@ -139,6 +141,9 @@
     <string name="not_now">Not now</string>
     <string name="permission_granted_try_again">Permission granted. Try again.</string>
     <string name="camera_permission_required">Camera permission is required to take photos.</string>
+    <string name="contacts_permission_granted">Contacts permission granted.</string>
+    <string name="contacts_permission_denied">Contacts permission denied.</string>
+    <string name="microphone_permission_denied">Microphone permission denied</string>
     <string name="location_permission_required">Location permission is required to get local weather.</string>
     <string name="location_permission_granted">Location permission granted.</string>
     <string name="location_permission_denied">Location permission denied.</string>

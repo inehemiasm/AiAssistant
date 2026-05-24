@@ -7,6 +7,7 @@ import com.neo.chevere.data.agent.actions.AndroidAppActionExecutor
 import com.neo.chevere.data.agent.actions.DefaultAndroidAppActionExecutor
 import com.neo.chevere.data.agent.tools.CopyToClipboardTool
 import com.neo.chevere.data.agent.tools.CreateCalendarEventTool
+import com.neo.chevere.data.agent.tools.DeviceControlTool
 import com.neo.chevere.data.agent.tools.DraftEmailTool
 import com.neo.chevere.data.agent.tools.GetActiveModelTool
 import com.neo.chevere.data.agent.tools.GetAppCapabilitiesTool
@@ -21,8 +22,10 @@ import com.neo.chevere.data.agent.tools.OpenDeepLinkTool
 import com.neo.chevere.data.agent.tools.OpenMapsTool
 import com.neo.chevere.data.agent.tools.OpenUrlTool
 import com.neo.chevere.data.agent.tools.RecommendModelTool
+import com.neo.chevere.data.agent.tools.ReadLocalFileTool
 import com.neo.chevere.data.agent.tools.RuntimeStatusTool
 import com.neo.chevere.data.agent.tools.SearchAppsTool
+import com.neo.chevere.data.agent.tools.SearchContactsTool
 import com.neo.chevere.data.agent.tools.SelectModelTool
 import com.neo.chevere.data.agent.tools.ShareTextTool
 import com.neo.chevere.data.agent.tools.SummarizeTextTool
@@ -168,6 +171,24 @@ abstract class AgentModule {
         fun provideDraftEmailTool(
             executor: AndroidAppActionExecutor
         ): AgentTool = DraftEmailTool(executor)
+
+        @Provides
+        @IntoSet
+        fun provideSearchContactsTool(
+            @ApplicationContext context: Context
+        ): AgentTool = SearchContactsTool(context)
+
+        @Provides
+        @IntoSet
+        fun provideReadLocalFileTool(
+            @ApplicationContext context: Context
+        ): AgentTool = ReadLocalFileTool(context)
+
+        @Provides
+        @IntoSet
+        fun provideDeviceControlTool(
+            executor: AndroidAppActionExecutor
+        ): AgentTool = DeviceControlTool(executor)
 
         @Provides
         @IntoSet

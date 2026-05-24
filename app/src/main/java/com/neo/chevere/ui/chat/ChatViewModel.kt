@@ -1,7 +1,10 @@
 package com.neo.chevere.ui.chat
 
+import android.Manifest
 import android.app.Application
+import android.content.pm.PackageManager
 import android.net.Uri
+import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import androidx.lifecycle.viewModelScope
 import com.neo.chevere.BuildConfig
@@ -11,8 +14,11 @@ import com.neo.chevere.core.DispatcherProvider
 import com.neo.chevere.data.PreferenceManager
 import com.neo.chevere.data.telemetry.AppTelemetry
 import com.neo.chevere.data.telemetry.TelemetryConstants
+import com.neo.chevere.data.voice.VoiceInputManager
+import com.neo.chevere.data.voice.VoiceResult
 import com.neo.chevere.domain.ChatMessage
 import com.neo.chevere.domain.ChatRepository
+import com.neo.chevere.domain.ContactsPermissionException
 import com.neo.chevere.domain.ExplicitImagePromptDecision
 import com.neo.chevere.domain.ExplicitImagePromptPolicy
 import com.neo.chevere.domain.ImageGenerationRequest
@@ -47,7 +53,8 @@ class ChatViewModel @Inject constructor(
     private val sendMessageUseCase: SendMessageUseCase,
     private val preferenceManager: PreferenceManager,
     private val dispatcherProvider: DispatcherProvider,
-    private val telemetry: AppTelemetry
+    private val telemetry: AppTelemetry,
+    private val voiceInputManager: VoiceInputManager
 ) : BaseViewModel<ChatState, ChatIntent, ChatEffect>(application, ChatState()) {
 
     private val explicitImagePromptPolicy = ExplicitImagePromptPolicy()
@@ -74,12 +81,34 @@ class ChatViewModel @Inject constructor(
         viewModelScope.launch {
             updateLocalModels()
         }
+
+        // 6. Observe voice recognition results
+        observeVoiceResults()
     }
 
     private fun observeActivePartialResponse() {
         viewModelScope.launch {
             repository.activePartialResponse.collectLatest { partialText ->
                 setState { copy(streamingText = partialText) }
+            }
+        }
+    }
+
+    private fun observeVoiceResults() {
+        viewModelScope.launch(dispatcherProvider.main) {
+            voiceInputManager.results.collect { result ->
+                when (result) {
+                    is VoiceResult.Partial -> setState { copy(inputText = result.text) }
+                    is VoiceResult.Final -> {
+                        setState { copy(inputText = result.text, isListening = false) }
+                    }
+                    is VoiceResult.Error -> {
+                        setState { copy(isListening = false) }
+                        if (result.message.isNotBlank()) {
+                            sendEffect { ChatEffect.ShowVoiceError(result.message) }
+                        }
+                    }
+                }
             }
         }
     }
@@ -214,6 +243,12 @@ class ChatViewModel @Inject constructor(
                     if (query != null) {
                         sendMessage(query, null)
                     }
+                }
+
+                ChatIntent.StartVoiceInput -> startVoiceInput()
+                ChatIntent.StopVoiceInput -> stopVoiceInput()
+                is ChatIntent.VoiceInputResult -> {
+                    setState { copy(inputText = intent.text, isListening = false) }
                 }
             }
         }
@@ -481,7 +516,39 @@ class ChatViewModel @Inject constructor(
         imageGenerationJob = null
         setState { copy(sendState = SendState.Idle) }
         if (hadActiveWork) {
-            appendAssistantMessage("Stopped.", modelName = "CHEVERE AI")
+            appendAssistantMessage("Response stopped.", modelName = "CHEVERE AI")
+        }
+    }
+
+    /**
+     * Starts a voice input session. If RECORD_AUDIO permission has not been granted,
+     * emits [ChatEffect.RequestMicPermission] so the UI can trigger the system dialog.
+     * SpeechRecognizer must be controlled from the main thread.
+     */
+    private fun startVoiceInput() {
+        if (currentState.isLoading || currentState.isListening) return
+        if (ContextCompat.checkSelfPermission(
+                application,
+                Manifest.permission.RECORD_AUDIO
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            viewModelScope.launch {
+                sendEffect { ChatEffect.RequestMicPermission }
+            }
+            return
+        }
+
+        viewModelScope.launch(dispatcherProvider.main) {
+            setState { copy(isListening = true, inputText = "") }
+            voiceInputManager.startListening()
+        }
+    }
+
+    /** Stops any active voice input session. */
+    private fun stopVoiceInput() {
+        viewModelScope.launch(dispatcherProvider.main) {
+            voiceInputManager.stopListening()
+            setState { copy(isListening = false) }
         }
     }
 
@@ -583,6 +650,14 @@ class ChatViewModel @Inject constructor(
                     sendEffect { ChatEffect.RequestLocationPermission }
                     appendAssistantMessage(
                         "Location permission is required to get local weather automatically. Please grant the permission or specify a city name (e.g. 'weather in Paris').",
+                        modelName = "CHEVERE AI"
+                    )
+                    return
+                }
+                if (e is ContactsPermissionException) {
+                    sendEffect { ChatEffect.RequestContactsPermission }
+                    appendAssistantMessage(
+                        "Contacts permission is required to look up people on this device. Please grant the permission or provide the email address directly.",
                         modelName = "CHEVERE AI"
                     )
                     return

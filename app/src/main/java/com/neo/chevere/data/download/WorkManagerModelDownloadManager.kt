@@ -1,7 +1,10 @@
 package com.neo.chevere.data.download
 
+import androidx.work.BackoffPolicy
+import androidx.work.Constraints
 import androidx.work.Data
 import androidx.work.ExistingWorkPolicy
+import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
@@ -11,6 +14,7 @@ import com.neo.chevere.domain.DownloadProgress
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import timber.log.Timber
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -69,12 +73,21 @@ class WorkManagerModelDownloadManager @Inject constructor(
 
         val workRequest = OneTimeWorkRequestBuilder<ModelDownloadWorker>()
             .setInputData(inputData)
+            .setConstraints(
+                Constraints.Builder()
+                    .setRequiredNetworkType(NetworkType.CONNECTED)
+                    .build()
+            )
+            // Exponential back-off: 30s, 60s, 120s, capped at 5 minutes.
+            // WorkManager's minimum backoff on Android is 10s; 30s gives the network time to recover.
+            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
             .addTag(TAG_MODEL_DOWNLOAD) // Generic tag for tracking all downloads
             .addTag("${Constants.Download.TAG_MODEL_NAME_PREFIX}$modelName") // Specific tag for this model
             .build()
 
-        // Replace same-model work so a stale interrupted job cannot keep the download button pinned.
-        workManager.enqueueUniqueWork(modelName, ExistingWorkPolicy.REPLACE, workRequest)
+        // KEEP: if this model is already queued/running, don't restart it.
+        // A retry after a network drop will resume the partial file instead of restarting.
+        workManager.enqueueUniqueWork(modelName, ExistingWorkPolicy.KEEP, workRequest)
 
         // Return a flow specifically for this model's name
         return workManager.getWorkInfosForUniqueWorkFlow(modelName).map { list ->

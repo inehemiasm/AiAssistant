@@ -12,6 +12,7 @@ import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.neo.chevere.core.Constants
+import com.neo.chevere.data.datasource.DefaultRemoteModelDataSource
 import com.neo.chevere.data.datasource.DownloadStatus
 import com.neo.chevere.data.datasource.RemoteModelDataSource
 import com.neo.chevere.data.telemetry.AppTelemetry
@@ -35,6 +36,7 @@ import java.util.concurrent.atomic.AtomicLong
 import java.util.zip.ZipInputStream
 
 private const val TAG = "ModelDownloadWorker"
+private const val MAX_AUTO_RETRIES = 3
 
 /**
  * A [CoroutineWorker] responsible for downloading AI model files in the background.
@@ -125,7 +127,17 @@ class ModelDownloadWorker @AssistedInject constructor(
 
             val downloadUrl = remoteModelDataSource.getDownloadUrl(uri)
 
-            remoteModelDataSource.downloadToFile(downloadUrl, tempFile).collect { status ->
+            // Resume from wherever the temp file left off (0 = fresh start).
+            val resumeOffset = if (tempFile.exists()) tempFile.length() else 0L
+            if (resumeOffset > 0L) {
+                Timber.tag(TAG).i("Resuming download of $modelName from byte $resumeOffset")
+            }
+            val downloadFlow = if (resumeOffset > 0L && remoteModelDataSource is DefaultRemoteModelDataSource) {
+                remoteModelDataSource.downloadToFile(downloadUrl, tempFile, resumeOffset)
+            } else {
+                remoteModelDataSource.downloadToFile(downloadUrl, tempFile)
+            }
+            downloadFlow.collect { status ->
                 coroutineContext.ensureActive()
                 emitDownloadProgress(status)
             }
@@ -196,7 +208,8 @@ class ModelDownloadWorker @AssistedInject constructor(
                 throw IOException("Empty file")
             }
         } catch (e: CancellationException) {
-            Timber.tag(TAG).d("Download canceled: ${e.message}")
+            // User explicitly canceled; discard the partial file so a fresh start is guaranteed.
+            Timber.tag(TAG).d("Download canceled by user: ${e.message}")
             if (tempFile.exists()) tempFile.delete()
             File(
                 applicationContext.filesDir,
@@ -211,27 +224,42 @@ class ModelDownloadWorker @AssistedInject constructor(
             )
             throw e
         } catch (e: Exception) {
-            Timber.tag(TAG).e(e, "Download failed: ${e.message}")
-            if (tempFile.exists()) tempFile.delete()
-            File(
-                applicationContext.filesDir,
-                "${modelId}${Constants.ModelFiles.TEMP_DIRECTORY_EXTENSION}"
-            ).deleteRecursively()
-            installedModelRegistry.updateInstallStatus(modelId, InstallStatus.FAILED)
-            telemetry.logModelDownloadFinished(
-                modelId = modelId,
-                success = false,
-                durationMs = System.currentTimeMillis() - startedAtMs,
-                fileType = fileType,
-                errorType = e::class.java.simpleName
+            // Transient failure (network drop, timeout, etc.).
+            // Keep the temp file so the next run can resume from where it left off.
+            val attemptsMade = runAttemptCount  // 0-based; 0 = first attempt
+            val willRetry = attemptsMade < MAX_AUTO_RETRIES
+            Timber.tag(TAG).e(
+                e,
+                "Download failed (attempt ${attemptsMade + 1}/${
+                    MAX_AUTO_RETRIES + 1
+                }). ${if (willRetry) "Will retry; keeping partial file (${tempFile.length()} bytes)." else "Max retries reached."}"
             )
-            telemetry.recordNonFatal(e, TelemetryConstants.Context.MODEL_DOWNLOAD)
-            Result.failure(
-                workDataOf(
-                    Constants.Download.OUTPUT_ERROR to (e.localizedMessage
-                        ?: Constants.Download.UNKNOWN_ERROR)
+            if (!willRetry) {
+                // Max retries exhausted; clean up and report permanent failure.
+                if (tempFile.exists()) tempFile.delete()
+                File(
+                    applicationContext.filesDir,
+                    "${modelId}${Constants.ModelFiles.TEMP_DIRECTORY_EXTENSION}"
+                ).deleteRecursively()
+                installedModelRegistry.updateInstallStatus(modelId, InstallStatus.FAILED)
+                telemetry.logModelDownloadFinished(
+                    modelId = modelId,
+                    success = false,
+                    durationMs = System.currentTimeMillis() - startedAtMs,
+                    fileType = fileType,
+                    errorType = e::class.java.simpleName
                 )
-            )
+                telemetry.recordNonFatal(e, TelemetryConstants.Context.MODEL_DOWNLOAD)
+                Result.failure(
+                    workDataOf(
+                        Constants.Download.OUTPUT_ERROR to (e.localizedMessage
+                            ?: Constants.Download.UNKNOWN_ERROR)
+                    )
+                )
+            } else {
+                // Keep the partial temp file and let WorkManager retry with exponential back-off.
+                Result.retry()
+            }
         }
     }
 

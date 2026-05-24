@@ -4,6 +4,7 @@ import android.net.Uri
 import com.neo.chevere.core.Constants
 import com.neo.chevere.core.PiiUtils
 import com.neo.chevere.data.inference.InferenceManager
+import com.neo.chevere.domain.ContactsPermissionException
 import com.neo.chevere.domain.InferenceRequest
 import com.neo.chevere.domain.InferenceResult
 import com.neo.chevere.domain.LocationPermissionException
@@ -296,6 +297,10 @@ class AgentOrchestrator @Inject constructor(
                 if (toolResult.message == "LOCATION_PERMISSION_REQUIRED") {
                     _agentState.value = AgentState.Idle
                     return Result.failure(LocationPermissionException())
+                }
+                if (toolResult.message == "CONTACTS_PERMISSION_REQUIRED") {
+                    _agentState.value = AgentState.Idle
+                    return Result.failure(ContactsPermissionException())
                 }
                 lastToolSummary = "Error: ${toolResult.message}"
                 lastPrompt =

@@ -43,7 +43,9 @@ data class ChatState(
     val selectedImageUri: Uri? = null,
     val tempCameraUri: Uri? = null,
     val ageVerificationRequest: AgeVerificationRequest? = null,
-    val streamingText: String = ""
+    val streamingText: String = "",
+    /** True while the microphone is actively recording for speech-to-text. */
+    val isListening: Boolean = false
 ) : UiState {
     val isReady: Boolean get() = runtimeState is RuntimeState.Ready
 
@@ -95,6 +97,12 @@ sealed class ChatIntent : UiIntent {
     data class ShareMessage(val messageIndex: Int) : ChatIntent()
     data class SaveImage(val messageIndex: Int) : ChatIntent()
     data object RetryLastMessage : ChatIntent()
+    /** Start offline speech-to-text recording. */
+    data object StartVoiceInput : ChatIntent()
+    /** Stop the active speech-to-text recording session. */
+    data object StopVoiceInput : ChatIntent()
+    /** Deliver a completed STT transcript back to the input field. */
+    data class VoiceInputResult(val text: String) : ChatIntent()
 }
 
 sealed class ChatEffect : UiEffect {
@@ -107,6 +115,12 @@ sealed class ChatEffect : UiEffect {
     data object ShowImageModelDownloadPrompt : ChatEffect()
     data object HideKeyboard : ChatEffect()
     data object RequestLocationPermission : ChatEffect()
+    /** Request the READ_CONTACTS permission from the user. */
+    data object RequestContactsPermission : ChatEffect()
+    /** Request the RECORD_AUDIO permission from the user. */
+    data object RequestMicPermission : ChatEffect()
+    /** Show an error that occurred during voice input. */
+    data class ShowVoiceError(val message: String) : ChatEffect()
 }
 
 /**

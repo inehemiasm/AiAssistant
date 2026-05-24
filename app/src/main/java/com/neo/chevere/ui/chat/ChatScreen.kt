@@ -242,6 +242,39 @@ private fun ChatContent(
         }
     }
 
+    val contactsPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            Toast.makeText(
+                context,
+                context.getString(R.string.contacts_permission_granted),
+                Toast.LENGTH_SHORT
+            ).show()
+            viewModel.onIntent(ChatIntent.RetryLastMessage)
+        } else {
+            Toast.makeText(
+                context,
+                context.getString(R.string.contacts_permission_denied),
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+
+    val micPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            viewModel.onIntent(ChatIntent.StartVoiceInput)
+        } else {
+            Toast.makeText(
+                context,
+                context.getString(R.string.microphone_permission_denied),
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+
     Scaffold(
         topBar = {
             ChatTopBar(
@@ -432,6 +465,16 @@ private fun ChatContent(
                                 }
                             }
                         },
+                        onVoiceInputClick = {
+                            hapticView.performChevereHaptic(ChevereHaptic.Selection)
+                            viewModel.onIntent(
+                                if (state.isListening) {
+                                    ChatIntent.StopVoiceInput
+                                } else {
+                                    ChatIntent.StartVoiceInput
+                                }
+                            )
+                        },
                         selectedImageUri = state.selectedImageUri,
                         onRemoveImage = {
                             hapticView.performChevereHaptic(ChevereHaptic.Warning)
@@ -439,6 +482,7 @@ private fun ChatContent(
                         },
                         enabled = state.isReady && !state.isLoading,
                         isBusy = isAiBusy,
+                        isListening = state.isListening,
                         busyMessage = inputBusyMessage
                     )
                 }
@@ -508,6 +552,23 @@ private fun ChatContent(
                             Manifest.permission.ACCESS_FINE_LOCATION
                         )
                     )
+                }
+
+                ChatEffect.RequestContactsPermission -> {
+                    contactsPermissionLauncher.launch(Manifest.permission.READ_CONTACTS)
+                }
+
+                ChatEffect.RequestMicPermission -> {
+                    micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                }
+
+                is ChatEffect.ShowVoiceError -> {
+                    hapticView.performChevereHaptic(ChevereHaptic.Warning)
+                    Toast.makeText(
+                        context,
+                        PiiUtils.scrub(effect.message),
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             }
         }

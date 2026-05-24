@@ -29,6 +29,8 @@ import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.MicOff
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.ContainedLoadingIndicator
@@ -79,9 +81,11 @@ fun ChatInputBar(
     selectedImageUri: Uri?,
     onGalleryClick: () -> Unit,
     onCameraClick: () -> Unit,
+    onVoiceInputClick: () -> Unit,
     onRemoveImage: () -> Unit,
     enabled: Boolean,
     isBusy: Boolean,
+    isListening: Boolean,
     busyMessage: String = Constants.UiStatus.THINKING,
     modifier: Modifier = Modifier
 ) {
@@ -160,7 +164,9 @@ fun ChatInputBar(
                         onShowAttachmentMenu = { showAttachmentMenu = true },
                         onDismissAttachmentMenu = { showAttachmentMenu = false },
                         onGalleryClick = onGalleryClick,
-                        onCameraClick = onCameraClick
+                        onCameraClick = onCameraClick,
+                        onVoiceInputClick = onVoiceInputClick,
+                        isListening = isListening
                     )
                 }
             }
@@ -230,7 +236,9 @@ private fun ComposerContent(
     onShowAttachmentMenu: () -> Unit,
     onDismissAttachmentMenu: () -> Unit,
     onGalleryClick: () -> Unit,
-    onCameraClick: () -> Unit
+    onCameraClick: () -> Unit,
+    onVoiceInputClick: () -> Unit,
+    isListening: Boolean
 ) {
     Row(verticalAlignment = Alignment.Bottom) {
         AttachmentButton(
@@ -240,6 +248,12 @@ private fun ComposerContent(
             onDismissAttachmentMenu = onDismissAttachmentMenu,
             onGalleryClick = onGalleryClick,
             onCameraClick = onCameraClick
+        )
+
+        VoiceInputButton(
+            enabled = enabled,
+            isListening = isListening,
+            onClick = onVoiceInputClick
         )
 
         TextField(
@@ -274,6 +288,41 @@ private fun ComposerContent(
                 keyboardType = KeyboardType.Text,
                 imeAction = ImeAction.Default
             )
+        )
+    }
+}
+
+@Composable
+private fun VoiceInputButton(
+    enabled: Boolean,
+    isListening: Boolean,
+    onClick: () -> Unit
+) {
+    IconButton(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = Modifier
+            .size(48.dp)
+            .clip(CircleShape)
+            .background(
+                if (isListening) {
+                    MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.9f)
+                } else {
+                    Color.Transparent
+                }
+            )
+    ) {
+        Icon(
+            if (isListening) Icons.Default.MicOff else Icons.Default.Mic,
+            stringResource(
+                if (isListening) R.string.stop_voice_input else R.string.start_voice_input
+            ),
+            tint = if (isListening) {
+                MaterialTheme.colorScheme.secondary
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            },
+            modifier = Modifier.size(22.dp)
         )
     }
 }
