@@ -82,6 +82,12 @@
     <string name="on_device_inference">On-Device Inference</string>
     <string name="reboot">REBOOT</string>
     <string name="camera_permission_denied">Camera permission denied</string>
+    <string name="camera_permission_required">Camera permission is required to take photos.</string>
+    <string name="location_permission_granted">Location permission granted.</string>
+    <string name="location_permission_denied">Location permission denied.</string>
+    <string name="contacts_permission_granted">Contacts permission granted.</string>
+    <string name="contacts_permission_denied">Contacts permission denied.</string>
+    <string name="microphone_permission_denied">Microphone permission denied.</string>
     <string name="neural_cores">NEURAL CORES</string>
     <string name="chat_label">Chat</string>
     <string name="models_label">Models</string>
@@ -141,12 +147,29 @@
     <string name="download_image_model_body">Chevere AI needs a local image generation model before it can create images on this device.</string>
     <string name="open_models">Open Models</string>
     <string name="not_now">Not now</string>
-    <string name="permission_granted_try_again">Permission granted. Try again.</string>
-    <string name="camera_permission_required">Camera permission is required to take photos.</string>
-    <string name="contacts_permission_granted">Contacts permission granted.</string>
-    <string name="contacts_permission_denied">Contacts permission denied.</string>
-    <string name="microphone_permission_denied">Microphone permission denied</string>
-    <string name="location_permission_required">Location permission is required to get local weather.</string>
-    <string name="location_permission_granted">Location permission granted.</string>
-    <string name="location_permission_denied">Location permission denied.</string>
+
+    <!-- Tasks Screen -->
+    <string name="tasks_label">Tasks</string>
+    <string name="no_tasks">No active tasks. Tell Chevere AI to add something!</string>
+    <string name="add_task_title">ADD LOCAL TASK</string>
+    <string name="task_title_hint">Task Title</string>
+    <string name="task_desc_hint">Task Description (optional)</string>
+    <string name="add_task_button">ADD</string>
+    <string name="cancel_button">CANCEL</string>
+    <string name="delete_task">Delete task</string>
+    <string name="task_completed">Task completed</string>
+    <string name="task_pending">Task pending</string>
+
+    <!-- Benchmark & Diagnostics Screen -->
+    <string name="benchmark_label">Diagnostics &amp; Benchmark</string>
+    <string name="run_benchmark">RUN BENCHMARK</string>
+    <string name="benchmarking">RUNNING NEURAL DIAGNOSTICS…</string>
+    <string name="benchmark_model_label">Active Model</string>
+    <string name="benchmark_ttft_label">Time to First Token (TTFT)</string>
+    <string name="benchmark_throughput_label">Inference Speed</string>
+    <string name="benchmark_ram_label">Device RAM Available</string>
+    <string name="benchmark_accel_label">Hardware Acceleration</string>
+    <string name="benchmark_load_label">Model Engine Load Latency</string>
+    <string name="benchmark_total_label">Total Execution Time</string>
+    <string name="benchmark_explanation">This runs a local, standardized generation request against the active LLM engine to measure performance metrics.</string>
 </resources>

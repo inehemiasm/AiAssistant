@@ -49,6 +49,7 @@ object TelemetryConstants {
         const val IMAGE_GENERATION = "image_generation"
         const val MODEL_MANAGEMENT = "model_management"
         const val SETTINGS = "settings"
+        const val TASKS = "tasks"
         const val SYSTEM = "system"
     }
 
@@ -57,6 +58,8 @@ object TelemetryConstants {
         const val MODEL_MARKETPLACE = "model_marketplace"
         const val MODEL_DETAILS = "model_details"
         const val SETTINGS = "settings"
+        const val TASKS = "tasks"
+        const val BENCHMARK = "benchmark"
         const val UNKNOWN = "unknown"
     }
 
@@ -64,6 +67,7 @@ object TelemetryConstants {
         const val BOTTOM_NAV_CHAT = "bottom_nav_chat"
         const val BOTTOM_NAV_MODELS = "bottom_nav_models"
         const val BOTTOM_NAV_SETTINGS = "bottom_nav_settings"
+        const val BOTTOM_NAV_TASKS = "bottom_nav_tasks"
     }
 
     object Value {

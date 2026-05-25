@@ -11,7 +11,9 @@ import com.neo.chevere.ui.chat.ChatViewModel
 import com.neo.chevere.ui.marketplace.MarketplaceViewModel
 import com.neo.chevere.ui.marketplace.ModelMarketplaceScreen
 import com.neo.chevere.ui.marketplace.details.ModelDetailsScreen
+import com.neo.chevere.ui.settings.BenchmarkScreen
 import com.neo.chevere.ui.settings.SettingsScreen
+import com.neo.chevere.ui.tasks.TasksScreen
 
 @Composable
 fun ChevereNavHost(
@@ -34,7 +36,8 @@ fun ChevereNavHost(
 
         composable<Route.Settings> {
             SettingsScreen(
-                onBackClick = { navController.popBackStack() }
+                onBackClick = { navController.popBackStack() },
+                onBenchmarkClick = { navController.navigate(Route.Benchmark) }
             )
         }
 
@@ -50,6 +53,16 @@ fun ChevereNavHost(
         composable<Route.ModelDetails> {
             ModelDetailsScreen(
                 onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable<Route.Tasks> {
+            TasksScreen()
+        }
+
+        composable<Route.Benchmark> {
+            BenchmarkScreen(
+                onBackClick = { navController.popBackStack() }
             )
         }
     }

@@ -633,13 +633,42 @@ fun AgentThoughtCard(
                 ) {
                     Column(
                         modifier = Modifier.padding(top = 14.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
                         if (steps.isEmpty()) {
-                            ThinkingPlaceholder()
+                            QuantumThinkingIndicator(
+                                visible = true,
+                                statusMessage = statusText
+                            )
                         } else {
                             steps.forEachIndexed { index, step ->
-                                StepItem(index = index + 1, step = step)
+                                StepItem(
+                                    index = index + 1,
+                                    step = step,
+                                    isLast = index == steps.lastIndex && !isBusy
+                                )
+                            }
+                            if (isBusy) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        modifier = Modifier.width(24.dp)
+                                    ) {
+                                        CircularProgressIndicator(
+                                            color = MaterialTheme.colorScheme.primary,
+                                            strokeWidth = 2.dp,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                    Text(
+                                        text = statusText,
+                                        style = Typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                             }
                         }
                     }
@@ -681,134 +710,191 @@ private fun AgentStatusIcon(agentState: AgentState, isBusy: Boolean) {
 }
 
 @Composable
-private fun ThinkingPlaceholder() {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.34f))
-            .padding(horizontal = 12.dp, vertical = 10.dp)
-    ) {
-        CircularProgressIndicator(
-            color = MaterialTheme.colorScheme.primary,
-            strokeWidth = 2.dp,
-            modifier = Modifier.size(16.dp)
-        )
-        Text(
-            text = "Planning next steps...",
-            style = Typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
+private fun StepItem(
+    index: Int,
+    step: AgentStep,
+    isLast: Boolean
+) {
+    var showArguments by remember { mutableStateOf(false) }
+    var showResult by remember { mutableStateOf(false) }
 
-@Composable
-private fun StepItem(index: Int, step: AgentStep) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.38f),
-                        MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.24f)
-                    )
-                ),
-                RoundedCornerShape(12.dp)
-            )
-            .border(
-                BorderStroke(0.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)),
-                RoundedCornerShape(12.dp)
-            )
-            .padding(10.dp)
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.width(24.dp)
+        ) {
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
-                    .size(20.dp)
+                    .size(24.dp)
+                    .clip(CircleShape)
                     .background(
-                        MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f),
-                        CircleShape
+                        Brush.linearGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.primary,
+                                MaterialTheme.colorScheme.secondary
+                            )
+                        )
                     )
             ) {
                 Text(
                     text = index.toString(),
-                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 10.sp
+                    ),
+                    color = MaterialTheme.colorScheme.onPrimary
                 )
             }
-            Spacer(modifier = Modifier.width(8.dp))
+
+            if (!isLast) {
+                Box(
+                    modifier = Modifier
+                        .width(2.dp)
+                        .weight(1f, fill = false)
+                        .height(36.dp)
+                        .background(
+                            brush = Brush.verticalGradient(
+                                colors = listOf(
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.15f)
+                                )
+                            )
+                        )
+                )
+            }
+        }
+
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .background(
+                    MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.28f),
+                    RoundedCornerShape(12.dp)
+                )
+                .border(
+                    BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.15f)),
+                    RoundedCornerShape(12.dp)
+                )
+                .padding(12.dp)
+        ) {
             Text(
                 text = if (step.toolCall != null) {
-                    "Calling ${step.toolCall.toolName}"
+                    "Calling: ${step.toolCall.toolName}"
                 } else {
                     "Reasoning"
                 },
                 style = Typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                 color = MaterialTheme.colorScheme.primary
             )
-        }
 
-        if (step.thought != null) {
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = step.thought,
-                style = Typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
-                modifier = Modifier.padding(start = 4.dp)
-            )
-        }
-
-        if (step.toolCall != null) {
-            Spacer(modifier = Modifier.height(6.dp))
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.5f),
-                        RoundedCornerShape(4.dp)
-                    )
-                    .padding(6.dp)
-            ) {
+            if (step.thought != null) {
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Arguments:",
-                    style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    text = step.thought,
+                    style = Typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
                 )
-                step.toolCall.arguments.forEach { (name, value) ->
+            }
+
+            if (step.toolCall != null) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.clickable { showArguments = !showArguments }
+                ) {
+                    Icon(
+                        imageVector = if (showArguments) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(Modifier.width(4.dp))
                     Text(
-                        text = "$name = $value",
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                        text = "Arguments",
+                        style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+                }
+
+                AnimatedVisibility(visible = showArguments) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 6.dp)
+                            .background(
+                                MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.5f),
+                                RoundedCornerShape(6.dp)
+                            )
+                            .padding(8.dp)
+                    ) {
+                        step.toolCall.arguments.forEach { (name, value) ->
+                            Text(
+                                text = "$name = $value",
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                                    fontSize = 11.sp
+                                ),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+                }
+            }
+
+            val result = step.result
+            if (result != null) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.clickable { showResult = !showResult }
+                ) {
+                    Icon(
+                        imageVector = if (showResult) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        text = "Observation Result",
+                        style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+                }
+
+                AnimatedVisibility(visible = showResult) {
+                    val resultColor = when (result) {
+                        is ToolResult.Success -> Color(0xFF00C853)
+                        is ToolResult.Error -> MaterialTheme.colorScheme.error
+                        is ToolResult.NeedsConfirmation -> MaterialTheme.colorScheme.secondary
+                    }
+                    val resultText = when (result) {
+                        is ToolResult.Success -> result.data
+                        is ToolResult.Error -> result.message
+                        is ToolResult.NeedsConfirmation -> "Needs Confirmation: ${result.message}"
+                    }
+                    Text(
+                        text = resultText,
+                        style = Typography.bodySmall.copy(
+                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                            fontSize = 11.sp
                         ),
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = resultColor,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 6.dp)
+                            .background(
+                                MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.5f),
+                                RoundedCornerShape(6.dp)
+                            )
+                            .padding(8.dp)
                     )
                 }
             }
-        }
-
-        val result = step.result
-        if (result != null) {
-            Spacer(modifier = Modifier.height(6.dp))
-            val resultColor = when (result) {
-                is ToolResult.Success -> Color(0xFF00C853)
-                is ToolResult.Error -> MaterialTheme.colorScheme.error
-                is ToolResult.NeedsConfirmation -> MaterialTheme.colorScheme.secondary
-            }
-            val resultText = when (result) {
-                is ToolResult.Success -> "Observed: ${result.data}"
-                is ToolResult.Error -> "Error: ${result.message}"
-                is ToolResult.NeedsConfirmation -> "Needs Confirmation: ${result.message}"
-            }
-            Text(
-                text = resultText,
-                style = Typography.bodySmall,
-                color = resultColor,
-                modifier = Modifier.padding(start = 4.dp)
-            )
         }
     }
 }

@@ -29,9 +29,11 @@ import com.neo.chevere.data.agent.tools.SearchContactsTool
 import com.neo.chevere.data.agent.tools.SelectModelTool
 import com.neo.chevere.data.agent.tools.ShareTextTool
 import com.neo.chevere.data.agent.tools.SummarizeTextTool
+import com.neo.chevere.data.agent.tools.TaskRegistryTool
 import com.neo.chevere.data.agent.tools.WeatherTool
 import com.neo.chevere.data.agent.tools.WebSearchTool
 import com.neo.chevere.data.datasource.local.SearchCacheDao
+import com.neo.chevere.data.datasource.local.TaskDao
 import com.neo.chevere.data.inference.ImageGenerationManager
 import com.neo.chevere.domain.InstalledModelRegistry
 import dagger.Binds
@@ -231,5 +233,11 @@ abstract class AgentModule {
         fun provideGetAppCapabilitiesTool(
             executor: AndroidAppActionExecutor
         ): AgentTool = GetAppCapabilitiesTool(executor)
+
+        @Provides
+        @IntoSet
+        fun provideTaskRegistryTool(
+            taskDao: TaskDao
+        ): AgentTool = TaskRegistryTool(taskDao)
     }
 }

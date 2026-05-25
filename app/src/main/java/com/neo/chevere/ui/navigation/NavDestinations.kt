@@ -2,6 +2,7 @@ package com.neo.chevere.ui.navigation
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChatBubble
+import androidx.compose.material.icons.filled.FormatListBulleted
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -22,6 +23,12 @@ sealed interface Route {
 
     @Serializable
     data class ModelDetails(val modelId: String) : Route
+
+    @Serializable
+    data object Tasks : Route
+
+    @Serializable
+    data object Benchmark : Route
 }
 
 enum class TopLevelDestination(
@@ -35,6 +42,12 @@ enum class TopLevelDestination(
         Icons.Default.ChatBubble,
         R.string.chat_label,
         TelemetryConstants.Action.BOTTOM_NAV_CHAT
+    ),
+    TASKS(
+        Route.Tasks,
+        Icons.Default.FormatListBulleted,
+        R.string.tasks_label,
+        TelemetryConstants.Action.BOTTOM_NAV_TASKS
     ),
     MODELS(
         Route.ModelMarketplace,

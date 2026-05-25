@@ -49,6 +49,12 @@ class DatabaseConverters {
     @TypeConverter
     fun toInstallStatus(value: String) = enumValueOrDefault(value, InstallStatus.INVALID)
 
+    @TypeConverter
+    fun fromTaskStatus(value: TaskStatus) = value.name
+
+    @TypeConverter
+    fun toTaskStatus(value: String) = enumValueOrDefault(value, TaskStatus.PENDING)
+
     private inline fun <reified T : Enum<T>> enumValueOrDefault(value: String, default: T): T {
         return runCatching { enumValueOf<T>(value) }.getOrDefault(default)
     }

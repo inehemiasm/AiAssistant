@@ -166,6 +166,8 @@ private fun androidx.navigation.NavDestination?.telemetryScreen(): String = when
     this?.hierarchy?.any { it.hasRoute(Route.ModelMarketplace::class) } == true -> TelemetryConstants.Screen.MODEL_MARKETPLACE
     this?.hierarchy?.any { it.hasRoute(Route.ModelDetails::class) } == true -> TelemetryConstants.Screen.MODEL_DETAILS
     this?.hierarchy?.any { it.hasRoute(Route.Settings::class) } == true -> TelemetryConstants.Screen.SETTINGS
+    this?.hierarchy?.any { it.hasRoute(Route.Tasks::class) } == true -> TelemetryConstants.Screen.TASKS
+    this?.hierarchy?.any { it.hasRoute(Route.Benchmark::class) } == true -> TelemetryConstants.Screen.BENCHMARK
     else -> TelemetryConstants.Screen.UNKNOWN
 }
 
@@ -175,5 +177,7 @@ private fun androidx.navigation.NavDestination?.telemetryProductArea(): String =
         TelemetryConstants.Screen.MODEL_DETAILS -> TelemetryConstants.ProductArea.MODEL_MANAGEMENT
 
         TelemetryConstants.Screen.SETTINGS -> TelemetryConstants.ProductArea.SETTINGS
+        TelemetryConstants.Screen.TASKS -> TelemetryConstants.ProductArea.TASKS
+        TelemetryConstants.Screen.BENCHMARK -> TelemetryConstants.ProductArea.SYSTEM
         else -> TelemetryConstants.ProductArea.CHAT
     }
