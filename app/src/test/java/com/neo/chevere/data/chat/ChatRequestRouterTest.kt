@@ -66,4 +66,32 @@ class ChatRequestRouterTest {
         assertTrue(prompt.contains("Do not generate"))
         assertTrue(prompt.endsWith("What can you tell me about this image"))
     }
+
+    @Test
+    fun taskRegistryRequests_useAgent() {
+        val prompts = listOf(
+            "add a task to book a hotel",
+            "create task walk the dog",
+            "show my todo list",
+            "list my tasks",
+            "complete task 3",
+            "remind me to buy groceries",
+            "remember to call mom"
+        )
+        for (prompt in prompts) {
+            assertTrue("Should route '$prompt' to agent", router.shouldUseAgent(prompt))
+        }
+    }
+
+    @Test
+    fun nonTaskRequests_doNotUseAgentForTasks() {
+        val prompts = listOf(
+            "what is task management?",
+            "how do I code a task scheduler in Kotlin",
+            "hello there"
+        )
+        for (prompt in prompts) {
+            assertFalse("Should not route '$prompt' to agent", router.shouldUseAgent(prompt))
+        }
+    }
 }

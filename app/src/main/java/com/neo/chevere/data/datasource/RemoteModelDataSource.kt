@@ -68,6 +68,12 @@ class DefaultRemoteModelDataSource @Inject constructor(
                 headers.append(HttpHeaders.Range, "bytes=$startFromByte-")
             }
         }.execute { response ->
+            // 416 Range Not Satisfiable means the file is already fully downloaded.
+            if (response.status.value == 416) {
+                emit(DownloadStatus.Progress(100))
+                return@execute
+            }
+
             // 206 Partial Content is expected for resumed requests; 200 is fine for fresh ones.
             if (!response.status.isSuccess()) {
                 throw IOException("HTTP error: ${response.status}")
@@ -82,21 +88,26 @@ class DefaultRemoteModelDataSource @Inject constructor(
                 throw IOException("Received HTML instead of a model file. The download link might be expired or blocked.")
             }
 
+            // Append only if the server actually returned 206 Partial Content.
+            // If the server ignored the Range header and returned 200 OK, we must start from 0.
+            val actualResume = isResume && response.status.value == 206
+            val startOffset = if (actualResume) startFromByte else 0L
+
             val channel = response.bodyAsChannel()
             // Content-Length from a Range response is the *remaining* bytes only.
             val remainingBytes = response.contentLength() ?: 0L
-            val totalBytes = startFromByte + remainingBytes
-            // Track bytes written in this session; start accounting from the resume offset.
-            var bytesRead = startFromByte
+            val totalBytes = startOffset + remainingBytes
+            // Track bytes written in this session; start accounting from the actual offset.
+            var bytesRead = startOffset
             val buffer = ByteArray(128 * 1024)
-            var lastEmittedProgress = if (isResume && totalBytes > 0) {
-                (startFromByte * 100 / totalBytes).toInt()
+            var lastEmittedProgress = if (actualResume && totalBytes > 0) {
+                (startOffset * 100 / totalBytes).toInt()
             } else {
                 -1
             }
 
             // Append when resuming so the already-downloaded prefix is kept.
-            FileOutputStream(file, isResume).use { output ->
+            FileOutputStream(file, actualResume).use { output ->
                 while (!channel.isClosedForRead) {
                     val read = channel.readAvailable(buffer)
                     if (read == -1) break

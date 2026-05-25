@@ -236,11 +236,18 @@ class ModelDownloadWorker @AssistedInject constructor(
             )
             if (!willRetry) {
                 // Max retries exhausted; clean up and report permanent failure.
-                if (tempFile.exists()) tempFile.delete()
-                File(
-                    applicationContext.filesDir,
-                    "${modelId}${Constants.ModelFiles.TEMP_DIRECTORY_EXTENSION}"
-                ).deleteRecursively()
+                // Keep the partial files on standard network/transient failures. Discard only on corruption.
+                val isCorruption = e.message?.contains("Checksum mismatch") == true ||
+                        e.message?.contains("ZIP") == true ||
+                        e.message?.contains("extracted") == true ||
+                        e.message?.contains("finalize") == true
+                if (isCorruption) {
+                    if (tempFile.exists()) tempFile.delete()
+                    File(
+                        applicationContext.filesDir,
+                        "${modelId}${Constants.ModelFiles.TEMP_DIRECTORY_EXTENSION}"
+                    ).deleteRecursively()
+                }
                 installedModelRegistry.updateInstallStatus(modelId, InstallStatus.FAILED)
                 telemetry.logModelDownloadFinished(
                     modelId = modelId,
@@ -312,7 +319,13 @@ class ModelDownloadWorker @AssistedInject constructor(
             destination.parentFile?.mkdirs()
 
             val url = remoteModelDataSource.getDownloadUrl(repositoryFile.url)
-            remoteModelDataSource.downloadToFile(url, destination).collect { status ->
+            val resumeOffset = if (destination.exists()) destination.length() else 0L
+            val downloadFlow = if (resumeOffset > 0L && remoteModelDataSource is DefaultRemoteModelDataSource) {
+                remoteModelDataSource.downloadToFile(url, destination, resumeOffset)
+            } else {
+                remoteModelDataSource.downloadToFile(url, destination)
+            }
+            downloadFlow.collect { status ->
                 coroutineContext.ensureActive()
                 if (status is DownloadStatus.Progress) {
                     val aggregateProgress = ((index * 100) + status.percent) / repositoryFiles.size

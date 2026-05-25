@@ -172,4 +172,8 @@
     <string name="benchmark_load_label">Model Engine Load Latency</string>
     <string name="benchmark_total_label">Total Execution Time</string>
     <string name="benchmark_explanation">This runs a local, standardized generation request against the active LLM engine to measure performance metrics.</string>
+
+    <!-- Settings Screen Biometrics -->
+    <string name="biometric_lock">Biometric Lock</string>
+    <string name="biometric_lock_desc">Require fingerprint or face recognition on startup</string>
 </resources>

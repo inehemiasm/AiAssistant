@@ -105,6 +105,22 @@ class PreferenceManager @Inject constructor(@ApplicationContext context: Context
                 ?: getDefaultWeatherUnitSystem()
         }
 
+    /**
+     * A [Flow] that emits whether the biometric lock is enabled on startup.
+     * Defaults to `false`.
+     */
+    val biometricLockPreference: Flow<Boolean> = dataStore.data
+        .catch { exception ->
+            if (exception is IOException) {
+                emit(emptyPreferences())
+            } else {
+                throw exception
+            }
+        }
+        .map { preferences ->
+            preferences[BIOMETRIC_LOCK_KEY] ?: false
+        }
+
     private fun getDefaultWeatherUnitSystem(): WeatherUnitSystem {
         val country = java.util.Locale.getDefault().country.uppercase()
         // US, Myanmar (MM), Liberia (LR) use Imperial system
@@ -155,10 +171,20 @@ class PreferenceManager @Inject constructor(@ApplicationContext context: Context
         }
     }
 
+    /**
+     * Updates the user's biometric lock preference.
+     */
+    suspend fun updateBiometricLock(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[BIOMETRIC_LOCK_KEY] = enabled
+        }
+    }
+
     companion object {
         private val THEME_KEY = booleanPreferencesKey("theme_preference")
         private val SELECTED_MODEL_KEY = stringPreferencesKey("selected_model")
         private val WEATHER_UNIT_KEY = stringPreferencesKey("weather_unit_system")
         private val ATMOSPHERIC_THEME_KEY = stringPreferencesKey("atmospheric_theme_preference")
+        private val BIOMETRIC_LOCK_KEY = booleanPreferencesKey("biometric_lock_enabled")
     }
 }

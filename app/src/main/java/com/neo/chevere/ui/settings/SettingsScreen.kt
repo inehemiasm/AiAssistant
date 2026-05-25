@@ -196,6 +196,65 @@ fun SettingsScreen(
                     }
                 )
 
+                Spacer(Modifier.height(12.dp))
+
+                // Biometric Security Card
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.5f),
+                    shape = RoundedCornerShape(16.dp),
+                    border = BorderStroke(
+                        1.dp,
+                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.1f)
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Security,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(Modifier.width(16.dp))
+                            Column {
+                                Text(
+                                    stringResource(R.string.biometric_lock),
+                                    style = Typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    stringResource(R.string.biometric_lock_desc),
+                                    style = Typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        Switch(
+                            checked = state.isBiometricLockEnabled,
+                            onCheckedChange = {
+                                hapticView.performChevereHaptic(ChevereHaptic.Selection)
+                                viewModel.onIntent(SettingsIntent.UpdateBiometricLock(it))
+                            },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = MaterialTheme.colorScheme.primary,
+                                checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                                uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainerHighest
+                            )
+                        )
+                    }
+                }
+
                 Spacer(Modifier.height(32.dp))
 
                 Text(

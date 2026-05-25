@@ -32,6 +32,11 @@ class SettingsViewModel @Inject constructor(
                 setState { copy(weatherUnitSystem = unitSystem) }
             }
         }
+        viewModelScope.launch {
+            preferenceManager.biometricLockPreference.collectLatest { enabled ->
+                setState { copy(isBiometricLockEnabled = enabled) }
+            }
+        }
     }
 
     override suspend fun handleIntent(intent: SettingsIntent) {
@@ -46,6 +51,10 @@ class SettingsViewModel @Inject constructor(
 
             is SettingsIntent.UpdateWeatherUnitSystem -> {
                 preferenceManager.updateWeatherUnitSystem(intent.unitSystem)
+            }
+
+            is SettingsIntent.UpdateBiometricLock -> {
+                preferenceManager.updateBiometricLock(intent.enabled)
             }
         }
     }
