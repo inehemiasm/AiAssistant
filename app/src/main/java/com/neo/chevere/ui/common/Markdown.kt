@@ -1,22 +1,34 @@
 package com.neo.chevere.ui.common
 
+import android.annotation.SuppressLint
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
@@ -27,8 +39,10 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import com.neo.chevere.ui.designsystem.Typography
 import kotlinx.coroutines.delay
+import java.util.Locale
 
 data class MarkdownBlock(
     val text: String,
@@ -86,6 +100,7 @@ fun MarkdownContent(
                     block = if (isLast && showCursor) {
                         block.copy(text = block.text + (if (cursorVisible) "▊" else ""))
                     } else block,
+                    allBlocks = blocks,
                     background = codeBackground,
                     border = codeBorder,
                     contentColor = codeText
@@ -105,43 +120,175 @@ fun MarkdownContent(
     }
 }
 
+enum class CodeBlockTab { CODE, PREVIEW }
+
+@SuppressLint("SetJavaScriptEnabled")
+@Composable
+private fun HtmlSandboxPreview(
+    html: String,
+    modifier: Modifier = Modifier
+) {
+    AndroidView(
+        factory = { context ->
+            WebView(context).apply {
+                webViewClient = WebViewClient()
+                settings.apply {
+                    javaScriptEnabled = true
+                    domStorageEnabled = true
+                    allowFileAccess = false
+                    allowContentAccess = false
+                }
+            }
+        },
+        update = { webView ->
+            webView.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null)
+        },
+        modifier = modifier
+            .fillMaxWidth()
+            .height(280.dp)
+            .clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
+    )
+}
+
+private fun compileHtmlWithAssets(htmlBlock: MarkdownBlock, allBlocks: List<MarkdownBlock>): String {
+    var html = htmlBlock.text
+
+    // Find all CSS code blocks in the message
+    val cssContent = allBlocks
+        .filter { it.isCode && it.language?.lowercase(Locale.US)?.trim() == "css" }
+        .joinToString("\n") { it.text }
+
+    // Find all JS/TS code blocks in the message
+    val jsContent = allBlocks
+        .filter { it.isCode && it.language?.lowercase(Locale.US)?.trim() in listOf("js", "javascript", "ts", "typescript") }
+        .joinToString("\n") { it.text }
+
+    // Inject CSS content into the HTML structure (before </head> or prepended)
+    if (cssContent.isNotBlank()) {
+        val styleTag = "\n<style>\n$cssContent\n</style>\n"
+        html = if (html.contains("</head>")) {
+            html.replace("</head>", "$styleTag</head>")
+        } else {
+            styleTag + html
+        }
+    }
+
+    // Inject JS content into the HTML structure (before </body> or appended)
+    if (jsContent.isNotBlank()) {
+        val scriptTag = "\n<script>\n$jsContent\n</script>\n"
+        html = if (html.contains("</body>")) {
+            html.replace("</body>", "$scriptTag</body>")
+        } else {
+            html + scriptTag
+        }
+    }
+
+    return html
+}
+
 @Composable
 private fun CodeBlock(
     block: MarkdownBlock,
+    allBlocks: List<MarkdownBlock>,
     background: Color,
     border: Color,
     contentColor: Color,
     scrollState: ScrollState = rememberScrollState()
 ) {
+    val isHtmlPreviewable = block.language?.lowercase(Locale.US)?.trim() in listOf("html", "xml", "svg")
+    var activeTab by remember { mutableStateOf(CodeBlockTab.CODE) }
+
     Surface(
         color = background,
         contentColor = contentColor,
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
         border = androidx.compose.foundation.BorderStroke(1.dp, border),
         modifier = Modifier.fillMaxWidth()
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            block.language?.takeIf { it.isNotBlank() }?.let { language ->
-                Text(
-                    text = language.uppercase(),
-                    style = Typography.labelSmall.copy(
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = contentColor.copy(alpha = 0.62f)
-                    ),
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
+        Column {
+            // Header Row
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                block.language?.takeIf { it.isNotBlank() }?.let { language ->
+                    Text(
+                        text = language.uppercase(),
+                        style = Typography.labelSmall.copy(
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = contentColor.copy(alpha = 0.62f)
+                        )
+                    )
+                }
+
+                if (isHtmlPreviewable) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        val activeColor = MaterialTheme.colorScheme.primary
+                        val inactiveColor = contentColor.copy(alpha = 0.5f)
+
+                        TextButton(
+                            onClick = { activeTab = CodeBlockTab.CODE },
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                            modifier = Modifier.height(28.dp)
+                        ) {
+                            Text(
+                                text = "CODE",
+                                style = Typography.labelSmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (activeTab == CodeBlockTab.CODE) activeColor else inactiveColor
+                                )
+                            )
+                        }
+
+                        TextButton(
+                            onClick = { activeTab = CodeBlockTab.PREVIEW },
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                            modifier = Modifier.height(28.dp)
+                        ) {
+                            Text(
+                                text = "PREVIEW",
+                                style = Typography.labelSmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (activeTab == CodeBlockTab.PREVIEW) activeColor else inactiveColor
+                                )
+                            )
+                        }
+                    }
+                }
             }
-            Text(
-                text = block.text.trimEnd(),
-                style = Typography.bodySmall.copy(
-                    fontFamily = FontFamily.Monospace,
-                    fontSize = 13.sp,
-                    lineHeight = 19.sp,
-                    color = contentColor
-                ),
-                modifier = Modifier.horizontalScroll(scrollState)
+
+            HorizontalDivider(
+                color = border.copy(alpha = 0.5f),
+                thickness = 0.5.dp
             )
+
+            // Content Area
+            Box(modifier = Modifier.padding(12.dp)) {
+                if (isHtmlPreviewable && activeTab == CodeBlockTab.PREVIEW) {
+                    val compiledHtml = remember(block.text, allBlocks) {
+                        compileHtmlWithAssets(block, allBlocks)
+                    }
+                    HtmlSandboxPreview(html = compiledHtml)
+                } else {
+                    val highlightedText = remember(block.text, block.language) {
+                        CodeHighlighter.highlight(block.text, block.language)
+                    }
+                    Text(
+                        text = highlightedText,
+                        style = Typography.bodySmall.copy(
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 13.sp,
+                            lineHeight = 19.sp,
+                            color = contentColor
+                        ),
+                        modifier = Modifier.horizontalScroll(scrollState)
+                    )
+                }
+            }
         }
     }
 }
