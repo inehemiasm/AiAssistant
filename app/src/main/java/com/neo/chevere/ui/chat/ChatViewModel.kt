@@ -452,6 +452,7 @@ class ChatViewModel @Inject constructor(
      * the installed image-generation backend directly.
      */
     private fun parseImageCommand(text: String): ImageCommand? {
+        if (!BuildConfig.DEBUG) return null
         val trimmed = text.trim()
         val command = imageCommandPrefixes.firstOrNull { prefix ->
             trimmed.startsWith(prefix, ignoreCase = true)

@@ -68,6 +68,10 @@ import coil.compose.AsyncImage
 import com.neo.chevere.R
 import com.neo.chevere.core.Constants
 import com.neo.chevere.ui.designsystem.Typography
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 
 /**
  * Bottom chat composer with attachment actions, text entry, busy status, and stop/send control.
@@ -87,6 +91,8 @@ fun ChatInputBar(
     isBusy: Boolean,
     isListening: Boolean,
     busyMessage: String = Constants.UiStatus.THINKING,
+    suggestions: List<String> = emptyList(),
+    onSuggestionClick: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var showAttachmentMenu by remember { mutableStateOf(false) }
@@ -101,6 +107,23 @@ fun ChatInputBar(
                 uri = selectedImageUri,
                 onRemoveImage = onRemoveImage
             )
+        }
+
+        if (suggestions.isNotEmpty() && !isBusy) {
+            LazyRow(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 10.dp, start = 4.dp, end = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(horizontal = 4.dp)
+            ) {
+                items(suggestions) { suggestion ->
+                    SuggestionChip(
+                        suggestion = suggestion,
+                        onClick = { onSuggestionClick(suggestion) }
+                    )
+                }
+            }
         }
 
         val inputShape = RoundedCornerShape(34.dp)
@@ -507,5 +530,40 @@ private fun AttachmentMenuIcon(content: @Composable () -> Unit) {
         Box(contentAlignment = Alignment.Center) {
             content()
         }
+    }
+}
+
+@Composable
+private fun SuggestionChip(
+    suggestion: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f),
+        contentColor = MaterialTheme.colorScheme.primary,
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(
+            width = 1.dp,
+            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+        ),
+        modifier = modifier
+            .shadow(
+                elevation = 2.dp,
+                shape = RoundedCornerShape(16.dp),
+                ambientColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+            )
+            .clickable(onClick = onClick)
+    ) {
+        Text(
+            text = suggestion,
+            style = Typography.labelMedium.copy(
+                fontWeight = FontWeight.Medium,
+                letterSpacing = 0.2.sp
+            ),
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+            maxLines = 1
+        )
     }
 }

@@ -84,6 +84,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.neo.chevere.BuildConfig
 import com.neo.chevere.R
 import com.neo.chevere.core.Constants
 import com.neo.chevere.core.PiiUtils
@@ -217,6 +218,45 @@ private fun ChatContent(
     val inputBusyMessage = when {
         state.sendState is SendState.GeneratingImage -> Constants.UiStatus.GENERATING_IMAGE
         else -> Constants.UiStatus.THINKING
+    }
+
+    val hasImageModel = remember(state.localModels) {
+        state.localModels.any {
+            it.isHealthy && (it.taskType == ModelTaskType.IMAGE_GENERATION || ModelCapability.IMAGE_GEN in it.capabilities)
+        }
+    }
+    val hasAttachedImage = state.selectedImageUri != null
+    val suggestions = remember(hasAttachedImage, hasImageModel) {
+        if (hasAttachedImage) {
+            listOf(
+                "Describe this image.",
+                "What is in this photo?",
+                "Extract text from this image."
+            )
+        } else {
+            val baseList = mutableListOf(
+                "Write a Kotlin Coroutine example.",
+                "Explain Clean Architecture.",
+                "Optimize this code snippet."
+            )
+            if (hasImageModel) {
+                val imagePrompts = if (BuildConfig.DEBUG) {
+                    listOf(
+                        "/image A futuristic neon laboratory",
+                        "/image Cyberpunk robot assistant",
+                        "/image Retro computer console"
+                    )
+                } else {
+                    listOf(
+                        "Imagine a futuristic neon laboratory",
+                        "Imagine a cyberpunk robot assistant",
+                        "Imagine a retro computer console"
+                    )
+                }
+                baseList.addAll(0, imagePrompts)
+            }
+            baseList
+        }
     }
 
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -530,7 +570,12 @@ private fun ChatContent(
                         enabled = state.isReady && !state.isLoading,
                         isBusy = isAiBusy,
                         isListening = state.isListening,
-                        busyMessage = inputBusyMessage
+                        busyMessage = inputBusyMessage,
+                        suggestions = suggestions,
+                        onSuggestionClick = { suggestion ->
+                            hapticView.performChevereHaptic(ChevereHaptic.Selection)
+                            viewModel.onIntent(ChatIntent.UpdateInputText(suggestion))
+                        }
                     )
                 }
             }
