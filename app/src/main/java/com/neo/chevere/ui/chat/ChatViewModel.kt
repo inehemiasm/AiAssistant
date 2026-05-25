@@ -20,6 +20,7 @@ import com.neo.chevere.data.agent.AgentState
 import com.neo.chevere.domain.ChatMessage
 import com.neo.chevere.domain.ChatRepository
 import com.neo.chevere.domain.ContactsPermissionException
+import com.neo.chevere.domain.CalendarPermissionException
 import com.neo.chevere.domain.ExplicitImagePromptDecision
 import com.neo.chevere.domain.ExplicitImagePromptPolicy
 import com.neo.chevere.domain.ImageGenerationRequest
@@ -692,6 +693,10 @@ class ChatViewModel @Inject constructor(
                     is ContactsPermissionException -> {
                         sendEffect { ChatEffect.RequestContactsPermission }
                         "Contacts permission is required to look up people on this device. Please grant the permission or provide the email address directly."
+                    }
+                    is CalendarPermissionException -> {
+                        sendEffect { ChatEffect.RequestCalendarPermission }
+                        "Calendar permission is required to read calendar events on this device. Please grant the permission."
                     }
                     else -> e.message ?: "Action failed"
                 }

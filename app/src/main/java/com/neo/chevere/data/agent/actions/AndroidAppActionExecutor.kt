@@ -50,6 +50,9 @@ class DefaultAndroidAppActionExecutor @Inject constructor(
                 is GetAppCapabilitiesRequest -> getAppCapabilities(request.appName)
                 is OpenDeepLinkRequest -> openDeepLink(request)
                 is DeviceControlRequest -> controlDevice(request)
+                is SetAlarmRequest -> setAlarm(request)
+                is SetTimerRequest -> setTimer(request)
+                is ShowAlarmsRequest -> showAlarms()
                 is PickImageRequest -> AppActionResult.Error("Pick Image not implemented yet via Intent in this layer")
                 else -> AppActionResult.Error("Unknown action request type")
             }
@@ -363,6 +366,7 @@ class DefaultAndroidAppActionExecutor @Inject constructor(
     private fun controlDevice(request: DeviceControlRequest): AppActionResult {
         return when (request.control.lowercase()) {
             "volume" -> controlVolume(request)
+            "media", "music" -> controlMedia(request)
             "brightness" -> openSystemSettings(
                 action = Settings.ACTION_DISPLAY_SETTINGS,
                 successMessage = "Opened Display settings so you can adjust screen brightness."
@@ -372,9 +376,27 @@ class DefaultAndroidAppActionExecutor @Inject constructor(
                 successMessage = "Opened Do Not Disturb access settings."
             )
             else -> AppActionResult.Error(
-                "Unsupported device control '${request.control}'. Supported controls: volume, brightness, do_not_disturb."
+                "Unsupported device control '${request.control}'. Supported controls: volume, music, brightness, do_not_disturb."
             )
         }
+    }
+
+    private fun controlMedia(request: DeviceControlRequest): AppActionResult {
+        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        val keyEventCode = when (request.action.lowercase()) {
+            "play", "resume" -> android.view.KeyEvent.KEYCODE_MEDIA_PLAY
+            "pause", "stop" -> android.view.KeyEvent.KEYCODE_MEDIA_PAUSE
+            "play_pause", "toggle" -> android.view.KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE
+            "next", "skip" -> android.view.KeyEvent.KEYCODE_MEDIA_NEXT
+            "previous", "back" -> android.view.KeyEvent.KEYCODE_MEDIA_PREVIOUS
+            else -> return AppActionResult.Error("Unsupported media action '${request.action}'. Use play, pause, next, previous.")
+        }
+
+        // Dispatch media button down and up events
+        audioManager.dispatchMediaKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, keyEventCode))
+        audioManager.dispatchMediaKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_UP, keyEventCode))
+
+        return AppActionResult.Success("Media control action ${request.action.uppercase()} executed successfully.")
     }
 
     private fun controlVolume(request: DeviceControlRequest): AppActionResult {
@@ -417,6 +439,58 @@ class DefaultAndroidAppActionExecutor @Inject constructor(
             AppActionResult.Success(successMessage)
         } else {
             AppActionResult.Error("No system settings screen found for this control.")
+        }
+    }
+
+    private fun setAlarm(request: SetAlarmRequest): AppActionResult {
+        val intent = Intent(android.provider.AlarmClock.ACTION_SET_ALARM).apply {
+            putExtra(android.provider.AlarmClock.EXTRA_HOUR, request.hour)
+            putExtra(android.provider.AlarmClock.EXTRA_MINUTES, request.minutes)
+            putExtra(android.provider.AlarmClock.EXTRA_MESSAGE, request.message ?: "Chevere AI Alarm")
+            putExtra(android.provider.AlarmClock.EXTRA_SKIP_UI, true)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        return if (intent.resolveActivity(context.packageManager) != null) {
+            context.startActivity(intent)
+            AppActionResult.Success("Alarm set for ${"%02d".format(request.hour)}:${"%02d".format(request.minutes)} with label: '${request.message ?: "Chevere AI Alarm"}'")
+        } else {
+            // In case AlarmClock intent is not supported directly, launch system clock app
+            val fallbackIntent = Intent(android.provider.AlarmClock.ACTION_SET_ALARM).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            if (fallbackIntent.resolveActivity(context.packageManager) != null) {
+                context.startActivity(fallbackIntent)
+                AppActionResult.Success("Opened clock app to set alarm.")
+            } else {
+                AppActionResult.Error("No clock or alarm application found on device")
+            }
+        }
+    }
+
+    private fun setTimer(request: SetTimerRequest): AppActionResult {
+        val intent = Intent(android.provider.AlarmClock.ACTION_SET_TIMER).apply {
+            putExtra(android.provider.AlarmClock.EXTRA_LENGTH, request.lengthSeconds)
+            putExtra(android.provider.AlarmClock.EXTRA_MESSAGE, request.message ?: "Chevere AI Timer")
+            putExtra(android.provider.AlarmClock.EXTRA_SKIP_UI, true)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        return if (intent.resolveActivity(context.packageManager) != null) {
+            context.startActivity(intent)
+            AppActionResult.Success("Timer set for ${request.lengthSeconds} seconds with label: '${request.message ?: "Chevere AI Timer"}'")
+        } else {
+            AppActionResult.Error("No timer application found on device")
+        }
+    }
+
+    private fun showAlarms(): AppActionResult {
+        val intent = Intent(android.provider.AlarmClock.ACTION_SHOW_ALARMS).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        return if (intent.resolveActivity(context.packageManager) != null) {
+            context.startActivity(intent)
+            AppActionResult.Success("Alarms screen opened.")
+        } else {
+            AppActionResult.Error("No alarm application found on device")
         }
     }
 }

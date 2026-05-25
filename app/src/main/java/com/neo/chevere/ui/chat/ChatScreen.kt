@@ -357,6 +357,28 @@ private fun ChatContent(
         }
     }
 
+    val calendarPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val readGranted = permissions[Manifest.permission.READ_CALENDAR] == true
+        val writeGranted = permissions[Manifest.permission.WRITE_CALENDAR] == true
+        if (readGranted || writeGranted) {
+            Toast.makeText(
+                context,
+                context.getString(R.string.calendar_permission_granted),
+                Toast.LENGTH_SHORT
+            ).show()
+            viewModel.onIntent(ChatIntent.RetryLastMessage)
+        } else {
+            Toast.makeText(
+                context,
+                context.getString(R.string.calendar_permission_denied),
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+
+
     Scaffold(
         topBar = {
             ChatTopBar(
@@ -664,6 +686,15 @@ private fun ChatContent(
 
                 ChatEffect.RequestMicPermission -> {
                     micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                }
+
+                ChatEffect.RequestCalendarPermission -> {
+                    calendarPermissionLauncher.launch(
+                        arrayOf(
+                            Manifest.permission.READ_CALENDAR,
+                            Manifest.permission.WRITE_CALENDAR
+                        )
+                    )
                 }
 
                 is ChatEffect.ShowVoiceError -> {

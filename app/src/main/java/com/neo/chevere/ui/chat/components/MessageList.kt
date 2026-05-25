@@ -122,9 +122,6 @@ fun MessageList(
         verticalArrangement = Arrangement.spacedBy(22.dp)
     ) {
         itemsIndexed(messages) { index, message ->
-            if (message.agentState != null && message.agentState !is AgentState.Idle) {
-                AgentThoughtCard(agentState = message.agentState)
-            }
             FuturisticChatBubble(
                 message = message,
                 isSpeaking = speakingMessageIndex == index,
@@ -248,6 +245,12 @@ fun FuturisticChatBubble(
                             isExplicitImage = message.isExplicitImage,
                             isMasked = message.isImageMasked,
                             onToggleMask = onToggleExplicitImageMask
+                        )
+                    }
+                    if (!isUser && message.agentState != null && message.agentState !is AgentState.Idle) {
+                        EmbeddedAgentThoughts(
+                            agentState = message.agentState,
+                            modifier = Modifier.padding(bottom = 12.dp)
                         )
                     }
                     SelectionContainer {
@@ -445,6 +448,108 @@ fun Badge(text: String) {
                     letterSpacing = 0.5.sp
                 )
             )
+        }
+    }
+}
+
+@Composable
+fun EmbeddedAgentThoughts(
+    agentState: AgentState,
+    modifier: Modifier = Modifier
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val steps = agentState.steps
+    val isBusy = agentState is AgentState.Planning || agentState is AgentState.ExecutingTool
+    val statusText = agentStatusText(agentState)
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(
+                MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.35f),
+                RoundedCornerShape(12.dp)
+            )
+            .border(
+                BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)),
+                RoundedCornerShape(12.dp)
+            )
+            .padding(10.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) { expanded = !expanded }
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Psychology,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Agent Thoughts",
+                        style = Typography.titleSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp,
+                            letterSpacing = 0.sp
+                        ),
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = if (steps.isNotEmpty()) "${steps.size} step${if (steps.size > 1) "s" else ""} completed" else statusText,
+                        style = Typography.labelSmall.copy(fontSize = 9.sp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+            Icon(
+                imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                contentDescription = if (expanded) "Collapse thoughts" else "Expand thoughts",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+
+        AnimatedVisibility(
+            visible = expanded,
+            enter = fadeIn(tween(180)) + expandVertically(tween(220)),
+            exit = fadeOut(tween(120)) + shrinkVertically(tween(160))
+        ) {
+            Column(
+                modifier = Modifier.padding(top = 10.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                if (steps.isEmpty()) {
+                    Text(
+                        text = "No recorded steps.",
+                        style = Typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    steps.forEachIndexed { index, step ->
+                        StepItem(
+                            index = index + 1,
+                            step = step,
+                            isLast = index == steps.lastIndex && !isBusy
+                        )
+                    }
+                }
+            }
         }
     }
 }

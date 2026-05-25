@@ -7,6 +7,7 @@ import com.neo.chevere.data.datasource.local.InstalledModelDao
 import com.neo.chevere.data.datasource.local.RoomInstalledModelRegistry
 import com.neo.chevere.data.datasource.local.SearchCacheDao
 import com.neo.chevere.data.datasource.local.TaskDao
+import com.neo.chevere.data.datasource.local.DocumentChunkDao
 import com.neo.chevere.domain.InstalledModelRegistry
 import dagger.Binds
 import dagger.Module
@@ -45,6 +46,11 @@ object DatabaseModule {
     @Provides
     fun provideTaskDao(database: AppDatabase): TaskDao {
         return database.taskDao()
+    }
+
+    @Provides
+    fun provideDocumentChunkDao(database: AppDatabase): DocumentChunkDao {
+        return database.documentChunkDao()
     }
 }
 

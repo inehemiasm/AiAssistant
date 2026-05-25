@@ -14,9 +14,9 @@ class DeviceControlTool @Inject constructor(
 ) : BaseAppActionTool(actionExecutor) {
     override val name: String = "control_device"
     override val description: String =
-        "Adjusts safe device controls after user confirmation. Supports media volume directly, and opens system settings for brightness or Do Not Disturb."
+        "Adjusts safe device controls after user confirmation. Supports media volume directly, media playback controls (play, pause, next, previous), and opens system settings for brightness or Do Not Disturb."
     override val inputSchema: String =
-        "control: volume|brightness|do_not_disturb. action: up|down|mute|unmute|set|open. value: Optional 0-100 for volume set."
+        "control: volume|music|brightness|do_not_disturb. action: up|down|mute|unmute|set|open|play|pause|next|previous. value: Optional 0-100 for volume set."
 
     override suspend fun execute(args: Map<String, String>): ToolResult {
         val control = args["control"]?.trim().orEmpty()
@@ -39,6 +39,13 @@ class DeviceControlTool @Inject constructor(
                 "Set media volume to ${request.value ?: "the requested level"}%?"
             } else {
                 "Adjust media volume: ${request.action}?"
+            }
+            "music", "media" -> when (request.action.lowercase()) {
+                "play", "resume" -> "Resume music playback?"
+                "pause", "stop" -> "Pause music playback?"
+                "next", "skip" -> "Skip to the next song?"
+                "previous", "back" -> "Go back to the previous song?"
+                else -> "Control music playback: ${request.action}?"
             }
             "brightness" -> "Open Display settings so you can adjust brightness?"
             "do_not_disturb", "dnd" -> "Open Do Not Disturb settings?"

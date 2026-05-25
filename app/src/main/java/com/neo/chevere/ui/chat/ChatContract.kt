@@ -121,6 +121,8 @@ sealed class ChatEffect : UiEffect {
     data object RequestContactsPermission : ChatEffect()
     /** Request the RECORD_AUDIO permission from the user. */
     data object RequestMicPermission : ChatEffect()
+    /** Request the READ_CALENDAR and WRITE_CALENDAR permissions. */
+    data object RequestCalendarPermission : ChatEffect()
     /** Show an error that occurred during voice input. */
     data class ShowVoiceError(val message: String) : ChatEffect()
 }

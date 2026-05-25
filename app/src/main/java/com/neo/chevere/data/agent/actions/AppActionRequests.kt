@@ -66,3 +66,17 @@ data class DeviceControlRequest(
     val action: String,
     val value: Int? = null
 ) : AppActionRequest
+
+data class SetAlarmRequest(
+    val hour: Int,
+    val minutes: Int,
+    val message: String? = null
+) : AppActionRequest
+
+data class SetTimerRequest(
+    val lengthSeconds: Int,
+    val message: String? = null
+) : AppActionRequest
+
+object ShowAlarmsRequest : AppActionRequest
+

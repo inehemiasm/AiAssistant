@@ -18,6 +18,10 @@ import com.neo.chevere.data.agent.tools.ListAppsTool
 import com.neo.chevere.data.agent.tools.ListModelsTool
 import com.neo.chevere.data.location.LocationProvider
 import com.neo.chevere.data.agent.tools.OpenAppTool
+import com.neo.chevere.data.agent.tools.LocalDocumentRagTool
+import com.neo.chevere.data.agent.tools.QueryCalendarTool
+import com.neo.chevere.data.agent.tools.AlarmTimerTool
+import com.neo.chevere.data.datasource.local.DocumentChunkDao
 import com.neo.chevere.data.agent.tools.OpenDeepLinkTool
 import com.neo.chevere.data.agent.tools.OpenMapsTool
 import com.neo.chevere.data.agent.tools.OpenUrlTool
@@ -239,5 +243,24 @@ abstract class AgentModule {
         fun provideTaskRegistryTool(
             taskDao: TaskDao
         ): AgentTool = TaskRegistryTool(taskDao)
+
+        @Provides
+        @IntoSet
+        fun provideLocalDocumentRagTool(
+            @ApplicationContext context: Context,
+            documentChunkDao: DocumentChunkDao
+        ): AgentTool = LocalDocumentRagTool(context, documentChunkDao)
+
+        @Provides
+        @IntoSet
+        fun provideQueryCalendarTool(
+            @ApplicationContext context: Context
+        ): AgentTool = QueryCalendarTool(context)
+
+        @Provides
+        @IntoSet
+        fun provideAlarmTimerTool(
+            executor: AndroidAppActionExecutor
+        ): AgentTool = AlarmTimerTool(executor)
     }
 }

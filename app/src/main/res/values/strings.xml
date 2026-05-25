@@ -88,6 +88,8 @@
     <string name="contacts_permission_granted">Contacts permission granted.</string>
     <string name="contacts_permission_denied">Contacts permission denied.</string>
     <string name="microphone_permission_denied">Microphone permission denied.</string>
+    <string name="calendar_permission_granted">Calendar permission granted.</string>
+    <string name="calendar_permission_denied">Calendar permission denied.</string>
     <string name="neural_cores">NEURAL CORES</string>
     <string name="chat_label">Chat</string>
     <string name="models_label">Models</string>
