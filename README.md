@@ -31,6 +31,10 @@ Chevere AI is a privacy-first Android assistant that runs local language models 
   - SHA-256 verification when a checksum is provided.
   - ZIP model bundles are extracted atomically with zip-slip protection.
   - Download progress is keyed by model filename using a stable `MODEL_NAME:` WorkManager tag.
+- **Local Tasks Management**:
+  - Organize checklists with automated task identification, listing, creation, status updating (pending/completed), and deletion in the database.
+- **On-Device Performance Benchmarking**:
+  - Runs local LLM performance tests measuring engine initialization/warmup latency, Time-To-First-Token (TTFT), tokens-per-second generation throughput (TPS), and logging device physical memory specs and hardware acceleration (CPU/GPU).
 
 ## Tech Stack
 
@@ -39,7 +43,7 @@ Chevere AI is a privacy-first Android assistant that runs local language models 
 - **Dependency injection**: Hilt
 - **Local LLM runtime**: Google AI Edge LiteRT-LM
 - **Image generation runtime**: ONNX Runtime Android for Stable Diffusion style bundles
-- **Database**: Room for installed models and search cache
+- **Database**: Room for installed models, tasks checklist, and offline search cache
 - **Networking**: Ktor + OkHttp
 - **Background tasks**: WorkManager foreground service
 - **Modules**:
@@ -60,29 +64,28 @@ Located under `app/src/main/java/com/neo/chevere/domain/`.
 
 Located under `app/src/main/java/com/neo/chevere/data/`.
 
-- `AgentOrchestrator`: local tool loop and confirmation flow.
-- `ToolRegistry`: exposes tools such as search, weather, app actions, clipboard/share, model inspection, and image generation.
+- `AgentOrchestrator`: Local tool loop and user action confirmation flow.
+- `ToolRegistry`: Hilt-provided collection of agent tools:
+  - **Core Tools**: `search_web`, `get_weather`, `summarize_text`, `model_registry`
+  - **Local Tasks**: `task_registry` (CRUD actions on database), `extract_tasks`
+  - **Device / Contacts**: `control_device` (volume, display/DND shortcuts), `search_contacts` (name/email lookup)
+  - **Android App Integration**: `copy_to_clipboard`, `share_text`, `open_url`, `open_maps`, `draft_email`, `create_calendar_event`, `list_apps`, `launch_app`, `launch_app_home_screen` (`OpenAppTool`), `perform_app_action` (`OpenDeepLinkTool`), `get_app_capabilities`
+  - **Image Tools**: `generate_image` (ONNX Stable Diffusion generation) and `analyze_image` (vision capabilities)
 - `InferenceManager`: LiteRT-LM model lifecycle.
-- `ConversationContextManager`: compact memory and recent-turn prompt slicing for constrained on-device context windows.
-- `ImageGenerationManager`: chooses installed image-generation models and falls back across compatible engines.
+- `ConversationContextManager`: Compact memory and recent-turn prompt slicing for constrained on-device context windows.
+- `ImageGenerationManager`: Chooses installed image-generation models and falls back across compatible engines.
 - `OnnxLocalDiffusionEngine`: ONNX text encoder, tokenizer, UNet scheduler loop, VAE decode, and PNG persistence.
-- `ModelDownloadWorker`: downloads, verifies, extracts, and finalizes model files.
+- `ModelDownloadWorker`: Downloads, verifies, extracts, and finalizes model files.
 
 ### UI
 
 Located under `app/src/main/java/com/neo/chevere/ui/`.
 
-- Chat uses `ChatState`, `ChatIntent`, and `SendState`.
-- The chat top bar is brand/capability focused: it shows `CHEVERE AI` plus `CHAT` and `IMAGE` readiness chips rather than a single selected model name.
-- Chat model switching lives in the Models screen. Image-generation models are used automatically by `ImageGenerationManager`.
-- Attached images force the chat/vision path. If the text field is empty, the prompt defaults to `Describe this image.`.
-- Each chat turn is rebuilt from compact conversation memory and recent turns, then sent as a fresh runtime conversation to reduce context drift on small local models.
-- Attached-image previews use a larger thumbnail with a neutral remove control.
-- Slash-command image generation uses `SendState.GeneratingImage` so the UI shows `GENERATING IMAGE...`.
-- Requests that look like image generation show an image-model download dialog when no healthy image model is installed.
-- `AgeVerificationDialog` handles explicit prompt gating.
-- Generated explicit images use `ChatMessage.isExplicitImage` and `ChatMessage.isImageMasked` to show a blur mask and reveal/hide toggle.
-- Marketplace screens observe `allDownloadsProgress` and local model state.
+- **Chat Screen** (`ui/chat/`): Uses `ChatState`, `ChatIntent`, and `SendState`. The top bar displays `CHEVERE AI` plus `CHAT` and `IMAGE` readiness chips. Rebuilds rolling context dynamically. Masks explicit images by default with a visibility toggle.
+- **Marketplace Screen** (`ui/marketplace/`): Discovers, downloads, selects, and deletes models. Separates chat/vision models from image models.
+- **Tasks Screen** (`ui/tasks/`): Renders local pending/completed checklist tasks. Supports adding new tasks, status toggling, and deletion.
+- **Settings Screen** (`ui/settings/`): Safety & privacy configurations and theme customization.
+- **Benchmark Screen** (`ui/settings/`): Runs speed tests measuring engine warmup, TTFT, TPS, and outputs hardware specs (available RAM, CPU/GPU acceleration).
 
 ## Model Formats
 

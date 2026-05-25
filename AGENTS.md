@@ -45,42 +45,65 @@ Path: `app/src/main/java/com/neo/chevere/data/`
 - **Agent layer** (`data/agent/`):
   - `AgentOrchestrator`: Reason-Act-Observe loop.
   - `ToolRegistry`: Hilt-provided set of `AgentTool` implementations.
-  - `ImageGenerationTool`: agent-facing text-to-image tool. Gemma should improve prompts before calling it.
+  - **Available Agent Tools:**
+    - `ImageGenerationTool` (`generate_image`): Agent-facing Stable Diffusion tool. Gemma improves prompts before calling it.
+    - `WebSearchTool` (`search_web`): Online web search.
+    - `WeatherTool` (`get_weather`): Local and global weather info.
+    - `SearchContactsTool` (`search_contacts`): Resolves local device contact emails by name.
+    - `TaskRegistryTool` (`task_registry`): Manages the local to-do checklist database (create, list, update, delete).
+    - `ExtractTasksTool` (`extract_tasks`): Extracts tasks from chat transcripts.
+    - `SummarizeTextTool` (`summarize_text`): Compacts blocks of text locally.
+    - `DeviceControlTool` (`control_device`): Modifies device settings (e.g., volume, display/DND shortcuts).
+    - `ModelRegistryTools` (`model_registry`): Allows the agent to query active or installed models.
+    - `AppActionTools`: Interacts with Android applications and actions:
+      - `copy_to_clipboard` / `share_text` / `open_url` / `open_maps`
+      - `draft_email` / `create_calendar_event`
+      - `list_apps` / `launch_app` / `launch_app_home_screen` (`OpenAppTool`)
+      - `perform_app_action` (`OpenDeepLinkTool` for specific app routes like Squarespace)
+      - `get_app_capabilities` (scans intent/filter capacities of apps)
 - **Inference runtime** (`data/inference/`):
   - `InferenceManager`: LiteRT-LM model loading and chat inference.
-  - `ImageGenerationManager`: selects a compatible installed image-generation model.
-  - `OnnxLocalDiffusionEngine`: local ONNX Stable Diffusion style pipeline.
+  - `ImageGenerationManager`: Selects compatible installed diffusion models.
+  - `OnnxLocalDiffusionEngine`: Runs Stable Diffusion generation using extracted ONNX files.
 - **Context management** (`data/context/`):
-  - `ConversationContextManager`: rolling context slicer for small on-device models. It keeps recent turns verbatim, compresses older turns into deterministic memory, and rebuilds each prompt instead of relying on an unbounded runtime conversation.
+  - `ConversationContextManager`: Rolling context memory compressor for constrained on-device windows.
 - **Data sources** (`data/datasource/`):
-  - `CompositeModelCatalogDataSource`: merges Firestore and Hugging Face catalogs.
-  - `HuggingFaceModelCatalogDataSource`: curated models plus Hub discovery.
-  - Kaggle model discovery has been removed because it was unreliable and often blocked.
-- **Registry** (`data/datasource/local/`):
-  - `RoomInstalledModelRegistry`: source of truth for installed models.
-  - `AppDatabase`: Room database.
+  - `CompositeModelCatalogDataSource`: Merges Hugging Face Hub discovery and Firestore catalogs.
+- **Registry & Storage** (`data/datasource/local/`):
+  - `RoomInstalledModelRegistry`: Registry for installed LLM/diffusion models.
+  - `AppDatabase`: Room database containing tables:
+    - `InstalledModelEntity`: Stores model metadata, filepath, and `InstallStatus`.
+    - `TaskEntity`: Stores local task titles, descriptions, and `TaskStatus`.
+    - `SearchCacheEntity`: Caches web queries to save offline bandwidth.
 - **Downloads**:
-  - `ModelDownloadWorker`: foreground WorkManager download, checksum verification, ZIP extraction.
-  - `WorkManagerModelDownloadManager`: tracks progress by `MODEL_NAME:<fileName>` tag. Do not reintroduce tag parsing that rejects dots in filenames.
+  - `ModelDownloadWorker`: Downloads models with foreground WorkManager, checks SHA-256, and extracts ZIPs safely.
+  - `WorkManagerModelDownloadManager`: Tracks downloads via `MODEL_NAME:<fileName>` tag. Do not reject filenames with dots.
 
 ### UI Layer
 
 Path: `app/src/main/java/com/neo/chevere/ui/`
 
-- Chat MVI state lives in `ChatContract.kt`.
-- `ChatTopBar` is brand/capability focused. It shows `CHEVERE AI` with `CHAT` and `IMAGE` readiness chips, not the selected model filename.
-- Attached images must route through chat/vision inference. Do not route image attachments to the text-to-image backend unless the user explicitly invokes an image-generation flow without an attachment.
-- Image-only sends default to `Describe this image.`.
-- Chat context should go through `ConversationContextManager`. Do not add unbounded message replay directly into LiteRT conversations.
-- Assistant message actions should use share semantics. Do not reintroduce report/flag controls until a real reporting backend exists.
-- `SendState.GeneratingImage` drives `GENERATING IMAGE...` UI while slash commands run.
-- Slash commands `/image`, `/img`, and `/imagine` bypass Gemma and call `ChatRepository.generateImage`.
-- If no healthy image-generation model is installed, image requests should show `ChatEffect.ShowImageModelDownloadPrompt` instead of falling through to a tool error.
-- Explicit image requests show `AgeVerificationDialog` first.
-- Explicit generated images are masked by default using `ChatMessage.isExplicitImage` and `ChatMessage.isImageMasked`.
-- Marketplace state observes both Room-installed models and WorkManager download progress.
-- Marketplace UI should keep chat/vision models and image-generation models visually separated. Chat models can be selected as the active LLM; image models are used automatically by the image backend.
-- Settings Safety & Privacy content should remain expandable and factual: local processing, release controls, user-controlled sharing, and local storage.
+- **Chat Screen** (`ui/chat/`):
+  - Chat MVI state lives in `ChatContract.kt`.
+  - `ChatTopBar` is brand/capability focused. It shows `CHEVERE AI` with `CHAT` and `IMAGE` readiness chips, not the selected model filename.
+  - Attached images must route through chat/vision inference. Do not route image attachments to the text-to-image backend unless the user explicitly invokes an image-generation flow without an attachment.
+  - Image-only sends default to `Describe this image.`.
+  - Chat context should go through `ConversationContextManager`. Do not add unbounded message replay directly into LiteRT conversations.
+  - Assistant message actions should use share semantics. Do not reintroduce report/flag controls until a real reporting backend exists.
+  - `SendState.GeneratingImage` drives `GENERATING IMAGE...` UI while slash commands run.
+  - Slash commands `/image`, `/img`, and `/imagine` bypass Gemma and call `ChatRepository.generateImage`.
+  - If no healthy image-generation model is installed, image requests should show `ChatEffect.ShowImageModelDownloadPrompt` instead of falling through to a tool error.
+  - Explicit image requests show `AgeVerificationDialog` first.
+  - Explicit generated images are masked by default using `ChatMessage.isExplicitImage` and `ChatMessage.isImageMasked`.
+- **Marketplace Screen** (`ui/marketplace/`):
+  - Marketplace state observes both Room-installed models and WorkManager download progress.
+  - Marketplace UI should keep chat/vision models and image-generation models visually separated. Chat models can be selected as the active LLM; image models are used automatically by the image backend.
+- **Tasks Screen** (`ui/tasks/`):
+  - Displays pending and completed tasks.
+  - Supports adding tasks through an `AddTaskDialog`, toggling completion, and deletion. Integrated with `TaskRegistryTool` at the data layer.
+- **Settings & Benchmark** (`ui/settings/`):
+  - Settings Safety & Privacy content remains expandable and factual: local processing, release controls, user-controlled sharing, and local storage.
+  - **Benchmark Screen**: Runs local inference speed tests. Measures engine warmup time, Time-To-First-Token (TTFT), generation throughput (TPS), and logs physical hardware metrics (CPU/GPU acceleration, available RAM).
 
 ## Model Management Rules
 

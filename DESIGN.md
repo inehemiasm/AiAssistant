@@ -89,6 +89,15 @@ Debug builds may use a dialog rather than an inline chat-only prompt for explici
 
 Launcher icon and launch animation should use a shared robot-head/cyan identity so the app drawer, Android splash, and in-app launch screen feel like the same product.
 
+### 16. Local Tasks Visual Feedback
+
+- Completed tasks should render with lower opacity (`0.45f` containers), a line-through on the task title, and a green success checkmark (`CheckCircle` with `#00C853`).
+- Active/pending tasks should use standard card opacity (`0.85f`), no text decoration, and a primary-colored unchecked icon (`RadioButtonUnchecked`).
+
+### 17. Benchmark Formatting
+
+- Benchmark metrics (warmup latency, TTFT, throughput, RAM size) must be formatted using a monospace typography style (`fontFamily = FontFamily.Monospace`) to evoke a precise, diagnostics-oriented high-tech terminal theme.
+
 ## Token Reference
 
 | Design Role | System Token | Usage |

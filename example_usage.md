@@ -54,6 +54,28 @@ Explicit image generation is debug-only. Debug builds show an age-verification d
 
 Assistant responses can be shared through Android's share sheet. There is no report/flag workflow in the app yet.
 
+## Local Tasks Management
+
+Users can manage their local checklists in two ways:
+1. **Interactive Checklist Screen**: Go to the **Tasks** tab to manually add, delete, or toggle pending/completed tasks.
+2. **Natural Language / Agent Control**: Ask the assistant to update the checklist:
+   ```text
+   Add "Buy groceries tomorrow morning" to my todo list
+   ```
+   The agent will parse the command and use the `task_registry` tool to create it. You can also ask:
+   ```text
+   What are my active tasks?
+   ```
+   The agent will read and list them for you.
+
+## Performance Benchmarking
+
+To measure how fast models run on your specific device:
+1. Navigate to **Settings** (gear icon in Chat or bottom bar).
+2. Tap on the **Performance Benchmark** card.
+3. Tap **RUN BENCHMARK**.
+4. The screen will report warmup load speed, Time-to-First-Token (TTFT), tokens-per-second generation rate (TPS), total elapsed time, and show device specs (physical RAM and CPU/GPU acceleration status).
+
 ## Manual ONNX Bundle Layout
 
 The app expects extracted ONNX diffusion bundles to look like:
