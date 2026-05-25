@@ -11,6 +11,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -42,7 +43,7 @@ fun RobotIcon(
     val robotWhite = if (isDark) AstroRobotWhite else Color(0xFFE3F2FD)
     val robotGray = if (isDark) AstroRobotGray else Color(0xFFBBDEFB)
     val robotDark = if (isDark) AstroRobotDark else Color(0xFF0D47A1)
-    val glowColor = if (isDark) AstroGlowCyan else Color(0xFF1E88E5)
+    val glowColor = MaterialTheme.colorScheme.primary
 
     // Pulsing effect for glowing elements
     val glowAlpha by infiniteTransition.animateFloat(

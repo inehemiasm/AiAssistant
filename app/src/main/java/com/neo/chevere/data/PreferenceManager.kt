@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.neo.chevere.domain.WeatherUnitSystem
+import com.neo.chevere.ui.designsystem.AtmosphericTheme
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
@@ -47,6 +48,27 @@ class PreferenceManager @Inject constructor(@ApplicationContext context: Context
         }
         .map { preferences ->
             preferences[THEME_KEY] ?: false
+        }
+
+    /**
+     * A [Flow] that emits the user's selected atmospheric theme.
+     * Defaults to [AtmosphericTheme.CLASSIC_CYAN] if no preference is set.
+     */
+    val atmosphericThemePreference: Flow<AtmosphericTheme> = dataStore.data
+        .catch { exception ->
+            if (exception is IOException) {
+                emit(emptyPreferences())
+            } else {
+                throw exception
+            }
+        }
+        .map { preferences ->
+            val themeName = preferences[ATMOSPHERIC_THEME_KEY] ?: AtmosphericTheme.CLASSIC_CYAN.name
+            try {
+                AtmosphericTheme.valueOf(themeName)
+            } catch (e: IllegalArgumentException) {
+                AtmosphericTheme.CLASSIC_CYAN
+            }
         }
 
     /**
@@ -124,9 +146,19 @@ class PreferenceManager @Inject constructor(@ApplicationContext context: Context
         }
     }
 
+    /**
+     * Updates the user's selected atmospheric theme style.
+     */
+    suspend fun updateAtmosphericTheme(theme: AtmosphericTheme) {
+        dataStore.edit { preferences ->
+            preferences[ATMOSPHERIC_THEME_KEY] = theme.name
+        }
+    }
+
     companion object {
         private val THEME_KEY = booleanPreferencesKey("theme_preference")
         private val SELECTED_MODEL_KEY = stringPreferencesKey("selected_model")
         private val WEATHER_UNIT_KEY = stringPreferencesKey("weather_unit_system")
+        private val ATMOSPHERIC_THEME_KEY = stringPreferencesKey("atmospheric_theme_preference")
     }
 }

@@ -57,8 +57,10 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.neo.chevere.R
 import com.neo.chevere.domain.WeatherUnitSystem
+import androidx.compose.ui.text.font.FontWeight
 import com.neo.chevere.ui.common.ChevereHaptic
 import com.neo.chevere.ui.common.performChevereHaptic
+import com.neo.chevere.ui.designsystem.AtmosphericTheme
 import com.neo.chevere.ui.designsystem.Typography
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -174,6 +176,15 @@ fun SettingsScreen(
                         )
                     }
                 }
+
+                Spacer(Modifier.height(12.dp))
+
+                AtmosphericThemesCard(
+                    selectedTheme = state.atmosphericTheme,
+                    onThemeSelected = {
+                        viewModel.onIntent(SettingsIntent.UpdateAtmosphericTheme(it))
+                    }
+                )
 
                 Spacer(Modifier.height(12.dp))
 
@@ -462,5 +473,141 @@ fun SystemInfoRow(label: String, value: String) {
             style = Typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
             color = MaterialTheme.colorScheme.onSurface
         )
+    }
+}
+
+@Composable
+private fun AtmosphericThemesCard(
+    selectedTheme: AtmosphericTheme,
+    onThemeSelected: (AtmosphericTheme) -> Unit
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.5f),
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.1f))
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Text(
+                "ATMOSPHERIC PRESETS",
+                style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(bottom = 14.dp)
+            )
+
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    ThemePresetSegment(
+                        name = "CLASSIC CYAN",
+                        primaryColor = Color(0xFF00BFA5),
+                        backgroundColor = Color(0xFF07111D),
+                        selected = selectedTheme == AtmosphericTheme.CLASSIC_CYAN,
+                        modifier = Modifier.weight(1f),
+                        onClick = { onThemeSelected(AtmosphericTheme.CLASSIC_CYAN) }
+                    )
+                    ThemePresetSegment(
+                        name = "MATRIX GREEN",
+                        primaryColor = Color(0xFF00FF66),
+                        backgroundColor = Color(0xFF020904),
+                        selected = selectedTheme == AtmosphericTheme.MATRIX_GREEN,
+                        modifier = Modifier.weight(1f),
+                        onClick = { onThemeSelected(AtmosphericTheme.MATRIX_GREEN) }
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    ThemePresetSegment(
+                        name = "CYBERPUNK GOLD",
+                        primaryColor = Color(0xFFFF9E00),
+                        backgroundColor = Color(0xFF0C0700),
+                        selected = selectedTheme == AtmosphericTheme.CYBERPUNK_GOLD,
+                        modifier = Modifier.weight(1f),
+                        onClick = { onThemeSelected(AtmosphericTheme.CYBERPUNK_GOLD) }
+                    )
+                    ThemePresetSegment(
+                        name = "OBSIDIAN DARK",
+                        primaryColor = Color(0xFFD2BFFF),
+                        backgroundColor = Color(0xFF040306),
+                        selected = selectedTheme == AtmosphericTheme.OBSIDIAN_DARK,
+                        modifier = Modifier.weight(1f),
+                        onClick = { onThemeSelected(AtmosphericTheme.OBSIDIAN_DARK) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ThemePresetSegment(
+    name: String,
+    primaryColor: Color,
+    backgroundColor: Color,
+    selected: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    val hapticView = LocalView.current
+    val background = if (selected) {
+        MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)
+    } else {
+        MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.55f)
+    }
+    val borderColor = if (selected) {
+        MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
+    } else {
+        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.18f)
+    }
+
+    Surface(
+        modifier = modifier.clickable {
+            hapticView.performChevereHaptic(ChevereHaptic.Selection)
+            onClick()
+        },
+        color = background,
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, borderColor)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                name,
+                style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
+                color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f)
+            )
+
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    modifier = Modifier.size(10.dp),
+                    shape = androidx.compose.foundation.shape.CircleShape,
+                    color = primaryColor,
+                    border = BorderStroke(0.5.dp, Color.White.copy(alpha = 0.5f))
+                ) {}
+                Surface(
+                    modifier = Modifier.size(10.dp),
+                    shape = androidx.compose.foundation.shape.CircleShape,
+                    color = backgroundColor,
+                    border = BorderStroke(0.5.dp, Color.White.copy(alpha = 0.2f))
+                ) {}
+            }
+        }
     }
 }

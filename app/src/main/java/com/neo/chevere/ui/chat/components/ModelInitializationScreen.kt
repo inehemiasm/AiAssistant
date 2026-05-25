@@ -26,6 +26,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -44,7 +45,6 @@ import androidx.compose.ui.unit.sp
 import com.neo.chevere.R
 import com.neo.chevere.ui.designsystem.AstroBrightCyan
 import com.neo.chevere.ui.designsystem.AstroDeepBlue
-import com.neo.chevere.ui.designsystem.AstroGlowCyan
 import com.neo.chevere.ui.designsystem.AstroPeach
 import com.neo.chevere.ui.designsystem.AstroRobotWhite
 import com.neo.chevere.ui.designsystem.AstroSoftCyan
@@ -129,6 +129,7 @@ fun ModelInitializationScreen(
             Spacer(modifier = Modifier.weight(1.2f))
 
             // Animated Loading Bar
+            val primaryColor = MaterialTheme.colorScheme.primary
             Box(
                 modifier = Modifier
                     .fillMaxWidth(0.7f)
@@ -155,9 +156,9 @@ fun ModelInitializationScreen(
                         brush = Brush.horizontalGradient(
                             listOf(
                                 Color.Transparent,
-                                AstroGlowCyan,
+                                primaryColor,
                                 textColor,
-                                AstroGlowCyan,
+                                primaryColor,
                                 Color.Transparent
                             )
                         ),
@@ -222,6 +223,7 @@ private fun DynamicLightTrails(infiniteTransition: InfiniteTransition) {
         label = "move_factor"
     )
     val isDark = isSystemInDarkTheme()
+    val primaryColor = MaterialTheme.colorScheme.primary
 
     Canvas(modifier = Modifier.fillMaxSize()) {
         val w = size.width
@@ -235,7 +237,7 @@ private fun DynamicLightTrails(infiniteTransition: InfiniteTransition) {
             drawLine(
                 brush = Brush.horizontalGradient(
                     0.0f to Color.Transparent,
-                    0.5f to (if (i % 2 == 0) AstroGlowCyan else AstroPeach).copy(alpha = if (isDark) 0.4f else 0.2f),
+                    0.5f to (if (i % 2 == 0) primaryColor else AstroPeach).copy(alpha = if (isDark) 0.4f else 0.2f),
                     1.0f to Color.Transparent
                 ),
                 start = Offset(currentX, startY),

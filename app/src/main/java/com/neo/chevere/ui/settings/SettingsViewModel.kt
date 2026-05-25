@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.viewModelScope
 import com.neo.chevere.core.BaseViewModel
 import com.neo.chevere.data.PreferenceManager
+import com.neo.chevere.ui.designsystem.AtmosphericTheme
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -22,6 +23,11 @@ class SettingsViewModel @Inject constructor(
             }
         }
         viewModelScope.launch {
+            preferenceManager.atmosphericThemePreference.collectLatest { theme ->
+                setState { copy(atmosphericTheme = theme) }
+            }
+        }
+        viewModelScope.launch {
             preferenceManager.weatherUnitPreference.collectLatest { unitSystem ->
                 setState { copy(weatherUnitSystem = unitSystem) }
             }
@@ -32,6 +38,10 @@ class SettingsViewModel @Inject constructor(
         when (intent) {
             is SettingsIntent.UpdateTheme -> {
                 preferenceManager.updateTheme(intent.isDark)
+            }
+
+            is SettingsIntent.UpdateAtmosphericTheme -> {
+                preferenceManager.updateAtmosphericTheme(intent.theme)
             }
 
             is SettingsIntent.UpdateWeatherUnitSystem -> {

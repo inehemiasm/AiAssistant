@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -61,6 +62,7 @@ fun QuantumThinkingIndicator(
         exit = fadeOut() + shrinkVertically(),
         modifier = modifier
     ) {
+        val primaryColor = MaterialTheme.colorScheme.primary
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -82,7 +84,7 @@ fun QuantumThinkingIndicator(
             Box(contentAlignment = Alignment.Center) {
                 Canvas(modifier = Modifier.size(24.dp)) {
                     drawCircle(
-                        color = Color.Cyan.copy(alpha = alpha * 0.2f),
+                        color = primaryColor.copy(alpha = alpha * 0.2f),
                         radius = size.minDimension / 1.5f,
                         style = Stroke(width = 2.dp.toPx())
                     )
@@ -90,7 +92,7 @@ fun QuantumThinkingIndicator(
                 Icon(
                     Icons.Default.AutoAwesome,
                     null,
-                    tint = Color.Cyan.copy(alpha = alpha),
+                    tint = primaryColor.copy(alpha = alpha),
                     modifier = Modifier.size(14.dp)
                 )
             }
@@ -102,7 +104,7 @@ fun QuantumThinkingIndicator(
                 style = Typography.labelSmall.copy(
                     letterSpacing = 2.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.Cyan.copy(alpha = alpha)
+                    color = primaryColor.copy(alpha = alpha)
                 )
             )
 
@@ -112,7 +114,7 @@ fun QuantumThinkingIndicator(
                     Icon(
                         imageVector = Icons.Default.Close,
                         contentDescription = "Cancel",
-                        tint = Color.Cyan.copy(alpha = alpha),
+                        tint = primaryColor.copy(alpha = alpha),
                         modifier = Modifier.size(18.dp)
                     )
                 }
