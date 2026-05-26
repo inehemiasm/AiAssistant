@@ -171,9 +171,21 @@ private fun ChatContent(
     // Auto-scroll to bottom during token streaming
     LaunchedEffect(state.streamingText) {
         if (state.streamingText.isNotEmpty()) {
-            val lastIndex = listState.layoutInfo.totalItemsCount - 1
-            if (lastIndex >= 0) {
-                listState.scrollToItem(lastIndex)
+            val layoutInfo = listState.layoutInfo
+            val visibleItems = layoutInfo.visibleItemsInfo
+            if (visibleItems.isNotEmpty()) {
+                val lastVisibleItem = visibleItems.last()
+                val isLastItemVisible = lastVisibleItem.index == layoutInfo.totalItemsCount - 1
+                if (isLastItemVisible) {
+                    val viewportHeight = layoutInfo.viewportEndOffset - layoutInfo.viewportStartOffset
+                    val lastIndex = layoutInfo.totalItemsCount - 1
+                    if (lastVisibleItem.size > viewportHeight) {
+                        // Scroll so that the bottom of the last item aligns with the bottom of the viewport
+                        listState.scrollToItem(lastIndex, lastVisibleItem.size - viewportHeight)
+                    } else {
+                        listState.scrollToItem(lastIndex)
+                    }
+                }
             }
         }
     }
@@ -184,7 +196,7 @@ private fun ChatContent(
     var fullscreenPreviewState by remember { mutableStateOf<FullscreenPreviewState>(FullscreenPreviewState.None) }
     val showOnboarding = state.localModels.isEmpty() && !state.isLoading
     val isAiBusy = state.isAiBusy
-    val inputBusyMessage = when {
+    val inputBusyMessage = state.loadingMessage ?: when {
         state.sendState is SendState.GeneratingImage -> Constants.UiStatus.GENERATING_IMAGE
         else -> Constants.UiStatus.THINKING
     }

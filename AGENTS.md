@@ -55,6 +55,7 @@ Path: `app/src/main/java/com/neo/chevere/data/`
     - `SummarizeTextTool` (`summarize_text`): Compacts blocks of text locally.
     - `DeviceControlTool` (`control_device`): Modifies device settings (e.g., volume, display/DND shortcuts).
     - `ModelRegistryTools` (`model_registry`): Allows the agent to query active or installed models.
+    - `SensorsTool` (`read_sensors`): Queries device environment and hardware sensors including ambient room temperature, device internal temperature, ambient light level (lux), atmospheric pressure (hPa), battery level, charging status, and CPU thermal throttling status.
     - `AppActionTools`: Interacts with Android applications and actions:
       - `copy_to_clipboard` / `share_text` / `open_url` / `open_maps`
       - `draft_email` / `create_calendar_event`
@@ -132,6 +133,19 @@ Path: `app/src/main/java/com/neo/chevere/ui/`
 - Direct slash-command image generation does not ask Gemma to rewrite the prompt.
 - Agent tool image generation should ask Gemma to improve the prompt before `generate_image`.
 - Explicit image generation is debug-only. Release builds block explicit prompts before the backend is invoked.
+
+## Contacts Integration & Tool Usage
+
+- **Natural Language Trigger**: Users trigger the contacts integration implicitly by asking the assistant questions or commands in natural language (e.g., "Find John's email in my contacts," "Do I have an email address for Alice?," or "Draft an email to Bob").
+- **Agent Resolution Flow**:
+  1. The user asks to email or contact someone by name rather than typing an email address.
+  2. The agent invokes `search_contacts(query = "<Name>")` to fetch matching contact names and email addresses.
+  3. If a match is found, the agent uses that email to proceed to another tool (e.g., `draft_email`) or prints the contact details directly to the user.
+- **Runtime Permission Flow**:
+  1. `SearchContactsTool` verifies whether `Manifest.permission.READ_CONTACTS` is granted.
+  2. If not granted, the tool returns the error payload `CONTACTS_PERMISSION_REQUIRED`.
+  3. The `ChatViewModel` translates this error to emit `ChatEffect.RequestContactsPermission`.
+  4. `ChatScreen` intercepts this effect, displays the system permission dialog to the user, and prompts the user to grant read-contacts access. Once granted, subsequent requests automatically succeed.
 
 ## Visual Identity Notes
 

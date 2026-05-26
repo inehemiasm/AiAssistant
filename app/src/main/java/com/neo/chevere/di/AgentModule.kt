@@ -30,6 +30,7 @@ import com.neo.chevere.data.agent.tools.ReadLocalFileTool
 import com.neo.chevere.data.agent.tools.RuntimeStatusTool
 import com.neo.chevere.data.agent.tools.SearchAppsTool
 import com.neo.chevere.data.agent.tools.SearchContactsTool
+import com.neo.chevere.data.agent.tools.SensorsTool
 import com.neo.chevere.data.agent.tools.SelectModelTool
 import com.neo.chevere.data.agent.tools.ShareTextTool
 import com.neo.chevere.data.agent.tools.SummarizeTextTool
@@ -183,6 +184,12 @@ abstract class AgentModule {
         fun provideSearchContactsTool(
             @ApplicationContext context: Context
         ): AgentTool = SearchContactsTool(context)
+
+        @Provides
+        @IntoSet
+        fun provideSensorsTool(
+            @ApplicationContext context: Context
+        ): AgentTool = SensorsTool(context)
 
         @Provides
         @IntoSet

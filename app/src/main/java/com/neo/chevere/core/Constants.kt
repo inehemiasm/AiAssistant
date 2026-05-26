@@ -99,10 +99,10 @@ object Constants {
 
     object ContextWindow {
         const val RECENT_TURN_COUNT = 4
-        const val MEMORY_CHAR_BUDGET = 900
-        const val RECENT_CHAR_BUDGET = 1_800
-        const val TURN_CHAR_LIMIT = 360
-        const val ASSISTANT_TURN_CHAR_LIMIT = 280
+        const val MEMORY_CHAR_BUDGET = 4_000
+        const val RECENT_CHAR_BUDGET = 15_000
+        const val TURN_CHAR_LIMIT = 3_000
+        const val ASSISTANT_TURN_CHAR_LIMIT = 4_000
         const val USER_ROLE = "User"
         const val ASSISTANT_ROLE = "Assistant"
         const val MEMORY_HEADER = "CONVERSATION MEMORY"
