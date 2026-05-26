@@ -6,6 +6,7 @@ import com.neo.chevere.core.PiiUtils
 import com.neo.chevere.data.inference.InferenceManager
 import com.neo.chevere.domain.ContactsPermissionException
 import com.neo.chevere.domain.CalendarPermissionException
+import com.neo.chevere.domain.MicPermissionException
 import com.neo.chevere.domain.InferenceRequest
 import com.neo.chevere.domain.InferenceResult
 import com.neo.chevere.domain.LocationPermissionException
@@ -306,6 +307,10 @@ class AgentOrchestrator @Inject constructor(
                 if (toolResult.message == "CALENDAR_PERMISSION_REQUIRED") {
                     _agentState.value = AgentState.Idle
                     return Result.failure(CalendarPermissionException())
+                }
+                if (toolResult.message == "MIC_PERMISSION_REQUIRED") {
+                    _agentState.value = AgentState.Idle
+                    return Result.failure(MicPermissionException())
                 }
                 lastToolSummary = "Error: ${toolResult.message}"
                 lastPrompt =

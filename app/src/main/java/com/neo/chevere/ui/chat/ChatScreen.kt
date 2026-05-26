@@ -219,6 +219,7 @@ private fun ChatContent(
                 "How hot is my room?",
                 "How's the weather today?",
                 "How's the light in here?",
+                "How noisy is my room?",
                 "Check battery and thermals",
                 "Write a Kotlin Coroutine example.",
                 "Explain Clean Architecture.",

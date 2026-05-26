@@ -21,6 +21,7 @@ import com.neo.chevere.domain.ChatMessage
 import com.neo.chevere.domain.ChatRepository
 import com.neo.chevere.domain.ContactsPermissionException
 import com.neo.chevere.domain.CalendarPermissionException
+import com.neo.chevere.domain.MicPermissionException
 import com.neo.chevere.domain.ExplicitImagePromptDecision
 import com.neo.chevere.domain.ExplicitImagePromptPolicy
 import com.neo.chevere.domain.ImageGenerationRequest
@@ -697,6 +698,10 @@ class ChatViewModel @Inject constructor(
                     is CalendarPermissionException -> {
                         sendEffect { ChatEffect.RequestCalendarPermission }
                         "Calendar permission is required to read calendar events on this device. Please grant the permission."
+                    }
+                    is MicPermissionException -> {
+                        sendEffect { ChatEffect.RequestMicPermission }
+                        "Microphone permission is required to measure the ambient sound level. Please grant the permission and try again."
                     }
                     else -> e.message ?: "Action failed"
                 }
