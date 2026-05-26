@@ -5,6 +5,19 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
+ * Represents the routing categories for prompt classification.
+ */
+enum class RoutingCategory {
+    IMAGE_GENERATION,
+    LIVE_INFORMATION,
+    DEVICE_ACTION,
+    MODEL_MANAGEMENT,
+    TASK_REGISTRY,
+    SENSORS,
+    DIRECT_CHAT
+}
+
+/**
  * Classifies chat prompts before they reach the repository orchestration layer.
  *
  * This keeps capability copy and lightweight routing heuristics out of
@@ -20,16 +33,68 @@ class ChatRequestRouter @Inject constructor() {
     fun buildVisionChatPrompt(contextualPrompt: String): String =
         "$VISION_CHAT_CAPABILITY_CONTEXT\n\n$contextualPrompt"
 
-    fun shouldUseAgent(prompt: String): Boolean {
+    fun classifyRequest(prompt: String): RoutingCategory {
         val normalized = prompt.normalized()
-        if (normalized.isBlank()) return false
-        if (isCapabilityOnlyQuestion(normalized)) return false
+        if (normalized.isBlank() || isCapabilityOnlyQuestion(normalized)) {
+            return RoutingCategory.DIRECT_CHAT
+        }
 
-        return looksLikeImageGenerationRequest(normalized) ||
-                looksLikeLiveInformationRequest(normalized) ||
-                looksLikeDeviceActionRequest(normalized) ||
-                looksLikeModelManagementRequest(normalized) ||
-                looksLikeTaskRegistryRequest(normalized)
+        return when {
+            looksLikeImageGenerationRequest(normalized) -> RoutingCategory.IMAGE_GENERATION
+            looksLikeSensorsRequest(normalized) -> RoutingCategory.SENSORS
+            looksLikeLiveInformationRequest(normalized) -> RoutingCategory.LIVE_INFORMATION
+            looksLikeDeviceActionRequest(normalized) -> RoutingCategory.DEVICE_ACTION
+            looksLikeModelManagementRequest(normalized) -> RoutingCategory.MODEL_MANAGEMENT
+            looksLikeTaskRegistryRequest(normalized) -> RoutingCategory.TASK_REGISTRY
+            else -> RoutingCategory.DIRECT_CHAT
+        }
+    }
+
+    fun shouldUseAgent(prompt: String): Boolean {
+        return classifyRequest(prompt) != RoutingCategory.DIRECT_CHAT
+    }
+
+    private fun looksLikeSensorsRequest(text: String): Boolean {
+        val sensorKeywords = listOf(
+            // English
+            "sensor", "sensors", "barometer", "pressure", "lux", "brightness",
+            "battery", "thermal", "thermals", "cpu temp", "device temp", "internal temp",
+            "room temp", "ambient temp", "temperature",
+            // Spanish
+            "sensores", "presión", "presion", "brillo", "batería", "bateria", "térmico", "termico", "temperatura",
+            // Portuguese
+            "sensores", "pressão", "pressao", "brilho", "bateria", "térmico", "termico", "temperatura",
+            // French
+            "capteur", "capteurs", "pression", "luminosité", "luminosite", "batterie", "thermique", "température", "temperature",
+            // German
+            "sensoren", "druck", "helligkeit", "akku", "thermisch", "temperatur"
+        )
+        val hasSensorKeyword = sensorKeywords.any { it in text }
+
+        val ambientPhrases = listOf(
+            // English
+            "how hot", "how cold", "how warm", "how bright", "is it hot", "is it cold",
+            "room temperature", "ambient temperature", "device temperature", "internal temperature",
+            "room condition", "room conditions",
+            // Spanish
+            "qué calor", "que calor", "qué frío", "que frio", "temperatura ambiente",
+            "temperatura del cuarto", "temperatura de la habitación", "temperatura de la habitacion",
+            "temperatura del dispositivo", "temperatura interna",
+            // Portuguese
+            "que calor", "que frio", "temperatura ambiente",
+            "temperatura do quarto", "temperatura do dispositivo", "temperatura interna",
+            // French
+            "fait chaud", "fait froid", "fait-il chaud", "fait-il froid", "fait il chaud", "fait il froid",
+            "température ambiante", "temperature ambiante",
+            "température de la pièce", "temperature de la piece", "température de la chambre", "temperature de la chambre",
+            "température de l'appareil", "temperature de l'appareil",
+            // German
+            "wie warm", "wie kalt", "wie heiss", "wie heiß", "raumtemperatur",
+            "umgebungstemperatur", "gerätetemperatur", "geratetemperatur", "innentemperatur"
+        )
+        val hasAmbientPhrase = ambientPhrases.any { it in text }
+
+        return hasSensorKeyword || hasAmbientPhrase
     }
 
     private fun looksLikeTaskRegistryRequest(text: String): Boolean {

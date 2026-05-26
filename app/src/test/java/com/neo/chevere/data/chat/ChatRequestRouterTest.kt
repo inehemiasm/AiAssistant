@@ -94,4 +94,53 @@ class ChatRequestRouterTest {
             assertFalse("Should not route '$prompt' to agent", router.shouldUseAgent(prompt))
         }
     }
+
+    @Test
+    fun sensorRequests_useAgent() {
+        val prompts = listOf(
+            "how hot is my room",
+            "Can you tell me how hot is my room?",
+            "is it hot in my room?",
+            "what is the ambient temperature?",
+            "read my device sensors",
+            "battery status",
+            "tell me the CPU thermal status",
+            "how bright is the room",
+            "check the barometer pressure"
+        )
+        for (prompt in prompts) {
+            assertTrue("Should route '$prompt' to agent", router.shouldUseAgent(prompt))
+        }
+    }
+
+    @Test
+    fun sensorRequests_multilingual_useAgent() {
+        val multilingualPrompts = mapOf(
+            "¿qué temperatura hace en mi cuarto?" to RoutingCategory.SENSORS, // Spanish
+            "temperatura de la habitación" to RoutingCategory.SENSORS, // Spanish
+            "temperatura do quarto" to RoutingCategory.SENSORS, // Portuguese
+            "como está a bateria?" to RoutingCategory.SENSORS, // Portuguese
+            "fait-il chaud dans ma chambre?" to RoutingCategory.SENSORS, // French
+            "température ambiante" to RoutingCategory.SENSORS, // French
+            "wie warm ist mein zimmer" to RoutingCategory.SENSORS, // German
+            "raumtemperatur" to RoutingCategory.SENSORS // German
+        )
+        for ((prompt, expectedCategory) in multilingualPrompts) {
+            val category = router.classifyRequest(prompt)
+            org.junit.Assert.assertEquals(
+                "Prompt '$prompt' should be classified as $expectedCategory but was $category",
+                expectedCategory,
+                category
+            )
+            assertTrue("Should route '$prompt' to agent", router.shouldUseAgent(prompt))
+        }
+    }
+
+    @Test
+    fun classifyRequest_returnsCorrectCategory() {
+        org.junit.Assert.assertEquals(RoutingCategory.IMAGE_GENERATION, router.classifyRequest("Draw a cute kitten"))
+        org.junit.Assert.assertEquals(RoutingCategory.LIVE_INFORMATION, router.classifyRequest("what is the weather today?"))
+        org.junit.Assert.assertEquals(RoutingCategory.TASK_REGISTRY, router.classifyRequest("add a task to walk the dog"))
+        org.junit.Assert.assertEquals(RoutingCategory.DIRECT_CHAT, router.classifyRequest("hello how are you?"))
+    }
 }
