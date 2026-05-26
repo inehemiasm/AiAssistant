@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -40,6 +41,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Fullscreen
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import com.neo.chevere.ui.designsystem.Typography
 import kotlinx.coroutines.delay
 import java.util.Locale
@@ -72,7 +77,8 @@ fun MarkdownContent(
     modifier: Modifier = Modifier,
     textStyle: TextStyle = Typography.bodyMedium,
     textColor: Color = MaterialTheme.colorScheme.onSurface,
-    showCursor: Boolean = false
+    showCursor: Boolean = false,
+    onPreviewHtmlFullScreen: ((String) -> Unit)? = null
 ) {
     var cursorVisible by remember { mutableStateOf(true) }
     if (showCursor) {
@@ -103,7 +109,8 @@ fun MarkdownContent(
                     allBlocks = blocks,
                     background = codeBackground,
                     border = codeBorder,
-                    contentColor = codeText
+                    contentColor = codeText,
+                    onPreviewHtmlFullScreen = onPreviewHtmlFullScreen
                 )
             } else {
                 val blockText = if (isLast && showCursor) {
@@ -193,7 +200,8 @@ private fun CodeBlock(
     background: Color,
     border: Color,
     contentColor: Color,
-    scrollState: ScrollState = rememberScrollState()
+    scrollState: ScrollState = rememberScrollState(),
+    onPreviewHtmlFullScreen: ((String) -> Unit)? = null
 ) {
     val isHtmlPreviewable = block.language?.lowercase(Locale.US)?.trim() in listOf("html", "xml", "svg")
     var activeTab by remember { mutableStateOf(CodeBlockTab.CODE) }
@@ -226,7 +234,10 @@ private fun CodeBlock(
                 }
 
                 if (isHtmlPreviewable) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         val activeColor = MaterialTheme.colorScheme.primary
                         val inactiveColor = contentColor.copy(alpha = 0.5f)
 
@@ -256,6 +267,23 @@ private fun CodeBlock(
                                     color = if (activeTab == CodeBlockTab.PREVIEW) activeColor else inactiveColor
                                 )
                             )
+                        }
+
+                        if (activeTab == CodeBlockTab.PREVIEW && onPreviewHtmlFullScreen != null) {
+                            val compiledHtml = remember(block.text, allBlocks) {
+                                compileHtmlWithAssets(block, allBlocks)
+                            }
+                            IconButton(
+                                onClick = { onPreviewHtmlFullScreen(compiledHtml) },
+                                modifier = Modifier.size(28.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Fullscreen,
+                                    contentDescription = "Preview fullscreen",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
                         }
                     }
                 }

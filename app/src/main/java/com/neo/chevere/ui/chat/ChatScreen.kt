@@ -12,8 +12,6 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.provider.MediaStore
-import android.speech.tts.TextToSpeech
-import android.speech.tts.UtteranceProgressListener
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -95,6 +93,8 @@ import com.neo.chevere.ui.chat.components.ActionConfirmationDialog
 import com.neo.chevere.ui.chat.components.AgeVerificationDialog
 import com.neo.chevere.ui.chat.components.ChatInputBar
 import com.neo.chevere.ui.chat.components.ChatTopBar
+import com.neo.chevere.ui.chat.components.FullscreenHtmlPreviewDialog
+import com.neo.chevere.ui.chat.components.FullscreenImagePreviewDialog
 import com.neo.chevere.ui.chat.components.MessageList
 import com.neo.chevere.ui.chat.components.ModelInitializationScreen
 import com.neo.chevere.ui.common.ChevereHaptic
@@ -114,6 +114,12 @@ import java.util.Locale
 /**
  * The main Chat screen of the application.
  */
+sealed interface FullscreenPreviewState {
+    data object None : FullscreenPreviewState
+    data class Image(val uri: String) : FullscreenPreviewState
+    data class Html(val html: String) : FullscreenPreviewState
+}
+
 @Composable
 fun ChatScreen(
     viewModel: ChatViewModel = hiltViewModel(),
@@ -160,42 +166,7 @@ private fun ChatContent(
     val hapticView = LocalView.current
     val listState = rememberLazyListState()
     val mainHandler = remember { Handler(Looper.getMainLooper()) }
-    var textToSpeech by remember { mutableStateOf<TextToSpeech?>(null) }
-    var isTextToSpeechReady by remember { mutableStateOf(false) }
-    var speakingMessageIndex by remember { mutableStateOf<Int?>(null) }
 
-    DisposableEffect(context) {
-        var tts: TextToSpeech? = null
-        tts = TextToSpeech(context.applicationContext) { status ->
-            isTextToSpeechReady = status == TextToSpeech.SUCCESS
-            if (status == TextToSpeech.SUCCESS) {
-                tts?.language = Locale.getDefault()
-                tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-                    override fun onStart(utteranceId: String?) = Unit
-
-                    override fun onDone(utteranceId: String?) {
-                        mainHandler.post { speakingMessageIndex = null }
-                    }
-
-                    @Deprecated("Required by the Android TextToSpeech callback API.")
-                    override fun onError(utteranceId: String?) {
-                        mainHandler.post { speakingMessageIndex = null }
-                    }
-                })
-            }
-        }
-        textToSpeech = tts
-
-        onDispose {
-            tts.stop()
-            tts.shutdown()
-            speakingMessageIndex = null
-            if (textToSpeech === tts) {
-                textToSpeech = null
-            }
-            isTextToSpeechReady = false
-        }
-    }
 
     // Auto-scroll to bottom during token streaming
     LaunchedEffect(state.streamingText) {
@@ -210,11 +181,9 @@ private fun ChatContent(
     val snackbarHostState = remember { SnackbarHostState() }
     var showImageModelDownloadPrompt by remember { mutableStateOf(false) }
     var wasAiBusy by remember { mutableStateOf(false) }
+    var fullscreenPreviewState by remember { mutableStateOf<FullscreenPreviewState>(FullscreenPreviewState.None) }
     val showOnboarding = state.localModels.isEmpty() && !state.isLoading
-    val isAiBusy = state.sendState is SendState.Sending ||
-            state.sendState is SendState.GeneratingImage ||
-            state.agentState is AgentState.Planning ||
-            state.agentState is AgentState.ExecutingTool
+    val isAiBusy = state.isAiBusy
     val inputBusyMessage = when {
         state.sendState is SendState.GeneratingImage -> Constants.UiStatus.GENERATING_IMAGE
         else -> Constants.UiStatus.THINKING
@@ -343,19 +312,7 @@ private fun ChatContent(
         }
     }
 
-    val micPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted: Boolean ->
-        if (isGranted) {
-            viewModel.onIntent(ChatIntent.StartVoiceInput)
-        } else {
-            Toast.makeText(
-                context,
-                context.getString(R.string.microphone_permission_denied),
-                Toast.LENGTH_SHORT
-            ).show()
-        }
-    }
+
 
     val calendarPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
@@ -441,7 +398,6 @@ private fun ChatContent(
                             ""
                         ).uppercase(),
                         agentState = state.agentState,
-                        speakingMessageIndex = speakingMessageIndex,
                         onToggleExplicitImageMask = { index ->
                             hapticView.performChevereHaptic(ChevereHaptic.Selection)
                             viewModel.onIntent(ChatIntent.ToggleExplicitImageMask(index))
@@ -454,9 +410,11 @@ private fun ChatContent(
                             hapticView.performChevereHaptic(ChevereHaptic.Action)
                             viewModel.onIntent(ChatIntent.SaveImage(index))
                         },
-                        onReadMessageAloud = { index ->
-                            hapticView.performChevereHaptic(ChevereHaptic.Selection)
-                            viewModel.onIntent(ChatIntent.ReadMessageAloud(index))
+                        onPreviewHtmlFullScreen = { html ->
+                            fullscreenPreviewState = FullscreenPreviewState.Html(html)
+                        },
+                        onImageClick = { uri ->
+                            fullscreenPreviewState = FullscreenPreviewState.Image(uri)
                         }
                     )
                 }
@@ -568,21 +526,10 @@ private fun ChatContent(
                                     viewModel.onIntent(ChatIntent.SetTempCameraUri(photoUri))
                                     cameraLauncher.launch(photoUri)
                                 }
-
                                 else -> {
                                     permissionLauncher.launch(Manifest.permission.CAMERA)
                                 }
                             }
-                        },
-                        onVoiceInputClick = {
-                            hapticView.performChevereHaptic(ChevereHaptic.Selection)
-                            viewModel.onIntent(
-                                if (state.isListening) {
-                                    ChatIntent.StopVoiceInput
-                                } else {
-                                    ChatIntent.StartVoiceInput
-                                }
-                            )
                         },
                         selectedImageUri = state.selectedImageUri,
                         onRemoveImage = {
@@ -590,8 +537,7 @@ private fun ChatContent(
                             viewModel.onIntent(ChatIntent.SelectImage(null))
                         },
                         enabled = state.isReady && !state.isLoading,
-                        isBusy = isAiBusy,
-                        isListening = state.isListening,
+                        buttonState = state.composerActionButtonState,
                         busyMessage = inputBusyMessage,
                         suggestions = suggestions,
                         onSuggestionClick = { suggestion ->
@@ -600,6 +546,22 @@ private fun ChatContent(
                         }
                     )
                 }
+            }
+
+            when (val preview = fullscreenPreviewState) {
+                is FullscreenPreviewState.Image -> {
+                    FullscreenImagePreviewDialog(
+                        imageUri = preview.uri,
+                        onDismiss = { fullscreenPreviewState = FullscreenPreviewState.None }
+                    )
+                }
+                is FullscreenPreviewState.Html -> {
+                    FullscreenHtmlPreviewDialog(
+                        html = preview.html,
+                        onDismiss = { fullscreenPreviewState = FullscreenPreviewState.None }
+                    )
+                }
+                FullscreenPreviewState.None -> {}
             }
         }
     }
@@ -654,17 +616,6 @@ private fun ChatContent(
                     hapticView.performChevereHaptic(if (saved) ChevereHaptic.Success else ChevereHaptic.Warning)
                 }
 
-                is ChatEffect.ReadMessageAloud -> {
-                    val stopped = stopOrSpeakAssistantMessage(
-                        context = context,
-                        textToSpeech = textToSpeech,
-                        isReady = isTextToSpeechReady,
-                        messageIndex = effect.messageIndex,
-                        currentSpeakingMessageIndex = speakingMessageIndex,
-                        text = effect.text
-                    )
-                    speakingMessageIndex = stopped
-                }
 
                 ChatEffect.ShowImageModelDownloadPrompt -> {
                     hapticView.performChevereHaptic(ChevereHaptic.Warning)
@@ -684,10 +635,6 @@ private fun ChatContent(
                     contactsPermissionLauncher.launch(Manifest.permission.READ_CONTACTS)
                 }
 
-                ChatEffect.RequestMicPermission -> {
-                    micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                }
-
                 ChatEffect.RequestCalendarPermission -> {
                     calendarPermissionLauncher.launch(
                         arrayOf(
@@ -697,14 +644,9 @@ private fun ChatContent(
                     )
                 }
 
-                is ChatEffect.ShowVoiceError -> {
-                    hapticView.performChevereHaptic(ChevereHaptic.Warning)
-                    Toast.makeText(
-                        context,
-                        PiiUtils.scrub(effect.message),
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
+                is ChatEffect.ReadMessageAloud -> Unit
+                ChatEffect.RequestMicPermission -> Unit
+                is ChatEffect.ShowVoiceError -> Unit
             }
         }
     }
@@ -763,40 +705,7 @@ private fun shareChatMessage(context: Context, effect: ChatEffect.ShareMessage) 
     context.startActivity(chooser)
 }
 
-private fun stopOrSpeakAssistantMessage(
-    context: Context,
-    textToSpeech: TextToSpeech?,
-    isReady: Boolean,
-    messageIndex: Int,
-    currentSpeakingMessageIndex: Int?,
-    text: String
-): Int? {
-    val tts = textToSpeech
-    if (tts == null || !isReady) {
-        Toast.makeText(context, "Read aloud is still warming up.", Toast.LENGTH_SHORT).show()
-        return currentSpeakingMessageIndex
-    }
 
-    if (currentSpeakingMessageIndex == messageIndex) {
-        tts.stop()
-        return null
-    }
-
-    val scrubbedText = text
-        .replace(Regex("""https?://\S+"""), "link")
-        .trim()
-
-    if (scrubbedText.isBlank()) return currentSpeakingMessageIndex
-
-    tts.stop()
-    tts.speak(
-        scrubbedText,
-        TextToSpeech.QUEUE_FLUSH,
-        null,
-        "chevere_response_${messageIndex}_${System.currentTimeMillis()}"
-    )
-    return messageIndex
-}
 
 private fun saveImageToGallery(context: Context, sourceUri: Uri): Boolean {
     val resolver = context.contentResolver

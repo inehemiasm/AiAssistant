@@ -29,8 +29,6 @@ import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.filled.MicOff
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.ContainedLoadingIndicator
@@ -44,6 +42,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
+import com.neo.chevere.ui.chat.ComposerActionButtonState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -85,17 +84,16 @@ fun ChatInputBar(
     selectedImageUri: Uri?,
     onGalleryClick: () -> Unit,
     onCameraClick: () -> Unit,
-    onVoiceInputClick: () -> Unit,
     onRemoveImage: () -> Unit,
     enabled: Boolean,
-    isBusy: Boolean,
-    isListening: Boolean,
+    buttonState: ComposerActionButtonState,
     busyMessage: String = Constants.UiStatus.THINKING,
     suggestions: List<String> = emptyList(),
     onSuggestionClick: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var showAttachmentMenu by remember { mutableStateOf(false) }
+    val isBusy = buttonState is ComposerActionButtonState.Stop
 
     LaunchedEffect(isBusy) {
         if (isBusy) showAttachmentMenu = false
@@ -187,16 +185,13 @@ fun ChatInputBar(
                         onShowAttachmentMenu = { showAttachmentMenu = true },
                         onDismissAttachmentMenu = { showAttachmentMenu = false },
                         onGalleryClick = onGalleryClick,
-                        onCameraClick = onCameraClick,
-                        onVoiceInputClick = onVoiceInputClick,
-                        isListening = isListening
+                        onCameraClick = onCameraClick
                     )
                 }
             }
 
             ComposerActionButton(
-                isBusy = isBusy,
-                isSendEnabled = enabled && (text.isNotBlank() || selectedImageUri != null),
+                state = buttonState,
                 onSend = onSend,
                 onStop = onStop
             )
@@ -259,9 +254,7 @@ private fun ComposerContent(
     onShowAttachmentMenu: () -> Unit,
     onDismissAttachmentMenu: () -> Unit,
     onGalleryClick: () -> Unit,
-    onCameraClick: () -> Unit,
-    onVoiceInputClick: () -> Unit,
-    isListening: Boolean
+    onCameraClick: () -> Unit
 ) {
     Row(verticalAlignment = Alignment.Bottom) {
         AttachmentButton(
@@ -306,49 +299,10 @@ private fun ComposerContent(
                 imeAction = ImeAction.Default
             )
         )
-
-        VoiceInputButton(
-            enabled = enabled,
-            isListening = isListening,
-            onClick = onVoiceInputClick
-        )
     }
 }
 
-@Composable
-private fun VoiceInputButton(
-    enabled: Boolean,
-    isListening: Boolean,
-    onClick: () -> Unit
-) {
-    IconButton(
-        onClick = onClick,
-        enabled = enabled,
-        modifier = Modifier
-            .size(48.dp)
-            .clip(CircleShape)
-            .background(
-                if (isListening) {
-                    MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.9f)
-                } else {
-                    Color.Transparent
-                }
-            )
-    ) {
-        Icon(
-            if (isListening) Icons.Default.MicOff else Icons.Default.Mic,
-            stringResource(
-                if (isListening) R.string.stop_voice_input else R.string.start_voice_input
-            ),
-            tint = if (isListening) {
-                MaterialTheme.colorScheme.secondary
-            } else {
-                MaterialTheme.colorScheme.onSurfaceVariant
-            },
-            modifier = Modifier.size(22.dp)
-        )
-    }
-}
+
 
 @Composable
 private fun AttachmentButton(
@@ -443,15 +397,15 @@ private fun AttachmentButton(
 
 @Composable
 private fun ComposerActionButton(
-    isBusy: Boolean,
-    isSendEnabled: Boolean,
+    state: ComposerActionButtonState,
     onSend: () -> Unit,
     onStop: () -> Unit
 ) {
-    val actionEnabled = isBusy || isSendEnabled
+    val actionEnabled = state !is ComposerActionButtonState.Disabled
+    val isBusy = state is ComposerActionButtonState.Stop
     Surface(
         color = if (actionEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHigh,
-        contentColor = if (isSendEnabled || isBusy) {
+        contentColor = if (actionEnabled) {
             MaterialTheme.colorScheme.onPrimary
         } else {
             MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f)
@@ -464,10 +418,10 @@ private fun ComposerActionButton(
     ) {
         IconButton(
             onClick = {
-                if (isBusy) {
-                    onStop()
-                } else if (isSendEnabled) {
-                    onSend()
+                when (state) {
+                    ComposerActionButtonState.Stop -> onStop()
+                    ComposerActionButtonState.Send -> onSend()
+                    ComposerActionButtonState.Disabled -> {}
                 }
             },
             enabled = actionEnabled

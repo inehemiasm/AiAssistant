@@ -109,11 +109,11 @@ fun MessageList(
     streamingText: String = "",
     streamingModelName: String = "",
     agentState: AgentState = AgentState.Idle,
-    speakingMessageIndex: Int? = null,
     onToggleExplicitImageMask: (Int) -> Unit = {},
     onShareMessage: (Int) -> Unit = {},
     onSaveImage: (Int) -> Unit = {},
-    onReadMessageAloud: (Int) -> Unit = {}
+    onPreviewHtmlFullScreen: (String) -> Unit = {},
+    onImageClick: (String) -> Unit = {}
 ) {
     LazyColumn(
         state = listState,
@@ -124,11 +124,11 @@ fun MessageList(
         itemsIndexed(messages) { index, message ->
             FuturisticChatBubble(
                 message = message,
-                isSpeaking = speakingMessageIndex == index,
                 onToggleExplicitImageMask = { onToggleExplicitImageMask(index) },
                 onShareMessage = { onShareMessage(index) },
                 onSaveImage = { onSaveImage(index) },
-                onReadMessageAloud = { onReadMessageAloud(index) }
+                onPreviewHtmlFullScreen = onPreviewHtmlFullScreen,
+                onImageClick = onImageClick
             )
         }
 
@@ -174,8 +174,8 @@ fun FuturisticChatBubble(
     onToggleExplicitImageMask: () -> Unit = {},
     onShareMessage: () -> Unit = {},
     onSaveImage: () -> Unit = {},
-    onReadMessageAloud: () -> Unit = {},
-    isSpeaking: Boolean = false,
+    onPreviewHtmlFullScreen: (String) -> Unit = {},
+    onImageClick: (String) -> Unit = {},
     showCursor: Boolean = false
 ) {
     val isUser = message.isUser
@@ -244,7 +244,8 @@ fun FuturisticChatBubble(
                             imageUri = message.imageUri,
                             isExplicitImage = message.isExplicitImage,
                             isMasked = message.isImageMasked,
-                            onToggleMask = onToggleExplicitImageMask
+                            onToggleMask = onToggleExplicitImageMask,
+                            onClick = { onImageClick(message.imageUri) }
                         )
                     }
                     if (!isUser && message.agentState != null && message.agentState !is AgentState.Idle) {
@@ -261,7 +262,8 @@ fun FuturisticChatBubble(
                                 color = onBubbleColor
                             ),
                             textColor = onBubbleColor,
-                            showCursor = showCursor
+                            showCursor = showCursor,
+                            onPreviewHtmlFullScreen = onPreviewHtmlFullScreen
                         )
                     }
 
@@ -302,31 +304,7 @@ fun FuturisticChatBubble(
                                         )
                                     }
                                 }
-                                IconButton(
-                                    onClick = onReadMessageAloud,
-                                    modifier = Modifier.size(32.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = if (isSpeaking) {
-                                            Icons.Default.StopCircle
-                                        } else {
-                                            Icons.AutoMirrored.Filled.VolumeUp
-                                        },
-                                        contentDescription = stringResource(
-                                            if (isSpeaking) {
-                                                R.string.stop_reading_aloud
-                                            } else {
-                                                R.string.read_message_aloud
-                                            }
-                                        ),
-                                        tint = if (isSpeaking) {
-                                            MaterialTheme.colorScheme.primary
-                                        } else {
-                                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                                        },
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                }
+
                                 IconButton(
                                     onClick = onShareMessage,
                                     modifier = Modifier.size(32.dp)
@@ -370,7 +348,8 @@ private fun GeneratedMessageImage(
     imageUri: String,
     isExplicitImage: Boolean,
     isMasked: Boolean,
-    onToggleMask: () -> Unit
+    onToggleMask: () -> Unit,
+    onClick: () -> Unit
 ) {
     Box(
         modifier = Modifier
@@ -383,7 +362,14 @@ private fun GeneratedMessageImage(
             contentDescription = null,
             modifier = Modifier
                 .fillMaxWidth()
-                .then(if (isExplicitImage && isMasked) Modifier.blur(18.dp) else Modifier),
+                .then(if (isExplicitImage && isMasked) Modifier.blur(18.dp) else Modifier)
+                .then(
+                    if (!isExplicitImage || !isMasked) {
+                        Modifier.clickable { onClick() }
+                    } else {
+                        Modifier
+                    }
+                ),
             contentScale = ContentScale.FillWidth
         )
 

@@ -30,6 +30,15 @@ sealed interface SendState {
 }
 
 /**
+ * Represents the state of the composer action button.
+ */
+sealed interface ComposerActionButtonState {
+    data object Disabled : ComposerActionButtonState
+    data object Send : ComposerActionButtonState
+    data object Stop : ComposerActionButtonState
+}
+
+/**
  * The UI state for the Chat screen.
  */
 data class ChatState(
@@ -54,6 +63,19 @@ data class ChatState(
                 sendState is SendState.Sending ||
                 sendState is SendState.GeneratingImage ||
                 (agentState is AgentState.Planning || agentState is AgentState.ExecutingTool)
+
+    val isAiBusy: Boolean
+        get() = sendState is SendState.Sending ||
+                sendState is SendState.GeneratingImage ||
+                agentState is AgentState.Planning ||
+                agentState is AgentState.ExecutingTool
+
+    val composerActionButtonState: ComposerActionButtonState
+        get() = when {
+            isAiBusy -> ComposerActionButtonState.Stop
+            isReady && !isLoading && (inputText.isNotBlank() || selectedImageUri != null) -> ComposerActionButtonState.Send
+            else -> ComposerActionButtonState.Disabled
+        }
 
     val loadingMessage: String?
         get() = when {

@@ -143,7 +143,7 @@ Path: `app/src/main/java/com/neo/chevere/ui/`
 - Prefer existing patterns, MVI state, Hilt DI, and repository abstractions.
 - Favor reactive state with `Flow` or `StateFlow`.
 - Add or update KDoc for new implementations and changed public data models.
-- Use sealed classes, sealed interfaces, or enums for state. Avoid raw string state.
+- Prefer sealed classes or sealed interfaces over raw booleans, strings, or ad-hoc UI logical evaluations (e.g. evaluating multiple conditions inside Compose layout blocks) to represent component states. Keep state calculations centralized in the MVI state or ViewModel layer so that UI components remain purely declarative.
 - Keep model catalog filtering conservative and runtime-aware.
 - Surface actionable errors with `InstallStatus` and `DownloadProgress.Error`.
 - Do not add `Co-Authored-By` or other AI/agent attribution to commits.
