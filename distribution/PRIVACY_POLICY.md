@@ -29,6 +29,9 @@ Chevere AI requests the following permissions:
 *   **Internet:** Used to download AI models and send anonymized telemetry.
 *   **Notifications:** Used to show the progress of model downloads.
 *   **Foreground Service:** Used to ensure model downloads complete if you leave the app.
+*   **Contacts:** Used locally by the Contacts Tool to lookup email addresses by name when you request app actions (e.g., drafting an email). This data is processed strictly on-device and is never uploaded.
+*   **Location:** Used locally by the Weather Tool to retrieve forecasts for your location. Location coordinates are sent directly to the weather provider and are never collected or stored on our servers.
+*   **Calendar:** Used locally by the Calendar Tool to draft and schedule events on your device calendar.
 
 ## 4. Data Security
 Data stored on your device is protected by the Android operating system's sandbox. Deleting the app removes all local models and chat history.

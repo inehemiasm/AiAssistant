@@ -9,6 +9,7 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.os.BatteryManager
 import android.os.PowerManager
+import com.neo.chevere.core.NumberUtils
 import com.neo.chevere.data.agent.AgentTool
 import com.neo.chevere.data.agent.ToolResult
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -26,7 +27,7 @@ class SensorsTool @Inject constructor(
 ) : AgentTool {
     override val name: String = "read_sensors"
     override val description: String =
-        "Queries device environment and hardware sensors including ambient room temperature, device internal temperature, ambient light level (lux), atmospheric pressure (hPa), battery level, charging status, and CPU thermal throttling status."
+        "Queries device environment and hardware sensors to check how hot/cold the room is or how bright it is. Includes ambient room temperature, device internal temperature, ambient light level (lux) / brightness, atmospheric pressure (hPa), battery level, charging status, and CPU thermal throttling status."
     override val inputSchema: String = "None. Returns all active sensor and system status values."
 
     override suspend fun execute(args: Map<String, String>): ToolResult = withContext(Dispatchers.IO) {
@@ -39,9 +40,9 @@ class SensorsTool @Inject constructor(
 
         val report = buildString {
             appendLine("Device Sensor Report:")
-            appendLine("- Ambient Room Temperature: ${ambientTemp?.let { String.format(java.util.Locale.US, "%.1f°C (%.1f°F)", it, it * 9f / 5f + 32f) } ?: "No hardware sensor"}")
-            appendLine("- Ambient Light: ${lightValue?.let { "$it lux" } ?: "Not available or timeout"}")
-            appendLine("- Atmospheric Pressure: ${pressureValue?.let { "$it hPa" } ?: "Not available or timeout"}")
+            appendLine("- Ambient Room Temperature: ${ambientTemp?.let { formatTemperature(it) } ?: "No hardware sensor"}")
+            appendLine("- Ambient Light: ${lightValue?.let { "${formatFloat(it)} lux" } ?: "Not available or timeout"}")
+            appendLine("- Atmospheric Pressure: ${pressureValue?.let { "${formatFloat(it)} hPa" } ?: "Not available or timeout"}")
             appendLine("- Battery Status: $batteryInfo")
             appendLine("- Device Internal Temperature: $batteryTemp")
             appendLine("- CPU Thermals: $thermalStatus")
@@ -79,22 +80,42 @@ class SensorsTool @Inject constructor(
         val status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
         val chargePct = if (level >= 0 && scale > 0) (level * 100f / scale).toInt() else -1
         val isCharging = status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL
-        return "Level: ${if (chargePct >= 0) "$chargePct%" else "Unknown"}, Charging: $isCharging"
+        return "Level: ${if (chargePct >= 0) "$chargePct% (${NumberUtils.toWords(chargePct)} percent)" else "Unknown"}, Charging: $isCharging"
     }
 
     private fun getBatteryTemperature(): String {
         val intent = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED)) ?: return "Unknown"
         val tempTenths = intent.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, -1)
         if (tempTenths == -1) return "Unknown"
-        val tempC = tempTenths / 10f
-        val tempF = tempC * 9f / 5f + 32f
-        return String.format(java.util.Locale.US, "%.1f°C (%.1f°F)", tempC, tempF)
+        val tempC = Math.round(tempTenths / 10f)
+        val tempF = Math.round(tempC * 9f / 5f + 32f)
+        return "$tempC (${NumberUtils.toWords(tempC)})°C ($tempF (${NumberUtils.toWords(tempF)})°F)"
+    }
+
+    private fun formatTemperature(celsius: Float): String {
+        val c = Math.round(celsius)
+        val f = Math.round(celsius * 9f / 5f + 32f)
+        return "$c (${NumberUtils.toWords(c)})°C ($f (${NumberUtils.toWords(f)})°F)"
+    }
+
+    private fun formatFloat(value: Float): String {
+        val rounded = Math.round(value)
+        return "$rounded (${NumberUtils.toWords(rounded)})"
     }
 
     private fun getThermalStatus(): String {
-        val powerManager = context.getSystemService(Context.POWER_SERVICE) as? PowerManager ?: return "Unknown"
         return if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-            when (powerManager.currentThermalStatus) {
+            Api29Helper.getThermalStatus(context)
+        } else {
+            "Not supported on Android version < 10"
+        }
+    }
+
+    @androidx.annotation.RequiresApi(android.os.Build.VERSION_CODES.Q)
+    private object Api29Helper {
+        fun getThermalStatus(context: Context): String {
+            val powerManager = context.getSystemService(Context.POWER_SERVICE) as? PowerManager ?: return "Unknown"
+            return when (powerManager.currentThermalStatus) {
                 PowerManager.THERMAL_STATUS_NONE -> "Normal (None)"
                 PowerManager.THERMAL_STATUS_LIGHT -> "Light Throttling"
                 PowerManager.THERMAL_STATUS_MODERATE -> "Moderate Throttling"
@@ -104,8 +125,6 @@ class SensorsTool @Inject constructor(
                 PowerManager.THERMAL_STATUS_SHUTDOWN -> "Device Shutdown Imminent"
                 else -> "Unknown"
             }
-        } else {
-            "Not supported on Android version < 10"
         }
     }
 }

@@ -1,5 +1,6 @@
 package com.neo.chevere.data.agent.tools
 
+import com.neo.chevere.core.NumberUtils
 import com.neo.chevere.core.PiiUtils
 import com.neo.chevere.data.PreferenceManager
 import com.neo.chevere.data.agent.AgentTool
@@ -95,14 +96,14 @@ class WeatherTool @Inject constructor(
             val current = weatherResponse.current_weather
             val result = buildString {
                 append("Current weather in $cityName:\n")
-                append("- Temperature: ${current.temperature} ${units.temperatureLabel}\n")
+                append("- Temperature: ${formatDouble(current.temperature)} ${units.temperatureLabel}\n")
                 append("- Condition: ${getWeatherCondition(current.weathercode)}\n")
-                append("- Wind Speed: ${current.windspeed} ${units.windSpeedLabel}\n")
+                append("- Wind Speed: ${formatDouble(current.windspeed)} ${units.windSpeedLabel}\n")
 
                 weatherResponse.daily?.let { daily ->
                     append("\nForecast for today:\n")
-                    append("- High: ${daily.temperature_2m_max.firstOrNull()} ${units.temperatureLabel}\n")
-                    append("- Low: ${daily.temperature_2m_min.firstOrNull()} ${units.temperatureLabel}\n")
+                    append("- High: ${formatDouble(daily.temperature_2m_max.firstOrNull())} ${units.temperatureLabel}\n")
+                    append("- Low: ${formatDouble(daily.temperature_2m_min.firstOrNull())} ${units.temperatureLabel}\n")
                 }
             }
 
@@ -111,6 +112,12 @@ class WeatherTool @Inject constructor(
             Timber.tag("WeatherTool").e(e, "Failed to get weather for $rawLocation")
             ToolResult.Error("Failed to fetch weather: ${e.message}")
         }
+    }
+
+    private fun formatDouble(value: Double?): String {
+        if (value == null) return "N/A"
+        val rounded = Math.round(value).toInt()
+        return "$rounded (${NumberUtils.toWords(rounded)})"
     }
 
     private fun isCurrentLocationRequest(location: String): Boolean {

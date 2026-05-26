@@ -207,7 +207,7 @@ private fun ChatContent(
         }
     }
     val hasAttachedImage = state.selectedImageUri != null
-    val suggestions = remember(hasAttachedImage, hasImageModel) {
+    val suggestions = remember(hasAttachedImage) {
         if (hasAttachedImage) {
             listOf(
                 "Describe this image.",
@@ -215,28 +215,15 @@ private fun ChatContent(
                 "Extract text from this image."
             )
         } else {
-            val baseList = mutableListOf(
+            listOf(
+                "How hot is my room?",
+                "How's the weather today?",
+                "How's the light in here?",
+                "Check battery and thermals",
                 "Write a Kotlin Coroutine example.",
                 "Explain Clean Architecture.",
                 "Optimize this code snippet."
             )
-            if (hasImageModel) {
-                val imagePrompts = if (BuildConfig.DEBUG) {
-                    listOf(
-                        "/image A futuristic neon laboratory",
-                        "/image Cyberpunk robot assistant",
-                        "/image Retro computer console"
-                    )
-                } else {
-                    listOf(
-                        "Imagine a futuristic neon laboratory",
-                        "Imagine a cyberpunk robot assistant",
-                        "Imagine a retro computer console"
-                    )
-                }
-                baseList.addAll(0, imagePrompts)
-            }
-            baseList
         }
     }
 

@@ -75,22 +75,26 @@ class ChatRequestRouter @Inject constructor() {
             // English
             "how hot", "how cold", "how warm", "how bright", "is it hot", "is it cold",
             "room temperature", "ambient temperature", "device temperature", "internal temperature",
-            "room condition", "room conditions",
+            "room condition", "room conditions", "hows the light", "how is the light", "light level", "light levels", "ambient light",
             // Spanish
             "qué calor", "que calor", "qué frío", "que frio", "temperatura ambiente",
             "temperatura del cuarto", "temperatura de la habitación", "temperatura de la habitacion",
             "temperatura del dispositivo", "temperatura interna",
+            "nivel de luz", "niveles de luz", "luz ambiental", "cómo está la luz", "como esta la luz",
             // Portuguese
             "que calor", "que frio", "temperatura ambiente",
             "temperatura do quarto", "temperatura do dispositivo", "temperatura interna",
+            "nível de luz", "nivel de luz", "luz ambiente", "como está a luz", "como esta a luz",
             // French
             "fait chaud", "fait froid", "fait-il chaud", "fait-il froid", "fait il chaud", "fait il froid",
             "température ambiante", "temperature ambiante",
             "température de la pièce", "temperature de la piece", "température de la chambre", "temperature de la chambre",
             "température de l'appareil", "temperature de l'appareil",
+            "niveau de lumière", "niveau de lumiere", "lumière ambiante", "lumiere ambiante", "comment est la lumière", "comment est la lumiere",
             // German
             "wie warm", "wie kalt", "wie heiss", "wie heiß", "raumtemperatur",
-            "umgebungstemperatur", "gerätetemperatur", "geratetemperatur", "innentemperatur"
+            "umgebungstemperatur", "gerätetemperatur", "geratetemperatur", "innentemperatur",
+            "lichtstärke", "lichtstarke", "lichtverhältnisse", "lichtverhaltnisse", "wie ist das licht", "raumbeleuchtung"
         )
         val hasAmbientPhrase = ambientPhrases.any { it in text }
 

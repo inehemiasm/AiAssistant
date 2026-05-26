@@ -15,7 +15,8 @@ class AnalyzeImageTool @Inject constructor(
     private val inferenceManager: InferenceManager
 ) : AgentTool {
     override val name: String = "analyze_image"
-    override val description: String = "Performs a deep analysis of the currently attached image."
+    override val description: String =
+        "Performs a deep analysis of the currently attached image. CRITICAL: ONLY call this tool if an image is already attached to the current message/conversation. Do NOT call this tool for general room brightness, ambient environment, or sensor questions; use 'read_sensors' instead."
     override val inputSchema: String =
         "focus: Specific aspect to look for (e.g., 'text', 'objects', 'mood')."
 

@@ -106,7 +106,10 @@ class ChatRequestRouterTest {
             "battery status",
             "tell me the CPU thermal status",
             "how bright is the room",
-            "check the barometer pressure"
+            "check the barometer pressure",
+            "hows the light in my room",
+            "how is the light in my room",
+            "light level in here"
         )
         for (prompt in prompts) {
             assertTrue("Should route '$prompt' to agent", router.shouldUseAgent(prompt))
@@ -123,7 +126,10 @@ class ChatRequestRouterTest {
             "fait-il chaud dans ma chambre?" to RoutingCategory.SENSORS, // French
             "température ambiante" to RoutingCategory.SENSORS, // French
             "wie warm ist mein zimmer" to RoutingCategory.SENSORS, // German
-            "raumtemperatur" to RoutingCategory.SENSORS // German
+            "raumtemperatur" to RoutingCategory.SENSORS, // German
+            "cómo está la luz" to RoutingCategory.SENSORS, // Spanish
+            "comment est la lumiere" to RoutingCategory.SENSORS, // French
+            "wie ist das licht" to RoutingCategory.SENSORS // German
         )
         for ((prompt, expectedCategory) in multilingualPrompts) {
             val category = router.classifyRequest(prompt)

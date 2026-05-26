@@ -65,6 +65,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -76,6 +81,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.runtime.mutableStateOf
+import androidx.core.content.ContextCompat
 import com.neo.chevere.R
 import com.neo.chevere.domain.InitializationStatus
 import com.neo.chevere.domain.InstallStatus
@@ -102,6 +109,18 @@ fun ModelMarketplaceScreen(
     val context = LocalContext.current
     val hapticView = LocalView.current
     val snackbarHostState = remember { SnackbarHostState() }
+
+    var pendingDownloadModel by remember { mutableStateOf<ModelEntry?>(null) }
+    val baseDir = context.filesDir.absolutePath
+
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { _ ->
+        pendingDownloadModel?.let { model ->
+            viewModel.onIntent(MarketplaceIntent.DownloadModel(model, baseDir))
+            pendingDownloadModel = null
+        }
+    }
 
     LaunchedEffect(viewModel.effect) {
         viewModel.effect.collect { effect ->
@@ -220,10 +239,26 @@ fun ModelMarketplaceScreen(
 
                 when (selectedTab) {
                     0 -> DiscoverModelsList(
-                        state,
-                        viewModel::onIntent,
-                        context.filesDir.absolutePath,
-                        onModelClick
+                        state = state,
+                        onIntent = { intent ->
+                            if (intent is MarketplaceIntent.DownloadModel) {
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                                    ContextCompat.checkSelfPermission(
+                                        context,
+                                        Manifest.permission.POST_NOTIFICATIONS
+                                    ) != PackageManager.PERMISSION_GRANTED
+                                ) {
+                                    pendingDownloadModel = intent.model
+                                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                } else {
+                                    viewModel.onIntent(intent)
+                                }
+                            } else {
+                                viewModel.onIntent(intent)
+                            }
+                        },
+                        baseDir = baseDir,
+                        onModelClick = onModelClick
                     )
 
                     1 -> InstalledModelsList(state, viewModel::onIntent, onModelClick)

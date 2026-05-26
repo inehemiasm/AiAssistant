@@ -54,6 +54,11 @@ gradle/gradle-daemon-jvm.properties
 .claude/
 .aiexclude
 
+# Agent runtime scratch/logs (skills in .agents/ are committed; transient outputs are not)
+.agents/**/.tmp/
+.agents/**/logs/
+.agents/**/__pycache__/
+
 # Distribution & Store Assets
 distribution/
 app/release/app-release.apk
