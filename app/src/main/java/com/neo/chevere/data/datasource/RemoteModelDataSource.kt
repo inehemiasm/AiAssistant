@@ -30,6 +30,7 @@ sealed class DownloadStatus {
 interface RemoteModelDataSource {
     suspend fun getDownloadUrl(uri: String): String
     fun downloadToFile(url: String, file: File): Flow<DownloadStatus>
+    fun downloadToFile(url: String, file: File, startFromByte: Long): Flow<DownloadStatus>
 }
 
 /**
@@ -57,7 +58,7 @@ class DefaultRemoteModelDataSource @Inject constructor(
      * - Opens [file] in **append** mode so already-downloaded bytes are preserved.
      * - Reports progress as a percentage of the full file size (already-downloaded + remaining).
      */
-    fun downloadToFile(
+    override fun downloadToFile(
         url: String,
         file: File,
         startFromByte: Long

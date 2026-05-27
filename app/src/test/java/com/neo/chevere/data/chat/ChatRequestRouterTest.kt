@@ -129,7 +129,8 @@ class ChatRequestRouterTest {
             "raumtemperatur" to RoutingCategory.SENSORS, // German
             "cómo está la luz" to RoutingCategory.SENSORS, // Spanish
             "comment est la lumiere" to RoutingCategory.SENSORS, // French
-            "wie ist das licht" to RoutingCategory.SENSORS // German
+            "wie ist das licht" to RoutingCategory.SENSORS, // German
+            "北はどっちですか" to RoutingCategory.SENSORS // Japanese
         )
         for ((prompt, expectedCategory) in multilingualPrompts) {
             val category = router.classifyRequest(prompt)

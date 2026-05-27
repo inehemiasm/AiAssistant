@@ -9,10 +9,10 @@ import androidx.core.app.NotificationCompat
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
+import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.neo.chevere.core.Constants
-import com.neo.chevere.data.datasource.DefaultRemoteModelDataSource
 import com.neo.chevere.data.datasource.DownloadStatus
 import com.neo.chevere.data.datasource.RemoteModelDataSource
 import com.neo.chevere.data.telemetry.AppTelemetry
@@ -101,7 +101,7 @@ class ModelDownloadWorker @AssistedInject constructor(
                 if (tempDir.exists()) tempDir.deleteRecursively()
                 tempDir.mkdirs()
 
-                downloadRepositoryBundle(repositoryFiles, tempDir)
+                downloadRepositoryBundle(repositoryFiles, tempDir, modelName)
 
                 installedModelRegistry.updateInstallStatus(modelId, InstallStatus.VERIFYING)
                 if (!isSupportedExtractedModelBundle(tempDir)) {
@@ -132,14 +132,12 @@ class ModelDownloadWorker @AssistedInject constructor(
             if (resumeOffset > 0L) {
                 Timber.tag(TAG).i("Resuming download of $modelName from byte $resumeOffset")
             }
-            val downloadFlow = if (resumeOffset > 0L && remoteModelDataSource is DefaultRemoteModelDataSource) {
-                remoteModelDataSource.downloadToFile(downloadUrl, tempFile, resumeOffset)
-            } else {
-                remoteModelDataSource.downloadToFile(downloadUrl, tempFile)
-            }
+
+            // Call downloadToFile using native overload on interface
+            val downloadFlow = remoteModelDataSource.downloadToFile(downloadUrl, tempFile, resumeOffset)
             downloadFlow.collect { status ->
                 coroutineContext.ensureActive()
-                emitDownloadProgress(status)
+                emitDownloadProgress(status, modelName)
             }
 
             if (tempFile.exists() && tempFile.length() > Constants.ModelFiles.MIN_VALID_FILE_SIZE_BYTES) {
@@ -307,7 +305,11 @@ class ModelDownloadWorker @AssistedInject constructor(
         }
     }
 
-    private suspend fun downloadRepositoryBundle(repositoryFiles: List<String>, targetDir: File) {
+    private suspend fun downloadRepositoryBundle(
+        repositoryFiles: List<String>,
+        targetDir: File,
+        modelName: String
+    ) {
         repositoryFiles.forEachIndexed { index, spec ->
             coroutineContext.ensureActive()
             val repositoryFile = RepositoryFileSpec.parse(spec)
@@ -320,26 +322,23 @@ class ModelDownloadWorker @AssistedInject constructor(
 
             val url = remoteModelDataSource.getDownloadUrl(repositoryFile.url)
             val resumeOffset = if (destination.exists()) destination.length() else 0L
-            val downloadFlow = if (resumeOffset > 0L && remoteModelDataSource is DefaultRemoteModelDataSource) {
-                remoteModelDataSource.downloadToFile(url, destination, resumeOffset)
-            } else {
-                remoteModelDataSource.downloadToFile(url, destination)
-            }
+            val downloadFlow = remoteModelDataSource.downloadToFile(url, destination, resumeOffset)
             downloadFlow.collect { status ->
                 coroutineContext.ensureActive()
                 if (status is DownloadStatus.Progress) {
                     val aggregateProgress = ((index * 100) + status.percent) / repositoryFiles.size
-                    emitDownloadProgress(DownloadStatus.Progress(aggregateProgress.coerceIn(0, 99)))
+                    emitDownloadProgress(DownloadStatus.Progress(aggregateProgress.coerceIn(0, 99)), modelName)
                 }
             }
         }
     }
 
-    private suspend fun emitDownloadProgress(status: DownloadStatus) {
+    private suspend fun emitDownloadProgress(status: DownloadStatus, modelName: String) {
         if (status is DownloadStatus.Progress) {
             val currentTime = System.currentTimeMillis()
             if (currentTime - lastUpdateMs.get() >= throttleIntervalMs) {
                 setProgress(workDataOf(Constants.Download.PROGRESS to status.percent))
+                setForeground(getForegroundInfoHelper(status.percent, modelName))
                 lastUpdateMs.set(currentTime)
             }
         }
@@ -388,11 +387,20 @@ class ModelDownloadWorker @AssistedInject constructor(
     }
 
     override suspend fun getForegroundInfo(): ForegroundInfo {
+        val modelName = inputData.getString(Constants.Download.INPUT_MODEL_NAME) ?: "Model"
+        return getForegroundInfoHelper(0, modelName)
+    }
+
+    private fun getForegroundInfoHelper(progress: Int, modelName: String): ForegroundInfo {
         createNotificationChannel()
+        val cancelIntent = WorkManager.getInstance(applicationContext).createCancelPendingIntent(id)
         val notification = NotificationCompat.Builder(applicationContext, channelId)
-            .setContentTitle(Constants.Download.NOTIFICATION_TITLE)
+            .setContentTitle("Downloading $modelName")
+            .setContentText("Progress: $progress%")
             .setSmallIcon(android.R.drawable.stat_sys_download)
+            .setProgress(100, progress, false)
             .setOngoing(true)
+            .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Cancel", cancelIntent)
             .build()
 
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {

@@ -54,69 +54,6 @@ class ChatRequestRouter @Inject constructor() {
         return classifyRequest(prompt) != RoutingCategory.DIRECT_CHAT
     }
 
-    private fun looksLikeSensorsRequest(text: String): Boolean {
-        val sensorKeywords = listOf(
-            // English
-            "sensor", "sensors", "barometer", "pressure", "lux", "brightness",
-            "battery", "thermal", "thermals", "cpu temp", "device temp", "internal temp",
-            "room temp", "ambient temp", "temperature",
-            // Spanish
-            "sensores", "presión", "presion", "brillo", "batería", "bateria", "térmico", "termico", "temperatura",
-            // Portuguese
-            "sensores", "pressão", "pressao", "brilho", "bateria", "térmico", "termico", "temperatura",
-            // French
-            "capteur", "capteurs", "pression", "luminosité", "luminosite", "batterie", "thermique", "température", "temperature",
-            // German
-            "sensoren", "druck", "helligkeit", "akku", "thermisch", "temperatur"
-        )
-        val hasSensorKeyword = sensorKeywords.any { it in text }
-
-        val ambientPhrases = listOf(
-            // English
-            "how hot", "how cold", "how warm", "how bright", "is it hot", "is it cold",
-            "room temperature", "ambient temperature", "device temperature", "internal temperature",
-            "room condition", "room conditions", "hows the light", "how is the light", "light level", "light levels", "ambient light",
-            // Spanish
-            "qué calor", "que calor", "qué frío", "que frio", "temperatura ambiente",
-            "temperatura del cuarto", "temperatura de la habitación", "temperatura de la habitacion",
-            "temperatura del dispositivo", "temperatura interna",
-            "nivel de luz", "niveles de luz", "luz ambiental", "cómo está la luz", "como esta la luz",
-            // Portuguese
-            "que calor", "que frio", "temperatura ambiente",
-            "temperatura do quarto", "temperatura do dispositivo", "temperatura interna",
-            "nível de luz", "nivel de luz", "luz ambiente", "como está a luz", "como esta a luz",
-            // French
-            "fait chaud", "fait froid", "fait-il chaud", "fait-il froid", "fait il chaud", "fait il froid",
-            "température ambiante", "temperature ambiante",
-            "température de la pièce", "temperature de la piece", "température de la chambre", "temperature de la chambre",
-            "température de l'appareil", "temperature de l'appareil",
-            "niveau de lumière", "niveau de lumiere", "lumière ambiante", "lumiere ambiante", "comment est la lumière", "comment est la lumiere",
-            // German
-            "wie warm", "wie kalt", "wie heiss", "wie heiß", "raumtemperatur",
-            "umgebungstemperatur", "gerätetemperatur", "geratetemperatur", "innentemperatur",
-            "lichtstärke", "lichtstarke", "lichtverhältnisse", "lichtverhaltnisse", "wie ist das licht", "raumbeleuchtung"
-        )
-        val hasAmbientPhrase = ambientPhrases.any { it in text }
-
-        return hasSensorKeyword || hasAmbientPhrase
-    }
-
-    private fun looksLikeTaskRegistryRequest(text: String): Boolean {
-        val taskKeywords = listOf("task", "tasks", "todo", "todos", "to-do", "to-dos", "checklist")
-        val actionVerbs = listOf(
-            "create", "add", "new", "list", "show", "get", "view",
-            "update", "change", "complete", "finish", "done",
-            "delete", "remove", "clear", "mark"
-        )
-        val hasTaskKeyword = taskKeywords.any { text.contains(it) }
-        val hasActionVerb = actionVerbs.any { text.startsWith("$it ") || " $it " in text }
-
-        val isReminder = text.startsWith("remind me to ") || text.startsWith("remember to ")
-
-        return (hasTaskKeyword && hasActionVerb) || isReminder ||
-                (text.contains("todo") || text.contains("to-do") || text.contains("checklist"))
-    }
-
     fun capabilityResponseFor(prompt: String): String? {
         val normalized = prompt.normalized()
         if (normalized.isBlank()) return null
@@ -128,7 +65,20 @@ class ChatRequestRouter @Inject constructor() {
         }
     }
 
-    private fun String.normalized(): String = lowercase(Locale.ROOT).trim()
+    private fun looksLikeSensorsRequest(text: String): Boolean {
+        val hasSensorKeyword = ChatRoutingLexicon.sensorKeywords.any { it in text }
+        val hasAmbientPhrase = ChatRoutingLexicon.ambientPhrases.any { it in text }
+        return hasSensorKeyword || hasAmbientPhrase
+    }
+
+    private fun looksLikeTaskRegistryRequest(text: String): Boolean {
+        val hasTaskKeyword = ChatRoutingLexicon.taskKeywords.any { text.contains(it) }
+        val hasActionVerb = ChatRoutingLexicon.taskActionVerbs.any { text.hasWordBoundaryMatch(it) }
+        val isReminder = text.startsWith("remind me to ") || text.startsWith("remember to ")
+
+        return (hasTaskKeyword && hasActionVerb) || isReminder ||
+                text.contains("todo") || text.contains("to-do") || text.contains("checklist")
+    }
 
     private fun isCapabilityOnlyQuestion(text: String): Boolean =
         isCapabilityOverviewQuestion(text) ||
@@ -143,103 +93,70 @@ class ChatRequestRouter @Inject constructor() {
                 text == "what can chevere do?"
 
     private fun isImageCapabilityQuestion(text: String): Boolean {
-        if (!capabilityQuestionPrefixes.any { text.startsWith(it) }) return false
-        if (!imageRequestVerbs.any { it in text }) return false
-        if (!imageRequestNouns.any { it in text }) return false
+        if (!ChatRoutingLexicon.capabilityQuestionPrefixes.any { text.startsWith(it) }) return false
+        if (!ChatRoutingLexicon.imageRequestVerbs.any { it in text }) return false
+        if (!ChatRoutingLexicon.imageRequestNouns.any { it in text }) return false
         return !hasConcreteImageDescription(text)
     }
 
     private fun hasConcreteImageDescription(text: String): Boolean =
-        listOf(
-            " of ",
-            " showing ",
-            " with ",
-            " in ",
-            " at ",
-            " wearing ",
-            " holding "
-        ).any { it in text }
+        ChatRoutingLexicon.concreteImageDescriptionMarkers.any { it in text }
 
     private fun looksLikeImageGenerationRequest(text: String): Boolean {
         val words = text.split(Regex("[\\s,\\.\\?!]+"))
-        val hasSpecificImageVerb = words.any { it in listOf("draw", "paint", "imagine", "depict", "sketch") }
+        val hasSpecificImageVerb = words.any {
+            it in setOf("draw", "paint", "imagine", "depict", "sketch")
+        }
         if (hasSpecificImageVerb) return true
 
-        val hasImageNoun = imageRequestNouns.any { it in text }
-        val hasCreateVerb = imageRequestVerbs.any { it in text }
+        val hasImageNoun = ChatRoutingLexicon.imageRequestNouns.any { it in text }
+        val hasCreateVerb = ChatRoutingLexicon.imageRequestVerbs.any { it in text }
         if (hasImageNoun && hasCreateVerb) return true
 
         // Also match visual prompts like "create a wolf..." or "generate a sunset..."
-        val isVisualCreation = (text.contains("create a") || text.contains("generate a") || text.contains("make a") || text.contains("render a")) &&
-                !text.contains("event") && !text.contains("calendar") && !text.contains("email") &&
-                !text.contains("code") && !text.contains("file") && !text.contains("text") && !text.contains("app") &&
-                !text.contains("playlist") && !text.contains("reminder") && !text.contains("alarm") &&
-                !text.contains("timer") && !text.contains("note")
+        val isVisualCreation = listOf("create a", "generate a", "make a", "render a").any { it in text } &&
+                listOf(
+                    "event",
+                    "calendar",
+                    "email",
+                    "code",
+                    "file",
+                    "text",
+                    "app",
+                    "playlist",
+                    "reminder",
+                    "alarm",
+                    "timer",
+                    "note"
+                ).none { it in text }
 
         return isVisualCreation
     }
 
     private fun looksLikeLiveInformationRequest(text: String): Boolean {
-        val asksForWeather = listOf("weather", "forecast", "temperature").any { it in text }
-        val asksForFreshInfo = listOf(
-            "search the web",
-            "look up",
-            "latest",
-            "current news",
-            "today's news",
-            "right now",
-            "breaking news",
-            "current price",
-            "stock price"
-        ).any { it in text }
+        val asksForWeather = ChatRoutingLexicon.liveInformationWeatherTerms.any { it in text }
+        val asksForFreshInfo = ChatRoutingLexicon.freshInformationPhrases.any { it in text }
         return asksForWeather || asksForFreshInfo
     }
 
     private fun looksLikeDeviceActionRequest(text: String): Boolean {
-        val actionVerbs = listOf(
-            "copy",
-            "share",
-            "open",
-            "launch",
-            "draft",
-            "email",
-            "map",
-            "navigate",
-            "calendar"
-        )
-        val actionTargets =
-            listOf("clipboard", "share sheet", "browser", "url", "app", "maps", "email", "calendar")
-        return actionVerbs.any { text.startsWith("$it ") || " $it " in text } &&
-                actionTargets.any { it in text }
+        return ChatRoutingLexicon.deviceActionVerbs.any { text.hasWordBoundaryMatch(it) } &&
+                ChatRoutingLexicon.deviceActionTargets.any { it in text }
     }
 
     private fun looksLikeModelManagementRequest(text: String): Boolean {
-        val mentionsModels = listOf(
-            "installed model",
-            "installed models",
-            "active model",
-            "runtime status",
-            "switch model",
-            "select model"
-        ).any { it in text }
+        val mentionsModels = ChatRoutingLexicon.modelManagementPhrases.any { it in text }
         val asksForModelAction =
-            listOf("list", "show", "what", "which", "switch", "select", "recommend", "status").any {
-                text.startsWith("$it ") || " $it " in text
-            }
+            ChatRoutingLexicon.modelManagementActionVerbs.any { text.hasWordBoundaryMatch(it) }
         return mentionsModels && asksForModelAction
     }
 
+    private fun String.normalized(): String = lowercase(Locale.ROOT).trim()
+
+    private fun String.hasWordBoundaryMatch(word: String): Boolean =
+        startsWith("$word ") || " $word " in this
+
     private companion object {
-        val imageRequestVerbs = listOf("create", "generate", "make", "draw", "render", "paint")
-        val imageRequestNouns =
-            listOf("image", "picture", "photo", "art", "illustration", "portrait")
-        val capabilityQuestionPrefixes = listOf(
-            "can you",
-            "could you",
-            "are you able to",
-            "do you know how to",
-            "do you have the ability to"
-        )
         const val DIRECT_CHAT_CAPABILITY_CONTEXT =
             "You are Chevere AI running inside an Android app. You can answer questions, explain and write code, grade answers, summarize, translate, brainstorm, and help with Android/software work. App tools can handle image generation when the user describes the desired image, image analysis when an image is attached and supported, web/current-info search, weather, sharing/copying text, opening URLs/maps/apps, drafting email, creating calendar events, managing tasks/to-do list, and model/runtime management. If the user asks whether you can do something, answer the capability question and ask for missing details; do not perform the action or invent missing content."
         const val VISION_CHAT_CAPABILITY_CONTEXT =

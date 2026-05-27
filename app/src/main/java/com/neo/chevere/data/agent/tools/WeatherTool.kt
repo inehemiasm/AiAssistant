@@ -116,8 +116,7 @@ class WeatherTool @Inject constructor(
 
     private fun formatDouble(value: Double?): String {
         if (value == null) return "N/A"
-        val rounded = Math.round(value).toInt()
-        return "$rounded (${NumberUtils.toWords(rounded)})"
+        return Math.round(value).toString()
     }
 
     private fun isCurrentLocationRequest(location: String): Boolean {

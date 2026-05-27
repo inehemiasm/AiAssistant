@@ -429,7 +429,7 @@ class SensorsTool @Inject constructor(
         val status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
         val chargePct = if (level >= 0 && scale > 0) (level * 100f / scale).toInt() else -1
         val isCharging = status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL
-        return "Level: ${if (chargePct >= 0) "$chargePct% (${NumberUtils.toWords(chargePct)} percent)" else "Unknown"}, Charging: $isCharging"
+        return "Level: ${if (chargePct >= 0) "$chargePct%" else "Unknown"}, Charging: $isCharging"
     }
 
     private fun getBatteryTemperature(): String {
@@ -438,18 +438,17 @@ class SensorsTool @Inject constructor(
         if (tempTenths == -1) return "Unknown"
         val tempC = Math.round(tempTenths / 10f)
         val tempF = Math.round(tempC * 9f / 5f + 32f)
-        return "$tempC (${NumberUtils.toWords(tempC)})°C ($tempF (${NumberUtils.toWords(tempF)})°F)"
+        return "$tempC°C ($tempF°F)"
     }
 
     private fun formatTemperature(celsius: Float): String {
         val c = Math.round(celsius)
         val f = Math.round(celsius * 9f / 5f + 32f)
-        return "$c (${NumberUtils.toWords(c)})°C ($f (${NumberUtils.toWords(f)})°F)"
+        return "$c°C ($f°F)"
     }
 
     private fun formatFloat(value: Float): String {
-        val rounded = Math.round(value)
-        return "$rounded (${NumberUtils.toWords(rounded)})"
+        return Math.round(value).toString()
     }
 
     private fun formatDecimal(value: Float): String {
