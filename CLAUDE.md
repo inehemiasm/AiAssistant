@@ -26,7 +26,7 @@ Chevere AI is an Android app using Clean Architecture, MVI, Room, Hilt, LiteRT-L
 - `:ui-designsystem`: shared theme/components.
 - `domain/`: contracts, shared models, explicit prompt policy, model/runtime enums.
 - `data/agent/`: Reason-Act-Observe loop (`AgentOrchestrator`) and Hilt-provided tool registry.
-  - **Available Agent Tools**: `generate_image`, `search_web`, `get_weather`, `search_contacts`, `task_registry` (CRUD on database), `extract_tasks`, `summarize_text`, `control_device` (media/settings), `model_registry`, and `AppActionTools` (`copy_to_clipboard`, `share_text`, `open_url`, `open_maps`, `draft_email`, `create_calendar_event`, `list_apps`, `launch_app`, `launch_app_home_screen`, `perform_app_action`, `get_app_capabilities`).
+  - **Available Agent Tools**: `generate_image`, `search_web`, `get_weather`, `search_contacts`, `task_registry` (CRUD on database), `extract_tasks`, `summarize_text`, `control_device` (media/settings), `model_registry`, `read_sensors` (ambient temperature, sound SPL, light, pressure, battery, thermals, gyroscope, accelerometer, compass heading, proximity, spirit level flatness, metal detector, device postures), and `AppActionTools` (`copy_to_clipboard`, `share_text`, `open_url`, `open_maps`, `draft_email`, `create_calendar_event`, `list_apps`, `launch_app`, `launch_app_home_screen`, `perform_app_action`, `get_app_capabilities`).
 - `data/inference/`: LiteRT-LM chat and local image-generation runtimes.
 - `data/context/`: compact conversation memory and prompt slicing for small on-device models.
 - `data/download/`: WorkManager download orchestration.

@@ -24,7 +24,10 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
+import kotlin.math.abs
+import kotlin.math.atan2
 import kotlin.math.log10
+import kotlin.math.sqrt
 
 /**
  * Reads local hardware and environment sensors, delivering ambient status to the agent.
@@ -37,6 +40,13 @@ import kotlin.math.log10
  * - Device internal (battery) temperature
  * - CPU thermal throttling status
  * - Ambient sound level (dB SPL estimate via microphone amplitude)
+ * - Gyroscope (rotation rate on X/Y/Z axes in rad/s, angular magnitude, motion classification)
+ * - Accelerometer (acceleration force on X/Y/Z axes in m/s², magnitude, motion classification)
+ * - Compass Heading (azimuth angle in degrees and cardinal direction computed from accelerometer + magnetometer)
+ * - Proximity Sensor (near/far status in cm)
+ * - Device Posture / Placement (Face Up, Face Down, Portrait, Landscape, etc.)
+ * - Spirit Level (Flatness tilt measurements in degrees)
+ * - Metal / Magnetic Detection (magnetic field strength in uT and proximity to metal/magnets)
  */
 class SensorsTool @Inject constructor(
     @param:ApplicationContext private val context: Context
@@ -75,13 +85,54 @@ class SensorsTool @Inject constructor(
           French: quelle est la température, il fait chaud, il fait froid.
           Portuguese: qual é a temperatura aqui, está quente, está frio.
           German: wie warm ist es hier, wie kalt ist es, Raumtemperatur.
-          Japanese: 部屋の温度はどれくらい, 暑いですか, 寒いですか.
+          Japanese: 部屋 of 温度はどれくらい, 暑いですか, 寒いですか.
 
         BATTERY / CHARGING / DEVICE STATUS:
           battery level, how's my battery, is my phone charging, battery percentage, charge status.
 
         PRESSURE / THERMALS / HARDWARE:
           atmospheric pressure, CPU temperature, device thermals, is the CPU throttling.
+
+        GYROSCOPE / MOTION / STABILITY:
+          Trigger phrases (English): gyroscope, am I walking, am I moving, is the phone still, is it shaking,
+          check movement, device stability, orientation, rotation rate, are we moving.
+          Spanish: giroscopio, ¿me estoy moviendo?, ¿estoy caminando?, ¿se mueve el teléfono?, ¿está quieto?, ¿está vibrando?, estabilidad, rotación.
+          French: gyroscope, est-ce que je bouge, le téléphone bouge-t-il, est-il immobile, stabilité.
+          Portuguese: giroscópio, estou me movendo, o celular está parado, estabilidade, rotação.
+          German: Gyroskop, bewege ich mich, bewegt sich das Telefon, ist es stabil, Drehung.
+          Japanese: ジャイロスコープ, 動いていますか, 歩いていますか, 揺れていますか, 回転, 安定性.
+
+        COMPASS / DIRECTION / HEADING:
+          Trigger phrases (English): compass, which way is north, what direction, am I facing east, azimuth, cardinal direction, heading, where is south, where is west.
+          Spanish: brújula, ¿hacia dónde está el norte?, ¿qué dirección?, azimut, rumbo, dirección cardinal.
+          French: boussole, où est le nord, quelle direction, cap, azimut.
+          Portuguese: bússola, onde fica o norte, qual direção, rumo, azimute.
+          German: Kompass, wo ist Norden, Himmelsrichtung, Ausrichtung, Azimut.
+          Japanese: コンパス, 北はどっち, 方角, 方位, 東を向いていますか, 西はどちらですか.
+
+        PROXIMITY / POCKET / TABLE DETECTION:
+          Trigger phrases (English): proximity, is the phone in my pocket, is it face down, check proximity, pocket detection, is something close to the screen, is the phone covered.
+          Spanish: proximidad, ¿está el teléfono en mi bolsillo?, ¿está boca abajo?, detector de bolsillo, sensor de proximidad.
+          French: proximité, le téléphone est-il dans ma poche, est-il face contre terre, capteur de proximité.
+          Portuguese: proximidade, o celular está no meu bolso, está virado para baixo, sensor de proximidade.
+          German: Näherungssensor, ist das Handy in meiner Tasche, liegt es auf dem Display, Näherung.
+          Japanese: 近接センサー, ポケットに入っていますか, うつ伏せですか, 近接.
+
+        SPIRIT LEVEL / FLATNESS / SURFACE LEVEL:
+          Trigger phrases (English): is this table flat, is the surface level, spirit level, bubble level, check flatness, is it straight, is the floor level, is it horizontal, is it plumb, level test.
+          Spanish: ¿esta mesa está nivelada?, ¿está plano?, nivel de burbuja, ¿está recto?, ¿esta superficie es plana?.
+          French: est-ce que cette table est plate, niveau à bulle, est-ce droit, surface plane.
+          Portuguese: esta mesa está plana, nível de bolha, está reto, superfície plana.
+          German: ist dieser Tisch gerade, Wasserwaage, ist die Oberfläche eben, gerade ausrichten.
+          Japanese: このテーブルは水平ですか, 平らですか, 水準器, 水平器.
+
+        METAL / MAGNET DETECTOR:
+          Trigger phrases (English): metal detector, stud finder, is there metal nearby, magnetic detector, check for magnets, detect metal, is there a magnetic field, find studs, metal finder.
+          Spanish: detector de metales, buscar metales, buscar imanes, detector magnético, buscador de vigas.
+          French: détecteur de métaux, y a-t-il du métal, détecteur magnétique, chercheur de montants.
+          Portuguese: detector de metal, encontrar metais, detector magnético, localizador de vigas.
+          German: Metalldetektor, Metall finden, Magnetdetektor, Balkenfinder.
+          Japanese: 金属探知機, 磁石を検出しますか, 金属探知, 下地探し.
     """.trimIndent()
     override val inputSchema: String = "None. Returns all active sensor and system status values."
 
@@ -94,6 +145,22 @@ class SensorsTool @Inject constructor(
         val thermalStatus = getThermalStatus()
         val soundResult   = measureAmbientSoundLevel()
 
+        // Read advanced sensors (Gyroscope, Accelerometer, Magnetometer, Proximity)
+        val gyroValues   = queryMultiAxisSensorValues(Sensor.TYPE_GYROSCOPE)
+        val accelValues  = queryMultiAxisSensorValues(Sensor.TYPE_ACCELEROMETER)
+        val magValues    = queryMultiAxisSensorValues(Sensor.TYPE_MAGNETIC_FIELD)
+        val proximityVal = querySensorValue(Sensor.TYPE_PROXIMITY)
+
+        val gyroReport   = formatGyroscope(gyroValues)
+        val accelReport  = formatAccelerometer(accelValues)
+        val compassReport = formatCompass(accelValues, magValues)
+        val proximityReport = formatProximity(proximityVal)
+
+        // Everyday helper reports
+        val postureReport = formatPosture(accelValues)
+        val flatnessReport = formatFlatness(accelValues)
+        val metalReport = formatMetalDetector(magValues)
+
         val report = buildString {
             appendLine("Device Sensor Report:")
             appendLine("- Ambient Room Temperature: ${ambientTemp?.let { formatTemperature(it) } ?: "No hardware sensor"}")
@@ -103,6 +170,13 @@ class SensorsTool @Inject constructor(
             appendLine("- Device Internal Temperature: $batteryTemp")
             appendLine("- CPU Thermals: $thermalStatus")
             appendLine("- Ambient Sound Level: $soundResult")
+            appendLine("- Gyroscope (Rotation): $gyroReport")
+            appendLine("- Accelerometer (Motion): $accelReport")
+            appendLine("- Compass Heading: $compassReport")
+            appendLine("- Proximity Sensor: $proximityReport")
+            appendLine("- Device Posture / Placement: $postureReport")
+            appendLine("- Spirit Level (Flatness): $flatnessReport")
+            appendLine("- Metal / Magnetic Detection: $metalReport")
         }
 
         ToolResult.Success(report)
@@ -202,10 +276,149 @@ class SensorsTool @Inject constructor(
         }
 
         try {
-            sensorManager.registerListener(listener, sensor, SensorManager.SENSOR_DELAY_FASTEST)
+            sensorManager.registerListener(listener, sensor, SensorManager.SENSOR_DELAY_UI)
             deferred.await()
         } finally {
             sensorManager.unregisterListener(listener)
+        }
+    }
+
+    private suspend fun queryMultiAxisSensorValues(sensorType: Int): FloatArray? = withTimeoutOrNull(500L) {
+        val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as? SensorManager ?: return@withTimeoutOrNull null
+        val sensor = sensorManager.getDefaultSensor(sensorType) ?: return@withTimeoutOrNull null
+        val deferred = CompletableDeferred<FloatArray>()
+
+        val listener = object : SensorEventListener {
+            override fun onSensorChanged(event: SensorEvent) {
+                if (event.values.isNotEmpty()) {
+                    deferred.complete(event.values.clone())
+                }
+            }
+            override fun onAccuracyChanged(sensor: Sensor, accuracy: Int) {}
+        }
+
+        try {
+            sensorManager.registerListener(listener, sensor, SensorManager.SENSOR_DELAY_UI)
+            deferred.await()
+        } finally {
+            sensorManager.unregisterListener(listener)
+        }
+    }
+
+    private fun formatGyroscope(values: FloatArray?): String {
+        if (values == null || values.size < 3) return "Not available or timeout"
+        val x = values[0]
+        val y = values[1]
+        val z = values[2]
+        val magnitude = sqrt((x * x + y * y + z * z).toDouble()).toFloat()
+        val label = when {
+            magnitude < 0.05f -> "Still (resting)"
+            magnitude < 0.3f  -> "Stable (slight tilt/rotation)"
+            magnitude < 1.5f  -> "Rotating (normal motion)"
+            else              -> "Rapid rotation / Shaking"
+        }
+        return "X: ${formatDecimal(x)}, Y: ${formatDecimal(y)}, Z: ${formatDecimal(z)} rad/s (magnitude: ${formatDecimal(magnitude)} rad/s) — $label"
+    }
+
+    private fun formatAccelerometer(values: FloatArray?): String {
+        if (values == null || values.size < 3) return "Not available or timeout"
+        val x = values[0]
+        val y = values[1]
+        val z = values[2]
+        val magnitude = sqrt((x * x + y * y + z * z).toDouble()).toFloat()
+        val deviation = abs(magnitude - 9.80665f)
+        val label = when {
+            deviation < 0.2f -> "Stationary"
+            deviation < 1.5f -> "Held in hand / gentle motion"
+            deviation < 5.0f -> "Walking / active movement"
+            else             -> "Shaking / running / high acceleration"
+        }
+        return "X: ${formatDecimal(x)}, Y: ${formatDecimal(y)}, Z: ${formatDecimal(z)} m/s² (magnitude: ${formatDecimal(magnitude)} m/s²) — $label"
+    }
+
+    private fun formatCompass(accel: FloatArray?, mag: FloatArray?): String {
+        if (accel == null || mag == null || accel.size < 3 || mag.size < 3) {
+            return "Not available (requires both accelerometer and magnetometer)"
+        }
+        val r = FloatArray(9)
+        val i = FloatArray(9)
+        val success = SensorManager.getRotationMatrix(r, i, accel, mag)
+        return if (success) {
+            val orientation = FloatArray(3)
+            SensorManager.getOrientation(r, orientation)
+            val azimuthRad = orientation[0]
+            var azimuthDeg = Math.toDegrees(azimuthRad.toDouble()).toFloat()
+            if (azimuthDeg < 0) {
+                azimuthDeg += 360f
+            }
+            val direction = getCardinalDirection(azimuthDeg)
+            val magStrength = sqrt((mag[0] * mag[0] + mag[1] * mag[1] + mag[2] * mag[2]).toDouble()).toFloat()
+            "${Math.round(azimuthDeg)}° ($direction) [Magnetic strength: ${formatDecimal(magStrength)} uT]"
+        } else {
+            "Unable to compute orientation"
+        }
+    }
+
+    private fun formatProximity(value: Float?): String {
+        if (value == null) return "Not available or timeout"
+        val label = if (value < 1.0f) "Near (object close to screen)" else "Far"
+        return "${formatDecimal(value)} cm — $label"
+    }
+
+    private fun formatPosture(values: FloatArray?): String {
+        if (values == null || values.size < 3) return "Unknown (no accelerometer data)"
+        val x = values[0]
+        val y = values[1]
+        val z = values[2]
+        return when {
+            z > 8.5f  -> "Face Up (Lying flat on its back)"
+            z < -8.5f -> "Face Down (Lying flat on its screen)"
+            y > 8.5f  -> "Portrait Upright (Normal portrait)"
+            y < -8.5f -> "Portrait Upside Down"
+            x > 8.5f  -> "Landscape Left (Tilted left)"
+            x < -8.5f -> "Landscape Right (Tilted right)"
+            else      -> "Tilted / Diagonal Orientation"
+        }
+    }
+
+    private fun formatFlatness(values: FloatArray?): String {
+        if (values == null || values.size < 3) return "Not available or timeout"
+        val x = values[0]
+        val y = values[1]
+        val z = values[2]
+        val pitch = Math.toDegrees(atan2(-x.toDouble(), sqrt((y * y + z * z).toDouble()))).toFloat()
+        val roll = Math.toDegrees(atan2(y.toDouble(), z.toDouble())).toFloat()
+        val isFlat = abs(pitch) < 2.0f && abs(roll) < 2.0f
+        val flatnessLabel = if (isFlat) "Level (Flat surface detected)" else "Tilted / Not flat"
+        return "$flatnessLabel — Pitch (forward/back tilt): ${formatDecimal(pitch)}°, Roll (left/right tilt): ${formatDecimal(roll)}°"
+    }
+
+    private fun formatMetalDetector(values: FloatArray?): String {
+        if (values == null || values.size < 3) return "Not available or timeout"
+        val x = values[0]
+        val y = values[1]
+        val z = values[2]
+        val magStrength = sqrt((x * x + y * y + z * z).toDouble()).toFloat()
+        val magnetStatus = when {
+            magStrength > 300f -> "Critical magnetic interference (Strong magnetic source / magnet / metal extremely close)"
+            magStrength > 150f -> "High magnetic interference (Possible metal object or magnetic field nearby)"
+            magStrength < 15f  -> "Low magnetic field (Shielded or sensor anomaly)"
+            else               -> "Normal magnetic field (No major metal or magnet nearby)"
+        }
+        return "Strength: ${formatDecimal(magStrength)} uT — $magnetStatus"
+    }
+
+    private fun getCardinalDirection(degrees: Float): String {
+        return when {
+            degrees >= 337.5 || degrees < 22.5 -> "North"
+            degrees >= 22.5 && degrees < 67.5 -> "North-East"
+            degrees >= 67.5 && degrees < 112.5 -> "East"
+            degrees >= 112.5 && degrees < 157.5 -> "South-East"
+            degrees >= 157.5 && degrees < 202.5 -> "South"
+            degrees >= 202.5 && degrees < 247.5 -> "South-West"
+            degrees >= 247.5 && degrees < 292.5 -> "West"
+            degrees >= 292.5 && degrees < 337.5 -> "North-West"
+            else -> "Unknown"
         }
     }
 
@@ -237,6 +450,10 @@ class SensorsTool @Inject constructor(
     private fun formatFloat(value: Float): String {
         val rounded = Math.round(value)
         return "$rounded (${NumberUtils.toWords(rounded)})"
+    }
+
+    private fun formatDecimal(value: Float): String {
+        return String.format(java.util.Locale.US, "%.2f", value)
     }
 
     private fun getThermalStatus(): String {

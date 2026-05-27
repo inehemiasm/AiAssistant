@@ -55,7 +55,7 @@ Path: `app/src/main/java/com/neo/chevere/data/`
     - `SummarizeTextTool` (`summarize_text`): Compacts blocks of text locally.
     - `DeviceControlTool` (`control_device`): Modifies device settings (e.g., volume, display/DND shortcuts).
     - `ModelRegistryTools` (`model_registry`): Allows the agent to query active or installed models.
-    - `SensorsTool` (`read_sensors`): Queries device environment and hardware sensors to check how hot/cold the room is or how bright it is. Includes ambient room temperature, device internal temperature, ambient light level (lux) / brightness, atmospheric pressure (hPa), battery level, charging status, CPU thermal throttling status, and **ambient sound / noise level** (dB estimate using the microphone — requires RECORD_AUDIO permission).
+    - `SensorsTool` (`read_sensors`): Queries device environment, motion, orientation, and hardware sensors. Includes ambient room temperature, battery level/status, CPU thermals, barometric pressure (hPa), light level (lux), **ambient sound / noise level** (dB SPL estimate using the microphone — requires `RECORD_AUDIO` permission), **gyroscope rotation rate** (rad/s), **accelerometer forces** (m/s²), **compass heading** (0-360° and cardinal direction), **proximity sensor** distance, **spirit level flatness** (pitch/roll tilt angles), **metal & magnet detection** (field strength in uT), and **device posture** classification (Face Up, Face Down, Portrait, Landscape, Tilted).
     - `AppActionTools`: Interacts with Android applications and actions:
       - `copy_to_clipboard` / `share_text` / `open_url` / `open_maps`
       - `draft_email` / `create_calendar_event`

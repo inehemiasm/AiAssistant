@@ -6,8 +6,18 @@ Chevere AI is a privacy-first Android assistant that runs local language models 
 
 - **Local LLM execution**: Runs LiteRT-LM models such as Gemma from app-private storage.
 - **Multimodal chat**: Users can attach gallery or camera images when the active chat model supports vision. Image attachments always route through chat/vision inference rather than the image-generation backend.
+- **Rich Math Formatting**: Prettifies math equations, derivatives, functions, and integrals. Inline (`$...$`) and block (`$$...$$`) LaTeX are parsed and formatted using serif typography, custom symbols, and specific styling for easy readability.
 - **Efficient context slicing**: Chat uses a rolling memory pattern for small on-device models, keeping recent turns verbatim while compacting older turns into a short deterministic summary.
 - **Agent workflow**: `AgentOrchestrator` runs a Reason-Act-Observe loop and executes registered tools.
+- **Everyday Sensor Utilities**:
+  - **Spirit Level (Flatness)**: Computes pitch and roll angles in degrees via the Accelerometer to check if a table/surface is level.
+  - **Metal & Magnet Detector**: Detects nearby metallic objects, studs, or magnets using Magnetometer strength ($\mu\text{T}$).
+  - **Device Posture**: Detects physical placement like Face Up, Face Down, Portrait, Landscape, or Tilted.
+- **Environment & Hardware Sensors**:
+  - **Ambient Sound Level**: Estimates noise levels in decibels (dB SPL) via microphone amplitude (requires `RECORD_AUDIO` permission).
+  - **Motion & Rotation**: Queries the Gyroscope (rad/s) and Accelerometer (m/s²) to identify if the device is stationary, rotating, or shaking.
+  - **Compass Heading**: Computes heading degrees ($0^\circ$-$360^\circ$) and cardinal directions (e.g. North-East) using accelerometer + magnetometer sensor matrix.
+  - **Light, Pressure, & Temp**: Reads ambient light level (lux), barometric pressure (hPa), room temperature (where supported), battery details, and internal CPU temperatures/thermals.
 - **Image generation**:
   - Agent tool: `generate_image` lets Gemma improve the prompt before calling the image backend.
   - Slash commands: `/image`, `/img`, and `/imagine` bypass Gemma and call image generation directly.
