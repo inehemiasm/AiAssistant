@@ -175,6 +175,23 @@ data class InferenceRequest(
 )
 
 /**
+ * Defines the supported aspect ratios for generated images.
+ */
+enum class ImageAspectRatio(val displayName: String, val pixelWidth: Int, val pixelHeight: Int) {
+    SQUARE_1_1("1:1", 512, 512),
+    LANDSCAPE_16_9("16:9", 640, 360),
+    PORTRAIT_9_16("9:16", 360, 640),
+    LANDSCAPE_4_3("4:3", 512, 384),
+    PORTRAIT_3_4("3:4", 384, 512);
+
+    companion object {
+        fun fromString(value: String?): ImageAspectRatio {
+            return entries.firstOrNull { it.name == value || it.displayName == value } ?: SQUARE_1_1
+        }
+    }
+}
+
+/**
  * Represents a text-to-image generation request.
  *
  * @property prompt The user prompt describing the desired image.

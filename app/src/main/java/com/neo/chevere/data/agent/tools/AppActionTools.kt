@@ -156,7 +156,7 @@ class ListAppsTool @Inject constructor(
 ) : BaseAppActionTool(actionExecutor) {
     override val name: String = "list_apps"
     override val description: String = "Lists all installed applications on the device."
-    override val inputSchema: String = ""
+    override val inputSchema: String = "{}"
 
     override suspend fun execute(args: Map<String, String>): ToolResult {
         return handleActionResult(actionExecutor.execute(ListAppsRequest))

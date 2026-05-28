@@ -5,15 +5,24 @@ This file guides Claude Code when working in this repository. Keep it aligned wi
 ## Common Commands
 
 - Build project: `./gradlew assembleDebug`
+- Build, install, and launch project: `./gradlew installDebug && adb shell am start -n dev.neo.chevereai/com.neo.chevere.MainActivity`
 - Run all tests: `./gradlew test`
 - Run Android instrumented tests: `./gradlew connectedAndroidTest`
 - Run lint: `./gradlew lint`
 - Clean project: `./gradlew clean`
+- Install already built debug APK via ADB: `adb install -r app/build/outputs/apk/debug/app-debug.apk`
 
 Windows PowerShell build command:
 
 ```powershell
+# Build only
 $env:GRADLE_USER_HOME='C:\Users\nehem\.gradle'; .\gradlew.bat assembleDebug --no-daemon
+
+# Build, install, and launch on connected device/emulator
+$env:GRADLE_USER_HOME='C:\Users\nehem\.gradle'; .\gradlew.bat installDebug --no-daemon; adb shell am start -n dev.neo.chevereai/com.neo.chevere.MainActivity
+
+# Install already built APK and launch
+adb install -r app/build/outputs/apk/debug/app-debug.apk; adb shell am start -n dev.neo.chevereai/com.neo.chevere.MainActivity
 ```
 
 ## Architecture Summary
@@ -91,4 +100,5 @@ Chevere AI is an Android app using Clean Architecture, MVI, Room, Hilt, LiteRT-L
 - Add or update KDoc when changing public models or new implementation classes.
 - Use `InstallStatus`, sealed states, and enums instead of raw state strings.
 - If `InstalledModelEntity` changes, increment Room database version and provide migration handling.
+- After building the project, try to deploy, install, and launch the application on a connected device/emulator using `adb install` or the Gradle `installDebug` task followed by launching via ADB to verify success.
 - Do not add AI attribution or `Co-Authored-By` lines to commits.

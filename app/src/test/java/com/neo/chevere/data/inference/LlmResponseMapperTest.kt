@@ -59,4 +59,26 @@ class LlmResponseMapperTest {
         // Verify it extracts the text
         assert(result.contains("Found an image"))
     }
+
+    @Test
+    fun extractTextFromContent_withObfuscatedContentHavingStringField() {
+        class ObfuscatedClass(val someStringField: String) {
+            override fun toString(): String = "ObfuscatedClass(text=$someStringField)"
+        }
+
+        val content = ObfuscatedClass("Hello (World)")
+        val result = mapper.extractTextFromContent(content)
+        assertEquals("Hello (World)", result)
+    }
+
+    @Test
+    fun extractTextFromContent_withNoStringFields_usesToString() {
+        class ObfuscatedClassNoString(val someIntField: Int) {
+            override fun toString(): String = "ObfuscatedClassNoString(text=Hello (World))"
+        }
+
+        val content = ObfuscatedClassNoString(42)
+        val result = mapper.extractTextFromContent(content)
+        assertEquals("Hello (World)", result)
+    }
 }

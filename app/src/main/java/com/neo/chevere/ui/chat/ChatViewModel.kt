@@ -24,10 +24,12 @@ import com.neo.chevere.domain.CalendarPermissionException
 import com.neo.chevere.domain.MicPermissionException
 import com.neo.chevere.domain.ExplicitImagePromptDecision
 import com.neo.chevere.domain.ExplicitImagePromptPolicy
+import com.neo.chevere.domain.ImageAspectRatio
 import com.neo.chevere.domain.ImageGenerationRequest
 import com.neo.chevere.domain.ImageGenerationResult
 import com.neo.chevere.domain.InitializationStatus
 import com.neo.chevere.domain.InitializeChatUseCase
+import kotlinx.coroutines.flow.first
 import com.neo.chevere.domain.ModelCapability
 import com.neo.chevere.domain.ModelTaskType
 import com.neo.chevere.domain.LocationPermissionException
@@ -749,10 +751,21 @@ class ChatViewModel @Inject constructor(
         val time = measureTimeMillis {
             result = try {
                 withContext(dispatcherProvider.default) {
+                    val defaultRatioStr = preferenceManager.defaultImageAspectRatioPreference.first()
+                    val defaultRatio = ImageAspectRatio.fromString(defaultRatioStr)
+                    val defaultSteps = preferenceManager.defaultImageStepsPreference.first()
+                    val defaultGuidanceScale = preferenceManager.defaultImageGuidanceScalePreference.first()
+                    val defaultNegativePrompt = preferenceManager.defaultImageNegativePromptPreference.first()
+
                     repository.generateImage(
                         ImageGenerationRequest(
                             prompt = prompt,
-                            conditionImageUri = conditionImageUri
+                            conditionImageUri = conditionImageUri,
+                            width = defaultRatio.pixelWidth,
+                            height = defaultRatio.pixelHeight,
+                            steps = defaultSteps,
+                            guidanceScale = defaultGuidanceScale,
+                            negativePrompt = defaultNegativePrompt.takeIf { it.isNotBlank() }
                         )
                     )
                 }

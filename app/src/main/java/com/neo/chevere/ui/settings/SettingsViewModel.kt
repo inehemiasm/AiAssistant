@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.neo.chevere.core.BaseViewModel
 import com.neo.chevere.data.PreferenceManager
 import com.neo.chevere.ui.designsystem.AtmosphericTheme
+import com.neo.chevere.domain.ImageAspectRatio
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -37,6 +38,27 @@ class SettingsViewModel @Inject constructor(
                 setState { copy(isBiometricLockEnabled = enabled) }
             }
         }
+        viewModelScope.launch {
+            preferenceManager.defaultImageAspectRatioPreference.collectLatest { ratioStr ->
+                val ratio = ImageAspectRatio.fromString(ratioStr)
+                setState { copy(defaultImageAspectRatio = ratio) }
+            }
+        }
+        viewModelScope.launch {
+            preferenceManager.defaultImageStepsPreference.collectLatest { steps ->
+                setState { copy(defaultImageSteps = steps) }
+            }
+        }
+        viewModelScope.launch {
+            preferenceManager.defaultImageGuidanceScalePreference.collectLatest { scale ->
+                setState { copy(defaultImageGuidanceScale = scale) }
+            }
+        }
+        viewModelScope.launch {
+            preferenceManager.defaultImageNegativePromptPreference.collectLatest { prompt ->
+                setState { copy(defaultImageNegativePrompt = prompt) }
+            }
+        }
     }
 
     override suspend fun handleIntent(intent: SettingsIntent) {
@@ -55,6 +77,22 @@ class SettingsViewModel @Inject constructor(
 
             is SettingsIntent.UpdateBiometricLock -> {
                 preferenceManager.updateBiometricLock(intent.enabled)
+            }
+
+            is SettingsIntent.UpdateDefaultImageAspectRatio -> {
+                preferenceManager.updateDefaultImageAspectRatio(intent.ratio.name)
+            }
+
+            is SettingsIntent.UpdateDefaultImageSteps -> {
+                preferenceManager.updateDefaultImageSteps(intent.steps)
+            }
+
+            is SettingsIntent.UpdateDefaultImageGuidanceScale -> {
+                preferenceManager.updateDefaultImageGuidanceScale(intent.scale)
+            }
+
+            is SettingsIntent.UpdateDefaultImageNegativePrompt -> {
+                preferenceManager.updateDefaultImageNegativePrompt(intent.prompt)
             }
         }
     }

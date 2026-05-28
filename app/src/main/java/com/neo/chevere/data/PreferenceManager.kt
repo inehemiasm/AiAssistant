@@ -6,6 +6,8 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.core.floatPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.neo.chevere.domain.WeatherUnitSystem
@@ -121,6 +123,70 @@ class PreferenceManager @Inject constructor(@ApplicationContext context: Context
             preferences[BIOMETRIC_LOCK_KEY] ?: false
         }
 
+    /**
+     * A [Flow] that emits the user's preferred default image aspect ratio.
+     * Defaults to "SQUARE_1_1" if no preference is set.
+     */
+    val defaultImageAspectRatioPreference: Flow<String> = dataStore.data
+        .catch { exception ->
+            if (exception is IOException) {
+                emit(emptyPreferences())
+            } else {
+                throw exception
+            }
+        }
+        .map { preferences ->
+            preferences[DEFAULT_IMAGE_ASPECT_RATIO_KEY] ?: "SQUARE_1_1"
+        }
+
+    /**
+     * A [Flow] that emits the user's preferred default image generation steps.
+     * Defaults to 20.
+     */
+    val defaultImageStepsPreference: Flow<Int> = dataStore.data
+        .catch { exception ->
+            if (exception is IOException) {
+                emit(emptyPreferences())
+            } else {
+                throw exception
+            }
+        }
+        .map { preferences ->
+            preferences[DEFAULT_IMAGE_STEPS_KEY] ?: 20
+        }
+
+    /**
+     * A [Flow] that emits the user's preferred default image generation guidance scale.
+     * Defaults to 7.5f.
+     */
+    val defaultImageGuidanceScalePreference: Flow<Float> = dataStore.data
+        .catch { exception ->
+            if (exception is IOException) {
+                emit(emptyPreferences())
+            } else {
+                throw exception
+            }
+        }
+        .map { preferences ->
+            preferences[DEFAULT_IMAGE_GUIDANCE_SCALE_KEY] ?: 7.5f
+        }
+
+    /**
+     * A [Flow] that emits the user's preferred default image negative prompt.
+     * Defaults to empty string.
+     */
+    val defaultImageNegativePromptPreference: Flow<String> = dataStore.data
+        .catch { exception ->
+            if (exception is IOException) {
+                emit(emptyPreferences())
+            } else {
+                throw exception
+            }
+        }
+        .map { preferences ->
+            preferences[DEFAULT_IMAGE_NEGATIVE_PROMPT_KEY] ?: ""
+        }
+
     private fun getDefaultWeatherUnitSystem(): WeatherUnitSystem {
         val country = java.util.Locale.getDefault().country.uppercase()
         // US, Myanmar (MM), Liberia (LR) use Imperial system
@@ -180,11 +246,51 @@ class PreferenceManager @Inject constructor(@ApplicationContext context: Context
         }
     }
 
+    /**
+     * Updates the user's preferred default image aspect ratio.
+     */
+    suspend fun updateDefaultImageAspectRatio(ratio: String) {
+        dataStore.edit { preferences ->
+            preferences[DEFAULT_IMAGE_ASPECT_RATIO_KEY] = ratio
+        }
+    }
+
+    /**
+     * Updates the user's preferred default image generation steps.
+     */
+    suspend fun updateDefaultImageSteps(steps: Int) {
+        dataStore.edit { preferences ->
+            preferences[DEFAULT_IMAGE_STEPS_KEY] = steps
+        }
+    }
+
+    /**
+     * Updates the user's preferred default image generation guidance scale.
+     */
+    suspend fun updateDefaultImageGuidanceScale(scale: Float) {
+        dataStore.edit { preferences ->
+            preferences[DEFAULT_IMAGE_GUIDANCE_SCALE_KEY] = scale
+        }
+    }
+
+    /**
+     * Updates the user's preferred default image negative prompt.
+     */
+    suspend fun updateDefaultImageNegativePrompt(prompt: String) {
+        dataStore.edit { preferences ->
+            preferences[DEFAULT_IMAGE_NEGATIVE_PROMPT_KEY] = prompt
+        }
+    }
+
     companion object {
         private val THEME_KEY = booleanPreferencesKey("theme_preference")
         private val SELECTED_MODEL_KEY = stringPreferencesKey("selected_model")
         private val WEATHER_UNIT_KEY = stringPreferencesKey("weather_unit_system")
         private val ATMOSPHERIC_THEME_KEY = stringPreferencesKey("atmospheric_theme_preference")
         private val BIOMETRIC_LOCK_KEY = booleanPreferencesKey("biometric_lock_enabled")
+        private val DEFAULT_IMAGE_ASPECT_RATIO_KEY = stringPreferencesKey("default_image_aspect_ratio")
+        private val DEFAULT_IMAGE_STEPS_KEY = intPreferencesKey("default_image_steps")
+        private val DEFAULT_IMAGE_GUIDANCE_SCALE_KEY = floatPreferencesKey("default_image_guidance_scale")
+        private val DEFAULT_IMAGE_NEGATIVE_PROMPT_KEY = stringPreferencesKey("default_image_negative_prompt")
     }
 }

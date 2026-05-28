@@ -6,9 +6,12 @@ import com.neo.chevere.core.Constants
 import com.neo.chevere.data.agent.AgentTool
 import com.neo.chevere.data.agent.ToolResult
 import com.neo.chevere.data.inference.ImageGenerationManager
+import com.neo.chevere.data.PreferenceManager
 import com.neo.chevere.domain.ExplicitImagePromptPolicy
+import com.neo.chevere.domain.ImageAspectRatio
 import com.neo.chevere.domain.ImageGenerationRequest
 import com.neo.chevere.domain.ImageGenerationResult
+import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -19,7 +22,8 @@ const val IMAGE_GENERATION_RESULT_PREFIX = Constants.Agent.IMAGE_GENERATION_RESU
  */
 @Singleton
 class ImageGenerationTool @Inject constructor(
-    private val imageGenerationManager: ImageGenerationManager
+    private val imageGenerationManager: ImageGenerationManager,
+    private val preferenceManager: PreferenceManager
 ) : AgentTool {
     private val explicitImagePromptPolicy = ExplicitImagePromptPolicy()
 
@@ -43,13 +47,19 @@ class ImageGenerationTool @Inject constructor(
             return ToolResult.Error("No compatible image generation model is installed. Download an ONNX Diffusion model from the Marketplace first.")
         }
 
+        val defaultRatioStr = preferenceManager.defaultImageAspectRatioPreference.first()
+        val defaultRatio = ImageAspectRatio.fromString(defaultRatioStr)
+        val defaultSteps = preferenceManager.defaultImageStepsPreference.first()
+        val defaultGuidanceScale = preferenceManager.defaultImageGuidanceScalePreference.first()
+        val defaultNegativePrompt = preferenceManager.defaultImageNegativePromptPreference.first()
+
         val request = ImageGenerationRequest(
             prompt = prompt,
-            negativePrompt = args["negativePrompt"]?.trim()?.takeIf { it.isNotBlank() },
-            width = args["width"]?.toIntOrNull() ?: 512,
-            height = args["height"]?.toIntOrNull() ?: 512,
-            steps = args["steps"]?.toIntOrNull() ?: 20,
-            guidanceScale = args["guidanceScale"]?.toFloatOrNull() ?: 7.5f,
+            negativePrompt = args["negativePrompt"]?.trim()?.takeIf { it.isNotBlank() } ?: defaultNegativePrompt.takeIf { it.isNotBlank() },
+            width = args["width"]?.toIntOrNull() ?: defaultRatio.pixelWidth,
+            height = args["height"]?.toIntOrNull() ?: defaultRatio.pixelHeight,
+            steps = args["steps"]?.toIntOrNull() ?: defaultSteps,
+            guidanceScale = args["guidanceScale"]?.toFloatOrNull() ?: defaultGuidanceScale,
             seed = args["seed"]?.toLongOrNull(),
             conditionImageUri = args["conditionImageUri"]?.let(Uri::parse)
         )

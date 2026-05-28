@@ -30,7 +30,7 @@ class WeatherTool @Inject constructor(
 ) : AgentTool {
     override val name: String = "get_weather"
     override val description: String =
-        "Fetches the current weather and forecast. Can fetch for a specified city name, or for the user's current location if no location is specified or if 'current' is passed."
+        "Fetches the current outdoor weather and forecast. Can fetch for a specified city name, or for the user's current location. CRITICAL: Do NOT call this tool for indoor temperature, room temperature, or device ambient conditions; use 'read_sensors' instead."
     override val inputSchema: String =
         "location: [Optional] The name of the city or place to get weather for (e.g. 'Paris'). If the user is asking about the weather at their current location, or does not specify a location, omit this parameter or pass 'current'."
 
@@ -96,14 +96,14 @@ class WeatherTool @Inject constructor(
             val current = weatherResponse.current_weather
             val result = buildString {
                 append("Current weather in $cityName:\n")
-                append("- Temperature: ${formatDouble(current.temperature)} ${units.temperatureLabel}\n")
+                append("- Temperature: ${formatWeatherValue(current.temperature, units.temperatureLabel)}\n")
                 append("- Condition: ${getWeatherCondition(current.weathercode)}\n")
-                append("- Wind Speed: ${formatDouble(current.windspeed)} ${units.windSpeedLabel}\n")
+                append("- Wind Speed: ${formatWeatherValue(current.windspeed, units.windSpeedLabel)}\n")
 
                 weatherResponse.daily?.let { daily ->
                     append("\nForecast for today:\n")
-                    append("- High: ${formatDouble(daily.temperature_2m_max.firstOrNull())} ${units.temperatureLabel}\n")
-                    append("- Low: ${formatDouble(daily.temperature_2m_min.firstOrNull())} ${units.temperatureLabel}\n")
+                    append("- High: ${formatWeatherValue(daily.temperature_2m_max.firstOrNull(), units.temperatureLabel)}\n")
+                    append("- Low: ${formatWeatherValue(daily.temperature_2m_min.firstOrNull(), units.temperatureLabel)}\n")
                 }
             }
 
@@ -114,9 +114,18 @@ class WeatherTool @Inject constructor(
         }
     }
 
-    private fun formatDouble(value: Double?): String {
+    private fun formatWeatherValue(value: Double?, unitLabel: String): String {
         if (value == null) return "N/A"
-        return Math.round(value).toString()
+        val rounded = Math.round(value).toInt()
+        val words = NumberUtils.toWords(rounded)
+        val expandedUnit = when (unitLabel) {
+            "F" -> "degrees Fahrenheit"
+            "C" -> "degrees Celsius"
+            "mph" -> "miles per hour"
+            "km/h" -> "kilometers per hour"
+            else -> unitLabel
+        }
+        return "$words $expandedUnit"
     }
 
     private fun isCurrentLocationRequest(location: String): Boolean {

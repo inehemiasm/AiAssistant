@@ -68,6 +68,19 @@ fun main() {
     }
 
     @Test
+    fun parse_acceptsAlternativeToolCallPrefix() {
+        val call = parser.parse("""[TOOL: read_sensors]""")
+        assertEquals("read_sensors", call?.toolName)
+        assertEquals(0, call?.arguments?.size)
+    }
+
+    @Test
+    fun stripToolCall_worksWithAlternativePrefix() {
+        val output = parser.stripToolCall("""Thought first. [TOOL: read_sensors] trailing""")
+        assertEquals("Thought first.  trailing", output)
+    }
+
+    @Test
     fun parse_returnsNullWhenNoToolCallExists() {
         assertNull(parser.parse("hello world"))
     }

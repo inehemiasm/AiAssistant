@@ -163,11 +163,16 @@ class SensorsTool @Inject constructor(
 
         val report = buildString {
             appendLine("Device Sensor Report:")
-            appendLine("- Ambient Room Temperature: ${ambientTemp?.let { formatTemperature(it) } ?: "No hardware sensor"}")
+            val ambientReport = if (ambientTemp != null) {
+                formatTemperature(ambientTemp)
+            } else {
+                "Not available (this device has no room temperature sensor)"
+            }
+            appendLine("- Ambient Room Temperature: $ambientReport")
             appendLine("- Ambient Light: ${lightValue?.let { "${formatFloat(it)} lux" } ?: "Not available or timeout"}")
-            appendLine("- Atmospheric Pressure: ${pressureValue?.let { "${formatFloat(it)} hPa" } ?: "Not available or timeout"}")
+            appendLine("- Atmospheric Pressure: ${pressureValue?.let { "${formatFloat(it)} hectopascals" } ?: "Not available or timeout"}")
             appendLine("- Battery Status: $batteryInfo")
-            appendLine("- Device Internal Temperature: $batteryTemp")
+            appendLine("- Battery Heat Level (Internal Device Temperature only): $batteryTemp")
             appendLine("- CPU Thermals: $thermalStatus")
             appendLine("- Ambient Sound Level: $soundResult")
             appendLine("- Gyroscope (Rotation): $gyroReport")
@@ -246,19 +251,20 @@ class SensorsTool @Inject constructor(
      * We offset by +90 to produce a rough dB SPL approximation suitable for qualitative guidance.
      */
     private fun formatSoundLevel(amplitude: Int): String {
-        if (amplitude <= 0) return "Inaudible / Silence"
+        if (amplitude <= 0) return "Inaudible or Silence"
         val dbFs  = 20.0 * log10(amplitude / 32767.0)   // negative; 0 = full scale
         val dbSpl = (dbFs + 90.0).coerceIn(0.0, 120.0)  // rough SPL offset
         val label = when {
-            dbSpl < 30  -> "Very quiet (near silence)"
-            dbSpl < 45  -> "Quiet (library-level)"
-            dbSpl < 60  -> "Moderate noise (normal conversation)"
-            dbSpl < 75  -> "Loud (busy office / traffic)"
-            dbSpl < 90  -> "Very loud (heavy machinery / concert)"
-            else        -> "Extremely loud (potential hearing risk)"
+            dbSpl < 30  -> "Very quiet, near silence"
+            dbSpl < 45  -> "Quiet, library level"
+            dbSpl < 60  -> "Moderate noise, normal conversation"
+            dbSpl < 75  -> "Loud, busy office or traffic"
+            dbSpl < 90  -> "Very loud, heavy machinery or concert"
+            else        -> "Extremely loud, potential hearing risk"
         }
         val rounded = dbSpl.toInt()
-        return "~$rounded dB SPL — $label"
+        val words = NumberUtils.toWords(rounded)
+        return "around $words decibels SPL — $label"
     }
 
     private suspend fun querySensorValue(sensorType: Int): Float? = withTimeoutOrNull(500L) {
@@ -312,12 +318,12 @@ class SensorsTool @Inject constructor(
         val z = values[2]
         val magnitude = sqrt((x * x + y * y + z * z).toDouble()).toFloat()
         val label = when {
-            magnitude < 0.05f -> "Still (resting)"
-            magnitude < 0.3f  -> "Stable (slight tilt/rotation)"
-            magnitude < 1.5f  -> "Rotating (normal motion)"
-            else              -> "Rapid rotation / Shaking"
+            magnitude < 0.05f -> "Still, resting"
+            magnitude < 0.3f  -> "Stable, slight tilt or rotation"
+            magnitude < 1.5f  -> "Rotating, normal motion"
+            else              -> "Rapid rotation or Shaking"
         }
-        return "X: ${formatDecimal(x)}, Y: ${formatDecimal(y)}, Z: ${formatDecimal(z)} rad/s (magnitude: ${formatDecimal(magnitude)} rad/s) — $label"
+        return "X: ${formatDecimal(x)}, Y: ${formatDecimal(y)}, Z: ${formatDecimal(z)} radians per second, with a magnitude of ${formatDecimal(magnitude)} radians per second — $label"
     }
 
     private fun formatAccelerometer(values: FloatArray?): String {
@@ -329,11 +335,11 @@ class SensorsTool @Inject constructor(
         val deviation = abs(magnitude - 9.80665f)
         val label = when {
             deviation < 0.2f -> "Stationary"
-            deviation < 1.5f -> "Held in hand / gentle motion"
-            deviation < 5.0f -> "Walking / active movement"
-            else             -> "Shaking / running / high acceleration"
+            deviation < 1.5f -> "Held in hand or gentle motion"
+            deviation < 5.0f -> "Walking or active movement"
+            else             -> "Shaking or running or high acceleration"
         }
-        return "X: ${formatDecimal(x)}, Y: ${formatDecimal(y)}, Z: ${formatDecimal(z)} m/s² (magnitude: ${formatDecimal(magnitude)} m/s²) — $label"
+        return "X: ${formatDecimal(x)}, Y: ${formatDecimal(y)}, Z: ${formatDecimal(z)} meters per second squared, with a magnitude of ${formatDecimal(magnitude)} meters per second squared — $label"
     }
 
     private fun formatCompass(accel: FloatArray?, mag: FloatArray?): String {
@@ -353,7 +359,9 @@ class SensorsTool @Inject constructor(
             }
             val direction = getCardinalDirection(azimuthDeg)
             val magStrength = sqrt((mag[0] * mag[0] + mag[1] * mag[1] + mag[2] * mag[2]).toDouble()).toFloat()
-            "${Math.round(azimuthDeg)}° ($direction) [Magnetic strength: ${formatDecimal(magStrength)} uT]"
+            val azimuthInt = Math.round(azimuthDeg)
+            val azimuthWords = NumberUtils.toWords(azimuthInt)
+            "$azimuthWords degrees, facing $direction, with a magnetic strength of ${formatDecimal(magStrength)} microtesla"
         } else {
             "Unable to compute orientation"
         }
@@ -361,23 +369,23 @@ class SensorsTool @Inject constructor(
 
     private fun formatProximity(value: Float?): String {
         if (value == null) return "Not available or timeout"
-        val label = if (value < 1.0f) "Near (object close to screen)" else "Far"
-        return "${formatDecimal(value)} cm — $label"
+        val label = if (value < 1.0f) "Near, object is close to the screen" else "Far"
+        return "${formatDecimal(value)} centimeters — $label"
     }
 
     private fun formatPosture(values: FloatArray?): String {
-        if (values == null || values.size < 3) return "Unknown (no accelerometer data)"
+        if (values == null || values.size < 3) return "Unknown, no accelerometer data"
         val x = values[0]
         val y = values[1]
         val z = values[2]
         return when {
-            z > 8.5f  -> "Face Up (Lying flat on its back)"
-            z < -8.5f -> "Face Down (Lying flat on its screen)"
-            y > 8.5f  -> "Portrait Upright (Normal portrait)"
+            z > 8.5f  -> "Face Up, lying flat on its back"
+            z < -8.5f -> "Face Down, lying flat on its screen"
+            y > 8.5f  -> "Portrait Upright"
             y < -8.5f -> "Portrait Upside Down"
-            x > 8.5f  -> "Landscape Left (Tilted left)"
-            x < -8.5f -> "Landscape Right (Tilted right)"
-            else      -> "Tilted / Diagonal Orientation"
+            x > 8.5f  -> "Landscape Left"
+            x < -8.5f -> "Landscape Right"
+            else      -> "Tilted or Diagonal Orientation"
         }
     }
 
@@ -389,8 +397,8 @@ class SensorsTool @Inject constructor(
         val pitch = Math.toDegrees(atan2(-x.toDouble(), sqrt((y * y + z * z).toDouble()))).toFloat()
         val roll = Math.toDegrees(atan2(y.toDouble(), z.toDouble())).toFloat()
         val isFlat = abs(pitch) < 2.0f && abs(roll) < 2.0f
-        val flatnessLabel = if (isFlat) "Level (Flat surface detected)" else "Tilted / Not flat"
-        return "$flatnessLabel — Pitch (forward/back tilt): ${formatDecimal(pitch)}°, Roll (left/right tilt): ${formatDecimal(roll)}°"
+        val flatnessLabel = if (isFlat) "Level, flat surface detected" else "Tilted or Not flat"
+        return "$flatnessLabel — Pitch forward or back tilt: ${formatDecimal(pitch)} degrees, Roll left or right tilt: ${formatDecimal(roll)} degrees"
     }
 
     private fun formatMetalDetector(values: FloatArray?): String {
@@ -400,12 +408,12 @@ class SensorsTool @Inject constructor(
         val z = values[2]
         val magStrength = sqrt((x * x + y * y + z * z).toDouble()).toFloat()
         val magnetStatus = when {
-            magStrength > 300f -> "Critical magnetic interference (Strong magnetic source / magnet / metal extremely close)"
-            magStrength > 150f -> "High magnetic interference (Possible metal object or magnetic field nearby)"
-            magStrength < 15f  -> "Low magnetic field (Shielded or sensor anomaly)"
-            else               -> "Normal magnetic field (No major metal or magnet nearby)"
+            magStrength > 300f -> "Critical magnetic interference, strong magnetic source or magnet or metal extremely close"
+            magStrength > 150f -> "High magnetic interference, possible metal object or magnetic field nearby"
+            magStrength < 15f  -> "Low magnetic field, shielded or sensor anomaly"
+            else               -> "Normal magnetic field, no major metal or magnet nearby"
         }
-        return "Strength: ${formatDecimal(magStrength)} uT — $magnetStatus"
+        return "Strength is ${formatDecimal(magStrength)} microtesla — $magnetStatus"
     }
 
     private fun getCardinalDirection(degrees: Float): String {
@@ -429,7 +437,11 @@ class SensorsTool @Inject constructor(
         val status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
         val chargePct = if (level >= 0 && scale > 0) (level * 100f / scale).toInt() else -1
         val isCharging = status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL
-        return "Level: ${if (chargePct >= 0) "$chargePct%" else "Unknown"}, Charging: $isCharging"
+        val levelStr = if (chargePct >= 0) {
+            val words = NumberUtils.toWords(chargePct)
+            "$words percent"
+        } else "Unknown"
+        return "Level: $levelStr, Charging: $isCharging"
     }
 
     private fun getBatteryTemperature(): String {
@@ -438,21 +450,55 @@ class SensorsTool @Inject constructor(
         if (tempTenths == -1) return "Unknown"
         val tempC = Math.round(tempTenths / 10f)
         val tempF = Math.round(tempC * 9f / 5f + 32f)
-        return "$tempC°C ($tempF°F)"
+        val cWords = NumberUtils.toWords(tempC)
+        val fWords = NumberUtils.toWords(tempF)
+        return "$cWords degrees Celsius, which is $fWords degrees Fahrenheit"
     }
 
     private fun formatTemperature(celsius: Float): String {
         val c = Math.round(celsius)
         val f = Math.round(celsius * 9f / 5f + 32f)
-        return "$c°C ($f°F)"
+        val cWords = NumberUtils.toWords(c)
+        val fWords = NumberUtils.toWords(f)
+        return "$cWords degrees Celsius, which is $fWords degrees Fahrenheit"
     }
 
     private fun formatFloat(value: Float): String {
-        return Math.round(value).toString()
+        val rounded = Math.round(value)
+        return NumberUtils.toWords(rounded)
+    }
+
+    private fun floatToWords(value: Float): String {
+        if (value.isNaN() || value.isInfinite()) return "unknown"
+        val absoluteValue = abs(value)
+        val rounded = String.format(java.util.Locale.US, "%.2f", absoluteValue)
+        val parts = rounded.split(".")
+        val integerPart = parts[0].toIntOrNull() ?: 0
+        val fractionPart = parts.getOrNull(1) ?: "00"
+
+        val integerWords = NumberUtils.toWords(integerPart)
+        val fractionWords = fractionPart.map { digit ->
+            when (digit) {
+                '0' -> "zero"
+                '1' -> "one"
+                '2' -> "two"
+                '3' -> "three"
+                '4' -> "four"
+                '5' -> "five"
+                '6' -> "six"
+                '7' -> "seven"
+                '8' -> "eight"
+                '9' -> "nine"
+                else -> ""
+            }
+        }.joinToString(" ")
+
+        val sign = if (value < 0) "minus " else ""
+        return "$sign$integerWords point $fractionWords"
     }
 
     private fun formatDecimal(value: Float): String {
-        return String.format(java.util.Locale.US, "%.2f", value)
+        return floatToWords(value)
     }
 
     private fun getThermalStatus(): String {
@@ -468,7 +514,7 @@ class SensorsTool @Inject constructor(
         fun getThermalStatus(context: Context): String {
             val powerManager = context.getSystemService(Context.POWER_SERVICE) as? PowerManager ?: return "Unknown"
             return when (powerManager.currentThermalStatus) {
-                PowerManager.THERMAL_STATUS_NONE      -> "Normal (None)"
+                PowerManager.THERMAL_STATUS_NONE      -> "Normal"
                 PowerManager.THERMAL_STATUS_LIGHT     -> "Light Throttling"
                 PowerManager.THERMAL_STATUS_MODERATE  -> "Moderate Throttling"
                 PowerManager.THERMAL_STATUS_SEVERE    -> "Severe Throttling"

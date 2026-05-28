@@ -5,15 +5,24 @@ This file guides Codex and other coding agents working in this repository.
 ## Common Commands
 
 - Build project: `./gradlew assembleDebug`
+- Build, install, and launch project: `./gradlew installDebug && adb shell am start -n dev.neo.chevereai/com.neo.chevere.MainActivity`
 - Run all tests: `./gradlew test`
 - Run Android instrumented tests: `./gradlew connectedAndroidTest`
 - Run lint: `./gradlew lint`
 - Clean project: `./gradlew clean`
+- Install already built debug APK via ADB: `adb install -r app/build/outputs/apk/debug/app-debug.apk`
 
 On Windows PowerShell, prefer:
 
 ```powershell
+# Build only
 $env:GRADLE_USER_HOME='C:\Users\nehem\.gradle'; .\gradlew.bat assembleDebug --no-daemon
+
+# Build, install, and launch on connected device/emulator
+$env:GRADLE_USER_HOME='C:\Users\nehem\.gradle'; .\gradlew.bat installDebug --no-daemon; adb shell am start -n dev.neo.chevereai/com.neo.chevere.MainActivity
+
+# Install already built APK and launch
+adb install -r app/build/outputs/apk/debug/app-debug.apk; adb shell am start -n dev.neo.chevereai/com.neo.chevere.MainActivity
 ```
 
 ## High-Level Architecture
@@ -160,4 +169,5 @@ Path: `app/src/main/java/com/neo/chevere/ui/`
 - Prefer sealed classes or sealed interfaces over raw booleans, strings, or ad-hoc UI logical evaluations (e.g. evaluating multiple conditions inside Compose layout blocks) to represent component states. Keep state calculations centralized in the MVI state or ViewModel layer so that UI components remain purely declarative.
 - Keep model catalog filtering conservative and runtime-aware.
 - Surface actionable errors with `InstallStatus` and `DownloadProgress.Error`.
+- After building the project, try to deploy, install, and launch the application on a connected device/emulator using `adb install` or the Gradle `installDebug` task followed by launching via ADB to verify success.
 - Do not add `Co-Authored-By` or other AI/agent attribution to commits.

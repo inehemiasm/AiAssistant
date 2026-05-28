@@ -59,7 +59,12 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.neo.chevere.R
 import com.neo.chevere.domain.WeatherUnitSystem
+import com.neo.chevere.domain.ImageAspectRatio
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import com.neo.chevere.ui.common.ChevereHaptic
 import com.neo.chevere.ui.common.performChevereHaptic
 import com.neo.chevere.ui.designsystem.AtmosphericTheme
@@ -196,6 +201,27 @@ fun SettingsScreen(
                     onUnitSelected = {
                         hapticView.performChevereHaptic(ChevereHaptic.Selection)
                         viewModel.onIntent(SettingsIntent.UpdateWeatherUnitSystem(it))
+                    }
+                )
+
+                Spacer(Modifier.height(12.dp))
+
+                ImageGenerationDefaultsCard(
+                    selectedRatio = state.defaultImageAspectRatio,
+                    steps = state.defaultImageSteps,
+                    guidanceScale = state.defaultImageGuidanceScale,
+                    negativePrompt = state.defaultImageNegativePrompt,
+                    onRatioSelected = { ratio ->
+                        viewModel.onIntent(SettingsIntent.UpdateDefaultImageAspectRatio(ratio))
+                    },
+                    onStepsChanged = { steps ->
+                        viewModel.onIntent(SettingsIntent.UpdateDefaultImageSteps(steps))
+                    },
+                    onGuidanceScaleChanged = { scale ->
+                        viewModel.onIntent(SettingsIntent.UpdateDefaultImageGuidanceScale(scale))
+                    },
+                    onNegativePromptChanged = { prompt ->
+                        viewModel.onIntent(SettingsIntent.UpdateDefaultImageNegativePrompt(prompt))
                     }
                 )
 
@@ -433,6 +459,9 @@ private fun WeatherUnitsCard(
     selectedUnitSystem: WeatherUnitSystem,
     onUnitSelected: (WeatherUnitSystem) -> Unit
 ) {
+    var expanded by remember { mutableStateOf(false) }
+    val hapticView = LocalView.current
+
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.5f),
         shape = RoundedCornerShape(16.dp),
@@ -441,37 +470,58 @@ private fun WeatherUnitsCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .clickable {
+                    hapticView.performChevereHaptic(ChevereHaptic.Selection)
+                    expanded = !expanded
+                }
                 .padding(16.dp)
         ) {
-            Text(
-                stringResource(R.string.weather_units),
-                style = Typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                stringResource(R.string.weather_units_desc),
-                style = Typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 4.dp, bottom = 14.dp)
-            )
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
             ) {
-                WeatherUnitSegment(
-                    label = stringResource(R.string.weather_units_metric),
-                    detail = stringResource(R.string.weather_units_metric_desc),
-                    selected = selectedUnitSystem == WeatherUnitSystem.METRIC,
-                    modifier = Modifier.weight(1f),
-                    onClick = { onUnitSelected(WeatherUnitSystem.METRIC) }
+                Text(
+                    stringResource(R.string.weather_units),
+                    style = Typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(1f)
                 )
-                WeatherUnitSegment(
-                    label = stringResource(R.string.weather_units_imperial),
-                    detail = stringResource(R.string.weather_units_imperial_desc),
-                    selected = selectedUnitSystem == WeatherUnitSystem.IMPERIAL,
-                    modifier = Modifier.weight(1f),
-                    onClick = { onUnitSelected(WeatherUnitSystem.IMPERIAL) }
+                Icon(
+                    imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    contentDescription = if (expanded) "Collapse" else "Expand",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(22.dp)
                 )
+            }
+            AnimatedVisibility(visible = expanded) {
+                Column(modifier = Modifier.padding(top = 8.dp)) {
+                    Text(
+                        stringResource(R.string.weather_units_desc),
+                        style = Typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(bottom = 14.dp)
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        WeatherUnitSegment(
+                            label = stringResource(R.string.weather_units_metric),
+                            detail = stringResource(R.string.weather_units_metric_desc),
+                            selected = selectedUnitSystem == WeatherUnitSystem.METRIC,
+                            modifier = Modifier.weight(1f),
+                            onClick = { onUnitSelected(WeatherUnitSystem.METRIC) }
+                        )
+                        WeatherUnitSegment(
+                            label = stringResource(R.string.weather_units_imperial),
+                            detail = stringResource(R.string.weather_units_imperial_desc),
+                            selected = selectedUnitSystem == WeatherUnitSystem.IMPERIAL,
+                            modifier = Modifier.weight(1f),
+                            onClick = { onUnitSelected(WeatherUnitSystem.IMPERIAL) }
+                        )
+                    }
+                }
             }
         }
     }
@@ -608,6 +658,9 @@ private fun AtmosphericThemesCard(
     selectedTheme: AtmosphericTheme,
     onThemeSelected: (AtmosphericTheme) -> Unit
 ) {
+    var expanded by remember { mutableStateOf(false) }
+    val hapticView = LocalView.current
+
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.5f),
         shape = RoundedCornerShape(16.dp),
@@ -616,60 +669,79 @@ private fun AtmosphericThemesCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .clickable {
+                    hapticView.performChevereHaptic(ChevereHaptic.Selection)
+                    expanded = !expanded
+                }
                 .padding(16.dp)
         ) {
-            Text(
-                "ATMOSPHERIC PRESETS",
-                style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(bottom = 14.dp)
-            )
-
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                Text(
+                    "ATMOSPHERIC PRESETS",
+                    style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.weight(1f)
+                )
+                Icon(
+                    imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    contentDescription = if (expanded) "Collapse" else "Expand",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+            AnimatedVisibility(visible = expanded) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 14.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    ThemePresetSegment(
-                        name = "CLASSIC CYAN",
-                        primaryColor = Color(0xFF00BFA5),
-                        backgroundColor = Color(0xFF07111D),
-                        selected = selectedTheme == AtmosphericTheme.CLASSIC_CYAN,
-                        modifier = Modifier.weight(1f),
-                        onClick = { onThemeSelected(AtmosphericTheme.CLASSIC_CYAN) }
-                    )
-                    ThemePresetSegment(
-                        name = "MATRIX GREEN",
-                        primaryColor = Color(0xFF00FF66),
-                        backgroundColor = Color(0xFF020904),
-                        selected = selectedTheme == AtmosphericTheme.MATRIX_GREEN,
-                        modifier = Modifier.weight(1f),
-                        onClick = { onThemeSelected(AtmosphericTheme.MATRIX_GREEN) }
-                    )
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    ThemePresetSegment(
-                        name = "CYBERPUNK GOLD",
-                        primaryColor = Color(0xFFFF9E00),
-                        backgroundColor = Color(0xFF0C0700),
-                        selected = selectedTheme == AtmosphericTheme.CYBERPUNK_GOLD,
-                        modifier = Modifier.weight(1f),
-                        onClick = { onThemeSelected(AtmosphericTheme.CYBERPUNK_GOLD) }
-                    )
-                    ThemePresetSegment(
-                        name = "OBSIDIAN DARK",
-                        primaryColor = Color(0xFFD2BFFF),
-                        backgroundColor = Color(0xFF040306),
-                        selected = selectedTheme == AtmosphericTheme.OBSIDIAN_DARK,
-                        modifier = Modifier.weight(1f),
-                        onClick = { onThemeSelected(AtmosphericTheme.OBSIDIAN_DARK) }
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        ThemePresetSegment(
+                            name = "CLASSIC CYAN",
+                            primaryColor = Color(0xFF00BFA5),
+                            backgroundColor = Color(0xFF07111D),
+                            selected = selectedTheme == AtmosphericTheme.CLASSIC_CYAN,
+                            modifier = Modifier.weight(1f),
+                            onClick = { onThemeSelected(AtmosphericTheme.CLASSIC_CYAN) }
+                        )
+                        ThemePresetSegment(
+                            name = "MATRIX GREEN",
+                            primaryColor = Color(0xFF00FF66),
+                            backgroundColor = Color(0xFF020904),
+                            selected = selectedTheme == AtmosphericTheme.MATRIX_GREEN,
+                            modifier = Modifier.weight(1f),
+                            onClick = { onThemeSelected(AtmosphericTheme.MATRIX_GREEN) }
+                        )
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        ThemePresetSegment(
+                            name = "CYBERPUNK GOLD",
+                            primaryColor = Color(0xFFFF9E00),
+                            backgroundColor = Color(0xFF0C0700),
+                            selected = selectedTheme == AtmosphericTheme.CYBERPUNK_GOLD,
+                            modifier = Modifier.weight(1f),
+                            onClick = { onThemeSelected(AtmosphericTheme.CYBERPUNK_GOLD) }
+                        )
+                        ThemePresetSegment(
+                            name = "OBSIDIAN DARK",
+                            primaryColor = Color(0xFFD2BFFF),
+                            backgroundColor = Color(0xFF040306),
+                            selected = selectedTheme == AtmosphericTheme.OBSIDIAN_DARK,
+                            modifier = Modifier.weight(1f),
+                            onClick = { onThemeSelected(AtmosphericTheme.OBSIDIAN_DARK) }
+                        )
+                    }
                 }
             }
         }
@@ -735,6 +807,251 @@ private fun ThemePresetSegment(
                     border = BorderStroke(0.5.dp, Color.White.copy(alpha = 0.2f))
                 ) {}
             }
+        }
+    }
+}
+
+@Composable
+private fun ImageGenerationDefaultsCard(
+    selectedRatio: ImageAspectRatio,
+    steps: Int,
+    guidanceScale: Float,
+    negativePrompt: String,
+    onRatioSelected: (ImageAspectRatio) -> Unit,
+    onStepsChanged: (Int) -> Unit,
+    onGuidanceScaleChanged: (Float) -> Unit,
+    onNegativePromptChanged: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val hapticView = LocalView.current
+
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.5f),
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.1f))
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable {
+                    hapticView.performChevereHaptic(ChevereHaptic.Selection)
+                    expanded = !expanded
+                }
+                .padding(16.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    "IMAGE GENERATION DEFAULTS",
+                    style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.weight(1f)
+                )
+                Icon(
+                    imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    contentDescription = if (expanded) "Collapse" else "Expand",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+            AnimatedVisibility(visible = expanded) {
+                Column(modifier = Modifier.padding(top = 14.dp)) {
+                    // Aspect Ratio selection
+                    Text(
+                        "ASPECT RATIO",
+                        style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold, fontSize = 10.sp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            ImageAspectRatioSegment(
+                                ratio = ImageAspectRatio.SQUARE_1_1,
+                                selected = selectedRatio == ImageAspectRatio.SQUARE_1_1,
+                                modifier = Modifier.weight(1f),
+                                onClick = { onRatioSelected(ImageAspectRatio.SQUARE_1_1) }
+                            )
+                            ImageAspectRatioSegment(
+                                ratio = ImageAspectRatio.LANDSCAPE_16_9,
+                                selected = selectedRatio == ImageAspectRatio.LANDSCAPE_16_9,
+                                modifier = Modifier.weight(1f),
+                                onClick = { onRatioSelected(ImageAspectRatio.LANDSCAPE_16_9) }
+                            )
+                            ImageAspectRatioSegment(
+                                ratio = ImageAspectRatio.PORTRAIT_9_16,
+                                selected = selectedRatio == ImageAspectRatio.PORTRAIT_9_16,
+                                modifier = Modifier.weight(1f),
+                                onClick = { onRatioSelected(ImageAspectRatio.PORTRAIT_9_16) }
+                            )
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            ImageAspectRatioSegment(
+                                ratio = ImageAspectRatio.LANDSCAPE_4_3,
+                                selected = selectedRatio == ImageAspectRatio.LANDSCAPE_4_3,
+                                modifier = Modifier.weight(1f),
+                                onClick = { onRatioSelected(ImageAspectRatio.LANDSCAPE_4_3) }
+                            )
+                            ImageAspectRatioSegment(
+                                ratio = ImageAspectRatio.PORTRAIT_3_4,
+                                selected = selectedRatio == ImageAspectRatio.PORTRAIT_3_4,
+                                modifier = Modifier.weight(1f),
+                                onClick = { onRatioSelected(ImageAspectRatio.PORTRAIT_3_4) }
+                            )
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
+                    }
+
+                    Spacer(Modifier.height(20.dp))
+
+                    // Steps selection
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "INFERENCE STEPS",
+                            style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold, fontSize = 10.sp),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = steps.toString(),
+                            style = Typography.bodyMedium.copy(fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold),
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    Slider(
+                        value = steps.toFloat(),
+                        onValueChange = { onStepsChanged(it.toInt()) },
+                        valueRange = 5f..50f,
+                        steps = 44, // 50 - 5 = 45 points, steps = 44 cuts it into increments of 1
+                        colors = SliderDefaults.colors(
+                            thumbColor = MaterialTheme.colorScheme.primary,
+                            activeTrackColor = MaterialTheme.colorScheme.primary,
+                            inactiveTrackColor = MaterialTheme.colorScheme.surfaceContainerHighest
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(Modifier.height(12.dp))
+
+                    // Guidance Scale selection
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "GUIDANCE SCALE",
+                            style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold, fontSize = 10.sp),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = String.format(java.util.Locale.US, "%.1f", guidanceScale),
+                            style = Typography.bodyMedium.copy(fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold),
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    Slider(
+                        value = guidanceScale,
+                        onValueChange = onGuidanceScaleChanged,
+                        valueRange = 1.0f..20.0f,
+                        steps = 38, // (20 - 1) * 2 = 38 cuts it into 0.5 increments
+                        colors = SliderDefaults.colors(
+                            thumbColor = MaterialTheme.colorScheme.primary,
+                            activeTrackColor = MaterialTheme.colorScheme.primary,
+                            inactiveTrackColor = MaterialTheme.colorScheme.surfaceContainerHighest
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(Modifier.height(16.dp))
+
+                    // Negative prompt text field
+                    OutlinedTextField(
+                        value = negativePrompt,
+                        onValueChange = onNegativePromptChanged,
+                        label = { Text("DEFAULT NEGATIVE PROMPT", style = Typography.labelSmall.copy(fontSize = 10.sp)) },
+                        placeholder = {
+                            Text(
+                                "e.g. blurry, low quality, distorted",
+                                style = Typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
+                            )
+                        },
+                        textStyle = Typography.bodyMedium,
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f),
+                            focusedLabelColor = MaterialTheme.colorScheme.primary,
+                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ImageAspectRatioSegment(
+    ratio: ImageAspectRatio,
+    selected: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    val hapticView = LocalView.current
+    val background = if (selected) {
+        MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)
+    } else {
+        MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.55f)
+    }
+    val borderColor = if (selected) {
+        MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
+    } else {
+        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.18f)
+    }
+
+    Surface(
+        modifier = modifier.clickable {
+            hapticView.performChevereHaptic(ChevereHaptic.Selection)
+            onClick()
+        },
+        color = background,
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, borderColor)
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = ratio.displayName,
+                style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
+                color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = "${ratio.pixelWidth}x${ratio.pixelHeight}",
+                style = Typography.bodySmall.copy(fontSize = 9.sp, fontFamily = FontFamily.Monospace),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

@@ -21,25 +21,42 @@ class LlmResponseMapper @Inject constructor() {
         val rawText = contents.joinToString("") { content ->
             when (content) {
                 is Content.Text -> content.text
-                else -> {
-                    // Handle cases where the library might use internal subclasses 
-                    // or if future content types are added.
-                    try {
-                        val textField = content.javaClass.getDeclaredField("text")
-                        textField.isAccessible = true
-                        textField.get(content) as? String ?: ""
-                    } catch (e: Exception) {
-                        // Fallback to string parsing as a last resort
-                        val str = content.toString()
-                        if (str.contains("text=")) {
-                            str.substringAfter("text=").substringBeforeLast(")")
-                        } else {
-                            ""
-                        }
-                    }
-                }
+                else -> extractTextFromContent(content)
             }
         }
         return if (trim) rawText.trim() else rawText
+    }
+
+    internal fun extractTextFromContent(content: Any): String {
+        try {
+            val stringField = content.javaClass.declaredFields.find { it.type == String::class.java }
+            return if (stringField != null) {
+                stringField.isAccessible = true
+                stringField.get(content) as? String ?: ""
+            } else {
+                val str = content.toString()
+                val prefix = "text="
+                val startIndex = str.indexOf(prefix)
+                if (startIndex != -1) {
+                    val valStart = startIndex + prefix.length
+                    val valEnd = str.lastIndexOf(')')
+                    if (valEnd > valStart) {
+                        str.substring(valStart, valEnd)
+                    } else {
+                        str.substring(valStart)
+                    }
+                } else {
+                    ""
+                }
+            }
+        } catch (e: Exception) {
+            // Safe fallback
+            val str = content.toString()
+            return if (str.contains("text=")) {
+                str.substringAfter("text=").substringBeforeLast(")")
+            } else {
+                ""
+            }
+        }
     }
 }

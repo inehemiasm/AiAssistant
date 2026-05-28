@@ -103,17 +103,20 @@ class AgentOrchestrator @Inject constructor(
                     if (result is InferenceResult.Success) {
                         val text = result.text
                         val trimmed = text.trimStart()
-                        if (trimmed.contains(Constants.Agent.TOOL_CALL_PREFIX)) {
+                        val toolCallPrefixes = listOf("[TOOL_CALL:", "[TOOL:")
+                        val hasToolCall = toolCallPrefixes.any { trimmed.contains(it) }
+                        if (hasToolCall) {
                             isStreamingEnabled = false
                             _activePartialResponse.value = ""
                         } else if (isStreamingEnabled) {
-                            val prefix = Constants.Agent.TOOL_CALL_PREFIX
-                            val isPrefix = if (trimmed.length < prefix.length) {
-                                prefix.startsWith(trimmed)
-                            } else {
-                                trimmed.startsWith(prefix)
+                            val isPrefixOfAny = toolCallPrefixes.any { prefix ->
+                                if (trimmed.length < prefix.length) {
+                                    prefix.startsWith(trimmed)
+                                } else {
+                                    trimmed.startsWith(prefix)
+                                }
                             }
-                            if (!isPrefix) {
+                            if (!isPrefixOfAny) {
                                 _activePartialResponse.value = text
                             }
                         }

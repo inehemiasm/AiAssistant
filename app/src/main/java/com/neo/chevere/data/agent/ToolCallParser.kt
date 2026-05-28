@@ -139,10 +139,15 @@ class ToolCallParser @Inject constructor() {
     }
 
     private fun findToolCallSpan(text: String): ToolCallSpan? {
-        val start = text.indexOf(Constants.Agent.TOOL_CALL_PREFIX)
+        var start = text.indexOf("[TOOL_CALL:")
+        var prefixLength = "[TOOL_CALL:".length
+        if (start == -1) {
+            start = text.indexOf("[TOOL:")
+            prefixLength = "[TOOL:".length
+        }
         if (start == -1) return null
 
-        val bodyStart = start + Constants.Agent.TOOL_CALL_PREFIX.length
+        val bodyStart = start + prefixLength
         val end = findClosingBracket(text, bodyStart) ?: return null
         return ToolCallSpan(
             start = start,
