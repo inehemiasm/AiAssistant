@@ -32,7 +32,7 @@ object DatabaseModule {
             AppDatabase::class.java,
             "ai_assistant_db"
         )
-            .fallbackToDestructiveMigration()
+            .fallbackToDestructiveMigration(dropAllTables = true)
             .build()
     }
 

@@ -136,7 +136,7 @@ class ModelDownloadWorker @AssistedInject constructor(
             // Call downloadToFile using native overload on interface
             val downloadFlow = remoteModelDataSource.downloadToFile(downloadUrl, tempFile, resumeOffset)
             downloadFlow.collect { status ->
-                coroutineContext.ensureActive()
+                kotlin.coroutines.coroutineContext.ensureActive()
                 emitDownloadProgress(status, modelName)
             }
 
@@ -311,7 +311,7 @@ class ModelDownloadWorker @AssistedInject constructor(
         modelName: String
     ) {
         repositoryFiles.forEachIndexed { index, spec ->
-            coroutineContext.ensureActive()
+            kotlin.coroutines.coroutineContext.ensureActive()
             val repositoryFile = RepositoryFileSpec.parse(spec)
             val destination = File(targetDir, repositoryFile.relativePath).canonicalFile
             val canonicalTarget = targetDir.canonicalFile
@@ -324,7 +324,7 @@ class ModelDownloadWorker @AssistedInject constructor(
             val resumeOffset = if (destination.exists()) destination.length() else 0L
             val downloadFlow = remoteModelDataSource.downloadToFile(url, destination, resumeOffset)
             downloadFlow.collect { status ->
-                coroutineContext.ensureActive()
+                kotlin.coroutines.coroutineContext.ensureActive()
                 if (status is DownloadStatus.Progress) {
                     val aggregateProgress = ((index * 100) + status.percent) / repositoryFiles.size
                     emitDownloadProgress(DownloadStatus.Progress(aggregateProgress.coerceIn(0, 99)), modelName)

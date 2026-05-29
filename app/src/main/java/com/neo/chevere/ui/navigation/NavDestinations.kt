@@ -1,8 +1,8 @@
 package com.neo.chevere.ui.navigation
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
 import androidx.compose.material.icons.filled.ChatBubble
-import androidx.compose.material.icons.filled.FormatListBulleted
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -48,7 +48,7 @@ enum class TopLevelDestination(
     ),
     TASKS(
         Route.Tasks,
-        Icons.Default.FormatListBulleted,
+        Icons.AutoMirrored.Filled.FormatListBulleted,
         R.string.tasks_label,
         TelemetryConstants.Action.BOTTOM_NAV_TASKS
     ),

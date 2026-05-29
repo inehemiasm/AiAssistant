@@ -37,7 +37,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.fragment.app.FragmentActivity
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.neo.chevere.data.PreferenceManager
 import com.neo.chevere.data.telemetry.AppTelemetry
 import com.neo.chevere.ui.LaunchAnimatedApp
