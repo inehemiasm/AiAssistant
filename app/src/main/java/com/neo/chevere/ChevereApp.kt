@@ -4,6 +4,7 @@ import android.app.Application
 import android.util.Log
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.neo.chevere.data.inference.ImageGenerationManager
 import com.neo.chevere.data.inference.InferenceManager
 import dagger.hilt.android.HiltAndroidApp
@@ -92,10 +93,26 @@ class ChevereApp : Application(), Configuration.Provider {
     private class ReleaseTree : Timber.Tree() {
         override fun log(priority: Int, tag: String?, message: String, t: Throwable?) {
             if (priority == Log.ERROR || priority == Log.WARN) {
-                // In release, we could also log to Crashlytics here if needed
-                // For now, we'll just keep it in Logcat as requested
-                Log.println(priority, tag, message)
+                try {
+                    val crashlytics = FirebaseCrashlytics.getInstance()
+                    val priorityStr = when (priority) {
+                        Log.WARN -> "WARN"
+                        Log.ERROR -> "ERROR"
+                        Log.ASSERT -> "ASSERT"
+                        else -> "UNKNOWN"
+                    }
+                    crashlytics.log("$priorityStr/${tag ?: "Timber"}: $message")
+                    if (t != null) {
+                        crashlytics.recordException(t)
+                    } else {
+                        crashlytics.recordException(Exception(message))
+                    }
+                } catch (e: Exception) {
+                    // Fallback to standard Logcat if Firebase/Crashlytics is not initialized or fails
+                    Log.println(priority, tag, message)
+                }
             }
         }
     }
 }
+
