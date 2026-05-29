@@ -129,6 +129,11 @@ class OnnxLocalDiffusionEngine @Inject constructor(
             // that trigger the NhwcConv issues.
             setOptimizationLevel(OrtSession.SessionOptions.OptLevel.EXTENDED_OPT)
 
+            // Limit thread pool to avoid starving the main UI thread during CPU-heavy operations.
+            val cores = Runtime.getRuntime().availableProcessors()
+            val numThreads = (cores / 2).coerceIn(2, 4)
+            setIntraOpNumThreads(numThreads)
+
             // Try to add NNAPI for hardware acceleration
             try {
                 addNnapi()
@@ -199,6 +204,7 @@ class OnnxLocalDiffusionEngine @Inject constructor(
                     seed = seed
                 )
             } catch (throwable: Throwable) {
+                if (throwable is kotlinx.coroutines.CancellationException) throw throwable
                 ImageGenerationResult.Failure(
                     "ONNX diffusion generation failed: ${throwable.message}",
                     throwable

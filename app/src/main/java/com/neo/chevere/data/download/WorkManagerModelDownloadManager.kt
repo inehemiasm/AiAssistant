@@ -18,12 +18,17 @@ import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 
+import com.neo.chevere.data.PreferenceManager
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
+
 /**
  * Manages the background downloading of AI models using Android's WorkManager.
  */
 @Singleton
 class WorkManagerModelDownloadManager @Inject constructor(
-    private val workManager: WorkManager
+    private val workManager: WorkManager,
+    private val preferenceManager: PreferenceManager
 ) {
     companion object {
         const val TAG_MODEL_DOWNLOAD = Constants.Download.TAG_MODEL_DOWNLOAD
@@ -56,6 +61,20 @@ class WorkManagerModelDownloadManager @Inject constructor(
     ): Flow<DownloadProgress> {
         Timber.tag("DownloadManager").d("Creating WorkManager request for $modelName from $url")
 
+        val downloadOnWifiOnly = runBlocking {
+            try {
+                preferenceManager.downloadOnWifiOnlyPreference.first()
+            } catch (e: Exception) {
+                true
+            }
+        }
+
+        val networkType = if (downloadOnWifiOnly) {
+            NetworkType.UNMETERED
+        } else {
+            NetworkType.CONNECTED
+        }
+
         val inputData = Data.Builder()
             .putString(Constants.Download.INPUT_URL, url)
             .putString(Constants.Download.INPUT_MODEL_NAME, modelName)
@@ -75,7 +94,9 @@ class WorkManagerModelDownloadManager @Inject constructor(
             .setInputData(inputData)
             .setConstraints(
                 Constraints.Builder()
-                    .setRequiredNetworkType(NetworkType.CONNECTED)
+                    .setRequiredNetworkType(networkType)
+                    .setRequiresStorageNotLow(true)
+                    .setRequiresBatteryNotLow(true)
                     .build()
             )
             // Exponential back-off: 30s, 60s, 120s, capped at 5 minutes.

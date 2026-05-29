@@ -187,6 +187,22 @@ class PreferenceManager @Inject constructor(@ApplicationContext context: Context
             preferences[DEFAULT_IMAGE_NEGATIVE_PROMPT_KEY] ?: ""
         }
 
+    /**
+     * A [Flow] that emits whether model downloads are restricted to Wi-Fi only.
+     * Defaults to true.
+     */
+    val downloadOnWifiOnlyPreference: Flow<Boolean> = dataStore.data
+        .catch { exception ->
+            if (exception is IOException) {
+                emit(emptyPreferences())
+            } else {
+                throw exception
+            }
+        }
+        .map { preferences ->
+            preferences[DOWNLOAD_ON_WIFI_ONLY_KEY] ?: true
+        }
+
     private fun getDefaultWeatherUnitSystem(): WeatherUnitSystem {
         val country = java.util.Locale.getDefault().country.uppercase()
         // US, Myanmar (MM), Liberia (LR) use Imperial system
@@ -282,6 +298,15 @@ class PreferenceManager @Inject constructor(@ApplicationContext context: Context
         }
     }
 
+    /**
+     * Updates whether model downloads should be restricted to Wi-Fi only.
+     */
+    suspend fun updateDownloadOnWifiOnly(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[DOWNLOAD_ON_WIFI_ONLY_KEY] = enabled
+        }
+    }
+
     companion object {
         private val THEME_KEY = booleanPreferencesKey("theme_preference")
         private val SELECTED_MODEL_KEY = stringPreferencesKey("selected_model")
@@ -292,5 +317,6 @@ class PreferenceManager @Inject constructor(@ApplicationContext context: Context
         private val DEFAULT_IMAGE_STEPS_KEY = intPreferencesKey("default_image_steps")
         private val DEFAULT_IMAGE_GUIDANCE_SCALE_KEY = floatPreferencesKey("default_image_guidance_scale")
         private val DEFAULT_IMAGE_NEGATIVE_PROMPT_KEY = stringPreferencesKey("default_image_negative_prompt")
+        private val DOWNLOAD_ON_WIFI_ONLY_KEY = booleanPreferencesKey("download_on_wifi_only")
     }
 }

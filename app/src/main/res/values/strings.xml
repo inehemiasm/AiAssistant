@@ -88,8 +88,14 @@
     <string name="contacts_permission_granted">Contacts permission granted.</string>
     <string name="contacts_permission_denied">Contacts permission denied.</string>
     <string name="microphone_permission_denied">Microphone permission denied.</string>
+    <string name="microphone_permission_granted">Microphone permission granted.</string>
     <string name="calendar_permission_granted">Calendar permission granted.</string>
     <string name="calendar_permission_denied">Calendar permission denied.</string>
+
+    <string name="location_permission_disclosure">Chevere AI requests Location access to check the local weather for your current city. Your coordinates are processed locally on this device and geocoded via open APIs.</string>
+    <string name="contacts_permission_disclosure">Chevere AI requests Contacts access to search for emails locally when you ask the assistant to compose messages. Your contacts data never leaves this device.</string>
+    <string name="calendar_permission_disclosure">Chevere AI requests Calendar access to schedule and view your calendar events. This data is only used locally to fulfill your direct assistant commands.</string>
+    <string name="microphone_permission_disclosure">Chevere AI requests Microphone access to measure the ambient sound level for the local Sensor Radar. Your audio is analyzed locally in real-time and never recorded or sent.</string>
     <string name="neural_cores">NEURAL CORES</string>
     <string name="chat_label">Chat</string>
     <string name="models_label">Models</string>

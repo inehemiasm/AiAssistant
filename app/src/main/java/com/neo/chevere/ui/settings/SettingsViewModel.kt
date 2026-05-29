@@ -59,6 +59,11 @@ class SettingsViewModel @Inject constructor(
                 setState { copy(defaultImageNegativePrompt = prompt) }
             }
         }
+        viewModelScope.launch {
+            preferenceManager.downloadOnWifiOnlyPreference.collectLatest { enabled ->
+                setState { copy(downloadOnWifiOnly = enabled) }
+            }
+        }
     }
 
     override suspend fun handleIntent(intent: SettingsIntent) {
@@ -93,6 +98,10 @@ class SettingsViewModel @Inject constructor(
 
             is SettingsIntent.UpdateDefaultImageNegativePrompt -> {
                 preferenceManager.updateDefaultImageNegativePrompt(intent.prompt)
+            }
+
+            is SettingsIntent.UpdateDownloadOnWifiOnly -> {
+                preferenceManager.updateDownloadOnWifiOnly(intent.enabled)
             }
         }
     }

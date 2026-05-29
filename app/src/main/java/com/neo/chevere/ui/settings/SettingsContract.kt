@@ -16,6 +16,7 @@ data class SettingsState(
     val defaultImageSteps: Int = 20,
     val defaultImageGuidanceScale: Float = 7.5f,
     val defaultImageNegativePrompt: String = "",
+    val downloadOnWifiOnly: Boolean = true,
     val appVersion: String = "1.0.0-STABLE",
     val engineInfo: String = "Gemma 4 Edge",
     val protocolInfo: String = "On-Device Inference"
@@ -30,6 +31,7 @@ sealed class SettingsIntent : UiIntent {
     data class UpdateDefaultImageSteps(val steps: Int) : SettingsIntent()
     data class UpdateDefaultImageGuidanceScale(val scale: Float) : SettingsIntent()
     data class UpdateDefaultImageNegativePrompt(val prompt: String) : SettingsIntent()
+    data class UpdateDownloadOnWifiOnly(val enabled: Boolean) : SettingsIntent()
 }
 
 sealed class SettingsEffect : UiEffect

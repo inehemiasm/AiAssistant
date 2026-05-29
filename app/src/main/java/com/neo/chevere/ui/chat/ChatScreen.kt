@@ -39,6 +39,7 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
@@ -48,6 +49,10 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.AccountBox
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -204,6 +209,7 @@ private fun ChatContent(
     val snackbarHostState = remember { SnackbarHostState() }
     var showImageModelDownloadPrompt by remember { mutableStateOf(false) }
     var showHistorySheet by remember { mutableStateOf(false) }
+    var pendingPermissionDisclosure by remember { mutableStateOf<PermissionType?>(null) }
     var wasAiBusy by remember { mutableStateOf(false) }
     var fullscreenPreviewState by remember { mutableStateOf<FullscreenPreviewState>(FullscreenPreviewState.None) }
     val showOnboarding = state.localModels.isEmpty() && !state.isLoading
@@ -347,6 +353,25 @@ private fun ChatContent(
         }
     }
 
+    val micPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            Toast.makeText(
+                context,
+                context.getString(R.string.microphone_permission_granted),
+                Toast.LENGTH_SHORT
+            ).show()
+            viewModel.onIntent(ChatIntent.StartVoiceInput)
+        } else {
+            Toast.makeText(
+                context,
+                context.getString(R.string.microphone_permission_denied),
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+
 
     Scaffold(
         topBar = {
@@ -482,12 +507,57 @@ private fun ChatContent(
                             }
                         },
                         dismissButton = {
-                            TextButton(onClick = {
-                                hapticView.performChevereHaptic(ChevereHaptic.Warning)
-                                showImageModelDownloadPrompt = false
-                            }) {
+                            TextButton(
+                                onClick = {
+                                    hapticView.performChevereHaptic(ChevereHaptic.Selection)
+                                    showImageModelDownloadPrompt = false
+                                }
+                            ) {
                                 Text(stringResource(R.string.not_now))
                             }
+                        }
+                    )
+                }
+
+                pendingPermissionDisclosure?.let { permissionType ->
+                    PermissionDisclosureDialog(
+                        permissionType = permissionType,
+                        onConfirm = {
+                            pendingPermissionDisclosure = null
+                            when (permissionType) {
+                                PermissionType.LOCATION -> {
+                                    locationPermissionLauncher.launch(
+                                        arrayOf(
+                                            Manifest.permission.ACCESS_COARSE_LOCATION,
+                                            Manifest.permission.ACCESS_FINE_LOCATION
+                                        )
+                                    )
+                                }
+                                PermissionType.CONTACTS -> {
+                                    contactsPermissionLauncher.launch(Manifest.permission.READ_CONTACTS)
+                                }
+                                PermissionType.CALENDAR -> {
+                                    calendarPermissionLauncher.launch(
+                                        arrayOf(
+                                            Manifest.permission.READ_CALENDAR,
+                                            Manifest.permission.WRITE_CALENDAR
+                                        )
+                                    )
+                                }
+                                PermissionType.MICROPHONE -> {
+                                    micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                                }
+                            }
+                        },
+                        onDismiss = {
+                            pendingPermissionDisclosure = null
+                            val message = when (permissionType) {
+                                PermissionType.LOCATION -> context.getString(R.string.location_permission_denied)
+                                PermissionType.CONTACTS -> context.getString(R.string.contacts_permission_denied)
+                                PermissionType.CALENDAR -> context.getString(R.string.calendar_permission_denied)
+                                PermissionType.MICROPHONE -> context.getString(R.string.microphone_permission_denied)
+                            }
+                            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
                         }
                     )
                 }
@@ -639,29 +709,21 @@ private fun ChatContent(
                 }
 
                 ChatEffect.RequestLocationPermission -> {
-                    locationPermissionLauncher.launch(
-                        arrayOf(
-                            Manifest.permission.ACCESS_COARSE_LOCATION,
-                            Manifest.permission.ACCESS_FINE_LOCATION
-                        )
-                    )
+                    pendingPermissionDisclosure = PermissionType.LOCATION
                 }
 
                 ChatEffect.RequestContactsPermission -> {
-                    contactsPermissionLauncher.launch(Manifest.permission.READ_CONTACTS)
+                    pendingPermissionDisclosure = PermissionType.CONTACTS
                 }
 
                 ChatEffect.RequestCalendarPermission -> {
-                    calendarPermissionLauncher.launch(
-                        arrayOf(
-                            Manifest.permission.READ_CALENDAR,
-                            Manifest.permission.WRITE_CALENDAR
-                        )
-                    )
+                    pendingPermissionDisclosure = PermissionType.CALENDAR
                 }
 
                 is ChatEffect.ReadMessageAloud -> Unit
-                ChatEffect.RequestMicPermission -> Unit
+                ChatEffect.RequestMicPermission -> {
+                    pendingPermissionDisclosure = PermissionType.MICROPHONE
+                }
                 is ChatEffect.ShowVoiceError -> Unit
                 is ChatEffect.NavigateToRadar -> Unit // Handled by dedicated LaunchedEffect in ChatScreen
                 ChatEffect.CloseHistorySheet -> {
@@ -944,4 +1006,83 @@ private fun OnboardingPoint(
             }
         }
     }
+}
+
+enum class PermissionType {
+    LOCATION,
+    CONTACTS,
+    CALENDAR,
+    MICROPHONE
+}
+
+@Composable
+private fun PermissionDisclosureDialog(
+    permissionType: PermissionType,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val title = when (permissionType) {
+        PermissionType.LOCATION -> "Location Access Required"
+        PermissionType.CONTACTS -> "Contacts Access Required"
+        PermissionType.CALENDAR -> "Calendar Access Required"
+        PermissionType.MICROPHONE -> "Microphone Access Required"
+    }
+
+    val description = when (permissionType) {
+        PermissionType.LOCATION -> stringResource(R.string.location_permission_disclosure)
+        PermissionType.CONTACTS -> stringResource(R.string.contacts_permission_disclosure)
+        PermissionType.CALENDAR -> stringResource(R.string.calendar_permission_disclosure)
+        PermissionType.MICROPHONE -> stringResource(R.string.microphone_permission_disclosure)
+    }
+
+    val icon = when (permissionType) {
+        PermissionType.LOCATION -> Icons.Default.LocationOn
+        PermissionType.CONTACTS -> Icons.Default.AccountBox
+        PermissionType.CALENDAR -> Icons.Default.DateRange
+        PermissionType.MICROPHONE -> Icons.Default.Mic
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(36.dp)
+            )
+        },
+        title = {
+            Text(
+                text = title,
+                style = Typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        },
+        text = {
+            Text(
+                text = description,
+                style = Typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                lineHeight = 20.sp
+            )
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirm
+            ) {
+                Text("Continue", style = Typography.labelLarge)
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss
+            ) {
+                Text("Not Now", style = Typography.labelLarge, color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f))
+            }
+        },
+        shape = RoundedCornerShape(24.dp),
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        tonalElevation = 6.dp
+    )
 }
