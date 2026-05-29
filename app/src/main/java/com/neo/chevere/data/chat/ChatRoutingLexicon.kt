@@ -26,6 +26,24 @@ internal object ChatRoutingLexicon {
         " holding "
     )
 
+    val sensorCapabilityTerms = setOf(
+        "sensor", "sensors", "device sensors", "hardware sensors", "ambient light",
+        "pressure", "barometer", "battery", "thermals", "temperature", "gyroscope",
+        "accelerometer", "compass", "proximity", "sound level", "noise level",
+        "metal", "magnet", "magnetic field", "stud", "studs", "level", "flatness"
+    )
+
+    val sensorScreenTerms = setOf(
+        "sensor dashboard", "sensor radar", "radar", "stud finder", "metal detector",
+        "spirit level", "bubble level", "light meter", "proximity detector"
+    )
+
+    val sensorReadingActionTerms = setOf(
+        "read", "check", "measure", "tell me", "what is", "what's", "how hot",
+        "how cold", "how warm", "how bright", "how dark", "how loud", "how noisy",
+        "how quiet", "which way", "where is", "am i", "is it", "is there"
+    )
+
     val sensorKeywords = setOf(
         // English
         "sensor", "sensors", "barometer", "pressure", "lux", "brightness",

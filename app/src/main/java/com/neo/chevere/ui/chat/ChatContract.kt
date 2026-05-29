@@ -7,6 +7,7 @@ import com.neo.chevere.core.UiIntent
 import com.neo.chevere.core.UiState
 import com.neo.chevere.data.agent.AgentState
 import com.neo.chevere.domain.ChatMessage
+import com.neo.chevere.domain.ConversationSession
 import com.neo.chevere.domain.InstalledModel
 
 /**
@@ -54,7 +55,11 @@ data class ChatState(
     val ageVerificationRequest: AgeVerificationRequest? = null,
     val streamingText: String = "",
     /** True while the microphone is actively recording for speech-to-text. */
-    val isListening: Boolean = false
+    val isListening: Boolean = false,
+    /** The ID of the currently active persisted session, or null for a brand-new unsaved session. */
+    val currentSessionId: Long? = null,
+    /** History sessions shown in the history bottom sheet. */
+    val historySessions: List<ConversationSession> = emptyList()
 ) : UiState {
     val isReady: Boolean get() = runtimeState is RuntimeState.Ready
 
@@ -126,6 +131,15 @@ sealed class ChatIntent : UiIntent {
     data object StopVoiceInput : ChatIntent()
     /** Deliver a completed STT transcript back to the input field. */
     data class VoiceInputResult(val text: String) : ChatIntent()
+    // ── Chat History ─────────────────────────────────────────────────────────
+    /** Starts a fresh, unsaved conversation (the current session is kept in history). */
+    data object NewConversation : ChatIntent()
+    /** Loads a previously saved session from history into the chat screen. */
+    data class LoadSession(val sessionId: Long) : ChatIntent()
+    /** Permanently deletes a session from history. */
+    data class DeleteSession(val sessionId: Long) : ChatIntent()
+    /** Renames a session's display title. */
+    data class RenameSession(val sessionId: Long, val newTitle: String) : ChatIntent()
 }
 
 sealed class ChatEffect : UiEffect {
@@ -138,6 +152,8 @@ sealed class ChatEffect : UiEffect {
     data class ReadMessageAloud(val messageIndex: Int, val text: String) : ChatEffect()
     data object ShowImageModelDownloadPrompt : ChatEffect()
     data object HideKeyboard : ChatEffect()
+    /** Navigate to the Sensor Radar / Stud Finder utility screen with an optional mode. */
+    data class NavigateToRadar(val mode: String = "all") : ChatEffect()
     data object RequestLocationPermission : ChatEffect()
     /** Request the READ_CONTACTS permission from the user. */
     data object RequestContactsPermission : ChatEffect()
@@ -147,6 +163,8 @@ sealed class ChatEffect : UiEffect {
     data object RequestCalendarPermission : ChatEffect()
     /** Show an error that occurred during voice input. */
     data class ShowVoiceError(val message: String) : ChatEffect()
+    /** Dismiss the chat history bottom sheet (e.g. after a session is loaded). */
+    data object CloseHistorySheet : ChatEffect()
 }
 
 /**

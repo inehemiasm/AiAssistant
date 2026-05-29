@@ -9,9 +9,11 @@ import androidx.room.TypeConverters
         SearchCacheEntity::class,
         InstalledModelEntity::class,
         TaskEntity::class,
-        DocumentChunkEntity::class
+        DocumentChunkEntity::class,
+        ConversationSessionEntity::class,
+        ConversationMessageEntity::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 @TypeConverters(DatabaseConverters::class)
@@ -20,4 +22,5 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun installedModelDao(): InstalledModelDao
     abstract fun taskDao(): TaskDao
     abstract fun documentChunkDao(): DocumentChunkDao
+    abstract fun conversationHistoryDao(): ConversationHistoryDao
 }

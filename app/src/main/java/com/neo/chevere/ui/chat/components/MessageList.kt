@@ -278,11 +278,13 @@ fun FuturisticChatBubble(
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 message.inferenceTimeMs?.let { timeMs ->
                                     val seconds = timeMs / 1000.0
-                                    val tps =
-                                        if (seconds > 0) message.text.length / (seconds * 4) else 0.0
-
                                     Badge(text = "%.2fs".format(Locale.US, seconds))
-                                    Badge(text = "%.1f tk/s".format(Locale.US, tps))
+                                    message.inputTokenCount?.let { inputTokens ->
+                                        Badge(text = "IN $inputTokens TOK")
+                                    }
+                                    message.outputTokenCount?.let { outputTokens ->
+                                        Badge(text = "OUT $outputTokens TOK")
+                                    }
                                 } ?: run {
                                     Badge(text = stringResource(R.string.hardware_accel))
                                     Badge(text = stringResource(R.string.privacy_lock))

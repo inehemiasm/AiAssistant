@@ -7,7 +7,8 @@ import com.neo.chevere.core.UiState
 data class BenchmarkMetrics(
     val loadTimeMs: Long,
     val ttftMs: Long,
-    val throughputTps: Double,
+    val inputTokenCount: Int,
+    val outputTokenCount: Int,
     val totalTimeMs: Long,
     val systemRamText: String,
     val accelText: String

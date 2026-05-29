@@ -197,7 +197,14 @@ class OpenDeepLinkTool @Inject constructor(
 ) : BaseAppActionTool(actionExecutor) {
     override val name: String = "perform_app_action"
     override val description: String =
-        "MANDATORY for specific actions inside an app. For Squarespace: use uri='squarespace://invoices/create' to create an invoice, uri='squarespace://pay-links/create' for pay links, or uri='squarespace://orders' to view orders."
+        "MANDATORY for specific actions inside an app. " +
+        "For Chevere AI sensor screens — use the matching URI:\n" +
+        "  chevere://sensor-radar?mode=all        → Full Sensor Dashboard (radar sweep, all sensors)\n" +
+        "  chevere://sensor-radar?mode=stud       → Stud Finder / Metal Detector (animated radar + beeps)\n" +
+        "  chevere://sensor-radar?mode=level      → Spirit Level / Bubble Level\n" +
+        "  chevere://sensor-radar?mode=light      → Ambient Light Meter\n" +
+        "  chevere://sensor-radar?mode=proximity  → Proximity Detector\n" +
+        "For Squarespace: uri='squarespace://invoices/create' to create an invoice, uri='squarespace://pay-links/create' for pay links, or uri='squarespace://orders' to view orders."
     override val inputSchema: String =
         "uri: The action URI (required). packageName: Optional package name (e.g. 'com.squarespace.android')."
 

@@ -44,6 +44,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.Security
@@ -124,9 +125,19 @@ sealed interface FullscreenPreviewState {
 fun ChatScreen(
     viewModel: ChatViewModel = hiltViewModel(),
     onModelsClick: () -> Unit,
-    onSettingsClick: () -> Unit
+    onSettingsClick: () -> Unit,
+    onRadarClick: (mode: String) -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
+
+    // Handle one-shot radar navigation effect at the top level
+    LaunchedEffect(Unit) {
+        viewModel.effect.collect { effect ->
+            if (effect is ChatEffect.NavigateToRadar) {
+                onRadarClick(effect.mode)
+            }
+        }
+    }
 
     // Check if the model is initializing to show the full-screen loading state
     val isInitializing = state.runtimeState is RuntimeState.Initializing
@@ -192,6 +203,7 @@ private fun ChatContent(
 
     val snackbarHostState = remember { SnackbarHostState() }
     var showImageModelDownloadPrompt by remember { mutableStateOf(false) }
+    var showHistorySheet by remember { mutableStateOf(false) }
     var wasAiBusy by remember { mutableStateOf(false) }
     var fullscreenPreviewState by remember { mutableStateOf<FullscreenPreviewState>(FullscreenPreviewState.None) }
     val showOnboarding = state.localModels.isEmpty() && !state.isLoading
@@ -357,6 +369,10 @@ private fun ChatContent(
                 onSettingsClick = {
                     hapticView.performChevereHaptic(ChevereHaptic.Selection)
                     onSettingsClick()
+                },
+                onHistoryClick = {
+                    hapticView.performChevereHaptic(ChevereHaptic.Selection)
+                    showHistorySheet = true
                 }
             )
         },
@@ -647,6 +663,10 @@ private fun ChatContent(
                 is ChatEffect.ReadMessageAloud -> Unit
                 ChatEffect.RequestMicPermission -> Unit
                 is ChatEffect.ShowVoiceError -> Unit
+                is ChatEffect.NavigateToRadar -> Unit // Handled by dedicated LaunchedEffect in ChatScreen
+                ChatEffect.CloseHistorySheet -> {
+                    showHistorySheet = false
+                }
             }
         }
     }
@@ -667,6 +687,31 @@ private fun ChatContent(
             delay(180)
             listState.animateScrollToItem(lastIndex)
         }
+    }
+
+    // ── History bottom sheet ──────────────────────────────────────────────────
+    if (showHistorySheet) {
+        HistoryBottomSheet(
+            sessions = state.historySessions,
+            currentSessionId = state.currentSessionId,
+            onDismiss = { showHistorySheet = false },
+            onLoadSession = { sessionId ->
+                hapticView.performChevereHaptic(ChevereHaptic.Selection)
+                viewModel.onIntent(ChatIntent.LoadSession(sessionId))
+            },
+            onDeleteSession = { sessionId ->
+                hapticView.performChevereHaptic(ChevereHaptic.Warning)
+                viewModel.onIntent(ChatIntent.DeleteSession(sessionId))
+            },
+            onRenameSession = { sessionId, newTitle ->
+                hapticView.performChevereHaptic(ChevereHaptic.Action)
+                viewModel.onIntent(ChatIntent.RenameSession(sessionId, newTitle))
+            },
+            onNewConversation = {
+                hapticView.performChevereHaptic(ChevereHaptic.Action)
+                viewModel.onIntent(ChatIntent.NewConversation)
+            }
+        )
     }
 }
 

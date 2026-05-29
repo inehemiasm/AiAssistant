@@ -9,7 +9,8 @@ The project is built for experimenting with capable on-device assistants: small 
 - Chat with local LiteRT-LM models such as Gemma.
 - Attach camera or gallery images for vision-capable chat models.
 - Run an agent loop that can search, check weather, summarize text, manage tasks, draft emails, open apps, copy/share text, and use Android intents.
-- Read device context through sensors such as light, pressure, battery, compass, accelerometer, gyroscope, proximity, thermals, and optional microphone-based noise level.
+- Read device context through sensors such as light, pressure, battery, compass, accelerometer, gyroscope, proximity, thermals, posture/flatness, magnetic field strength, and optional microphone-based noise level.
+- Open dedicated sensor tools from chat: `/sensors` for the full dashboard, `/stud` or `/metal` for stud finder/metal detector, `/level` for spirit level, `/light` for ambient light meter, and `/proximity` for proximity detection.
 - Download, verify, install, select, and protect local models through a marketplace-style UI.
 - Generate images locally from ONNX Stable Diffusion bundles.
 - Keep older chat context compact so small on-device models stay usable.
@@ -20,7 +21,16 @@ The project is built for experimenting with capable on-device assistants: small 
 - **Chat**: local conversation, image attachments, assistant actions, explicit image safeguards, and shareable responses.
 - **Models**: separate chat/vision models from image-generation models, track installs, and prevent active model deletion.
 - **Tasks**: local checklist management, including agent-created tasks.
+- **Sensors**: real-time sensor radar, stud finder/metal detector, spirit level, light meter, and proximity detector screens launched by slash command or agent deep link.
 - **Settings**: safety, privacy, theme controls, and benchmarking.
+
+## Sensor Capabilities
+
+Chevere AI can answer sensor questions textually through the `read_sensors` agent tool and can launch visual sensor screens through app deep links.
+
+- Textual readings: ambient room temperature when supported, ambient light in lux, atmospheric pressure, battery level/charging state, device battery heat, CPU thermal status, ambient sound level with microphone permission, gyroscope rotation, accelerometer motion, compass heading, proximity, posture, flatness, and magnetic field strength.
+- Visual screens: full radar dashboard, stud finder/metal detector, spirit level/bubble level, ambient light meter, and proximity detector.
+- Chat commands: `/sensors`, `/stud`, `/metal`, `/level`, `/light`, and `/proximity`.
 
 ## Tech Stack
 

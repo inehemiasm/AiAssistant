@@ -155,19 +155,14 @@ class BenchmarkViewModel @Inject constructor(
             val ttftMs = if (firstTokenTime > 0) firstTokenTime - startTime else endTime - startTime
             val totalTimeMs = endTime - startTime
             
-            // throughput count in approximate tokens (charLength / 4.0)
-            val tokenCount = accumulatedText.length / 4.0
-            val generationTimeMs = if (firstTokenTime > 0) endTime - firstTokenTime else totalTimeMs
-            val generationTimeSec = maxOf(generationTimeMs, 1L) / 1000.0
-            val throughputTps = tokenCount / generationTimeSec
-
             setState {
                 copy(
                     isRunning = false,
                     result = BenchmarkMetrics(
                         loadTimeMs = loadTimeMs,
                         ttftMs = ttftMs,
-                        throughputTps = throughputTps,
+                        inputTokenCount = estimateTokenCount(prompt),
+                        outputTokenCount = estimateTokenCount(accumulatedText),
                         totalTimeMs = totalTimeMs,
                         systemRamText = systemRamText,
                         accelText = accelText
@@ -175,5 +170,12 @@ class BenchmarkViewModel @Inject constructor(
                 )
             }
         }
+    }
+
+    private fun estimateTokenCount(text: String): Int =
+        (text.length / APPROX_CHARS_PER_TOKEN).toInt().coerceAtLeast(if (text.isBlank()) 0 else 1)
+
+    private companion object {
+        const val APPROX_CHARS_PER_TOKEN = 4.0
     }
 }

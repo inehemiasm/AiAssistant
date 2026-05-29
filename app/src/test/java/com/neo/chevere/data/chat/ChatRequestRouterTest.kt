@@ -1,6 +1,7 @@
 package com.neo.chevere.data.chat
 
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -13,7 +14,11 @@ class ChatRequestRouterTest {
     fun capabilityOverview_returnsStaticResponseAndDoesNotUseAgent() {
         val prompt = "What can you do?"
 
-        assertNotNull(router.capabilityResponseFor(prompt))
+        val response = router.capabilityResponseFor(prompt)
+
+        assertNotNull(response)
+        assertTrue(response?.contains("live device sensor readings") == true)
+        assertTrue(response?.contains("stud finder") == true)
         assertFalse(router.shouldUseAgent(prompt))
     }
 
@@ -22,6 +27,18 @@ class ChatRequestRouterTest {
         val prompt = "Can you generate images?"
 
         assertNotNull(router.capabilityResponseFor(prompt))
+        assertFalse(router.shouldUseAgent(prompt))
+    }
+
+    @Test
+    fun sensorCapabilityQuestion_doesNotUseAgent() {
+        val prompt = "Can you detect metal?"
+
+        val response = router.capabilityResponseFor(prompt)
+
+        assertNotNull(response)
+        assertTrue(response?.contains("/stud") == true)
+        assertTrue(response?.contains("ambient light") == true)
         assertFalse(router.shouldUseAgent(prompt))
     }
 
@@ -134,7 +151,7 @@ class ChatRequestRouterTest {
         )
         for ((prompt, expectedCategory) in multilingualPrompts) {
             val category = router.classifyRequest(prompt)
-            org.junit.Assert.assertEquals(
+            assertEquals(
                 "Prompt '$prompt' should be classified as $expectedCategory but was $category",
                 expectedCategory,
                 category
@@ -145,9 +162,9 @@ class ChatRequestRouterTest {
 
     @Test
     fun classifyRequest_returnsCorrectCategory() {
-        org.junit.Assert.assertEquals(RoutingCategory.IMAGE_GENERATION, router.classifyRequest("Draw a cute kitten"))
-        org.junit.Assert.assertEquals(RoutingCategory.LIVE_INFORMATION, router.classifyRequest("what is the weather today?"))
-        org.junit.Assert.assertEquals(RoutingCategory.TASK_REGISTRY, router.classifyRequest("add a task to walk the dog"))
-        org.junit.Assert.assertEquals(RoutingCategory.DIRECT_CHAT, router.classifyRequest("hello how are you?"))
+        assertEquals(RoutingCategory.IMAGE_GENERATION, router.classifyRequest("Draw a cute kitten"))
+        assertEquals(RoutingCategory.LIVE_INFORMATION, router.classifyRequest("what is the weather today?"))
+        assertEquals(RoutingCategory.TASK_REGISTRY, router.classifyRequest("add a task to walk the dog"))
+        assertEquals(RoutingCategory.DIRECT_CHAT, router.classifyRequest("hello how are you?"))
     }
 }

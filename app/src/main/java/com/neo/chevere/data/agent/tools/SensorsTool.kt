@@ -53,8 +53,44 @@ class SensorsTool @Inject constructor(
 ) : AgentTool {
     override val name: String = "read_sensors"
     override val description: String = """
-        Reads all real-time environment and hardware sensors from the device and reports them to the user.
-        ALWAYS call this tool when the user asks about ANY of the following topics:
+        Reads live device sensor DATA for textual chat answers: ambient temperature, light/lux,
+        pressure, battery, thermals, microphone noise level, gyroscope, accelerometer, compass,
+        proximity, posture, flatness/spirit level, and metal/magnetic field strength.
+        If the user asks to open a visual sensor screen, use perform_app_action instead:
+        chevere://sensor-radar?mode=all, mode=stud, mode=level, mode=light, or mode=proximity.
+
+        BUILT-IN SENSOR SCREENS: This app has dedicated real-time visual screens for sensors. When the user
+        asks to open, launch, view, start, or show any visual/animated/interactive sensor screen, call
+        'perform_app_action' with the matching URI instead of this tool:
+
+          • chevere://sensor-radar?mode=all       → Full Sensor Dashboard (all sensors + radar sweep)
+          • chevere://sensor-radar?mode=stud      → Stud Finder / Metal Detector (magnetometer, radar HUD, beeps)
+          • chevere://sensor-radar?mode=level     → Spirit Level / Bubble Level (accelerometer, pitch/roll angles)
+          • chevere://sensor-radar?mode=light     → Ambient Light Meter (lux reading, brightness category)
+          • chevere://sensor-radar?mode=proximity → Proximity Detector (near/far, distance in cm)
+
+        CAPABILITY AWARENESS: If the user asks "what can you do?", "what sensors do you have?", "can you detect
+        metal?", "can you check if something is level?", "can you find studs?", or any similar capability question,
+        respond by listing the available sensor screens above and tell the user they can ask to open any of them
+        or type the matching slash command:
+          /sensors  → full sensor dashboard
+          /stud     → stud finder / metal detector
+          /level    → spirit level
+          /light    → ambient light meter
+          /proximity → proximity detector
+
+        CRITICAL VISUAL REDIRECT EXAMPLES (always use perform_app_action, never read_sensors):
+          "open the stud finder" → perform_app_action(uri="chevere://sensor-radar?mode=stud")
+          "launch the metal detector" → perform_app_action(uri="chevere://sensor-radar?mode=stud")
+          "open the spirit level" → perform_app_action(uri="chevere://sensor-radar?mode=level")
+          "show me the bubble level" → perform_app_action(uri="chevere://sensor-radar?mode=level")
+          "open the light meter" → perform_app_action(uri="chevere://sensor-radar?mode=light")
+          "open proximity sensor" → perform_app_action(uri="chevere://sensor-radar?mode=proximity")
+          "open all sensors" / "open the radar" → perform_app_action(uri="chevere://sensor-radar?mode=all")
+          "can I find studs?" → explain capability AND offer to open perform_app_action(uri="chevere://sensor-radar?mode=stud")
+
+        ALWAYS call this tool ('read_sensors') when the user asks about sensor DATA textually in the chat
+        (not asking to open a screen):
 
         SOUND / NOISE / AUDIO (use this tool — do NOT say you cannot hear):
           Trigger phrases (English): how loud is it, how noisy is it, how quiet is it, what's the noise level,

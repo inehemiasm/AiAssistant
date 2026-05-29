@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DeleteSweep
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Icon
@@ -48,6 +49,7 @@ fun ChatTopBar(
     onClearChat: () -> Unit,
     onModelsClick: () -> Unit,
     onSettingsClick: () -> Unit,
+    onHistoryClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val topBarShape = RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp)
@@ -117,6 +119,13 @@ fun ChatTopBar(
                         Icons.Default.DeleteSweep,
                         stringResource(R.string.clear_chat),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                TopBarIconButton(onClick = onHistoryClick) {
+                    Icon(
+                        Icons.Default.History,
+                        contentDescription = "Chat history",
+                        tint = MaterialTheme.colorScheme.onSurface
                     )
                 }
                 TopBarIconButton(onClick = onSettingsClick) {

@@ -46,7 +46,7 @@ class AgentOrchestratorTest {
             on { inputSchema } doReturn "path: string"
         }
 
-        whenever(mockToolRegistry.getToolsSystemPrompt()).doReturn("Mock System Prompt")
+        whenever(mockToolRegistry.getToolsSystemPrompt(null)).doReturn("Mock System Prompt")
         whenever(mockToolRegistry.getTool("get_weather")).doReturn(mockWeatherTool)
         whenever(mockToolRegistry.getTool("delete_file")).doReturn(mockConfirmationTool)
     }
@@ -119,6 +119,26 @@ class AgentOrchestratorTest {
         assertTrue(result.isSuccess)
         // Fallback summary is used when loop ends
         assertEquals("75 degrees", result.getOrNull())
+    }
+
+    @Test
+    fun processUserRequest_trimsLongContextBeforeInference() = runTest {
+        val longContext = "older context ".repeat(2_000)
+        whenever(mockInferenceManager.generateStream(any())).doAnswer { invocation ->
+            val request = invocation.arguments[0] as InferenceRequest
+            assertTrue(request.prompt.length <= Constants.Agent.MAX_PROMPT_CHAR_BUDGET)
+            assertTrue(request.prompt.contains(Constants.Agent.SYSTEM_PROMPT_PREFIX))
+            assertTrue(request.prompt.contains("How is the weather today?"))
+            flowOf(InferenceResult.Success("It looks sunny."))
+        }
+
+        val result = orchestrator.processUserRequest(
+            prompt = "How is the weather today?",
+            conversationContext = longContext
+        )
+
+        assertTrue(result.isSuccess)
+        assertEquals("It looks sunny.", result.getOrNull())
     }
 
     @Test

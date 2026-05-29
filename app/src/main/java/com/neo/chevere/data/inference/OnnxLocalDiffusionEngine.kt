@@ -151,11 +151,11 @@ class OnnxLocalDiffusionEngine @Inject constructor(
                 ?: return@withContext ImageGenerationResult.Failure("ONNX diffusion VAE decoder is not loaded.")
 
             try {
-                val width = request.width.coerceIn(256, 512).roundDownToMultipleOf(8)
-                val height = request.height.coerceIn(256, 512).roundDownToMultipleOf(8)
-                val steps = request.steps.coerceIn(1, 40)
+                val width = request.width.coerceIn(256, 640).roundDownToMultipleOf(8)
+                val height = request.height.coerceIn(256, 640).roundDownToMultipleOf(8)
+                val steps = request.steps.coerceIn(1, 50)
                 val seed = request.seed ?: System.currentTimeMillis()
-                val guidanceScale = request.guidanceScale.coerceIn(1f, 15f)
+                val guidanceScale = request.guidanceScale.coerceIn(1f, 20f)
 
                 val conditionalEmbeddings = encodePrompt(
                     tokenizer = activeTokenizer,

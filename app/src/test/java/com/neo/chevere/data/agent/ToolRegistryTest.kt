@@ -35,6 +35,7 @@ import com.neo.chevere.data.agent.tools.SummarizeTextTool
 import com.neo.chevere.data.agent.tools.TaskRegistryTool
 import com.neo.chevere.data.agent.tools.WeatherTool
 import com.neo.chevere.data.agent.tools.WebSearchTool
+import com.neo.chevere.data.chat.RoutingCategory
 import com.neo.chevere.data.datasource.local.DocumentChunkDao
 import com.neo.chevere.data.datasource.local.SearchCacheDao
 import com.neo.chevere.data.datasource.local.TaskDao
@@ -165,7 +166,7 @@ class ToolRegistryTest {
     }
 
     @Test
-    fun systemPrompt_containsAllToolDescriptionsAndSchemas() {
+    fun systemPrompt_containsAllToolsWithConciseDescriptions() {
         val registry = ToolRegistry(productionTools)
         val systemPrompt = registry.getToolsSystemPrompt()
 
@@ -174,10 +175,41 @@ class ToolRegistryTest {
                 "System prompt must contain tool name '${tool.name}'",
                 systemPrompt.contains(tool.name)
             )
+            val descriptionStart = tool.description.lineSequence()
+                .map { it.trim() }
+                .first { it.isNotEmpty() }
+                .take(30)
             assertTrue(
-                "System prompt must contain description of '${tool.name}'",
-                systemPrompt.contains(tool.description)
+                "System prompt must contain concise description of '${tool.name}'",
+                systemPrompt.contains(descriptionStart)
             )
         }
+        assertTrue(
+            "System prompt should stay compact enough for small on-device context windows",
+            systemPrompt.length < 14_000
+        )
+    }
+
+    @Test
+    fun categoryPrompt_forLiveInformation_excludesSensorContext() {
+        val registry = ToolRegistry(productionTools)
+        val systemPrompt = registry.getToolsSystemPrompt(RoutingCategory.LIVE_INFORMATION)
+
+        assertTrue(systemPrompt.contains("get_weather"))
+        assertTrue(systemPrompt.contains("web_search"))
+        assertTrue(!systemPrompt.contains("read_sensors"))
+        assertTrue(!systemPrompt.contains("sensor-radar"))
+    }
+
+    @Test
+    fun categoryPrompt_forSensors_includesOnlySensorTools() {
+        val registry = ToolRegistry(productionTools)
+        val systemPrompt = registry.getToolsSystemPrompt(RoutingCategory.SENSORS)
+
+        assertTrue(systemPrompt.contains("read_sensors"))
+        assertTrue(systemPrompt.contains("perform_app_action"))
+        assertTrue(systemPrompt.contains("sensor-radar"))
+        assertTrue(!systemPrompt.contains("get_weather"))
+        assertTrue(!systemPrompt.contains("generate_image"))
     }
 }

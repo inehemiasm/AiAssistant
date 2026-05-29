@@ -156,7 +156,8 @@ class ChatRepositoryImpl @Inject constructor(
             return Result.success(response)
         }
 
-        if (!chatRequestRouter.shouldUseAgent(prompt)) {
+        val routingCategory = chatRequestRouter.classifyRequest(prompt)
+        if (routingCategory == com.neo.chevere.data.chat.RoutingCategory.DIRECT_CHAT) {
             return generateDirectChatResponse(prompt, imageUri = null)
         }
 
@@ -166,7 +167,8 @@ class ChatRepositoryImpl @Inject constructor(
         val result = agentOrchestrator.processUserRequest(
             prompt = prompt,
             imageUri = imageUri,
-            conversationContext = conversationContext
+            conversationContext = conversationContext,
+            routingCategory = routingCategory
         )
         result.onSuccess { response ->
             val memoryResponse =
@@ -556,18 +558,17 @@ class ChatRepositoryImpl @Inject constructor(
                 // Wait for the system to be idle
                 delay(3000)
 
-                val prompt = "You are Chevere AI's memory manager. Condense the following message exchange " +
-                        "into a concise bulleted paragraph under 90 words that captures all key details, " +
-                        "preferences, and facts discussed. Do not add intro/outro text, just output the condensed paragraph.\n\n" +
-                        "Turns to summarize:\n$transcript\n\n" +
-                        "Condensed Paragraph:"
+                // Cap the transcript fed to the summarizer to avoid overloading the context
+                val cappedTranscript = transcript.take(3_000)
+                val prompt = "Summarize the key facts from this conversation in ≤50 words as bullet points. " +
+                        "No intro, no outro — bullets only.\n\n$cappedTranscript\n\nSummary:"
 
                 val request = InferenceRequest(prompt = prompt, imageUri = null)
 
                 inferenceManager.clearConversation()
                 val response = inferenceManager.generate(request)
                 if (response is InferenceResult.Success) {
-                    val summary = response.text.trim()
+                    val summary = response.text.trim().take(800) // Hard-cap the stored memory
                     if (summary.isNotEmpty()) {
                         conversationContextManager.persistentMemory = summary
                         Timber.tag(TAG).d("Background context summarization succeeded: $summary")

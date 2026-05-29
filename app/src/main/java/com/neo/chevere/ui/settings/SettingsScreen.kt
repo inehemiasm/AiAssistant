@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Sensors
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Speed
@@ -75,7 +76,8 @@ import com.neo.chevere.ui.designsystem.Typography
 fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
     onBackClick: () -> Unit,
-    onBenchmarkClick: () -> Unit
+    onBenchmarkClick: () -> Unit,
+    onRadarClick: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
     val hapticView = LocalView.current
@@ -300,6 +302,54 @@ fun SettingsScreen(
                 SystemInfoRow(stringResource(R.string.protocol_label), state.protocolInfo)
 
                 Spacer(Modifier.height(16.dp))
+
+                // Sensor Radar entry
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.5f),
+                    shape = RoundedCornerShape(16.dp),
+                    border = BorderStroke(
+                        1.dp,
+                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.1f)
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            hapticView.performChevereHaptic(ChevereHaptic.Selection)
+                            onRadarClick()
+                        }
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Sensors,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(Modifier.width(16.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    "Sensor Radar",
+                                    style = Typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    "Stud finder, metal detector & spirit level",
+                                    style = Typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(12.dp))
 
                 Surface(
                     color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.5f),

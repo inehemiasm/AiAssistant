@@ -168,7 +168,8 @@
     <string name="benchmarking">RUNNING NEURAL DIAGNOSTICS…</string>
     <string name="benchmark_model_label">Active Model</string>
     <string name="benchmark_ttft_label">Time to First Token (TTFT)</string>
-    <string name="benchmark_throughput_label">Inference Speed</string>
+    <string name="benchmark_input_tokens_label">Input Tokens</string>
+    <string name="benchmark_output_tokens_label">Output Tokens</string>
     <string name="benchmark_ram_label">Device RAM Available</string>
     <string name="benchmark_accel_label">Hardware Acceleration</string>
     <string name="benchmark_load_label">Model Engine Load Latency</string>

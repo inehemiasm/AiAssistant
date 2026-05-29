@@ -2,9 +2,12 @@ package com.neo.chevere.ui.chat.components
 
 import android.net.Uri
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -45,6 +48,7 @@ import androidx.compose.material3.TextFieldDefaults
 import com.neo.chevere.ui.chat.ComposerActionButtonState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -66,9 +70,11 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.neo.chevere.R
 import com.neo.chevere.core.Constants
+import com.neo.chevere.core.Constants.SlashCommand
 import com.neo.chevere.ui.designsystem.Typography
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 
@@ -95,6 +101,15 @@ fun ChatInputBar(
     var showAttachmentMenu by remember { mutableStateOf(false) }
     val isBusy = buttonState is ComposerActionButtonState.Stop
 
+    // Slash command autocomplete: filter whenever text starts with '/'
+    val slashSuggestions: List<SlashCommand> by remember(text) {
+        derivedStateOf {
+            if (!text.startsWith("/")) return@derivedStateOf emptyList()
+            val query = text.trim().lowercase()
+            Constants.Commands.ALL.filter { it.command.startsWith(query) }
+        }
+    }
+
     LaunchedEffect(isBusy) {
         if (isBusy) showAttachmentMenu = false
     }
@@ -107,7 +122,7 @@ fun ChatInputBar(
             )
         }
 
-        if (suggestions.isNotEmpty() && !isBusy) {
+        if (suggestions.isNotEmpty() && !isBusy && slashSuggestions.isEmpty()) {
             LazyRow(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -122,6 +137,21 @@ fun ChatInputBar(
                     )
                 }
             }
+        }
+
+        // Slash command autocomplete popup (appears above the input bar)
+        AnimatedVisibility(
+            visible = slashSuggestions.isNotEmpty() && !isBusy,
+            enter = expandVertically(expandFrom = Alignment.Bottom) + fadeIn(tween(160)),
+            exit = shrinkVertically(shrinkTowards = Alignment.Bottom) + fadeOut(tween(120))
+        ) {
+            SlashCommandMenu(
+                commands = slashSuggestions,
+                onSelect = { command ->
+                    // Fill with command + space so the user can type a prompt directly
+                    onTextChange("$command ")
+                }
+            )
         }
 
         val inputShape = RoundedCornerShape(34.dp)
@@ -483,6 +513,80 @@ private fun AttachmentMenuIcon(content: @Composable () -> Unit) {
     ) {
         Box(contentAlignment = Alignment.Center) {
             content()
+        }
+    }
+}
+
+@Composable
+private fun SlashCommandMenu(
+    commands: List<SlashCommand>,
+    onSelect: (String) -> Unit
+) {
+    Surface(
+        shape = RoundedCornerShape(18.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.97f),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)),
+        shadowElevation = 10.dp,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 10.dp)
+            .heightIn(max = 280.dp)
+    ) {
+        LazyColumn(
+            contentPadding = PaddingValues(vertical = 6.dp),
+            verticalArrangement = Arrangement.spacedBy(0.dp)
+        ) {
+            items(commands, key = { it.command }) { cmd ->
+                SlashCommandRow(
+                    command = cmd,
+                    onClick = { onSelect(cmd.command) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SlashCommandRow(
+    command: SlashCommand,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 11.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Command badge
+        Surface(
+            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+            shape = RoundedCornerShape(8.dp)
+        ) {
+            Text(
+                text = command.command,
+                style = Typography.labelMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 0.sp
+                ),
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+            )
+        }
+
+        Spacer(Modifier.width(12.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = command.label,
+                style = Typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = command.description,
+                style = Typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f)
+            )
         }
     }
 }

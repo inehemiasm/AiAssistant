@@ -6,6 +6,7 @@ import com.neo.chevere.core.DispatcherProvider
 import com.neo.chevere.data.agent.AgentOrchestrator
 import com.neo.chevere.data.agent.AgentState
 import com.neo.chevere.data.chat.ChatRequestRouter
+import com.neo.chevere.data.chat.RoutingCategory
 import com.neo.chevere.data.context.ConversationContextManager
 import com.neo.chevere.data.datasource.ModelCatalogDataSource
 import com.neo.chevere.data.download.WorkManagerModelDownloadManager
@@ -122,9 +123,10 @@ class ChatRepositoryImplTest {
         val result = repository.sendMessage("What can you do?", null)
 
         verify(inferenceManager, never()).generate(any())
-        verify(agentOrchestrator, never()).processUserRequest(any(), any(), any())
+        verify(agentOrchestrator, never()).processUserRequest(any(), any(), any(), any())
         assertTrue(result.getOrNull()?.contains("image generation") == true)
         assertTrue(result.getOrNull()?.contains("weather") == true)
+        assertTrue(result.getOrNull()?.contains("live device sensor readings") == true)
     }
 
     @Test
@@ -132,7 +134,7 @@ class ChatRepositoryImplTest {
         val result = repository.sendMessage("Can you generate images?", null)
 
         verify(inferenceManager, never()).generate(any())
-        verify(agentOrchestrator, never()).processUserRequest(any(), any(), any())
+        verify(agentOrchestrator, never()).processUserRequest(any(), any(), any(), any())
         assertTrue(result.getOrNull()?.contains("Tell me what you want") == true)
     }
 
@@ -143,13 +145,14 @@ class ChatRepositoryImplTest {
             agentOrchestrator.processUserRequest(
                 prompt,
                 null,
-                null
+                null,
+                RoutingCategory.LIVE_INFORMATION
             )
         ).doReturn(Result.success("sunny"))
 
         val result = repository.sendMessage(prompt, null)
 
-        verify(agentOrchestrator).processUserRequest(prompt, null, null)
+        verify(agentOrchestrator).processUserRequest(prompt, null, null, RoutingCategory.LIVE_INFORMATION)
         assertEquals("sunny", result.getOrNull())
     }
 
@@ -195,13 +198,14 @@ class ChatRepositoryImplTest {
             agentOrchestrator.processUserRequest(
                 prompt,
                 null,
-                null
+                null,
+                RoutingCategory.IMAGE_GENERATION
             )
         ).doReturn(Result.success("created"))
 
         val result = repository.sendMessage(prompt, null)
 
-        verify(agentOrchestrator).processUserRequest(prompt, null, null)
+        verify(agentOrchestrator).processUserRequest(prompt, null, null, RoutingCategory.IMAGE_GENERATION)
         assertEquals("created", result.getOrNull())
     }
 
@@ -214,7 +218,7 @@ class ChatRepositoryImplTest {
 
         val result = repository.sendMessage(prompt, mockUri)
 
-        verify(agentOrchestrator, never()).processUserRequest(any(), any(), any())
+        verify(agentOrchestrator, never()).processUserRequest(any(), any(), any(), any())
         verify(inferenceManager).generateStream(argThat {
             imageUri == mockUri &&
                     this.prompt.contains("attached image") &&

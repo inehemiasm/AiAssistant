@@ -2,12 +2,15 @@ package com.neo.chevere.di
 
 import android.content.Context
 import androidx.room.Room
+import com.neo.chevere.data.ChatHistoryRepositoryImpl
 import com.neo.chevere.data.datasource.local.AppDatabase
+import com.neo.chevere.data.datasource.local.ConversationHistoryDao
 import com.neo.chevere.data.datasource.local.InstalledModelDao
 import com.neo.chevere.data.datasource.local.RoomInstalledModelRegistry
 import com.neo.chevere.data.datasource.local.SearchCacheDao
 import com.neo.chevere.data.datasource.local.TaskDao
 import com.neo.chevere.data.datasource.local.DocumentChunkDao
+import com.neo.chevere.domain.ChatHistoryRepository
 import com.neo.chevere.domain.InstalledModelRegistry
 import dagger.Binds
 import dagger.Module
@@ -52,6 +55,11 @@ object DatabaseModule {
     fun provideDocumentChunkDao(database: AppDatabase): DocumentChunkDao {
         return database.documentChunkDao()
     }
+
+    @Provides
+    fun provideConversationHistoryDao(database: AppDatabase): ConversationHistoryDao {
+        return database.conversationHistoryDao()
+    }
 }
 
 @Module
@@ -62,4 +70,10 @@ abstract class RepositoryModule {
     abstract fun bindInstalledModelRegistry(
         impl: RoomInstalledModelRegistry
     ): InstalledModelRegistry
+
+    @Binds
+    @Singleton
+    abstract fun bindChatHistoryRepository(
+        impl: ChatHistoryRepositoryImpl
+    ): ChatHistoryRepository
 }

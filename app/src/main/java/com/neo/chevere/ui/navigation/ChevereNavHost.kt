@@ -6,11 +6,13 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.navDeepLink
 import com.neo.chevere.ui.chat.ChatScreen
 import com.neo.chevere.ui.chat.ChatViewModel
 import com.neo.chevere.ui.marketplace.MarketplaceViewModel
 import com.neo.chevere.ui.marketplace.ModelMarketplaceScreen
 import com.neo.chevere.ui.marketplace.details.ModelDetailsScreen
+import com.neo.chevere.ui.radar.SensorsRadarScreen
 import com.neo.chevere.ui.settings.BenchmarkScreen
 import com.neo.chevere.ui.settings.SettingsScreen
 import com.neo.chevere.ui.tasks.TasksScreen
@@ -30,14 +32,16 @@ fun ChevereNavHost(
             ChatScreen(
                 viewModel = chatViewModel,
                 onSettingsClick = { navController.navigate(Route.Settings) },
-                onModelsClick = { navController.navigate(Route.ModelMarketplace) }
+                onModelsClick = { navController.navigate(Route.ModelMarketplace) },
+                onRadarClick = { mode -> navController.navigate(Route.SensorRadar(mode = mode)) }
             )
         }
 
         composable<Route.Settings> {
             SettingsScreen(
                 onBackClick = { navController.popBackStack() },
-                onBenchmarkClick = { navController.navigate(Route.Benchmark) }
+                onBenchmarkClick = { navController.navigate(Route.Benchmark) },
+                onRadarClick = { navController.navigate(Route.SensorRadar(mode = "all")) }
             )
         }
 
@@ -62,6 +66,16 @@ fun ChevereNavHost(
 
         composable<Route.Benchmark> {
             BenchmarkScreen(
+                onBackClick = { navController.popBackStack() }
+            )
+        }
+
+        composable<Route.SensorRadar>(
+            deepLinks = listOf(
+                navDeepLink { uriPattern = "chevere://sensor-radar" }
+            )
+        ) {
+            SensorsRadarScreen(
                 onBackClick = { navController.popBackStack() }
             )
         }

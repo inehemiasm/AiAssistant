@@ -3,6 +3,7 @@ package com.neo.chevere.data.agent
 import android.net.Uri
 import com.neo.chevere.core.Constants
 import com.neo.chevere.core.PiiUtils
+import com.neo.chevere.data.chat.RoutingCategory
 import com.neo.chevere.data.inference.InferenceManager
 import com.neo.chevere.domain.ContactsPermissionException
 import com.neo.chevere.domain.CalendarPermissionException
@@ -49,7 +50,8 @@ class AgentOrchestrator @Inject constructor(
     suspend fun processUserRequest(
         prompt: String,
         imageUri: Uri? = null,
-        conversationContext: String? = null
+        conversationContext: String? = null,
+        routingCategory: RoutingCategory? = null
     ): Result<String> = loopMutex.withLock {
         _activePartialResponse.value = ""
         currentSteps.clear()
@@ -57,7 +59,7 @@ class AgentOrchestrator @Inject constructor(
         // Scrub log output to avoid PII in logcat
         Timber.tag(TAG).i(">>> Starting agent loop for user prompt: \"${PiiUtils.scrub(prompt)}\"")
 
-        val systemPrompt = toolRegistry.getToolsSystemPrompt()
+        val systemPrompt = toolRegistry.getToolsSystemPrompt(routingCategory)
         val contextualUserPrompt = buildString {
             if (!conversationContext.isNullOrBlank()) {
                 append(conversationContext)
@@ -73,9 +75,9 @@ class AgentOrchestrator @Inject constructor(
             append(prompt)
         }
         val initialPrompt = if (systemPrompt.isNotEmpty()) {
-            "${Constants.Agent.SYSTEM_PROMPT_PREFIX}$systemPrompt${Constants.Agent.USER_PROMPT_PREFIX}$contextualUserPrompt"
+            buildInitialPrompt(systemPrompt, contextualUserPrompt)
         } else {
-            contextualUserPrompt
+            contextualUserPrompt.takeLast(Constants.Agent.MAX_PROMPT_CHAR_BUDGET)
         }
 
         lastPrompt = initialPrompt
@@ -258,6 +260,38 @@ class AgentOrchestrator @Inject constructor(
     private fun isVeryShort(text: String): Boolean {
         val trimmed = text.trim()
         return trimmed.length < 5 || trimmed.split(" ").size < 3
+    }
+
+    private fun buildInitialPrompt(systemPrompt: String, contextualUserPrompt: String): String {
+        val prefix = "${Constants.Agent.SYSTEM_PROMPT_PREFIX}$systemPrompt${Constants.Agent.USER_PROMPT_PREFIX}"
+        val fullPrompt = "$prefix$contextualUserPrompt"
+        if (fullPrompt.length <= Constants.Agent.MAX_PROMPT_CHAR_BUDGET) {
+            return fullPrompt
+        }
+
+        val currentRequestIndex = contextualUserPrompt.lastIndexOf(Constants.ContextWindow.CURRENT_REQUEST_HEADER)
+        val trimmedContextualPrompt = if (currentRequestIndex >= 0) {
+            val priorContext = contextualUserPrompt.substring(0, currentRequestIndex)
+            val currentRequest = contextualUserPrompt.substring(currentRequestIndex)
+            val remainingForContext =
+                Constants.Agent.MAX_PROMPT_CHAR_BUDGET - prefix.length - currentRequest.length
+            if (remainingForContext > 0) {
+                "${priorContext.takeLast(remainingForContext)}$currentRequest"
+            } else {
+                currentRequest.takeLast(
+                    (Constants.Agent.MAX_PROMPT_CHAR_BUDGET - prefix.length)
+                        .coerceAtLeast(0)
+                )
+            }
+        } else {
+            contextualUserPrompt.takeLast(
+                (Constants.Agent.MAX_PROMPT_CHAR_BUDGET - prefix.length)
+                    .coerceAtLeast(0)
+            )
+        }
+
+        return "$prefix$trimmedContextualPrompt"
+            .takeLast(Constants.Agent.MAX_PROMPT_CHAR_BUDGET)
     }
 
     private fun AgentTool.executionTimeoutMs(): Long {

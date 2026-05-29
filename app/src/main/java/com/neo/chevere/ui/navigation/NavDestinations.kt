@@ -29,6 +29,9 @@ sealed interface Route {
 
     @Serializable
     data object Benchmark : Route
+
+    @Serializable
+    data class SensorRadar(val mode: String = "all") : Route
 }
 
 enum class TopLevelDestination(

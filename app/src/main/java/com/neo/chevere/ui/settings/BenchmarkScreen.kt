@@ -228,6 +228,7 @@ private fun ConsolePanel(
                 add(">> DIAGNOSTICS COMPLETED.")
                 add(">> HARDWARE: ${metrics.accelText.uppercase()}")
                 add(">> MEMORY INFO: ${metrics.systemRamText}")
+                add(">> TOKENS: IN ${metrics.inputTokenCount} / OUT ${metrics.outputTokenCount}")
                 add(">> EXECUTION COMPLETED IN ${metrics.totalTimeMs} MS.")
             } else {
                 add(">> NEURAL CONSOLE IDLE.")
@@ -331,8 +332,14 @@ private fun MetricsTable(metrics: BenchmarkMetrics) {
                 isMonospace = true
             )
             MetricRow(
-                label = stringResource(R.string.benchmark_throughput_label),
-                value = String.format("%.2f tokens/sec", metrics.throughputTps),
+                label = stringResource(R.string.benchmark_input_tokens_label),
+                value = "${metrics.inputTokenCount} tokens",
+                isMonospace = true,
+                isGlow = true
+            )
+            MetricRow(
+                label = stringResource(R.string.benchmark_output_tokens_label),
+                value = "${metrics.outputTokenCount} tokens",
                 isMonospace = true,
                 isGlow = true
             )

@@ -17,6 +17,7 @@ import com.neo.chevere.data.telemetry.TelemetryConstants
 import com.neo.chevere.data.voice.VoiceInputManager
 import com.neo.chevere.data.voice.VoiceResult
 import com.neo.chevere.data.agent.AgentState
+import com.neo.chevere.domain.ChatHistoryRepository
 import com.neo.chevere.domain.ChatMessage
 import com.neo.chevere.domain.ChatRepository
 import com.neo.chevere.domain.ContactsPermissionException
@@ -59,7 +60,8 @@ class ChatViewModel @Inject constructor(
     private val preferenceManager: PreferenceManager,
     private val dispatcherProvider: DispatcherProvider,
     private val telemetry: AppTelemetry,
-    private val voiceInputManager: VoiceInputManager
+    private val voiceInputManager: VoiceInputManager,
+    private val chatHistoryRepository: ChatHistoryRepository
 ) : BaseViewModel<ChatState, ChatIntent, ChatEffect>(application, ChatState()) {
 
     private val explicitImagePromptPolicy = ExplicitImagePromptPolicy()
@@ -74,6 +76,8 @@ class ChatViewModel @Inject constructor(
     private var imageGenerationJob: Job? = null
     private var responseJob: Job? = null
     private var lastUserMessage: String? = null
+    /** ID of the currently active Room session; null until the first message is sent. */
+    private var currentSessionId: Long? = null
 
     init {
         // 1. Observe global initialization status from the repository
@@ -95,6 +99,9 @@ class ChatViewModel @Inject constructor(
 
         // 6. Observe voice recognition results
         observeVoiceResults()
+
+        // 7. Observe history sessions for the bottom sheet
+        observeHistorySessions()
     }
 
     private fun observeActivePartialResponse() {
@@ -262,6 +269,11 @@ class ChatViewModel @Inject constructor(
                 is ChatIntent.VoiceInputResult -> {
                     setState { copy(inputText = intent.text, isListening = false) }
                 }
+                // ── Chat History ─────────────────────────────────────────────
+                ChatIntent.NewConversation -> newConversation()
+                is ChatIntent.LoadSession -> loadSession(intent.sessionId)
+                is ChatIntent.DeleteSession -> deleteSession(intent.sessionId)
+                is ChatIntent.RenameSession -> renameSession(intent.sessionId, intent.newTitle)
             }
         }
     }
@@ -271,7 +283,90 @@ class ChatViewModel @Inject constructor(
             withContext(dispatcherProvider.io) {
                 repository.clearConversation()
             }
-            setState { copy(messages = emptyList()) }
+            // Detach from the current session; the session stays in history
+            currentSessionId = null
+            setState { copy(messages = emptyList(), currentSessionId = null) }
+        }
+    }
+
+    // ── Chat History helpers ──────────────────────────────────────────────────
+
+    private fun observeHistorySessions() {
+        viewModelScope.launch {
+            chatHistoryRepository.getAllSessions().collectLatest { sessions ->
+                setState { copy(historySessions = sessions) }
+            }
+        }
+    }
+
+    /**
+     * Ensures a Room session exists for the current conversation. If this is the
+     * first message of a new session, creates the session row and caches the ID.
+     */
+    private suspend fun ensureSessionCreated(firstUserText: String): Long {
+        currentSessionId?.let { return it }
+        val id = withContext(dispatcherProvider.io) {
+            chatHistoryRepository.createSession(
+                firstUserMessage = firstUserText,
+                modelName = currentState.selectedModel
+            )
+        }
+        currentSessionId = id
+        setState { copy(currentSessionId = id) }
+        return id
+    }
+
+    /** Persists a completed message to the active session (fire-and-forget). */
+    private fun persistMessage(message: ChatMessage) {
+        val sessionId = currentSessionId ?: return
+        viewModelScope.launch(dispatcherProvider.io) {
+            chatHistoryRepository.appendMessage(sessionId, message)
+        }
+    }
+
+    private fun newConversation() {
+        viewModelScope.launch {
+            withContext(dispatcherProvider.io) {
+                repository.clearConversation()
+            }
+            currentSessionId = null
+            setState { copy(messages = emptyList(), currentSessionId = null, inputText = "") }
+            sendEffect { ChatEffect.CloseHistorySheet }
+        }
+    }
+
+    private fun loadSession(sessionId: Long) {
+        if (currentState.isAiBusy) return
+        viewModelScope.launch {
+            val messages = withContext(dispatcherProvider.io) {
+                chatHistoryRepository.getMessages(sessionId)
+            }
+            // Rebuild context manager from the loaded session
+            withContext(dispatcherProvider.io) {
+                repository.clearConversation()
+            }
+            currentSessionId = sessionId
+            setState { copy(messages = messages, currentSessionId = sessionId) }
+            sendEffect { ChatEffect.ScrollToBottom }
+            sendEffect { ChatEffect.CloseHistorySheet }
+        }
+    }
+
+    private fun deleteSession(sessionId: Long) {
+        viewModelScope.launch(dispatcherProvider.io) {
+            chatHistoryRepository.deleteSession(sessionId)
+            // If we just deleted the active session, start fresh
+            if (currentSessionId == sessionId) {
+                currentSessionId = null
+                setState { copy(messages = emptyList(), currentSessionId = null) }
+            }
+        }
+    }
+
+    private fun renameSession(sessionId: Long, newTitle: String) {
+        if (newTitle.isBlank()) return
+        viewModelScope.launch(dispatcherProvider.io) {
+            chatHistoryRepository.renameSession(sessionId, newTitle)
         }
     }
 
@@ -312,6 +407,9 @@ class ChatViewModel @Inject constructor(
         }
         lastUserMessage = promptText
         val userMsg = ChatMessage(promptText, isUser = true, imageUri = imageUri?.toString())
+        // Ensure a Room session exists and persist the user message before dispatching
+        ensureSessionCreated(promptText)
+        persistMessage(userMsg)
         setState {
             copy(
                 messages = messages + userMsg,
@@ -326,7 +424,7 @@ class ChatViewModel @Inject constructor(
             telemetry.logChatTurnStarted(hasImage = true, promptLength = promptText.length)
             responseJob?.cancel()
             responseJob = viewModelScope.launch {
-                processAgentTurn(hasImage = true) {
+                processAgentTurn(hasImage = true, inputText = promptText) {
                     withContext(dispatcherProvider.default) {
                         sendMessageUseCase(promptText, imageUri)
                     }
@@ -353,6 +451,25 @@ class ChatViewModel @Inject constructor(
             return
         }
 
+        // Sensor slash commands → navigate to Sensor Radar screen in the requested mode
+        val trimmedLower = promptText.trim().lowercase()
+        val sensorMode: String? = when {
+            trimmedLower == "/sensors" || trimmedLower.startsWith("/sensors ") -> "all"
+            trimmedLower == "/stud" || trimmedLower.startsWith("/stud ")   -> "stud"
+            trimmedLower == "/metal" || trimmedLower.startsWith("/metal ") -> "stud"
+            trimmedLower == "/level" || trimmedLower.startsWith("/level ")                     -> "level"
+            trimmedLower == "/spiritlevel" || trimmedLower.startsWith("/spiritlevel ") -> "level"
+            trimmedLower == "/light" || trimmedLower.startsWith("/light ") -> "light"
+            trimmedLower == "/proximity" || trimmedLower.startsWith("/proximity ") -> "proximity"
+            else -> null
+        }
+        if (sensorMode != null) {
+            // Remove the user message we just appended — it's a silent nav command
+            setState { copy(messages = messages.dropLast(1), sendState = SendState.Idle, inputText = "") }
+            sendEffect { ChatEffect.NavigateToRadar(mode = sensorMode) }
+            return
+        }
+
         val imageCommand = parseImageCommand(promptText)
         if ((imageCommand != null || looksLikeImageGenerationRequest(promptText)) && !hasInstalledImageGenerationModel()) {
             promptForImageModelDownload()
@@ -367,7 +484,7 @@ class ChatViewModel @Inject constructor(
         telemetry.logChatTurnStarted(hasImage = false, promptLength = promptText.length)
         responseJob?.cancel()
         responseJob = viewModelScope.launch {
-            processAgentTurn(hasImage = false) {
+            processAgentTurn(hasImage = false, inputText = promptText) {
                 withContext(dispatcherProvider.default) {
                     sendMessageUseCase(promptText, imageUri = null)
                 }
@@ -642,7 +759,7 @@ class ChatViewModel @Inject constructor(
         sendEffect { ChatEffect.HideKeyboard }
         responseJob?.cancel()
         responseJob = viewModelScope.launch {
-            processAgentTurn(hasImage = false) {
+            processAgentTurn(hasImage = false, inputText = lastUserMessage.orEmpty()) {
                 withContext(dispatcherProvider.default) {
                     repository.confirmAction()
                 }
@@ -654,7 +771,7 @@ class ChatViewModel @Inject constructor(
         sendEffect { ChatEffect.HideKeyboard }
         responseJob?.cancel()
         responseJob = viewModelScope.launch {
-            processAgentTurn(hasImage = false) {
+            processAgentTurn(hasImage = false, inputText = lastUserMessage.orEmpty()) {
                 withContext(dispatcherProvider.default) {
                     repository.cancelAction()
                 }
@@ -662,7 +779,11 @@ class ChatViewModel @Inject constructor(
         }
     }
 
-    private suspend fun processAgentTurn(hasImage: Boolean, action: suspend () -> Result<String>) {
+    private suspend fun processAgentTurn(
+        hasImage: Boolean,
+        inputText: String,
+        action: suspend () -> Result<String>
+    ) {
         var result: Result<String>? = null
         val time = measureTimeMillis {
             result = try {
@@ -711,6 +832,8 @@ class ChatViewModel @Inject constructor(
                     text = errorMsg,
                     isUser = false,
                     inferenceTimeMs = time,
+                    inputTokenCount = estimateTokenCount(inputText),
+                    outputTokenCount = estimateTokenCount(errorMsg),
                     modelName = "CHEVERE AI",
                     agentState = currentAgentState.takeIf { it !is AgentState.Idle }
                 )
@@ -729,6 +852,8 @@ class ChatViewModel @Inject constructor(
             text = imagePayload?.caption ?: responseText,
             isUser = false,
             inferenceTimeMs = time,
+            inputTokenCount = estimateTokenCount(inputText),
+            outputTokenCount = estimateTokenCount(imagePayload?.caption ?: responseText),
             imageUri = imagePayload?.imageUri,
             modelName = currentState.selectedModel.replace(
                 Constants.ModelFiles.LITERTLM_EXTENSION,
@@ -738,6 +863,7 @@ class ChatViewModel @Inject constructor(
         )
         responseJob = null
         setState { copy(messages = messages + aiMsg, sendState = SendState.Idle, streamingText = "") }
+        persistMessage(aiMsg)
         sendEffect { ChatEffect.ScrollToBottom }
     }
 
@@ -808,6 +934,8 @@ class ChatViewModel @Inject constructor(
             text = "Generated image for: ${generation.prompt}",
             isUser = false,
             inferenceTimeMs = time,
+            inputTokenCount = estimateTokenCount(prompt),
+            outputTokenCount = estimateTokenCount("Generated image for: ${generation.prompt}"),
             imageUri = generation.imageUri.toString(),
             modelName = currentState.selectedModel.replace(Constants.ModelFiles.ZIP_EXTENSION, "")
                 .uppercase(),
@@ -821,6 +949,7 @@ class ChatViewModel @Inject constructor(
             isExplicit = maskExplicitImage
         )
         setState { copy(messages = messages + aiMsg, sendState = SendState.Idle) }
+        persistMessage(aiMsg)
         sendEffect { ChatEffect.ScrollToBottom }
     }
 
@@ -843,6 +972,9 @@ class ChatViewModel @Inject constructor(
         )
     }
 
+    private fun estimateTokenCount(text: String): Int =
+        (text.length / APPROX_CHARS_PER_TOKEN).toInt().coerceAtLeast(if (text.isBlank()) 0 else 1)
+
     private fun com.neo.chevere.domain.InstalledModel.isHealthy(): Boolean =
         installStatus == com.neo.chevere.domain.InstallStatus.INSTALLED
 
@@ -857,6 +989,7 @@ class ChatViewModel @Inject constructor(
     private data class ImageCommand(val prompt: String)
 
     private companion object {
+        const val APPROX_CHARS_PER_TOKEN = 4.0
         val imageCommandPrefixes = Constants.Commands.IMAGE_GENERATION
         val imageRequestVerbs = listOf("create", "generate", "make", "draw", "render", "paint")
         val imageRequestNouns =
