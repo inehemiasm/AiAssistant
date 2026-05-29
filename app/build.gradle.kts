@@ -10,6 +10,10 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
+ksp {
+    arg("room.schemaLocation", "${projectDir}/schemas")
+}
+
 android {
     namespace = "com.neo.chevere"
     compileSdk = 37

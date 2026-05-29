@@ -14,7 +14,7 @@ import androidx.room.TypeConverters
         ConversationMessageEntity::class
     ],
     version = 6,
-    exportSchema = false
+    exportSchema = true
 )
 @TypeConverters(DatabaseConverters::class)
 abstract class AppDatabase : RoomDatabase() {
