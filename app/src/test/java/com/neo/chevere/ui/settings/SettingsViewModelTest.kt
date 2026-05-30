@@ -44,6 +44,7 @@ class SettingsViewModelTest {
         whenever(preferenceManager.defaultImageStepsPreference).doReturn(flowOf(15))
         whenever(preferenceManager.defaultImageGuidanceScalePreference).doReturn(flowOf(8.5f))
         whenever(preferenceManager.defaultImageNegativePromptPreference).doReturn(flowOf("blurry"))
+        whenever(preferenceManager.downloadOnWifiOnlyPreference).doReturn(flowOf(true))
 
         viewModel = SettingsViewModel(application, preferenceManager)
     }

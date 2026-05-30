@@ -1,16 +1,20 @@
 package com.neo.chevere.ui.radar
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.media.AudioManager
+import android.media.MediaRecorder
 import android.media.ToneGenerator
 import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -46,7 +50,9 @@ enum class SensorMode(val key: String) {
     /** Ambient light sensor only. */
     LIGHT("light"),
     /** Proximity sensor only. */
-    PROXIMITY("proximity");
+    PROXIMITY("proximity"),
+    /** Sound level sensor (decibel meter). */
+    SOUND("sound");
 
     companion object {
         fun from(key: String?) = entries.firstOrNull { it.key == key } ?: ALL
@@ -66,7 +72,10 @@ data class RadarUiState(
     val roll: Float = 0f,
     val audioEnabled: Boolean = false,
     val vibrationEnabled: Boolean = false,
-    val statusLabel: String = "INITIALIZING..."
+    val statusLabel: String = "INITIALIZING...",
+    val soundDbSpl: Float = 0f,
+    val soundHistory: List<Float> = emptyList(),
+    val micPermissionGranted: Boolean = true
 )
 
 @HiltViewModel
@@ -169,10 +178,15 @@ class SensorsRadarViewModel @Inject constructor(
 
     init {
         _uiState.update { it.copy(statusLabel = initialStatusLabel(mode)) }
+        val hasMic = checkMicPermission()
+        _uiState.update { it.copy(micPermissionGranted = hasMic) }
         registerSensors()
         if (mode == SensorMode.ALL || mode == SensorMode.STUD) {
             startAudioFeedbackLoop()
             startVibrationFeedbackLoop()
+        }
+        if (mode == SensorMode.SOUND && hasMic) {
+            startSoundMonitoring()
         }
     }
 
@@ -182,6 +196,7 @@ class SensorsRadarViewModel @Inject constructor(
         SensorMode.LEVEL    -> "READING ORIENTATION..."
         SensorMode.LIGHT    -> "READING AMBIENT LIGHT..."
         SensorMode.PROXIMITY -> "READING PROXIMITY..."
+        SensorMode.SOUND    -> "MONITORING AMBIENT NOISE..."
     }
 
     fun calibrate() {
@@ -243,6 +258,9 @@ class SensorsRadarViewModel @Inject constructor(
                 manager.getDefaultSensor(Sensor.TYPE_PROXIMITY)
                     ?.let { manager.registerListener(sensorListener, it, SensorManager.SENSOR_DELAY_NORMAL) }
             }
+            SensorMode.SOUND -> {
+                // Sound mode uses MediaRecorder inside startSoundMonitoring, no standard Android Sensors are registered
+            }
         }
     }
 
@@ -296,9 +314,117 @@ class SensorsRadarViewModel @Inject constructor(
         } catch (_: Exception) {}
     }
 
+    private fun checkMicPermission(): Boolean {
+        return ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
+                PackageManager.PERMISSION_GRANTED
+    }
+
+    private var soundJob: Job? = null
+    private var mediaRecorder: MediaRecorder? = null
+    private var soundRecordFile: java.io.File? = null
+
+    fun onMicPermissionGranted() {
+        _uiState.update { it.copy(micPermissionGranted = true) }
+        if (mode == SensorMode.SOUND) {
+            startSoundMonitoring()
+        }
+    }
+
+    private fun startSoundMonitoring() {
+        soundJob?.cancel()
+        releaseAudioRecorder()
+
+        if (!checkMicPermission()) {
+            _uiState.update { it.copy(micPermissionGranted = false) }
+            return
+        }
+
+        soundJob = viewModelScope.launch(Dispatchers.Default) {
+            val recorder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                MediaRecorder(context)
+            } else {
+                @Suppress("DEPRECATION")
+                MediaRecorder()
+            }
+
+            try {
+                recorder.setAudioSource(MediaRecorder.AudioSource.MIC)
+                recorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP)
+                recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB)
+                
+                val tmpFile = java.io.File(context.cacheDir, "sound_radar_probe.3gp")
+                soundRecordFile = tmpFile
+                recorder.setOutputFile(tmpFile.absolutePath)
+                
+                recorder.prepare()
+                recorder.start()
+                mediaRecorder = recorder
+
+                _uiState.update { it.copy(statusLabel = "MONITORING AMBIENT NOISE...") }
+
+                while (true) {
+                    delay(150L)
+                    val amplitude = recorder.maxAmplitude
+                    val dbSpl = formatDbSpl(amplitude)
+                    _uiState.update { state ->
+                        val history = (state.soundHistory + dbSpl).takeLast(60)
+                        val label = when {
+                            dbSpl < 30f  -> "VERY QUIET (${dbSpl.toInt()} dB)"
+                            dbSpl < 45f  -> "QUIET (${dbSpl.toInt()} dB)"
+                            dbSpl < 60f  -> "MODERATE NOISE (${dbSpl.toInt()} dB)"
+                            dbSpl < 75f  -> "LOUD (${dbSpl.toInt()} dB)"
+                            dbSpl < 90f  -> "VERY LOUD (${dbSpl.toInt()} dB)"
+                            else         -> "HEARING RISK (${dbSpl.toInt()} dB)"
+                        }
+                        state.copy(
+                            soundDbSpl = dbSpl,
+                            soundHistory = history,
+                            statusLabel = label
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(statusLabel = "SOUND PROBE ERROR: ${e.message}") }
+            } finally {
+                runCatching { recorder.stop() }
+                runCatching { recorder.release() }
+                soundRecordFile?.delete()
+                soundRecordFile = null
+                if (mediaRecorder == recorder) {
+                    mediaRecorder = null
+                }
+            }
+        }
+    }
+
+    private fun formatDbSpl(amplitude: Int): Float {
+        if (amplitude <= 0) return 0f
+        val dbFs = 20.0 * kotlin.math.log10(amplitude / 32767.0)
+        val dbSpl = (dbFs + 90.0).coerceIn(0.0, 120.0)
+        return dbSpl.toFloat()
+    }
+
+    private fun releaseAudioRecorder() {
+        soundJob?.cancel()
+        soundJob = null
+        val recorder = mediaRecorder
+        if (recorder != null) {
+            try {
+                recorder.stop()
+            } catch (_: Exception) {}
+            try {
+                recorder.release()
+            } catch (_: Exception) {}
+            mediaRecorder = null
+        }
+        soundRecordFile?.delete()
+        soundRecordFile = null
+    }
+
     override fun onCleared() {
         super.onCleared()
         unregisterSensors()
+        releaseAudioRecorder()
         audioJob?.cancel()
         vibrationJob?.cancel()
         try { toneGenerator?.release() } catch (_: Exception) {}

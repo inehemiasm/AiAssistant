@@ -461,6 +461,8 @@ class ChatViewModel @Inject constructor(
             trimmedLower == "/spiritlevel" || trimmedLower.startsWith("/spiritlevel ") -> "level"
             trimmedLower == "/light" || trimmedLower.startsWith("/light ") -> "light"
             trimmedLower == "/proximity" || trimmedLower.startsWith("/proximity ") -> "proximity"
+            trimmedLower == "/sound" || trimmedLower.startsWith("/sound ") -> "sound"
+            trimmedLower == "/noise" || trimmedLower.startsWith("/noise ") -> "sound"
             else -> null
         }
         if (sensorMode != null) {

@@ -78,7 +78,7 @@ class HuggingFaceModelCatalogDataSource @Inject constructor(
         // 2. Search Hugging Face Hub for compatible models dynamically (Discovery)
         try {
             val response = httpClient.get("https://huggingface.co/api/models") {
-                parameter("search", "litertlm")
+                parameter("search", "litert")
                 parameter("full", "true")
             }
 

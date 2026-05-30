@@ -16,7 +16,7 @@ class WorkManagerModelDownloadManagerTest {
 
     @Before
     fun setup() {
-        downloadManager = WorkManagerModelDownloadManager(mock())
+        downloadManager = WorkManagerModelDownloadManager(mock(), mock())
     }
 
     @Test

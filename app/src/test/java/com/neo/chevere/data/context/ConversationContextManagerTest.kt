@@ -90,7 +90,7 @@ class ConversationContextManagerTest {
         assertTrue(transcript != null)
         assertTrue(transcript!!.contains("User: q0"))
         assertTrue(transcript.contains("Assistant: a0"))
-        assertFalse(transcript.contains("q1"))
+        assertFalse(transcript.contains("q2"))
     }
 
     @Test

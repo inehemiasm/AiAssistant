@@ -1,5 +1,7 @@
 package com.neo.chevere.ui.radar
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -28,8 +30,10 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -51,12 +55,31 @@ fun SensorsRadarScreen(
     val secondaryColor = MaterialTheme.colorScheme.secondary
     val surfaceContainer = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
 
+    val context = LocalContext.current
+    val micPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            viewModel.onMicPermissionGranted()
+        }
+    }
+
+    LaunchedEffect(uiState.mode) {
+        if (uiState.mode == SensorMode.SOUND &&
+            androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.RECORD_AUDIO) ==
+            android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) {
+            viewModel.onMicPermissionGranted()
+        }
+    }
+
     val screenTitle = when (uiState.mode) {
         SensorMode.ALL      -> "[ SENSOR RADAR ]"
         SensorMode.STUD     -> "[ STUD FINDER ]"
         SensorMode.LEVEL    -> "[ SPIRIT LEVEL ]"
         SensorMode.LIGHT    -> "[ AMBIENT LIGHT ]"
         SensorMode.PROXIMITY -> "[ PROXIMITY ]"
+        SensorMode.SOUND    -> "[ DECIBEL METER ]"
     }
 
     Scaffold(
@@ -112,8 +135,9 @@ fun SensorsRadarScreen(
             // ── Status Banner (all modes) ──────────────────────────────────
             StatusBanner(
                 label = uiState.statusLabel,
-                alertColor = uiState.mode == SensorMode.STUD && uiState.magneticCalibrated > 35f ||
-                        uiState.mode == SensorMode.PROXIMITY && uiState.proximityNear,
+                alertColor = (uiState.mode == SensorMode.STUD && uiState.magneticCalibrated > 35f) ||
+                        (uiState.mode == SensorMode.PROXIMITY && uiState.proximityNear) ||
+                        (uiState.mode == SensorMode.SOUND && uiState.soundDbSpl > 75f),
                 primaryColor = primaryColor,
                 surfaceContainer = surfaceContainer
             )
@@ -151,6 +175,24 @@ fun SensorsRadarScreen(
                     primaryColor = primaryColor,
                     surfaceContainer = surfaceContainer
                 )
+                SensorMode.SOUND -> {
+                    if (!uiState.micPermissionGranted) {
+                        MicPermissionPromptCard(
+                            onRequestPermission = {
+                                micPermissionLauncher.launch(android.Manifest.permission.RECORD_AUDIO)
+                            },
+                            primaryColor = primaryColor,
+                            surfaceContainer = surfaceContainer
+                        )
+                    } else {
+                        SoundSensorContent(
+                            dbSpl = uiState.soundDbSpl,
+                            history = uiState.soundHistory,
+                            primaryColor = primaryColor,
+                            surfaceContainer = surfaceContainer
+                        )
+                    }
+                }
             }
         }
     }
@@ -682,3 +724,270 @@ fun SpiritLevelVisualizer(
 }
 
 private fun BoxBorder(color: Color) = BorderStroke(1.dp, color)
+
+@Composable
+private fun MicPermissionPromptCard(
+    onRequestPermission: () -> Unit,
+    primaryColor: Color,
+    surfaceContainer: Color
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+        colors = CardDefaults.cardColors(containerColor = surfaceContainer),
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.4f))
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.HearingDisabled,
+                contentDescription = "Permission Required",
+                tint = MaterialTheme.colorScheme.error,
+                modifier = Modifier.size(64.dp)
+            )
+            Text(
+                text = "MICROPHONE REQUIRED",
+                style = Typography.titleMedium.copy(fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace),
+                color = MaterialTheme.colorScheme.error
+            )
+            Text(
+                text = "Recording permission is needed to measure ambient decibels (dB SPL) in real-time.",
+                style = Typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
+            Spacer(Modifier.height(8.dp))
+            Button(
+                onClick = onRequestPermission,
+                colors = ButtonDefaults.buttonColors(containerColor = primaryColor),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text(
+                    text = "GRANT ACCESS",
+                    style = Typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.onPrimary
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SoundSensorContent(
+    dbSpl: Float,
+    history: List<Float>,
+    primaryColor: Color,
+    surfaceContainer: Color
+) {
+    val category = when {
+        dbSpl < 30f  -> "VERY QUIET"
+        dbSpl < 45f  -> "QUIET"
+        dbSpl < 60f  -> "MODERATE"
+        dbSpl < 75f  -> "LOUD"
+        dbSpl < 90f  -> "VERY LOUD"
+        else         -> "HEARING RISK"
+    }
+
+    val warningColor = when {
+        dbSpl < 60f  -> primaryColor
+        dbSpl < 75f  -> Color(0xFFFFB300) // Amber
+        else         -> MaterialTheme.colorScheme.error
+    }
+
+    val infiniteTransition = rememberInfiniteTransition(label = "WaveAnimation")
+    val waveOffset by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 2f * Math.PI.toFloat(),
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1500, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "WaveOffset"
+    )
+
+    DecibelHUDVisualizer(
+        dbSpl = dbSpl,
+        primaryColor = warningColor,
+        waveOffset = waveOffset
+    )
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = surfaceContainer),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text("AUDIO WAVEFORM", style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            WaveformBouncer(dbSpl = dbSpl, color = warningColor)
+        }
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = surfaceContainer),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = "${dbSpl.toInt()} dB SPL",
+                style = Typography.displaySmall.copy(fontWeight = FontWeight.ExtraBold, fontFamily = FontFamily.Monospace),
+                color = warningColor
+            )
+            Text(
+                text = category,
+                style = Typography.titleMedium.copy(fontWeight = FontWeight.Bold, letterSpacing = 2.sp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(4.dp))
+            LinearProgressIndicator(
+                progress = { dbSpl / 120f },
+                modifier = Modifier.fillMaxWidth().height(8.dp),
+                color = warningColor,
+                trackColor = warningColor.copy(alpha = 0.15f)
+            )
+        }
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = surfaceContainer),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text("SOUND HISTORY (dB)", style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 8.dp))
+            HistoryGraph(history = history, primaryColor = warningColor)
+        }
+    }
+}
+
+@Composable
+private fun WaveformBouncer(
+    dbSpl: Float,
+    color: Color,
+    modifier: Modifier = Modifier
+) {
+    val barCount = 20
+    val intensity = (dbSpl / 120f).coerceIn(0f, 1f)
+    
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(60.dp)
+            .padding(horizontal = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        for (i in 0 until barCount) {
+            val envelope = 1f - abs(i - (barCount - 1) / 2f) / ((barCount - 1) / 2f)
+            val modifierVal = when (i % 4) {
+                0 -> 0.7f
+                1 -> 1.2f
+                2 -> 0.9f
+                else -> 0.5f
+            }
+            val targetHeight = (5.dp + (50.dp * intensity * envelope * modifierVal))
+            val animatedHeight by animateDpAsState(
+                targetValue = targetHeight,
+                animationSpec = spring(dampingRatio = 0.5f, stiffness = Spring.StiffnessLow),
+                label = "BarHeight_$i"
+            )
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(animatedHeight)
+                    .background(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(color, color.copy(alpha = 0.3f))
+                        ),
+                        shape = RoundedCornerShape(2.dp)
+                    )
+            )
+        }
+    }
+}
+
+@Composable
+private fun DecibelHUDVisualizer(
+    dbSpl: Float,
+    primaryColor: Color,
+    waveOffset: Float,
+    modifier: Modifier = Modifier
+) {
+    val intensity = (dbSpl / 120f).coerceIn(0f, 1f)
+    val pulseScale by animateFloatAsState(
+        targetValue = 1f + (intensity * 0.15f),
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+        label = "DbHUDScale"
+    )
+
+    Box(
+        modifier = modifier
+            .size(230.dp)
+            .border(1.dp, primaryColor.copy(alpha = 0.2f), RoundedCornerShape(115.dp)),
+        contentAlignment = Alignment.Center
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize().padding(8.dp)) {
+            val center = Offset(size.width / 2, size.height / 2)
+            val radius = size.minDimension / 2
+            
+            drawCircle(color = primaryColor.copy(alpha = 0.12f), radius = radius, style = Stroke(width = 2f))
+            drawCircle(color = primaryColor.copy(alpha = 0.12f), radius = radius * 0.75f, style = Stroke(width = 2f))
+            
+            val waveRadius = radius * 0.75f
+            val path = Path()
+            val points = 80
+            for (x in 0..points) {
+                val fraction = x.toFloat() / points
+                val angle = fraction * 2f * Math.PI.toFloat()
+                val sine = sin(angle * 4f + waveOffset) * (8f + (30f * intensity))
+                val r = waveRadius + sine
+                val drawX = center.x + r * cos(angle)
+                val drawY = center.y + r * sin(angle)
+                if (x == 0) {
+                    path.moveTo(drawX, drawY)
+                } else {
+                    path.lineTo(drawX, drawY)
+                }
+            }
+            path.close()
+            drawPath(path = path, color = primaryColor.copy(alpha = 0.08f))
+            drawPath(path = path, color = primaryColor.copy(alpha = 0.4f), style = Stroke(width = 2.5f))
+
+            drawCircle(
+                color = primaryColor.copy(alpha = 0.25f),
+                radius = radius * 0.5f,
+                style = Stroke(width = 3f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(8f, 8f)))
+            )
+            drawCircle(color = primaryColor, radius = 4f, center = center)
+        }
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+            Icon(
+                imageVector = Icons.Default.Hearing,
+                contentDescription = null,
+                tint = primaryColor,
+                modifier = Modifier.size(28.dp)
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = String.format(java.util.Locale.US, "%.0f", dbSpl),
+                style = Typography.headlineMedium.copy(fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace, fontSize = 32.sp),
+                color = primaryColor
+            )
+            Text("dB SPL", style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}

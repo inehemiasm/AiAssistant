@@ -15,11 +15,42 @@
     "displayName": "Gemma 4 E2B IT (Quantized)",
     "source": "HUGGING_FACE",
     "repoId": "litert-community/gemma-4-E2B-it-litert-lm",
-    "fileName": "gemma-4-E2B-it-q4.litertlm",
-    "downloadUrl": "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it-q4.litertlm",
-    "sizeBytes": 1565953024,
+    "fileName": "gemma-4-E2B-it-web.litertlm",
+    "downloadUrl": "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it-web.litertlm",
+    "sizeBytes": 2008432640,
     "supportsVision": true,
     "license": "Gemma Terms of Use"
+  },
+  {
+    "id": "qwen-2.5-coder-1.5b-it",
+    "displayName": "Qwen 2.5 Coder 1.5B IT",
+    "source": "HUGGING_FACE",
+    "repoId": "4ntoine/Qwen2.5-Coder-1.5B-Instruct-LiteRTLM",
+    "fileName": "model.litertlm",
+    "downloadUrl": "https://huggingface.co/4ntoine/Qwen2.5-Coder-1.5B-Instruct-LiteRTLM/resolve/main/model.litertlm",
+    "sizeBytes": 1567489440,
+    "supportsVision": false,
+    "license": "Apache-2.0"
+  },
+  {
+    "id": "dreamshaper-hyper-onnx",
+    "displayName": "DreamShaper Hyper-SD ONNX",
+    "source": "HUGGING_FACE",
+    "repoId": "Heliosoph/dreamshaper-hyper-onnx",
+    "fileName": "dreamshaper-hyper-onnx.zip",
+    "downloadUrl": "https://huggingface.co/Heliosoph/dreamshaper-hyper-onnx",
+    "repositoryFiles": [
+      "https://huggingface.co/Heliosoph/dreamshaper-hyper-onnx/resolve/main/text_encoder/model.onnx|text_encoder/model.onnx",
+      "https://huggingface.co/Heliosoph/dreamshaper-hyper-onnx/resolve/main/tokenizer/vocab.json|tokenizer/vocab.json",
+      "https://huggingface.co/Heliosoph/dreamshaper-hyper-onnx/resolve/main/tokenizer/merges.txt|tokenizer/merges.txt",
+      "https://huggingface.co/Heliosoph/dreamshaper-hyper-onnx/resolve/main/unet/model.onnx|unet/model.onnx",
+      "https://huggingface.co/Heliosoph/dreamshaper-hyper-onnx/resolve/main/unet/model.onnx_data|unet/model.onnx_data",
+      "https://huggingface.co/Heliosoph/dreamshaper-hyper-onnx/resolve/main/vae_decoder/model.onnx|vae_decoder/model.onnx"
+    ],
+    "sizeBytes": 2150000000,
+    "runtimeType": "ONNX Diffusion",
+    "supportsVision": true,
+    "license": "CreativeML OpenRAIL-M"
   },
   {
     "id": "gemma-4-e4b-it",

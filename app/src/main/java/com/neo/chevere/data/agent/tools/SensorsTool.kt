@@ -57,7 +57,7 @@ class SensorsTool @Inject constructor(
         pressure, battery, thermals, microphone noise level, gyroscope, accelerometer, compass,
         proximity, posture, flatness/spirit level, and metal/magnetic field strength.
         If the user asks to open a visual sensor screen, use perform_app_action instead:
-        chevere://sensor-radar?mode=all, mode=stud, mode=level, mode=light, or mode=proximity.
+        chevere://sensor-radar?mode=all, mode=stud, mode=level, mode=light, mode=proximity, or mode=sound.
 
         BUILT-IN SENSOR SCREENS: This app has dedicated real-time visual screens for sensors. When the user
         asks to open, launch, view, start, or show any visual/animated/interactive sensor screen, call
@@ -68,6 +68,7 @@ class SensorsTool @Inject constructor(
           • chevere://sensor-radar?mode=level     → Spirit Level / Bubble Level (accelerometer, pitch/roll angles)
           • chevere://sensor-radar?mode=light     → Ambient Light Meter (lux reading, brightness category)
           • chevere://sensor-radar?mode=proximity → Proximity Detector (near/far, distance in cm)
+          • chevere://sensor-radar?mode=sound     → Sound / Noise Level Meter (decibel gauge, animated waveform)
 
         CAPABILITY AWARENESS: If the user asks "what can you do?", "what sensors do you have?", "can you detect
         metal?", "can you check if something is level?", "can you find studs?", or any similar capability question,
@@ -78,6 +79,8 @@ class SensorsTool @Inject constructor(
           /level    → spirit level
           /light    → ambient light meter
           /proximity → proximity detector
+          /sound    → sound / noise level meter
+          /noise    → sound / noise level meter
 
         CRITICAL VISUAL REDIRECT EXAMPLES (always use perform_app_action, never read_sensors):
           "open the stud finder" → perform_app_action(uri="chevere://sensor-radar?mode=stud")
@@ -86,6 +89,7 @@ class SensorsTool @Inject constructor(
           "show me the bubble level" → perform_app_action(uri="chevere://sensor-radar?mode=level")
           "open the light meter" → perform_app_action(uri="chevere://sensor-radar?mode=light")
           "open proximity sensor" → perform_app_action(uri="chevere://sensor-radar?mode=proximity")
+          "open the decibel meter" / "open noise level visualizer" → perform_app_action(uri="chevere://sensor-radar?mode=sound")
           "open all sensors" / "open the radar" → perform_app_action(uri="chevere://sensor-radar?mode=all")
           "can I find studs?" → explain capability AND offer to open perform_app_action(uri="chevere://sensor-radar?mode=stud")
 

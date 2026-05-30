@@ -135,15 +135,6 @@ fun ChatScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
 
-    // Handle one-shot radar navigation effect at the top level
-    LaunchedEffect(Unit) {
-        viewModel.effect.collect { effect ->
-            if (effect is ChatEffect.NavigateToRadar) {
-                onRadarClick(effect.mode)
-            }
-        }
-    }
-
     // Check if the model is initializing to show the full-screen loading state
     val isInitializing = state.runtimeState is RuntimeState.Initializing
 
@@ -164,7 +155,8 @@ fun ChatScreen(
                 state = state,
                 viewModel = viewModel,
                 onModelsClick = onModelsClick,
-                onSettingsClick = onSettingsClick
+                onSettingsClick = onSettingsClick,
+                onRadarClick = onRadarClick
             )
         }
     }
@@ -176,7 +168,8 @@ private fun ChatContent(
     state: ChatState,
     viewModel: ChatViewModel,
     onModelsClick: () -> Unit,
-    onSettingsClick: () -> Unit
+    onSettingsClick: () -> Unit,
+    onRadarClick: (mode: String) -> Unit
 ) {
     val context = LocalContext.current
     val hapticView = LocalView.current
@@ -725,7 +718,9 @@ private fun ChatContent(
                     pendingPermissionDisclosure = PermissionType.MICROPHONE
                 }
                 is ChatEffect.ShowVoiceError -> Unit
-                is ChatEffect.NavigateToRadar -> Unit // Handled by dedicated LaunchedEffect in ChatScreen
+                is ChatEffect.NavigateToRadar -> {
+                    onRadarClick(effect.mode)
+                }
                 ChatEffect.CloseHistorySheet -> {
                     showHistorySheet = false
                 }
