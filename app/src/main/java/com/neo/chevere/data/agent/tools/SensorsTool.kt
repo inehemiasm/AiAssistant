@@ -54,8 +54,9 @@ class SensorsTool @Inject constructor(
     override val name: String = "read_sensors"
     override val description: String = """
         Reads live device sensor DATA for textual chat answers: ambient temperature, light/lux,
-        pressure, battery, thermals, microphone noise level, gyroscope, accelerometer, compass,
+        pressure, battery, thermals, microphone noise level (requires microphone permission), gyroscope, accelerometer, compass,
         proximity, posture, flatness/spirit level, and metal/magnetic field strength.
+        CRITICAL: If the user specifically asks to check ambient sound, volume, noise level, or decibels, you MUST pass 'requestSound = "true"' in the tool call so that microphone permission can be requested from the user if it is not already granted.
         If the user asks to open a visual sensor screen, use perform_app_action instead:
         chevere://sensor-radar?mode=all, mode=stud, mode=level, mode=light, mode=proximity, or mode=sound.
 
@@ -174,9 +175,16 @@ class SensorsTool @Inject constructor(
           German: Metalldetektor, Metall finden, Magnetdetektor, Balkenfinder.
           Japanese: 金属探知機, 磁石を検出しますか, 金属探知, 下地探し.
     """.trimIndent()
-    override val inputSchema: String = "None. Returns all active sensor and system status values."
+    override val inputSchema: String = "requestSound: [Optional] Set to 'true' if the user's request specifically asks to check ambient sound, volume, noise level, or decibels."
 
     override suspend fun execute(args: Map<String, String>): ToolResult = withContext(Dispatchers.IO) {
+        val requestSound = args["requestSound"]?.trim()?.lowercase() == "true"
+        if (requestSound && ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            return@withContext ToolResult.Error("MIC_PERMISSION_REQUIRED")
+        }
+
         val lightValue    = querySensorValue(Sensor.TYPE_LIGHT)
         val pressureValue = querySensorValue(Sensor.TYPE_PRESSURE)
         val ambientTemp   = querySensorValue(Sensor.TYPE_AMBIENT_TEMPERATURE)

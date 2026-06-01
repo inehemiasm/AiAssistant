@@ -400,7 +400,14 @@ private fun ChatContent(
                 resources.getString(R.string.microphone_permission_granted),
                 Toast.LENGTH_SHORT
             ).show()
-            viewModel.onIntent(ChatIntent.StartVoiceInput)
+            val lastMessage = state.messages.lastOrNull()
+            val isAmbientSoundPermission = lastMessage != null && !lastMessage.isUser &&
+                lastMessage.text.contains("Microphone permission is required to measure the ambient sound level")
+            if (isAmbientSoundPermission) {
+                viewModel.onIntent(ChatIntent.RetryLastMessage)
+            } else {
+                viewModel.onIntent(ChatIntent.StartVoiceInput)
+            }
         } else {
             Toast.makeText(
                 context,
