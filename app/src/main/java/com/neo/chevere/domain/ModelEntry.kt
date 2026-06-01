@@ -32,11 +32,30 @@ data class ModelEntry(
     val repositoryFiles: List<String> = emptyList()
 ) {
     /**
+     * Heuristic to determine if this is an image generation model.
+     */
+    val isImageGenerationModel: Boolean
+        get() {
+            val runtime = runtimeType.lowercase()
+            val nameLower = "${name} ${fileName.orEmpty()} ${description}".lowercase()
+            return "image" in runtime ||
+                    "diffusion" in runtime ||
+                    "onnx" in runtime ||
+                    "stable diffusion" in nameLower ||
+                    "image generation" in nameLower ||
+                    "diffusion" in nameLower
+        }
+
+    /**
      * The effective file name to use for this model, derived from [fileName] or [name].
      */
     val effectiveFileName: String
         get() = fileName ?: (name.replace(" ", "_")
-            .lowercase() + if (runtimeType == "LiteRT") Constants.ModelFiles.LITERTLM_EXTENSION else Constants.ModelFiles.BIN_EXTENSION)
+            .lowercase() + when {
+                isImageGenerationModel -> Constants.ModelFiles.ZIP_EXTENSION
+                runtimeType == "LiteRT" -> Constants.ModelFiles.LITERTLM_EXTENSION
+                else -> Constants.ModelFiles.BIN_EXTENSION
+            })
 
     /**
      * The canonical installed model id. ZIP bundles install as extracted directories.

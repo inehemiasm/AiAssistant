@@ -23,6 +23,8 @@ import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
 
+private const val TAG = "WebSearchTool"
+
 /**
  * A tool that allows the agent to search the web for real-time information using Serper.dev.
  * Implements a persistent Room-based cache with an LRU pruning strategy.
@@ -51,14 +53,14 @@ class WebSearchTool @Inject constructor(
             val cachedEntry = searchCacheDao.getCachedResult(query)
             if (cachedEntry != null) {
                 if (now - cachedEntry.timestamp < Constants.WebSearch.CACHE_EXPIRATION_MS) {
-                    Timber.tag("WebSearchTool").d("Returning persistent cached results for: $query")
+                    Timber.tag(TAG).d("Returning persistent cached results for: $query")
                     return ToolResult.Success(cachedEntry.results)
                 } else {
-                    Timber.tag("WebSearchTool").d("Cache expired for: $query")
+                    Timber.tag(TAG).d("Cache expired for: $query")
                 }
             }
         } catch (e: Exception) {
-            Timber.tag("WebSearchTool").e(e, "Error reading from cache")
+            Timber.tag(TAG).e(e, "Error reading from cache")
         }
 
         // 2. Check Internet Connectivity
@@ -68,7 +70,7 @@ class WebSearchTool @Inject constructor(
 
         // 3. Call Serper API
         return try {
-            Timber.tag("WebSearchTool").d("Calling Serper API for: $query")
+            Timber.tag(TAG).d("Calling Serper API for: $query")
             val response: SerperResponse = httpClient.post(Constants.WebSearch.SERPER_API_URL) {
                 header("X-API-KEY", BuildConfig.SERPER_API_KEY)
                 contentType(ContentType.Application.Json)
@@ -84,12 +86,12 @@ class WebSearchTool @Inject constructor(
                     Constants.WebSearch.MAX_CACHE_SIZE
                 )
             } catch (e: Exception) {
-                Timber.tag("WebSearchTool").e(e, "Error saving to cache")
+                Timber.tag(TAG).e(e, "Error saving to cache")
             }
 
             ToolResult.Success(formattedResults)
         } catch (e: Exception) {
-            Timber.tag("WebSearchTool").e(e, "Search failed")
+            Timber.tag(TAG).e(e, "Search failed")
             ToolResult.Error("Failed to search the web: ${e.message}")
         }
     }

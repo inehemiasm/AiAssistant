@@ -122,4 +122,21 @@
     <string name="error_inference_failed">Fallo de inferencia</string>
     <string name="error_warmup">calentamiento</string>
     <string name="ai_models">Modelos de IA</string>
+
+    <!-- Localized Busy Status States -->
+    <string name="status_generating">GENERANDO…</string>
+    <string name="status_generating_image">GENERANDO IMAGEN…</string>
+    <string name="status_planning">PLANIFICANDO…</string>
+    <string name="status_executing">EJECUTANDO: %1$s</string>
+    <string name="status_thinking">PENSANDO…</string>
+
+    <!-- Cognitive Thinking Rotating Phrases (Claude CLI style) -->
+    <string name="busy_phrase_1">Reflexionando sobre la consulta…</string>
+    <string name="busy_phrase_2">Alineando vias neuronales…</string>
+    <string name="busy_phrase_3">Calibrando puertas logicas…</string>
+    <string name="busy_phrase_4">Optimizando mapas de atencion…</string>
+    <string name="busy_phrase_5">Consultando sinapsis locales…</string>
+    <string name="busy_phrase_6">Estructurando flujos cognitivos…</string>
+    <string name="busy_phrase_7">Sintetizando respuesta…</string>
+    <string name="busy_phrase_8">Finalizando proceso de pensamiento…</string>
 </resources>

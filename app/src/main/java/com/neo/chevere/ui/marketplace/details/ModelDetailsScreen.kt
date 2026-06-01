@@ -335,10 +335,15 @@ fun MetadataSection(state: ModelDetailsState) {
 
 @Composable
 fun ActionSection(state: ModelDetailsState, onIntent: (ModelDetailsIntent) -> Unit) {
+    val isImageModel = state.installedModel?.let {
+        it.taskType == com.neo.chevere.domain.ModelTaskType.IMAGE_GENERATION ||
+                com.neo.chevere.domain.ModelCapability.IMAGE_GEN in it.capabilities
+    } ?: state.modelEntry?.isImageGenerationModel ?: false
+
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         if (!state.isInstalled && !state.isActionInProgress) {
             PrimaryAction(
-                label = "DOWNLOAD ENGINE",
+                label = if (isImageModel) "DOWNLOAD IMAGE GENERATOR" else "DOWNLOAD ENGINE",
                 icon = Icons.Default.Download,
                 onClick = { onIntent(ModelDetailsIntent.Download) }
             )
@@ -354,13 +359,13 @@ fun ActionSection(state: ModelDetailsState, onIntent: (ModelDetailsIntent) -> Un
 
         if (state.isInstalled && !state.isActive && !state.isActionInProgress) {
             PrimaryAction(
-                label = "ACTIVATE ENGINE",
+                label = if (isImageModel) "ACTIVATE IMAGE GENERATOR" else "ACTIVATE ENGINE",
                 icon = Icons.Default.Sync,
                 onClick = { onIntent(ModelDetailsIntent.ConfirmSwitch) }
             )
         } else if (state.isActive) {
             PrimaryAction(
-                label = "ENGINE ACTIVE",
+                label = if (isImageModel) "IMAGE GENERATOR ACTIVE" else "ENGINE ACTIVE",
                 icon = Icons.Default.CheckCircle,
                 onClick = { },
                 enabled = false
@@ -369,7 +374,7 @@ fun ActionSection(state: ModelDetailsState, onIntent: (ModelDetailsIntent) -> Un
 
         if (state.isInstalled && !state.isActive && !state.isActionInProgress) {
             SecondaryAction(
-                label = "DELETE COMPONENT",
+                label = if (isImageModel) "DELETE IMAGE GENERATOR" else "DELETE COMPONENT",
                 icon = Icons.Default.Delete,
                 onClick = { onIntent(ModelDetailsIntent.Delete) }
             )

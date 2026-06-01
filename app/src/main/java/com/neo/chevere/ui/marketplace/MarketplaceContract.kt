@@ -6,6 +6,7 @@ import com.neo.chevere.core.UiState
 import com.neo.chevere.domain.InitializationStatus
 import com.neo.chevere.domain.InstalledModel
 import com.neo.chevere.domain.ModelEntry
+import com.neo.chevere.domain.DownloadProgress
 import com.neo.chevere.ui.common.CatalogState
 
 /**
@@ -32,11 +33,13 @@ data class MarketplaceState(
     val catalogState: CatalogState = CatalogState.Idle,
     val downloadingModelName: String? = null,
     val downloadProgress: Int? = null,
+    val activeDownloads: Map<String, DownloadProgress> = emptyMap(),
     val activeModelId: String? = null,
+    val activeImageModelId: String? = null,
     val pendingModelId: String? = null,
     val switchState: ModelSwitchState = ModelSwitchState.Idle
 ) : UiState {
-    val isDownloading: Boolean get() = downloadingModelName != null
+    val isDownloading: Boolean get() = activeDownloads.isNotEmpty()
     val isSwitching: Boolean get() = switchState is ModelSwitchState.Switching || switchState is ModelSwitchState.WarmingUp
 
     val chatRemoteModels: List<ModelEntry>

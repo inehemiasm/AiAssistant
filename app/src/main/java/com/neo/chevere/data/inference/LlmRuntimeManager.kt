@@ -22,6 +22,8 @@ import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
 
+private const val TAG = "LlmRuntimeManager"
+
 /**
  * Manages the lifecycle of the LiteRT-LM engine and active conversation.
  */
@@ -83,7 +85,7 @@ class LlmRuntimeManager @Inject constructor(
                 }
 
                 if (result.isSuccess) {
-                    Timber.tag("LlmRuntimeManager").i("Successfully initialized with $label")
+                    Timber.tag(TAG).i("Successfully initialized with $label")
                     isVisionEnabled = vision != null
                     activeConversation = engineWrapper.createConversation()
                     isInitialized = true
@@ -92,7 +94,7 @@ class LlmRuntimeManager @Inject constructor(
                 }
 
                 lastError = result.exceptionOrNull()
-                Timber.tag("LlmRuntimeManager").e("$label failed: ${lastError?.message}")
+                Timber.tag(TAG).e("$label failed: ${lastError?.message}")
                 engineWrapper.close()
                 neuralCache.deleteRecursively()
                 neuralCache.mkdirs()
@@ -114,7 +116,7 @@ class LlmRuntimeManager @Inject constructor(
             }
             warmupConv.sendMessage(message)
         } catch (e: Exception) {
-            Timber.tag("LlmRuntimeManager").w("Warmup skipped: ${e.message}")
+            Timber.tag(TAG).w("Warmup skipped: ${e.message}")
         } finally {
             warmupConv.close()
         }

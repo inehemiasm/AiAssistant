@@ -17,6 +17,8 @@ import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
 
+private const val TAG = "ChevereApp"
+
 @HiltAndroidApp
 class ChevereApp : Application(), Configuration.Provider {
 
@@ -51,7 +53,7 @@ class ChevereApp : Application(), Configuration.Provider {
                 startedActivities++
                 if (startedActivities == 1) {
                     // App came to foreground
-                    Timber.tag("ChevereApp").d("App came to foreground. Cancelling unload timer.")
+                    Timber.tag(TAG).d("App came to foreground. Cancelling unload timer.")
                     backgroundJob?.cancel()
                     backgroundJob = null
                 }
@@ -61,17 +63,17 @@ class ChevereApp : Application(), Configuration.Provider {
                 startedActivities--
                 if (startedActivities == 0) {
                     // App went to background
-                    Timber.tag("ChevereApp").d("App went to background. Starting 3-minute unload timer.")
+                    Timber.tag(TAG).d("App went to background. Starting 3-minute unload timer.")
                     backgroundJob?.cancel()
                     backgroundJob = appScope.launch {
                         delay(3 * 60 * 1000L) // 3 minutes
-                        Timber.tag("ChevereApp").i("App has been in background for 3 minutes. Unloading local models to free RAM.")
+                        Timber.tag(TAG).i("App has been in background for 3 minutes. Unloading local models to free RAM.")
                         try {
                             inferenceManager.unload()
                             imageGenerationManager.unload()
-                            Timber.tag("ChevereApp").i("Unloaded local models successfully.")
+                            Timber.tag(TAG).i("Unloaded local models successfully.")
                         } catch (e: Exception) {
-                            Timber.tag("ChevereApp").e(e, "Failed to unload models on backgrounding")
+                            Timber.tag(TAG).e(e, "Failed to unload models on backgrounding")
                         }
                     }
                 }

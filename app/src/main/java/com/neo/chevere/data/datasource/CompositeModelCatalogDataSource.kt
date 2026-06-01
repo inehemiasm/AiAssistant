@@ -8,6 +8,8 @@ import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
 
+private const val TAG = "CompositeCatalog"
+
 /**
  * A composite implementation of ModelCatalogDataSource that merges results from multiple sources.
  */
@@ -41,7 +43,7 @@ class CompositeModelCatalogDataSource @Inject constructor(
         } else {
             // Deduplicate by URL to be safe
             val distinctModels = allModels.distinctBy { it.url }
-            Timber.tag("CompositeCatalog").d("merged catalog count: ${distinctModels.size}")
+            Timber.tag(TAG).d("merged catalog count: ${distinctModels.size}")
             Result.success(distinctModels)
         }
     }

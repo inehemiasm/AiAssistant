@@ -22,6 +22,8 @@ import com.neo.chevere.data.PreferenceManager
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 
+private const val TAG = "DownloadManager"
+
 /**
  * Manages the background downloading of AI models using Android's WorkManager.
  */
@@ -59,7 +61,7 @@ class WorkManagerModelDownloadManager @Inject constructor(
         sha256: String? = null,
         repositoryFiles: List<String> = emptyList()
     ): Flow<DownloadProgress> {
-        Timber.tag("DownloadManager").d("Creating WorkManager request for $modelName from $url")
+        Timber.tag(TAG).d("Creating WorkManager request for $modelName from $url")
 
         val downloadOnWifiOnly = runBlocking {
             try {

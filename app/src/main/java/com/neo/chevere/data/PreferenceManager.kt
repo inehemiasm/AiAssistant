@@ -188,6 +188,22 @@ class PreferenceManager @Inject constructor(@ApplicationContext context: Context
         }
 
     /**
+     * A [Flow] that emits the identifier of the currently selected image-generation model.
+     * Emits `null` if no model has been selected yet.
+     */
+    val selectedImageModelPreference: Flow<String?> = dataStore.data
+        .catch { exception ->
+            if (exception is IOException) {
+                emit(emptyPreferences())
+            } else {
+                throw exception
+            }
+        }
+        .map { preferences ->
+            preferences[SELECTED_IMAGE_MODEL_KEY]
+        }
+
+    /**
      * A [Flow] that emits whether model downloads are restricted to Wi-Fi only.
      * Defaults to true.
      */
@@ -299,6 +315,17 @@ class PreferenceManager @Inject constructor(@ApplicationContext context: Context
     }
 
     /**
+     * Updates the identifier of the selected image-generation model.
+     *
+     * @param modelName The identifier of the image model to select.
+     */
+    suspend fun updateSelectedImageModel(modelName: String) {
+        dataStore.edit { preferences ->
+            preferences[SELECTED_IMAGE_MODEL_KEY] = modelName
+        }
+    }
+
+    /**
      * Updates whether model downloads should be restricted to Wi-Fi only.
      */
     suspend fun updateDownloadOnWifiOnly(enabled: Boolean) {
@@ -310,6 +337,7 @@ class PreferenceManager @Inject constructor(@ApplicationContext context: Context
     companion object {
         private val THEME_KEY = booleanPreferencesKey("theme_preference")
         private val SELECTED_MODEL_KEY = stringPreferencesKey("selected_model")
+        private val SELECTED_IMAGE_MODEL_KEY = stringPreferencesKey("selected_image_model")
         private val WEATHER_UNIT_KEY = stringPreferencesKey("weather_unit_system")
         private val ATMOSPHERIC_THEME_KEY = stringPreferencesKey("atmospheric_theme_preference")
         private val BIOMETRIC_LOCK_KEY = booleanPreferencesKey("biometric_lock_enabled")

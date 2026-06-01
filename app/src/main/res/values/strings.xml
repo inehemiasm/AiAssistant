@@ -190,4 +190,33 @@
     <string name="privacy_policy">Privacy Policy</string>
     <string name="privacy_policy_desc">Read our privacy practices and content policy.</string>
     <string name="privacy_policy_url">https://aiassistant-88f75.web.app/privacy.html</string>
+    <!-- Suggestion Chips -->
+    <string name="suggestion_describe_image">Describe this image.</string>
+    <string name="suggestion_what_is_in_photo">What is in this photo?</string>
+    <string name="suggestion_extract_text">Extract text from this image.</string>
+    <string name="suggestion_room_temp">How hot is my room?</string>
+    <string name="suggestion_weather">How’s the weather today?</string>
+    <string name="suggestion_light_level">How’s the light in here?</string>
+    <string name="suggestion_noise_level">How noisy is my room?</string>
+    <string name="suggestion_battery_thermals">Check battery and thermals</string>
+    <string name="suggestion_kotlin_coroutine">Write a Kotlin Coroutine example.</string>
+    <string name="suggestion_clean_architecture">Explain Clean Architecture.</string>
+    <string name="suggestion_optimize_code">Optimize this code snippet.</string>
+
+    <!-- Localized Busy Status States -->
+    <string name="status_generating">GENERATING…</string>
+    <string name="status_generating_image">GENERATING IMAGE…</string>
+    <string name="status_planning">PLANNING…</string>
+    <string name="status_executing">EXECUTING: %1$s</string>
+    <string name="status_thinking">THINKING…</string>
+
+    <!-- Cognitive Thinking Rotating Phrases (Claude CLI style) -->
+    <string name="busy_phrase_1">Pondering the query…</string>
+    <string name="busy_phrase_2">Aligning neural pathways…</string>
+    <string name="busy_phrase_3">Calibrating logic gates…</string>
+    <string name="busy_phrase_4">Optimizing attention maps…</string>
+    <string name="busy_phrase_5">Querying local synapses…</string>
+    <string name="busy_phrase_6">Structuring cognitive flows…</string>
+    <string name="busy_phrase_7">Synthesizing response…</string>
+    <string name="busy_phrase_8">Finalizing thought process…</string>
 </resources>

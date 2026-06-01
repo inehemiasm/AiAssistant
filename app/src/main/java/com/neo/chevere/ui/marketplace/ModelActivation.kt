@@ -18,16 +18,7 @@ internal fun InstalledModel.activationCategory(): ModelActivationCategory =
     }
 
 internal fun ModelEntry.activationCategory(): ModelActivationCategory {
-    val runtime = runtimeType.lowercase()
-    val name = "${name} ${fileName.orEmpty()} ${description}".lowercase()
-    return if (
-        "image" in runtime ||
-        "diffusion" in runtime ||
-        "onnx" in runtime ||
-        "stable diffusion" in name ||
-        "image generation" in name ||
-        "diffusion" in name
-    ) {
+    return if (isImageGenerationModel) {
         ModelActivationCategory.IMAGE_GENERATION
     } else {
         ModelActivationCategory.CHAT

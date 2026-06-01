@@ -14,6 +14,8 @@ import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
 
+private const val TAG = "MainViewModel"
+
 /**
  * Global ViewModel for managing the application's initialization state.
  *
@@ -33,19 +35,19 @@ class MainViewModel @Inject constructor(
             // First, check if there's even anything to wait for.
             val models = repository.getLocalModels()
             if (models.isEmpty()) {
-                Timber.tag("MainViewModel").d("No local models found; skipping initialization splash.")
+                Timber.tag(TAG).d("No local models found; skipping initialization splash.")
                 _isInitializing.value = false
                 return@launch
             }
 
             // Observe the repository's initialization status using the typed sealed interface.
             repository.getInitStatus().collectLatest { status ->
-                Timber.tag("MainViewModel").d("Engine status update: $status")
+                Timber.tag(TAG).d("Engine status update: $status")
 
                 when (status) {
                     is InitializationStatus.Ready,
                     is InitializationStatus.Failure -> {
-                        Timber.tag("MainViewModel").d("Termination status reached; dismissing splash.")
+                        Timber.tag(TAG).d("Termination status reached; dismissing splash.")
                         _isInitializing.value = false
                     }
 
@@ -54,7 +56,7 @@ class MainViewModel @Inject constructor(
                         // ChatViewModel hasn't triggered a load yet.
                         delay(3500)
                         if (_isInitializing.value) {
-                            Timber.tag("MainViewModel").d(
+                            Timber.tag(TAG).d(
                                 "Timed out waiting for init to start; dismissing splash."
                             )
                             _isInitializing.value = false
@@ -72,7 +74,7 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             delay(10000)
             if (_isInitializing.value) {
-                Timber.tag("MainViewModel").w("Hard safety timeout reached; forcing splash dismissal.")
+                Timber.tag(TAG).w("Hard safety timeout reached; forcing splash dismissal.")
                 _isInitializing.value = false
             }
         }

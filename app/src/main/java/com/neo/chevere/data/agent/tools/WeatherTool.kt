@@ -17,6 +17,8 @@ import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
 
+private const val TAG = "WeatherTool"
+
 /**
  * A tool that allows the agent to get real-time weather information for any location.
  * Uses the Open-Meteo API (free, no API key required).
@@ -109,7 +111,7 @@ class WeatherTool @Inject constructor(
 
             ToolResult.Success(result)
         } catch (e: Exception) {
-            Timber.tag("WeatherTool").e(e, "Failed to get weather for $rawLocation")
+            Timber.tag(TAG).e(e, "Failed to get weather for $rawLocation")
             ToolResult.Error("Failed to fetch weather: ${e.message}")
         }
     }

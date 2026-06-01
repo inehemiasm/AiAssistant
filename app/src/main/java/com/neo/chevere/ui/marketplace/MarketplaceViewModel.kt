@@ -42,6 +42,12 @@ class MarketplaceViewModel @Inject constructor(
             }
         }
 
+        viewModelScope.launch {
+            preferenceManager.selectedImageModelPreference.collectLatest { modelId ->
+                setState { copy(activeImageModelId = modelId) }
+            }
+        }
+
         // Observe global downloads progress
         viewModelScope.launch {
             repository.allDownloadsProgress.collectLatest { progressMap ->
@@ -54,8 +60,7 @@ class MarketplaceViewModel @Inject constructor(
                     copy(
                         downloadingModelName = downloadingModel?.key,
                         downloadProgress = (downloadingModel?.value as? DownloadProgress.Progress)?.percent,
-                        // We also need to map this back to individual model items in the UI if needed
-                        // but usually the installStatus in localModels (observed from DB) handles the rest
+                        activeDownloads = progressMap
                     )
                 }
 
@@ -111,8 +116,12 @@ class MarketplaceViewModel @Inject constructor(
         when (intent) {
             MarketplaceIntent.FetchModels -> fetchRemoteModels()
             is MarketplaceIntent.DownloadModel -> {
-                if (currentState.isDownloading) {
-                    sendEffect { MarketplaceEffect.ShowToast("Another download is in progress") }
+                val fileName = intent.model.effectiveFileName
+                val installedId = intent.model.effectiveInstalledId
+                val isAlreadyDownloading = currentState.activeDownloads[fileName] is DownloadProgress.Progress ||
+                        currentState.activeDownloads[installedId] is DownloadProgress.Progress
+                if (isAlreadyDownloading) {
+                    sendEffect { MarketplaceEffect.ShowToast("This model is already downloading") }
                     return
                 }
                 downloadModel(intent.model)
@@ -144,7 +153,10 @@ class MarketplaceViewModel @Inject constructor(
                 }
 
                 if (model.activationCategory() == ModelActivationCategory.IMAGE_GENERATION) {
-                    sendEffect { MarketplaceEffect.ShowToast("Image models are used automatically when you generate images.") }
+                    viewModelScope.launch {
+                        preferenceManager.updateSelectedImageModel(intent.modelId)
+                        sendEffect { MarketplaceEffect.ShowToast("${model.displayName} activated for image generation") }
+                    }
                     return
                 }
 
@@ -234,7 +246,8 @@ class MarketplaceViewModel @Inject constructor(
                 val healthyImageModels = installedModels
                     .filter { it.isHealthy && it.activationCategory() == ModelActivationCategory.IMAGE_GENERATION }
                 if (healthyImageModels.size == 1) {
-                    sendEffect { MarketplaceEffect.ShowToast("${installedModel.displayName} is ready for image generation") }
+                    preferenceManager.updateSelectedImageModel(installedModel.id)
+                    sendEffect { MarketplaceEffect.ShowToast("${installedModel.displayName} activated for image generation") }
                 }
             }
         }

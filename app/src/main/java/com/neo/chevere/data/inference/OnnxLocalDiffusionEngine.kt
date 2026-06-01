@@ -1,8 +1,10 @@
 package com.neo.chevere.data.inference
 
+import ai.onnxruntime.OnnxJavaType
 import ai.onnxruntime.OnnxTensor
 import ai.onnxruntime.OrtEnvironment
 import ai.onnxruntime.OrtSession
+import ai.onnxruntime.TensorInfo
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Color
@@ -223,16 +225,116 @@ class OnnxLocalDiffusionEngine @Inject constructor(
         modelDirectory = null
     }
 
+    private fun createNumericTensor(
+        session: OrtSession,
+        inputName: String,
+        values: IntArray,
+        shape: LongArray
+    ): OnnxTensor {
+        val nodeInfo = session.inputInfo[inputName]
+        val tensorInfo = nodeInfo?.info as? TensorInfo
+        val javaType = tensorInfo?.type
+        return when (javaType) {
+            OnnxJavaType.INT64 -> {
+                val longValues = values.map { it.toLong() }.toLongArray()
+                OnnxTensor.createTensor(
+                    environment,
+                    java.nio.LongBuffer.wrap(longValues),
+                    shape
+                )
+            }
+            OnnxJavaType.FLOAT -> {
+                val floatValues = values.map { it.toFloat() }.toFloatArray()
+                OnnxTensor.createTensor(
+                    environment,
+                    java.nio.FloatBuffer.wrap(floatValues),
+                    shape
+                )
+            }
+            else -> {
+                OnnxTensor.createTensor(
+                    environment,
+                    java.nio.IntBuffer.wrap(values),
+                    shape
+                )
+            }
+        }
+    }
+
+    private fun createTimestepTensor(
+        session: OrtSession,
+        timestep: Int,
+        batchSize: Int
+    ): OnnxTensor {
+        val nodeInfo = session.inputInfo["timestep"]
+        val tensorInfo = nodeInfo?.info as? TensorInfo
+        val expectedShape = tensorInfo?.shape
+
+        if (expectedShape == null || expectedShape.isEmpty()) {
+            return createNumericTensor(
+                session = session,
+                inputName = "timestep",
+                values = intArrayOf(timestep),
+                shape = longArrayOf()
+            )
+        }
+
+        return when (expectedShape.size) {
+            1 -> {
+                val dim = expectedShape[0]
+                if (dim == 1L) {
+                    createNumericTensor(
+                        session = session,
+                        inputName = "timestep",
+                        values = intArrayOf(timestep),
+                        shape = longArrayOf(1)
+                    )
+                } else {
+                    val values = IntArray(batchSize) { timestep }
+                    createNumericTensor(
+                        session = session,
+                        inputName = "timestep",
+                        values = values,
+                        shape = longArrayOf(batchSize.toLong())
+                    )
+                }
+            }
+            2 -> {
+                val dim0 = expectedShape[0]
+                val dim1 = expectedShape[1]
+                val targetDim0 = if (dim0 == 1L) 1 else batchSize
+                val targetDim1 = if (dim1 == 1L) 1 else batchSize
+                val totalElements = targetDim0 * targetDim1
+                val values = IntArray(totalElements) { timestep }
+                createNumericTensor(
+                    session = session,
+                    inputName = "timestep",
+                    values = values,
+                    shape = longArrayOf(targetDim0.toLong(), targetDim1.toLong())
+                )
+            }
+            else -> {
+                createNumericTensor(
+                    session = session,
+                    inputName = "timestep",
+                    values = intArrayOf(timestep),
+                    shape = longArrayOf(1)
+                )
+            }
+        }
+    }
+
     private fun encodePrompt(
         tokenizer: ClipTokenizer,
         textEncoder: OrtSession,
         prompt: String
     ): Array<Array<FloatArray>> {
         val tokenIds = tokenizer.encode(prompt)
-        val inputIds = OnnxTensor.createTensor(
-            environment,
-            IntBuffer.wrap(tokenIds),
-            longArrayOf(1, MAX_TOKENS.toLong())
+        val inputIds = createNumericTensor(
+            session = textEncoder,
+            inputName = "input_ids",
+            values = tokenIds,
+            shape = longArrayOf(1, MAX_TOKENS.toLong())
         )
         inputIds.use { tensor ->
             textEncoder.run(mapOf("input_ids" to tensor)).use { result ->
@@ -249,10 +351,10 @@ class OnnxLocalDiffusionEngine @Inject constructor(
         textEmbeddings: Array<Array<FloatArray>>
     ): Array<Array<Array<FloatArray>>> {
         val sampleTensor = OnnxTensor.createTensor(environment, sample)
-        val timestepTensor = OnnxTensor.createTensor(
-            environment,
-            IntBuffer.wrap(intArrayOf(timestep)),
-            longArrayOf(1)
+        val timestepTensor = createTimestepTensor(
+            session = session,
+            timestep = timestep,
+            batchSize = sample.size
         )
         val embeddingsTensor = OnnxTensor.createTensor(environment, textEmbeddings)
         sampleTensor.use { sampleInput ->

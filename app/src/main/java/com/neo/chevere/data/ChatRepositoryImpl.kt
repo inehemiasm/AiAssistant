@@ -428,6 +428,7 @@ class ChatRepositoryImpl @Inject constructor(
 
     private fun ModelEntry.toPendingInstalledModel(id: String, filePath: String): InstalledModel {
         val (format, runtime, taskType, capabilities) = when {
+            isImageGenerationModel ||
             effectiveFileName.endsWith(
                 Constants.ModelFiles.ZIP_EXTENSION,
                 ignoreCase = true
@@ -509,17 +510,20 @@ class ChatRepositoryImpl @Inject constructor(
 
     override suspend fun deleteModel(modelName: String): Boolean {
         if (modelName.isBlank()) return false
-        val file = File(context.filesDir, modelName)
+        val cleanName = modelName.removeSuffix(Constants.ModelFiles.ZIP_EXTENSION)
+        val file = File(context.filesDir, cleanName)
         if (file.exists()) {
             val deleted = if (file.isDirectory) file.deleteRecursively() else file.delete()
             if (deleted) {
+                installedModelRegistry.removeInstalledModel(cleanName)
                 installedModelRegistry.removeInstalledModel(modelName)
             }
             return deleted
         } else {
+            installedModelRegistry.removeInstalledModel(cleanName)
             installedModelRegistry.removeInstalledModel(modelName)
+            return true
         }
-        return false
     }
 
     private fun isExcludedDirectory(file: File): Boolean {

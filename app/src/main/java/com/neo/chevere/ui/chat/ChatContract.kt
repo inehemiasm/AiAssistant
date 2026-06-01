@@ -59,7 +59,8 @@ data class ChatState(
     /** The ID of the currently active persisted session, or null for a brand-new unsaved session. */
     val currentSessionId: Long? = null,
     /** History sessions shown in the history bottom sheet. */
-    val historySessions: List<ConversationSession> = emptyList()
+    val historySessions: List<ConversationSession> = emptyList(),
+    val suggestions: List<String> = emptyList()
 ) : UiState {
     val isReady: Boolean get() = runtimeState is RuntimeState.Ready
 
@@ -86,7 +87,13 @@ data class ChatState(
         get() = when {
             streamingText.isNotEmpty() -> "GENERATING..."
             agentState is AgentState.Planning -> Constants.UiStatus.PLANNING
-            agentState is AgentState.ExecutingTool -> "${Constants.UiStatus.EXECUTING_PREFIX}${agentState.toolName.uppercase()}"
+            agentState is AgentState.ExecutingTool -> {
+                if (agentState.toolName == Constants.Agent.IMAGE_GENERATION_TOOL_NAME) {
+                    Constants.UiStatus.GENERATING_IMAGE
+                } else {
+                    "${Constants.UiStatus.EXECUTING_PREFIX}${agentState.toolName.uppercase()}"
+                }
+            }
             sendState is SendState.GeneratingImage -> Constants.UiStatus.GENERATING_IMAGE
             sendState is SendState.Sending -> Constants.UiStatus.THINKING
             runtimeState is RuntimeState.Initializing -> runtimeState.message
@@ -140,6 +147,8 @@ sealed class ChatIntent : UiIntent {
     data class DeleteSession(val sessionId: Long) : ChatIntent()
     /** Renames a session's display title. */
     data class RenameSession(val sessionId: Long, val newTitle: String) : ChatIntent()
+    /** Triggers reload of model on resume if needed. */
+    data object Resume : ChatIntent()
 }
 
 sealed class ChatEffect : UiEffect {

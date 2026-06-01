@@ -16,10 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DeleteSweep
-import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -39,20 +36,17 @@ import com.neo.chevere.R
 import com.neo.chevere.ui.designsystem.Typography
 
 /**
- * Brand-forward chat top bar with model capability status and quick actions.
+ * Brand-forward chat top bar with model capability status and menu trigger.
  */
 @Composable
 fun ChatTopBar(
-    isInteractionEnabled: Boolean,
+    onMenuClick: () -> Unit,
     isChatReady: Boolean,
     isImageReady: Boolean,
-    onClearChat: () -> Unit,
-    onModelsClick: () -> Unit,
-    onSettingsClick: () -> Unit,
-    onHistoryClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val topBarShape = RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp)
+
     Surface(
         color = Color.Transparent,
         contentColor = MaterialTheme.colorScheme.onSurface,
@@ -83,7 +77,7 @@ fun ChatTopBar(
                 .padding(horizontal = 18.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            TopBarIconButton(onClick = onModelsClick) {
+            TopBarIconButton(onClick = onMenuClick) {
                 Icon(
                     Icons.Default.Menu,
                     stringResource(R.string.menu_library),
@@ -113,29 +107,7 @@ fun ChatTopBar(
                 }
             }
 
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TopBarIconButton(onClick = onClearChat, enabled = isInteractionEnabled) {
-                    Icon(
-                        Icons.Default.DeleteSweep,
-                        stringResource(R.string.clear_chat),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                TopBarIconButton(onClick = onHistoryClick) {
-                    Icon(
-                        Icons.Default.History,
-                        contentDescription = "Chat history",
-                        tint = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-                TopBarIconButton(onClick = onSettingsClick) {
-                    Icon(
-                        Icons.Default.Person,
-                        stringResource(R.string.profile),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
-            }
+            Spacer(modifier = Modifier.width(44.dp))
         }
     }
 }

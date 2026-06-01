@@ -1,7 +1,6 @@
 package com.neo.chevere.ui.chat
 
 import android.Manifest
-import android.content.ActivityNotFoundException
 import android.content.ClipData
 import android.content.ContentValues
 import android.content.Context
@@ -9,8 +8,6 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
-import android.os.Handler
-import android.os.Looper
 import android.provider.MediaStore
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -53,17 +50,34 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.filled.DeleteSweep
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDrawerState
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -77,8 +91,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -88,11 +106,10 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import com.neo.chevere.BuildConfig
+import timber.log.Timber
 import com.neo.chevere.R
 import com.neo.chevere.core.Constants
 import com.neo.chevere.core.PiiUtils
-import com.neo.chevere.data.agent.AgentState
 import com.neo.chevere.domain.ModelCapability
 import com.neo.chevere.domain.ModelTaskType
 import com.neo.chevere.ui.chat.components.ActionConfirmationDialog
@@ -107,15 +124,16 @@ import com.neo.chevere.ui.common.ChevereHaptic
 import com.neo.chevere.ui.common.ErrorSnackbar
 import com.neo.chevere.ui.common.hapticForFeedbackMessage
 import com.neo.chevere.ui.common.performChevereHaptic
+import com.neo.chevere.ui.common.ObserveAsEvents
 import com.neo.chevere.ui.designsystem.Typography
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+private const val TAG = "ChatScreen"
 
 /**
  * The main Chat screen of the application.
@@ -134,6 +152,19 @@ fun ChatScreen(
     onRadarClick: (mode: String) -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_START) {
+                viewModel.onIntent(ChatIntent.Resume)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     // Check if the model is initializing to show the full-screen loading state
     val isInitializing = state.runtimeState is RuntimeState.Initializing
@@ -172,9 +203,11 @@ private fun ChatContent(
     onRadarClick: (mode: String) -> Unit
 ) {
     val context = LocalContext.current
+    val resources = LocalResources.current
     val hapticView = LocalView.current
     val listState = rememberLazyListState()
-    val mainHandler = remember { Handler(Looper.getMainLooper()) }
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
 
 
     // Auto-scroll to bottom during token streaming
@@ -207,38 +240,50 @@ private fun ChatContent(
     var fullscreenPreviewState by remember { mutableStateOf<FullscreenPreviewState>(FullscreenPreviewState.None) }
     val showOnboarding = state.localModels.isEmpty() && !state.isLoading
     val isAiBusy = state.isAiBusy
+    val busyPhrases = remember {
+        listOf(
+            R.string.busy_phrase_1,
+            R.string.busy_phrase_2,
+            R.string.busy_phrase_3,
+            R.string.busy_phrase_4,
+            R.string.busy_phrase_5,
+            R.string.busy_phrase_6,
+            R.string.busy_phrase_7,
+            R.string.busy_phrase_8
+        )
+    }
+    var busyPhraseIndex by remember { mutableStateOf(0) }
+
+    LaunchedEffect(isAiBusy) {
+        if (isAiBusy) {
+            busyPhraseIndex = 0
+            while (isActive) {
+                delay(2500)
+                busyPhraseIndex = (busyPhraseIndex + 1) % busyPhrases.size
+            }
+        }
+    }
+
     val inputBusyMessage = state.loadingMessage ?: when {
         state.sendState is SendState.GeneratingImage -> Constants.UiStatus.GENERATING_IMAGE
         else -> Constants.UiStatus.THINKING
     }
 
-    val hasImageModel = remember(state.localModels) {
-        state.localModels.any {
-            it.isHealthy && (it.taskType == ModelTaskType.IMAGE_GENERATION || ModelCapability.IMAGE_GEN in it.capabilities)
+    val resolvedBusyMessage = when {
+        inputBusyMessage == "GENERATING..." -> stringResource(R.string.status_generating)
+        inputBusyMessage == Constants.UiStatus.PLANNING -> stringResource(R.string.status_planning)
+        inputBusyMessage == Constants.UiStatus.GENERATING_IMAGE -> stringResource(R.string.status_generating_image)
+        inputBusyMessage.startsWith(Constants.UiStatus.EXECUTING_PREFIX) -> {
+            val toolName = inputBusyMessage.removePrefix(Constants.UiStatus.EXECUTING_PREFIX)
+            stringResource(R.string.status_executing, toolName)
         }
-    }
-    val hasAttachedImage = state.selectedImageUri != null
-    val suggestions = remember(hasAttachedImage) {
-        if (hasAttachedImage) {
-            listOf(
-                "Describe this image.",
-                "What is in this photo?",
-                "Extract text from this image."
-            )
-        } else {
-            listOf(
-                "How hot is my room?",
-                "How's the weather today?",
-                "How's the light in here?",
-                "How noisy is my room?",
-                "Check battery and thermals",
-                "Write a Kotlin Coroutine example.",
-                "Explain Clean Architecture.",
-                "Optimize this code snippet."
-            )
+        inputBusyMessage == Constants.UiStatus.THINKING -> {
+            stringResource(busyPhrases[busyPhraseIndex])
         }
+        else -> inputBusyMessage
     }
 
+    val suggestions = state.suggestions
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
 
@@ -277,7 +322,7 @@ private fun ChatContent(
         } else {
             Toast.makeText(
                 context,
-                context.getString(R.string.camera_permission_required),
+                resources.getString(R.string.camera_permission_required),
                 Toast.LENGTH_SHORT
             ).show()
         }
@@ -291,14 +336,14 @@ private fun ChatContent(
         if (isCoarseGranted || isFineGranted) {
             Toast.makeText(
                 context,
-                context.getString(R.string.location_permission_granted),
+                resources.getString(R.string.location_permission_granted),
                 Toast.LENGTH_SHORT
             ).show()
             viewModel.onIntent(ChatIntent.RetryLastMessage)
         } else {
             Toast.makeText(
                 context,
-                context.getString(R.string.location_permission_denied),
+                resources.getString(R.string.location_permission_denied),
                 Toast.LENGTH_SHORT
             ).show()
         }
@@ -310,14 +355,14 @@ private fun ChatContent(
         if (isGranted) {
             Toast.makeText(
                 context,
-                context.getString(R.string.contacts_permission_granted),
+                resources.getString(R.string.contacts_permission_granted),
                 Toast.LENGTH_SHORT
             ).show()
             viewModel.onIntent(ChatIntent.RetryLastMessage)
         } else {
             Toast.makeText(
                 context,
-                context.getString(R.string.contacts_permission_denied),
+                resources.getString(R.string.contacts_permission_denied),
                 Toast.LENGTH_SHORT
             ).show()
         }
@@ -333,14 +378,14 @@ private fun ChatContent(
         if (readGranted || writeGranted) {
             Toast.makeText(
                 context,
-                context.getString(R.string.calendar_permission_granted),
+                resources.getString(R.string.calendar_permission_granted),
                 Toast.LENGTH_SHORT
             ).show()
             viewModel.onIntent(ChatIntent.RetryLastMessage)
         } else {
             Toast.makeText(
                 context,
-                context.getString(R.string.calendar_permission_denied),
+                resources.getString(R.string.calendar_permission_denied),
                 Toast.LENGTH_SHORT
             ).show()
         }
@@ -352,48 +397,153 @@ private fun ChatContent(
         if (isGranted) {
             Toast.makeText(
                 context,
-                context.getString(R.string.microphone_permission_granted),
+                resources.getString(R.string.microphone_permission_granted),
                 Toast.LENGTH_SHORT
             ).show()
             viewModel.onIntent(ChatIntent.StartVoiceInput)
         } else {
             Toast.makeText(
                 context,
-                context.getString(R.string.microphone_permission_denied),
+                resources.getString(R.string.microphone_permission_denied),
                 Toast.LENGTH_SHORT
             ).show()
         }
     }
 
 
-    Scaffold(
-        topBar = {
-            ChatTopBar(
-                isInteractionEnabled = state.isReady,
-                isChatReady = state.localModels.any {
-                    it.isHealthy && it.taskType != ModelTaskType.IMAGE_GENERATION
-                },
-                isImageReady = state.localModels.any {
-                    it.isHealthy && (it.taskType == ModelTaskType.IMAGE_GENERATION || ModelCapability.IMAGE_GEN in it.capabilities)
-                },
-                onClearChat = {
-                    hapticView.performChevereHaptic(ChevereHaptic.Warning)
-                    viewModel.onIntent(ChatIntent.ClearConversation)
-                },
-                onModelsClick = {
-                    hapticView.performChevereHaptic(ChevereHaptic.Selection)
-                    onModelsClick()
-                },
-                onSettingsClick = {
-                    hapticView.performChevereHaptic(ChevereHaptic.Selection)
-                    onSettingsClick()
-                },
-                onHistoryClick = {
-                    hapticView.performChevereHaptic(ChevereHaptic.Selection)
-                    showHistorySheet = true
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        gesturesEnabled = !showOnboarding,
+        drawerContent = {
+            ModalDrawerSheet(
+                drawerContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                drawerShape = RoundedCornerShape(topEnd = 16.dp, bottomEnd = 16.dp),
+                modifier = Modifier.width(300.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.96f),
+                                    MaterialTheme.colorScheme.surfaceContainerLowest.copy(alpha = 0.90f)
+                                )
+                            )
+                        )
+                        .padding(24.dp)
+                ) {
+                    // Header Area
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(bottom = 32.dp, top = 12.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .background(
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                                    CircleShape
+                                )
+                                .border(1.dp, MaterialTheme.colorScheme.primary, CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(10.dp)
+                                    .background(MaterialTheme.colorScheme.primary, CircleShape)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                text = "CHEVERE AI",
+                                style = Typography.titleLarge,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                fontWeight = FontWeight.ExtraBold,
+                                letterSpacing = 1.4.sp
+                            )
+                            Text(
+                                text = "PRIVATE CORE",
+                                style = Typography.labelSmall.copy(fontSize = 9.sp, fontWeight = FontWeight.Bold),
+                                color = MaterialTheme.colorScheme.primary,
+                                letterSpacing = 1.2.sp
+                            )
+                        }
+                    }
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    DrawerNavItem(
+                        label = "Models Library",
+                        icon = Icons.Default.Storage,
+                        onClick = {
+                            scope.launch { drawerState.close() }
+                            hapticView.performChevereHaptic(ChevereHaptic.Selection)
+                            onModelsClick()
+                        }
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    DrawerNavItem(
+                        label = "Chat History",
+                        icon = Icons.Default.History,
+                        onClick = {
+                            scope.launch { drawerState.close() }
+                            hapticView.performChevereHaptic(ChevereHaptic.Selection)
+                            showHistorySheet = true
+                        }
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    DrawerNavItem(
+                        label = "System Settings",
+                        icon = Icons.Default.Person,
+                        onClick = {
+                            scope.launch { drawerState.close() }
+                            hapticView.performChevereHaptic(ChevereHaptic.Selection)
+                            onSettingsClick()
+                        }
+                    )
+
+                    Spacer(modifier = Modifier.weight(1f))
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    DrawerNavItem(
+                        label = "Clear Conversation",
+                        icon = Icons.Default.DeleteSweep,
+                        tint = MaterialTheme.colorScheme.error,
+                        enabled = state.isReady,
+                        onClick = {
+                            scope.launch { drawerState.close() }
+                            hapticView.performChevereHaptic(ChevereHaptic.Warning)
+                            viewModel.onIntent(ChatIntent.ClearConversation)
+                        }
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
                 }
-            )
-        },
+            }
+        }
+    ) {
+        Scaffold(
+            topBar = {
+                ChatTopBar(
+                    onMenuClick = {
+                        scope.launch { drawerState.open() }
+                    },
+                    isChatReady = state.localModels.any {
+                        it.isHealthy && it.taskType != ModelTaskType.IMAGE_GENERATION
+                    },
+                    isImageReady = state.localModels.any {
+                        it.isHealthy && (it.taskType == ModelTaskType.IMAGE_GENERATION || ModelCapability.IMAGE_GEN in it.capabilities)
+                    }
+                )
+            },
         snackbarHost = {
             SnackbarHost(hostState = snackbarHostState) { data ->
                 ErrorSnackbar(state.error ?: data.visuals.message) {
@@ -545,10 +695,10 @@ private fun ChatContent(
                         onDismiss = {
                             pendingPermissionDisclosure = null
                             val message = when (permissionType) {
-                                PermissionType.LOCATION -> context.getString(R.string.location_permission_denied)
-                                PermissionType.CONTACTS -> context.getString(R.string.contacts_permission_denied)
-                                PermissionType.CALENDAR -> context.getString(R.string.calendar_permission_denied)
-                                PermissionType.MICROPHONE -> context.getString(R.string.microphone_permission_denied)
+                                PermissionType.LOCATION -> resources.getString(R.string.location_permission_denied)
+                                PermissionType.CONTACTS -> resources.getString(R.string.contacts_permission_denied)
+                                PermissionType.CALENDAR -> resources.getString(R.string.calendar_permission_denied)
+                                PermissionType.MICROPHONE -> resources.getString(R.string.microphone_permission_denied)
                             }
                             Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
                         }
@@ -617,7 +767,7 @@ private fun ChatContent(
                         },
                         enabled = state.isReady && !state.isLoading,
                         buttonState = state.composerActionButtonState,
-                        busyMessage = inputBusyMessage,
+                        busyMessage = resolvedBusyMessage,
                         suggestions = suggestions,
                         onSuggestionClick = { suggestion ->
                             hapticView.performChevereHaptic(ChevereHaptic.Selection)
@@ -644,10 +794,10 @@ private fun ChatContent(
             }
         }
     }
+}
 
-    LaunchedEffect(viewModel.effect) {
-        viewModel.effect.collect { effect ->
-            when (effect) {
+    ObserveAsEvents(viewModel.effect) { effect ->
+        when (effect) {
                 is ChatEffect.ScrollToBottom -> {
                     val lastIndex = listState.layoutInfo.totalItemsCount - 1
                     if (lastIndex >= 0) {
@@ -669,10 +819,11 @@ private fun ChatContent(
                 is ChatEffect.ShareMessage -> {
                     try {
                         shareChatMessage(context, effect)
-                    } catch (_: ActivityNotFoundException) {
+                    } catch (e: Throwable) {
+                        Timber.tag(TAG).e(e, "Failed to share message")
                         Toast.makeText(
                             context,
-                            context.getString(R.string.share_failed),
+                            resources.getString(R.string.share_failed),
                             Toast.LENGTH_SHORT
                         ).show()
                     }
@@ -687,7 +838,7 @@ private fun ChatContent(
                         .getOrDefault(false)
                     Toast.makeText(
                         context,
-                        if (saved) context.getString(R.string.image_saved) else context.getString(
+                        if (saved) resources.getString(R.string.image_saved) else resources.getString(
                             R.string.image_save_failed
                         ),
                         Toast.LENGTH_SHORT
@@ -725,7 +876,6 @@ private fun ChatContent(
                     showHistorySheet = false
                 }
             }
-        }
     }
 
     LaunchedEffect(isAiBusy, state.error, state.messages.size) {
@@ -743,6 +893,24 @@ private fun ChatContent(
             listState.animateScrollToItem(lastIndex)
             delay(180)
             listState.animateScrollToItem(lastIndex)
+        }
+    }
+
+    LaunchedEffect(state.error) {
+        val errorMessage = state.error
+        if (errorMessage != null) {
+            try {
+                snackbarHostState.showSnackbar(
+                    message = errorMessage,
+                    duration = SnackbarDuration.Long
+                )
+            } finally {
+                if (viewModel.uiState.value.error != null) {
+                    viewModel.onIntent(ChatIntent.ClearError)
+                }
+            }
+        } else {
+            snackbarHostState.currentSnackbarData?.dismiss()
         }
     }
 
@@ -777,6 +945,7 @@ private fun shareChatMessage(context: Context, effect: ChatEffect.ShareMessage) 
     val sendIntent = Intent(Intent.ACTION_SEND).apply {
         type = imageUri?.let { context.contentResolver.getType(it) ?: "image/*" } ?: "text/plain"
         putExtra(Intent.EXTRA_TEXT, effect.text)
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         imageUri?.let { uri ->
             putExtra(Intent.EXTRA_STREAM, uri)
             clipData = ClipData.newUri(context.contentResolver, "Chevere AI image", uri)
@@ -799,6 +968,7 @@ private fun shareChatMessage(context: Context, effect: ChatEffect.ShareMessage) 
     }
 
     val chooser = Intent.createChooser(sendIntent, effect.title).apply {
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         imageUri?.let { uri ->
             clipData = ClipData.newUri(context.contentResolver, "Chevere AI image", uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
@@ -1080,4 +1250,44 @@ private fun PermissionDisclosureDialog(
         containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
         tonalElevation = 6.dp
     )
+}
+
+@Composable
+private fun DrawerNavItem(
+    label: String,
+    icon: ImageVector,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    tint: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onSurfaceVariant,
+    enabled: Boolean = true
+) {
+    val alpha = if (enabled) 1f else 0.38f
+    Surface(
+        onClick = onClick,
+        enabled = enabled,
+        color = androidx.compose.ui.graphics.Color.Transparent,
+        shape = RoundedCornerShape(12.dp),
+        modifier = modifier
+            .fillMaxWidth()
+            .height(52.dp)
+            .alpha(alpha)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = 16.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = tint,
+                modifier = Modifier.size(22.dp)
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+            Text(
+                text = label,
+                style = Typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                color = if (tint == MaterialTheme.colorScheme.error) tint else MaterialTheme.colorScheme.onSurface
+            )
+        }
+    }
 }

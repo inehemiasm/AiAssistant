@@ -85,6 +85,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.core.content.ContextCompat
 import com.neo.chevere.R
 import com.neo.chevere.domain.InitializationStatus
+import com.neo.chevere.domain.DownloadProgress
 import com.neo.chevere.domain.InstallStatus
 import com.neo.chevere.domain.InstalledModel
 import com.neo.chevere.domain.ModelEntry
@@ -298,13 +299,16 @@ fun DiscoverModelsList(
                                 it.id == model.effectiveInstalledId ||
                                 it.fileName == model.effectiveInstalledId
                     }
-                    val isDownloading = state.downloadingModelName == model.effectiveFileName
+                    val activeDownload = state.activeDownloads[model.effectiveFileName]
+                        ?: state.activeDownloads[model.effectiveInstalledId]
+                    val isDownloading = activeDownload is DownloadProgress.Progress
+                    val downloadProgress = (activeDownload as? DownloadProgress.Progress)?.percent
 
                     RemoteModelCard(
                         model = model,
                         installedModel = installedVersion,
                         isDownloading = isDownloading,
-                        downloadProgress = if (isDownloading) state.downloadProgress else null,
+                        downloadProgress = downloadProgress,
                         onDownload = {
                             onIntent(MarketplaceIntent.DownloadModel(model, baseDir))
                         },
@@ -351,6 +355,9 @@ fun InstalledModelsList(
                     val isSwitching =
                         (state.switchState as? ModelSwitchState.Switching)?.toModelId == model.id ||
                                 (state.switchState as? ModelSwitchState.WarmingUp)?.modelId == model.id
+                    val activeDownload = state.activeDownloads[model.id]
+                        ?: state.activeDownloads[model.fileName]
+                    val downloadProgress = (activeDownload as? DownloadProgress.Progress)?.percent
 
                     LocalModelCard(
                         model = model,
@@ -358,6 +365,7 @@ fun InstalledModelsList(
                         isPending = isPending,
                         isSwitching = isSwitching,
                         warmupStatus = if (isSwitching) (state.switchState as? ModelSwitchState.WarmingUp)?.progress else null,
+                        downloadProgress = downloadProgress,
                         onSelect = { onIntent(MarketplaceIntent.SelectModel(model.id)) },
                         onDelete = { onIntent(MarketplaceIntent.DeleteModel(model.id)) },
                         onClick = { onModelClick(model.id) }
@@ -369,12 +377,24 @@ fun InstalledModelsList(
                 }
 
                 items(state.imageLocalModels) { model ->
+                    val activeDownload = state.activeDownloads[model.id]
+                        ?: state.activeDownloads[model.fileName]
+                    val downloadProgress = (activeDownload as? DownloadProgress.Progress)?.percent
+
+                    val isActive = if (state.activeImageModelId != null) {
+                        state.activeImageModelId.removeSuffix(".zip") == model.id.removeSuffix(".zip")
+                    } else {
+                        val firstHealthy = state.imageLocalModels.firstOrNull { it.isHealthy }
+                        firstHealthy?.id?.removeSuffix(".zip") == model.id.removeSuffix(".zip")
+                    }
+
                     LocalModelCard(
                         model = model,
-                        isActive = false,
-                        isPending = model.isHealthy,
+                        isActive = isActive,
+                        isPending = false,
                         isSwitching = model.isTransitioning,
                         warmupStatus = null,
+                        downloadProgress = downloadProgress,
                         onSelect = { onIntent(MarketplaceIntent.SelectModel(model.id)) },
                         onDelete = { onIntent(MarketplaceIntent.DeleteModel(model.id)) },
                         onClick = { onModelClick(model.id) }
@@ -564,6 +584,7 @@ fun LocalModelCard(
     isPending: Boolean,
     isSwitching: Boolean,
     warmupStatus: InitializationStatus?,
+    downloadProgress: Int? = null,
     onSelect: () -> Unit,
     onDelete: () -> Unit,
     onClick: () -> Unit
@@ -648,7 +669,13 @@ fun LocalModelCard(
                             is InitializationStatus.Failure -> "FAILED: ${warmupStatus.message}"
                             InitializationStatus.Ready -> "READY"
                             InitializationStatus.Uninitialized -> "STARTING..."
-                            null -> model.installStatus.name
+                            null -> {
+                                if (model.installStatus == InstallStatus.DOWNLOADING && downloadProgress != null) {
+                                    "DOWNLOADING ($downloadProgress%)"
+                                } else {
+                                    model.installStatus.name
+                                }
+                            }
                         }
 
                         Text(
@@ -693,6 +720,9 @@ fun LocalModelCard(
                 }
             }
 
+            val isImageModel = model.activationCategory() == ModelActivationCategory.IMAGE_GENERATION
+            val showReadyBadge = isImageModel && model.isHealthy && !isSwitching
+
             if (isActive) {
                 Badge(
                     text = stringResource(R.string.active),
@@ -702,9 +732,18 @@ fun LocalModelCard(
                         .align(Alignment.TopEnd)
                         .padding(16.dp)
                 )
+            } else if (showReadyBadge) {
+                Badge(
+                    text = "READY",
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(16.dp)
+                )
             } else if (isPending && !isSwitching) {
                 Badge(
-                    text = if (model.activationCategory() == ModelActivationCategory.IMAGE_GENERATION) "READY" else "SELECTED",
+                    text = "SELECTED",
                     containerColor = MaterialTheme.colorScheme.secondary,
                     contentColor = MaterialTheme.colorScheme.onSecondary,
                     modifier = Modifier

@@ -12,6 +12,7 @@ import com.neo.chevere.domain.InferenceRequest
 import com.neo.chevere.domain.InferenceResult
 import com.neo.chevere.domain.LocationPermissionException
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -221,6 +222,8 @@ class AgentOrchestrator @Inject constructor(
                         } catch (e: TimeoutCancellationException) {
                             Timber.tag(TAG).e("Tool ${tool.name} timed out.")
                             ToolResult.Error("Tool execution timed out.")
+                        } catch (e: CancellationException) {
+                            throw e
                         } catch (e: Exception) {
                             Timber.tag(TAG).e(e, "Tool ${tool.name} failed")
                             ToolResult.Error("Tool execution failed: ${e.message}")
@@ -250,6 +253,8 @@ class AgentOrchestrator @Inject constructor(
             _agentState.value = AgentState.Completed(currentSteps.toList())
             return Result.success(finalFallback)
 
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Timber.tag(TAG).e(e, "Unexpected error in agent loop")
             _agentState.value = AgentState.Error("Unexpected error: ${e.message}", currentSteps.toList())

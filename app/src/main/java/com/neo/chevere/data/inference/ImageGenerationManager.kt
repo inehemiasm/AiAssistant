@@ -102,7 +102,7 @@ class ImageGenerationManager @Inject constructor(
 
         if (models.isEmpty()) return emptyList()
 
-        val activeModelId = preferenceManager.selectedModelPreference.firstOrNull()
+        val activeModelId = preferenceManager.selectedImageModelPreference.firstOrNull()
         val activeModel = models.find { it.id == activeModelId || it.fileName == activeModelId }
         return buildList {
             if (activeModel != null) add(activeModel)

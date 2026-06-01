@@ -14,6 +14,7 @@ import com.neo.chevere.ui.marketplace.ModelActivationCategory
 import com.neo.chevere.ui.marketplace.activationCategory
 import com.neo.chevere.ui.navigation.Route
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -48,10 +49,35 @@ class ModelDetailsViewModel @Inject constructor(
 
         // Reactive Observation of Active Model
         viewModelScope.launch {
-            preferenceManager.selectedModelPreference.collectLatest { activeId ->
-                val isNowActive = activeId == modelId
+            combine(
+                preferenceManager.selectedModelPreference,
+                preferenceManager.selectedImageModelPreference
+            ) { activeChatId, activeImageId ->
+                val localModels = repository.getLocalModels()
+                val installed = localModels.find {
+                    it.id == modelId || it.id == modelId.removeSuffix(Constants.ModelFiles.ZIP_EXTENSION) || it.fileName == modelId
+                }
+                val isImage = installed?.let {
+                    it.taskType == com.neo.chevere.domain.ModelTaskType.IMAGE_GENERATION ||
+                            com.neo.chevere.domain.ModelCapability.IMAGE_GEN in it.capabilities
+                } ?: false
+
+                if (isImage) {
+                    if (activeImageId != null) {
+                        activeImageId.removeSuffix(Constants.ModelFiles.ZIP_EXTENSION) == modelId.removeSuffix(Constants.ModelFiles.ZIP_EXTENSION)
+                    } else {
+                        val firstHealthy = localModels.firstOrNull {
+                            it.isHealthy && (it.taskType == com.neo.chevere.domain.ModelTaskType.IMAGE_GENERATION ||
+                                    com.neo.chevere.domain.ModelCapability.IMAGE_GEN in it.capabilities)
+                        }
+                        firstHealthy?.id?.removeSuffix(Constants.ModelFiles.ZIP_EXTENSION) == modelId.removeSuffix(Constants.ModelFiles.ZIP_EXTENSION)
+                    }
+                } else {
+                    activeChatId?.removeSuffix(Constants.ModelFiles.ZIP_EXTENSION) == modelId.removeSuffix(Constants.ModelFiles.ZIP_EXTENSION)
+                }
+            }.collectLatest { isNowActive ->
                 Timber.tag(TAG).d(
-                    "[SYNC] Active Model in DataStore: '$activeId' | This Model: '$modelId' | Result: $isNowActive"
+                    "[SYNC] Model: '$modelId' | Active Result: $isNowActive"
                 )
                 setState { copy(isActive = isNowActive) }
             }
@@ -220,19 +246,27 @@ class ModelDetailsViewModel @Inject constructor(
         setState { copy(isActionInProgress = true) }
 
         viewModelScope.launch {
-            Timber.tag(TAG).i("[SWITCH] Initializing Engine with path: ${model.filePath}")
-            repository.initializeModel(model.filePath)
-                .onSuccess {
-                    Timber.tag(TAG).i("[SWITCH] Engine Ready. Updating DataStore to: $modelId")
-                    preferenceManager.updateSelectedModel(modelId)
-                    setState { copy(isActionInProgress = false) }
-                    sendEffect { ModelDetailsEffect.ShowToast("Model activated") }
-                }
-                .onFailure { e ->
-                    Timber.tag(TAG).e(e, "[SWITCH] Engine Init FAILED")
-                    setState { copy(isActionInProgress = false) }
-                    sendEffect { ModelDetailsEffect.ShowToast("Switch failed: ${e.message}") }
-                }
+            val isImage = model.taskType == com.neo.chevere.domain.ModelTaskType.IMAGE_GENERATION ||
+                    com.neo.chevere.domain.ModelCapability.IMAGE_GEN in model.capabilities
+            if (isImage) {
+                preferenceManager.updateSelectedImageModel(model.id)
+                setState { copy(isActionInProgress = false, isActive = true) }
+                sendEffect { ModelDetailsEffect.ShowToast("Image model activated") }
+            } else {
+                Timber.tag(TAG).i("[SWITCH] Initializing Engine with path: ${model.filePath}")
+                repository.initializeModel(model.filePath)
+                    .onSuccess {
+                        Timber.tag(TAG).i("[SWITCH] Engine Ready. Updating DataStore to: $modelId")
+                        preferenceManager.updateSelectedModel(modelId)
+                        setState { copy(isActionInProgress = false) }
+                        sendEffect { ModelDetailsEffect.ShowToast("Model activated") }
+                    }
+                    .onFailure { e ->
+                        Timber.tag(TAG).e(e, "[SWITCH] Engine Init FAILED")
+                        setState { copy(isActionInProgress = false) }
+                        sendEffect { ModelDetailsEffect.ShowToast("Switch failed: ${e.message}") }
+                    }
+            }
         }
     }
 
@@ -261,7 +295,8 @@ class ModelDetailsViewModel @Inject constructor(
                     it.isHealthy && it.activationCategory() == ModelActivationCategory.IMAGE_GENERATION
                 }
                 if (healthyImageModels.size == 1) {
-                    sendEffect { ModelDetailsEffect.ShowToast("${installedModel.displayName} is ready for image generation") }
+                    preferenceManager.updateSelectedImageModel(installedModel.id)
+                    sendEffect { ModelDetailsEffect.ShowToast("${installedModel.displayName} activated for image generation") }
                 }
             }
         }

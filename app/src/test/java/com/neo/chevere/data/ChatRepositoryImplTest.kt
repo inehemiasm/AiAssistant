@@ -282,6 +282,42 @@ class ChatRepositoryImplTest {
     }
 
     @Test
+    fun downloadModel_whenImageModelHasNoZipExtension_stillClassifiesAsImageGenerationBundle() = runTest(testDispatcher) {
+        val model = ModelEntry(
+            name = "DreamShaper",
+            url = "https://example.com/dreamshaper",
+            provider = "Hugging Face",
+            runtimeType = "ONNX Diffusion",
+            fileName = null,
+            license = "CreativeML",
+            sha256 = "xyz789"
+        )
+        whenever(
+            downloadManager.downloadModel(
+                url = model.url,
+                modelName = model.effectiveFileName,
+                modelId = model.effectiveInstalledId,
+                sha256 = model.sha256
+            )
+        ).doReturn(flowOf())
+
+        repository.downloadModel(model).collect {}
+
+        verify(installedModelRegistry).upsertInstalledModel(
+            org.mockito.kotlin.argThat {
+                id == "dreamshaper" &&
+                        source == ModelSource.HUGGING_FACE &&
+                        format == ModelFormat.ONNX_DIFFUSION_BUNDLE &&
+                        runtime == ModelRuntime.ONNX_DIFFUSION &&
+                        taskType == ModelTaskType.IMAGE_GENERATION &&
+                        checksum == "xyz789" &&
+                        license == "CreativeML"
+            }
+        )
+        verify(downloadManager).downloadModel(model.url, "dreamshaper.zip", "dreamshaper", "xyz789")
+    }
+
+    @Test
     fun activePartialResponse_combinesDirectAndAgentFlows() = runTest(testDispatcher) {
         val directFlow = MutableStateFlow<InferenceResult>(InferenceResult.Success(""))
         whenever(inferenceManager.generateStream(any())).doReturn(directFlow)

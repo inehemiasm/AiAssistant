@@ -35,6 +35,7 @@ import com.neo.chevere.domain.ModelCapability
 import com.neo.chevere.domain.ModelTaskType
 import com.neo.chevere.domain.LocationPermissionException
 import com.neo.chevere.domain.SendMessageUseCase
+import com.neo.chevere.R
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -50,6 +51,8 @@ import java.time.LocalDate
 import java.time.Period
 import javax.inject.Inject
 import kotlin.system.measureTimeMillis
+
+private const val TAG = "ChatViewModel"
 
 @HiltViewModel
 class ChatViewModel @Inject constructor(
@@ -102,6 +105,9 @@ class ChatViewModel @Inject constructor(
 
         // 7. Observe history sessions for the bottom sheet
         observeHistorySessions()
+
+        // 8. Initialize suggestions
+        setState { copy(suggestions = getSuggestions(false)) }
     }
 
     private fun observeActivePartialResponse() {
@@ -142,7 +148,12 @@ class ChatViewModel @Inject constructor(
                 // or if we aren't ready yet, trigger initialization.
                 if (savedModel != null && (savedModel != currentModel || currentState.runtimeState is RuntimeState.Uninitialized)) {
                     val models = withContext(dispatcherProvider.io) { repository.getLocalModels() }
-                    val selected = models.find { it.id == savedModel || it.fileName == savedModel }
+                    val selected = models.find {
+                        it.id == savedModel ||
+                                it.fileName == savedModel ||
+                                it.id == savedModel.removeSuffix(Constants.ModelFiles.ZIP_EXTENSION) ||
+                                it.fileName == savedModel.removeSuffix(Constants.ModelFiles.ZIP_EXTENSION)
+                    }
                     setState { copy(localModels = models) }
 
                     if (selected?.isImageGenerationModel() == true) {
@@ -183,7 +194,7 @@ class ChatViewModel @Inject constructor(
     private fun observeInitStatus() {
         viewModelScope.launch {
             repository.getInitStatus().collectLatest { status ->
-                Timber.tag("ChatViewModel").d("Init status update: $status")
+                Timber.tag(TAG).d("Init status update: $status")
                 val runtimeState = when (status) {
                     is InitializationStatus.Ready -> RuntimeState.Ready
                     is InitializationStatus.Uninitialized -> RuntimeState.Uninitialized
@@ -239,7 +250,12 @@ class ChatViewModel @Inject constructor(
 
                 ChatIntent.ClearConversation -> clearConversation()
                 is ChatIntent.UpdateInputText -> setState { copy(inputText = intent.text) }
-                is ChatIntent.SelectImage -> setState { copy(selectedImageUri = intent.uri) }
+                is ChatIntent.SelectImage -> setState {
+                    copy(
+                        selectedImageUri = intent.uri,
+                        suggestions = getSuggestions(intent.uri != null)
+                    )
+                }
                 is ChatIntent.SetTempCameraUri -> setState { copy(tempCameraUri = intent.uri) }
                 ChatIntent.ConfirmAction -> confirmAction()
                 ChatIntent.CancelAction -> cancelAction()
@@ -274,18 +290,43 @@ class ChatViewModel @Inject constructor(
                 is ChatIntent.LoadSession -> loadSession(intent.sessionId)
                 is ChatIntent.DeleteSession -> deleteSession(intent.sessionId)
                 is ChatIntent.RenameSession -> renameSession(intent.sessionId, intent.newTitle)
+                ChatIntent.Resume -> {
+                    if (currentState.runtimeState is RuntimeState.Uninitialized && currentState.selectedModel.isNotEmpty()) {
+                        val modelFile = File(application.filesDir, currentState.selectedModel)
+                        if (modelFile.exists()) {
+                            initModel(modelFile.absolutePath)
+                        }
+                    }
+                }
             }
         }
     }
 
+    private fun cancelActiveWorkSilently() {
+        responseJob?.cancel()
+        responseJob = null
+        imageGenerationJob?.cancel()
+        imageGenerationJob = null
+        repository.resetAgentState()
+        setState { copy(sendState = SendState.Idle) }
+    }
+
     private fun clearConversation() {
+        cancelActiveWorkSilently()
         viewModelScope.launch {
             withContext(dispatcherProvider.io) {
                 repository.clearConversation()
             }
             // Detach from the current session; the session stays in history
             currentSessionId = null
-            setState { copy(messages = emptyList(), currentSessionId = null) }
+            setState {
+                copy(
+                    messages = emptyList(),
+                    currentSessionId = null,
+                    selectedImageUri = null,
+                    suggestions = getSuggestions(false)
+                )
+            }
         }
     }
 
@@ -325,12 +366,21 @@ class ChatViewModel @Inject constructor(
     }
 
     private fun newConversation() {
+        cancelActiveWorkSilently()
         viewModelScope.launch {
             withContext(dispatcherProvider.io) {
                 repository.clearConversation()
             }
             currentSessionId = null
-            setState { copy(messages = emptyList(), currentSessionId = null, inputText = "") }
+            setState {
+                copy(
+                    messages = emptyList(),
+                    currentSessionId = null,
+                    inputText = "",
+                    selectedImageUri = null,
+                    suggestions = getSuggestions(false)
+                )
+            }
             sendEffect { ChatEffect.CloseHistorySheet }
         }
     }
@@ -346,7 +396,14 @@ class ChatViewModel @Inject constructor(
                 repository.clearConversation()
             }
             currentSessionId = sessionId
-            setState { copy(messages = messages, currentSessionId = sessionId) }
+            setState {
+                copy(
+                    messages = messages,
+                    currentSessionId = sessionId,
+                    selectedImageUri = null,
+                    suggestions = getSuggestions(false)
+                )
+            }
             sendEffect { ChatEffect.ScrollToBottom }
             sendEffect { ChatEffect.CloseHistorySheet }
         }
@@ -415,7 +472,8 @@ class ChatViewModel @Inject constructor(
                 messages = messages + userMsg,
                 sendState = SendState.Sending,
                 inputText = "",
-                selectedImageUri = null
+                selectedImageUri = null,
+                suggestions = getSuggestions(false)
             )
         }
         sendEffect { ChatEffect.ScrollToBottom }
@@ -897,9 +955,11 @@ class ChatViewModel @Inject constructor(
                         )
                     )
                 }
-            } catch (_: CancellationException) {
+            } catch (e: CancellationException) {
                 wasCanceled = true
                 return@measureTimeMillis
+            } catch (e: Exception) {
+                Result.failure(e)
             }
         }
 
@@ -989,6 +1049,28 @@ class ChatViewModel @Inject constructor(
      * Parsed direct image-generation command.
      */
     private data class ImageCommand(val prompt: String)
+
+    private fun getSuggestions(hasImage: Boolean): List<String> {
+        val app = getApplication<Application>()
+        return if (hasImage) {
+            listOf(
+                app.getString(R.string.suggestion_describe_image),
+                app.getString(R.string.suggestion_what_is_in_photo),
+                app.getString(R.string.suggestion_extract_text)
+            )
+        } else {
+            listOf(
+                app.getString(R.string.suggestion_room_temp),
+                app.getString(R.string.suggestion_weather),
+                app.getString(R.string.suggestion_light_level),
+                app.getString(R.string.suggestion_noise_level),
+                app.getString(R.string.suggestion_battery_thermals),
+                app.getString(R.string.suggestion_kotlin_coroutine),
+                app.getString(R.string.suggestion_clean_architecture),
+                app.getString(R.string.suggestion_optimize_code)
+            )
+        }
+    }
 
     private companion object {
         const val APPROX_CHARS_PER_TOKEN = 4.0

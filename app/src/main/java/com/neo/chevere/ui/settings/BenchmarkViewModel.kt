@@ -17,6 +17,8 @@ import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
 
+private const val TAG = "BenchmarkViewModel"
+
 @HiltViewModel
 class BenchmarkViewModel @Inject constructor(
     application: Application,
@@ -116,7 +118,7 @@ class BenchmarkViewModel @Inject constructor(
             
             inferenceManager.generateStream(request)
                 .catch { e ->
-                    Timber.tag("BenchmarkViewModel").e(e, "Benchmark generation failed")
+                    Timber.tag(TAG).e(e, "Benchmark generation failed")
                     setState {
                         copy(
                             isRunning = false,
