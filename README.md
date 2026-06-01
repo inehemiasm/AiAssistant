@@ -4,6 +4,22 @@ Chevere AI is a privacy-first Android assistant that runs local AI models on dev
 
 The project is built for experimenting with capable on-device assistants: small enough to run locally, but structured enough to support real app features like downloads, permissions, background work, model health, and a Compose UI.
 
+
+---
+
+## Screenshots
+
+<p align="center">
+  <img src="app/screenshots/chat_screen.png" width="32%" alt="Chat Screen"/>
+  <img src="app/screenshots/sensors_radar_screen.png" width="32%" alt="Sensors Radar Screen"/>
+  <img src="app/screenshots/marketplace_screen.png" width="32%" alt="Marketplace Screen"/>
+</p>
+<p align="center">
+  <img src="app/screenshots/benchmark_screen.png" width="32%" alt="Benchmark Screen"/>
+  <img src="app/screenshots/settings_screen.png" width="32%" alt="Settings Screen"/>
+  <img src="app/screenshots/tasks_screen.png" width="32%" alt="Tasks Screen"/>
+</p>
+
 ---
 
 ## What It Can Do

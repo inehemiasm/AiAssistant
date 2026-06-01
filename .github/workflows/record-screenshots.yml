@@ -1,0 +1,56 @@
+name: Record Screenshots
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch: # Allows manual trigger
+
+permissions:
+  contents: write # Needed to push screenshots back to repository
+
+jobs:
+  record-screenshots:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          # Fetch all history so we can push back
+          fetch-depth: 0
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Create dummy google-services.json
+        run: |
+          echo '{"project_info":{"project_number":"123","project_id":"dummy"},"client":[{"client_info":{"mobilesdk_app_id":"1:123:android:123","android_client_info":{"package_name":"dev.neo.chevereai"}},"api_key":[{"current_key":"dummy"}]}],"configuration_version":"1"}' > app/google-services.json
+
+      - name: Run Roborazzi Record
+        run: ./gradlew recordRoborazziDebug --no-daemon
+
+      - name: Commit and Push changes
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          
+          # Check if there are any changes to screenshots
+          if git status --porcelain app/screenshots/ | grep -q .; then
+            git add app/screenshots/
+            git commit -m "chore: auto-update screenshots from CI"
+            git push
+          else
+            echo "No screenshot changes to commit."
+          fi
