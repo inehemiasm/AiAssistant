@@ -42,7 +42,6 @@ import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SensorsRadarScreen(
     onBackClick: () -> Unit,
@@ -50,6 +49,30 @@ fun SensorsRadarScreen(
     viewModel: SensorsRadarViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    SensorsRadarContent(
+        uiState = uiState,
+        onMicPermissionGranted = { viewModel.onMicPermissionGranted() },
+        calibrate = { viewModel.calibrate() },
+        resetCalibration = { viewModel.resetCalibration() },
+        toggleAudio = { viewModel.toggleAudio(it) },
+        toggleVibration = { viewModel.toggleVibration(it) },
+        onBackClick = onBackClick,
+        modifier = modifier
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SensorsRadarContent(
+    uiState: RadarUiState,
+    onMicPermissionGranted: () -> Unit,
+    calibrate: () -> Unit,
+    resetCalibration: () -> Unit,
+    toggleAudio: (Boolean) -> Unit,
+    toggleVibration: (Boolean) -> Unit,
+    onBackClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     val scrollState = rememberScrollState()
     val primaryColor = MaterialTheme.colorScheme.primary
     val secondaryColor = MaterialTheme.colorScheme.secondary
@@ -60,7 +83,7 @@ fun SensorsRadarScreen(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (isGranted) {
-            viewModel.onMicPermissionGranted()
+            onMicPermissionGranted()
         }
     }
 
@@ -69,7 +92,7 @@ fun SensorsRadarScreen(
             androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.RECORD_AUDIO) ==
             android.content.pm.PackageManager.PERMISSION_GRANTED
         ) {
-            viewModel.onMicPermissionGranted()
+            onMicPermissionGranted()
         }
     }
 
@@ -107,7 +130,7 @@ fun SensorsRadarScreen(
                 },
                 actions = {
                     if (uiState.mode == SensorMode.ALL || uiState.mode == SensorMode.STUD) {
-                        IconButton(onClick = { viewModel.calibrate() }) {
+                        IconButton(onClick = { calibrate() }) {
                             Icon(
                                 imageVector = Icons.Default.LocationSearching,
                                 contentDescription = "Calibrate",
@@ -149,14 +172,20 @@ fun SensorsRadarScreen(
                     primaryColor = primaryColor,
                     secondaryColor = secondaryColor,
                     surfaceContainer = surfaceContainer,
-                    viewModel = viewModel
+                    onCalibrate = calibrate,
+                    onResetCalibration = resetCalibration,
+                    onToggleAudio = toggleAudio,
+                    onToggleVibration = toggleVibration
                 )
                 SensorMode.STUD -> StudFinderContent(
                     uiState = uiState,
                     primaryColor = primaryColor,
                     secondaryColor = secondaryColor,
                     surfaceContainer = surfaceContainer,
-                    viewModel = viewModel
+                    onCalibrate = calibrate,
+                    onResetCalibration = resetCalibration,
+                    onToggleAudio = toggleAudio,
+                    onToggleVibration = toggleVibration
                 )
                 SensorMode.LEVEL -> SpiritLevelContent(
                     pitch = uiState.pitch,
@@ -239,9 +268,21 @@ private fun AllSensorsContent(
     primaryColor: Color,
     secondaryColor: Color,
     surfaceContainer: Color,
-    viewModel: SensorsRadarViewModel
+    onCalibrate: () -> Unit,
+    onResetCalibration: () -> Unit,
+    onToggleAudio: (Boolean) -> Unit,
+    onToggleVibration: (Boolean) -> Unit
 ) {
-    StudFinderContent(uiState, primaryColor, secondaryColor, surfaceContainer, viewModel)
+    StudFinderContent(
+        uiState = uiState,
+        primaryColor = primaryColor,
+        secondaryColor = secondaryColor,
+        surfaceContainer = surfaceContainer,
+        onCalibrate = onCalibrate,
+        onResetCalibration = onResetCalibration,
+        onToggleAudio = onToggleAudio,
+        onToggleVibration = onToggleVibration
+    )
 
     // Light & Proximity row
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -312,7 +353,10 @@ private fun StudFinderContent(
     primaryColor: Color,
     secondaryColor: Color,
     surfaceContainer: Color,
-    viewModel: SensorsRadarViewModel
+    onCalibrate: () -> Unit,
+    onResetCalibration: () -> Unit,
+    onToggleAudio: (Boolean) -> Unit,
+    onToggleVibration: (Boolean) -> Unit
 ) {
     RadarHUDVisualizer(
         magneticCalibrated = uiState.magneticCalibrated,
@@ -359,11 +403,11 @@ private fun StudFinderContent(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TextButton(onClick = { viewModel.calibrate() }) {
+                    TextButton(onClick = { onCalibrate() }) {
                         Text("TARE / ZERO OUT", color = primaryColor, style = Typography.labelLarge)
                     }
                     if (uiState.baseline > 0f) {
-                        IconButton(onClick = { viewModel.resetCalibration() }) {
+                        IconButton(onClick = { onResetCalibration() }) {
                             Icon(Icons.Default.Refresh, "Reset Calibration",
                                 tint = MaterialTheme.colorScheme.error)
                         }
@@ -383,7 +427,7 @@ private fun StudFinderContent(
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.clickable { viewModel.toggleAudio(!uiState.audioEnabled) }.padding(8.dp)
+                modifier = Modifier.clickable { onToggleAudio(!uiState.audioEnabled) }.padding(8.dp)
             ) {
                 Icon(
                     imageVector = if (uiState.audioEnabled) Icons.Default.Hearing else Icons.Default.HearingDisabled,
@@ -396,7 +440,7 @@ private fun StudFinderContent(
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.clickable { viewModel.toggleVibration(!uiState.vibrationEnabled) }.padding(8.dp)
+                modifier = Modifier.clickable { onToggleVibration(!uiState.vibrationEnabled) }.padding(8.dp)
             ) {
                 Icon(Icons.Default.Vibration, "Haptic Alert",
                     tint = if (uiState.vibrationEnabled) primaryColor else MaterialTheme.colorScheme.onSurfaceVariant)
@@ -991,3 +1035,33 @@ private fun DecibelHUDVisualizer(
         }
     }
 }
+
+@androidx.compose.ui.tooling.preview.Preview(showBackground = true)
+@Composable
+private fun SensorsRadarScreenPreview() {
+    com.neo.chevere.ui.designsystem.HighTechAiTheme(darkTheme = true) {
+        SensorsRadarContent(
+            uiState = RadarUiState(
+                mode = SensorMode.ALL,
+                magneticMagnitude = 45.2f,
+                magneticCalibrated = 12.5f,
+                baseline = 32.7f,
+                lightLevel = 150f,
+                proximityDistance = 8f,
+                proximityNear = false,
+                pitch = 1.2f,
+                roll = -0.5f,
+                audioEnabled = false,
+                vibrationEnabled = false,
+                statusLabel = "SCANNING FOR STUDS / METALS..."
+            ),
+            onMicPermissionGranted = {},
+            calibrate = {},
+            resetCalibration = {},
+            toggleAudio = {},
+            toggleVibration = {},
+            onBackClick = {}
+        )
+    }
+}
+

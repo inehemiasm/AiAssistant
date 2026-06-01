@@ -71,7 +71,6 @@ import com.neo.chevere.ui.common.performChevereHaptic
 import com.neo.chevere.ui.designsystem.AtmosphericTheme
 import com.neo.chevere.ui.designsystem.Typography
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
@@ -80,6 +79,31 @@ fun SettingsScreen(
     onRadarClick: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
+    SettingsContent(
+        state = state,
+        onIntent = { viewModel.onIntent(it) },
+        onBackClick = onBackClick,
+        onBenchmarkClick = onBenchmarkClick,
+        onRadarClick = onRadarClick
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SettingsContent(
+    state: SettingsState,
+    onIntent: (SettingsIntent) -> Unit,
+    onBackClick: () -> Unit,
+    onBenchmarkClick: () -> Unit,
+    onRadarClick: () -> Unit
+) {
+    val viewModel = remember(onIntent) {
+        object {
+            fun onIntent(intent: SettingsIntent) {
+                onIntent(intent)
+            }
+        }
+    }
     val hapticView = LocalView.current
     val context = LocalContext.current
 
@@ -1164,3 +1188,24 @@ private fun ImageAspectRatioSegment(
         }
     }
 }
+
+@androidx.compose.ui.tooling.preview.Preview(showBackground = true)
+@Composable
+private fun SettingsScreenPreview() {
+    com.neo.chevere.ui.designsystem.HighTechAiTheme(darkTheme = true) {
+        SettingsContent(
+            state = SettingsState(
+                isDarkMode = true,
+                atmosphericTheme = AtmosphericTheme.CLASSIC_CYAN,
+                weatherUnitSystem = WeatherUnitSystem.METRIC,
+                isBiometricLockEnabled = false,
+                downloadOnWifiOnly = true
+            ),
+            onIntent = {},
+            onBackClick = {},
+            onBenchmarkClick = {},
+            onRadarClick = {}
+        )
+    }
+}
+

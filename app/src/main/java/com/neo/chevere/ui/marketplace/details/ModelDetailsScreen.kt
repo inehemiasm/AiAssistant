@@ -61,6 +61,8 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.neo.chevere.R
 import com.neo.chevere.core.Constants
+import com.neo.chevere.domain.ModelEntry
+import com.neo.chevere.domain.InstalledModel
 import com.neo.chevere.ui.common.ChevereHaptic
 import com.neo.chevere.ui.common.hapticForFeedbackMessage
 import com.neo.chevere.ui.common.performChevereHaptic
@@ -69,13 +71,39 @@ import com.neo.chevere.ui.designsystem.Typography
 import kotlin.math.log10
 import kotlin.math.pow
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ModelDetailsScreen(
     viewModel: ModelDetailsViewModel = hiltViewModel(),
     onBack: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
+    ModelDetailsContent(
+        state = state,
+        effects = viewModel.effect,
+        onIntent = { viewModel.onIntent(it) },
+        onBack = onBack
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ModelDetailsContent(
+    state: ModelDetailsState,
+    effects: kotlinx.coroutines.flow.Flow<ModelDetailsEffect>,
+    onIntent: (ModelDetailsIntent) -> Unit,
+    onBack: () -> Unit
+) {
+    val viewModel = remember(state, effects, onIntent) {
+        object {
+            fun onIntent(intent: ModelDetailsIntent) {
+                onIntent(intent)
+            }
+            val effect = effects
+            val uiState = object {
+                val value = state
+            }
+        }
+    }
     val context = LocalContext.current
     val hapticView = LocalView.current
     val snackbarHostState = remember { SnackbarHostState() }
@@ -593,3 +621,30 @@ private fun getAvailableBytes(path: String): Long {
         StatFs(path).availableBytes
     }.getOrDefault(0L)
 }
+
+@androidx.compose.ui.tooling.preview.Preview(showBackground = true)
+@Composable
+private fun ModelDetailsScreenPreview() {
+    com.neo.chevere.ui.designsystem.HighTechAiTheme(darkTheme = true) {
+        ModelDetailsContent(
+            state = ModelDetailsState(
+                modelId = "gemma-2b.litertlm",
+                modelEntry = ModelEntry(
+                    name = "Gemma 2B",
+                    description = "Lightweight local language model optimized for mobile devices.",
+                    sizeBytes = 1600000000L,
+                    runtimeType = "LiteRT",
+                    supportsVision = false,
+                    provider = "Google",
+                    fileName = "gemma-2b.litertlm"
+                ),
+                isLoading = false,
+                isActive = false
+            ),
+            effects = kotlinx.coroutines.flow.emptyFlow(),
+            onIntent = {},
+            onBack = {}
+        )
+    }
+}
+

@@ -75,12 +75,36 @@ import com.neo.chevere.ui.common.ChevereHaptic
 import com.neo.chevere.ui.common.performChevereHaptic
 import com.neo.chevere.ui.designsystem.Typography
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TasksScreen(
     viewModel: TasksViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
+    TasksContent(
+        state = state,
+        effects = viewModel.effect,
+        onIntent = { viewModel.onIntent(it) }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TasksContent(
+    state: TasksState,
+    effects: kotlinx.coroutines.flow.Flow<TasksEffect>,
+    onIntent: (TasksIntent) -> Unit
+) {
+    val viewModel = remember(state, effects, onIntent) {
+        object {
+            fun onIntent(intent: TasksIntent) {
+                onIntent(intent)
+            }
+            val effect = effects
+            val uiState = object {
+                val value = state
+            }
+        }
+    }
     val context = LocalContext.current
     val hapticView = LocalView.current
     var showAddDialog by remember { mutableStateOf(false) }
@@ -404,3 +428,21 @@ private fun AddTaskDialog(
         modifier = Modifier.padding(16.dp)
     )
 }
+
+@androidx.compose.ui.tooling.preview.Preview(showBackground = true)
+@Composable
+private fun TasksScreenPreview() {
+    com.neo.chevere.ui.designsystem.HighTechAiTheme(darkTheme = true) {
+        TasksContent(
+            state = TasksState(
+                tasks = listOf(
+                    TaskEntity(id = 1, title = "Integrate camera permission check", description = "Use rememberLauncherForActivityResult to prompt camera access flow.", status = TaskStatus.COMPLETED),
+                    TaskEntity(id = 2, title = "Implement ambient sound sensor retry", description = "Automatically retry query when mic permission is granted.", status = TaskStatus.PENDING)
+                )
+            ),
+            effects = kotlinx.coroutines.flow.emptyFlow(),
+            onIntent = {}
+        )
+    }
+}
+

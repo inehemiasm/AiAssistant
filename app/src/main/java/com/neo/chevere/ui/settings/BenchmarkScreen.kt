@@ -55,13 +55,36 @@ import com.neo.chevere.ui.common.performChevereHaptic
 import com.neo.chevere.ui.chat.components.QuantumThinkingIndicator
 import com.neo.chevere.ui.designsystem.Typography
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BenchmarkScreen(
     viewModel: BenchmarkViewModel = hiltViewModel(),
     onBackClick: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
+    BenchmarkContent(
+        state = state,
+        onIntent = { viewModel.onIntent(it) },
+        onBackClick = onBackClick
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun BenchmarkContent(
+    state: BenchmarkState,
+    onIntent: (BenchmarkIntent) -> Unit,
+    onBackClick: () -> Unit
+) {
+    val viewModel = remember(state, onIntent) {
+        object {
+            fun onIntent(intent: BenchmarkIntent) {
+                onIntent(intent)
+            }
+            val uiState = object {
+                val value = state
+            }
+        }
+    }
     val hapticView = LocalView.current
 
     val glassBackground = Brush.verticalGradient(
@@ -410,3 +433,28 @@ private fun MetricRow(
         )
     }
 }
+
+@androidx.compose.ui.tooling.preview.Preview(showBackground = true)
+@Composable
+private fun BenchmarkScreenPreview() {
+    com.neo.chevere.ui.designsystem.HighTechAiTheme(darkTheme = true) {
+        BenchmarkContent(
+            state = BenchmarkState(
+                isRunning = false,
+                modelName = "gemma-2b.litertlm",
+                result = BenchmarkMetrics(
+                    loadTimeMs = 120L,
+                    ttftMs = 380L,
+                    inputTokenCount = 10,
+                    outputTokenCount = 128,
+                    totalTimeMs = 3200L,
+                    systemRamText = "12.4 GB Available",
+                    accelText = "GPU (NNAPI) Acceleration"
+                )
+            ),
+            onIntent = {},
+            onBackClick = {}
+        )
+    }
+}
+

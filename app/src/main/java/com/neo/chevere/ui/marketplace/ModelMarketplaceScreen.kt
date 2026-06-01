@@ -98,7 +98,6 @@ import com.neo.chevere.ui.designsystem.Typography
 import kotlin.math.log10
 import kotlin.math.pow
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ModelMarketplaceScreen(
     viewModel: MarketplaceViewModel,
@@ -106,6 +105,35 @@ fun ModelMarketplaceScreen(
     onModelClick: (String) -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
+    ModelMarketplaceContent(
+        state = state,
+        effects = viewModel.effect,
+        onIntent = { viewModel.onIntent(it) },
+        onBack = onBack,
+        onModelClick = onModelClick
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ModelMarketplaceContent(
+    state: MarketplaceState,
+    effects: kotlinx.coroutines.flow.Flow<MarketplaceEffect>,
+    onIntent: (MarketplaceIntent) -> Unit,
+    onBack: () -> Unit,
+    onModelClick: (String) -> Unit
+) {
+    val viewModel = remember(state, effects, onIntent) {
+        object {
+            fun onIntent(intent: MarketplaceIntent) {
+                onIntent(intent)
+            }
+            val effect = effects
+            val uiState = object {
+                val value = state
+            }
+        }
+    }
     var selectedTab by remember { mutableIntStateOf(0) }
     val context = LocalContext.current
     val hapticView = LocalView.current
@@ -810,3 +838,55 @@ private fun formatFileSize(size: Long): String {
     val digitGroups = (log10(size.toDouble()) / log10(1024.0)).toInt()
     return "%.1f %s".format(size / 1024.0.pow(digitGroups.toDouble()), units[digitGroups])
 }
+
+@androidx.compose.ui.tooling.preview.Preview(showBackground = true)
+@Composable
+private fun ModelMarketplaceScreenPreview() {
+    com.neo.chevere.ui.designsystem.HighTechAiTheme(darkTheme = true) {
+        ModelMarketplaceContent(
+            state = MarketplaceState(
+                remoteModels = listOf(
+                    ModelEntry(
+                        name = "Gemma 2B",
+                        description = "Lightweight local language model optimized for mobile devices.",
+                        sizeBytes = 1600000000L,
+                        runtimeType = "LiteRT",
+                        supportsVision = false,
+                        provider = "Google",
+                        fileName = "gemma-2b.litertlm"
+                    ),
+                    ModelEntry(
+                        name = "Stable Diffusion Turbo",
+                        description = "Ultra-fast local text-to-image generator.",
+                        sizeBytes = 2100000000L,
+                        runtimeType = "ONNX",
+                        supportsVision = false,
+                        provider = "StabilityAI",
+                        fileName = "sd-turbo.zip"
+                    )
+                ),
+                localModels = listOf(
+                    InstalledModel(
+                        id = "gemma-2b.litertlm",
+                        displayName = "Gemma 2B",
+                        fileName = "gemma-2b.litertlm",
+                        filePath = "/data/user/0/dev.neo.chevereai/files/gemma-2b.litertlm",
+                        source = com.neo.chevere.domain.ModelSource.LOCAL,
+                        format = com.neo.chevere.domain.ModelFormat.LITERTLM,
+                        runtime = com.neo.chevere.domain.ModelRuntime.LITERT,
+                        taskType = com.neo.chevere.domain.ModelTaskType.CHAT,
+                        capabilities = setOf(com.neo.chevere.domain.ModelCapability.TEXT),
+                        installStatus = InstallStatus.INSTALLED,
+                        sizeBytes = 1600000000L
+                    )
+                ),
+                activeModelId = "gemma-2b.litertlm"
+            ),
+            effects = kotlinx.coroutines.flow.emptyFlow(),
+            onIntent = {},
+            onBack = {},
+            onModelClick = {}
+        )
+    }
+}
+

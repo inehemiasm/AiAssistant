@@ -110,6 +110,7 @@ import timber.log.Timber
 import com.neo.chevere.R
 import com.neo.chevere.core.Constants
 import com.neo.chevere.core.PiiUtils
+import com.neo.chevere.domain.ChatMessage
 import com.neo.chevere.domain.ModelCapability
 import com.neo.chevere.domain.ModelTaskType
 import com.neo.chevere.ui.chat.components.ActionConfirmationDialog
@@ -184,7 +185,8 @@ fun ChatScreen(
         } else {
             ChatContent(
                 state = state,
-                viewModel = viewModel,
+                effects = viewModel.effect,
+                onIntent = { viewModel.onIntent(it) },
                 onModelsClick = onModelsClick,
                 onSettingsClick = onSettingsClick,
                 onRadarClick = onRadarClick
@@ -195,13 +197,25 @@ fun ChatScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ChatContent(
+fun ChatContent(
     state: ChatState,
-    viewModel: ChatViewModel,
+    effects: kotlinx.coroutines.flow.Flow<ChatEffect>,
+    onIntent: (ChatIntent) -> Unit,
     onModelsClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onRadarClick: (mode: String) -> Unit
 ) {
+    val viewModel = remember(state, effects, onIntent) {
+        object {
+            fun onIntent(intent: ChatIntent) {
+                onIntent(intent)
+            }
+            val effect = effects
+            val uiState = object {
+                val value = state
+            }
+        }
+    }
     val context = LocalContext.current
     val resources = LocalResources.current
     val hapticView = LocalView.current
@@ -1298,3 +1312,25 @@ private fun DrawerNavItem(
         }
     }
 }
+
+@androidx.compose.ui.tooling.preview.Preview(showBackground = true)
+@Composable
+private fun ChatScreenPreview() {
+    com.neo.chevere.ui.designsystem.HighTechAiTheme(darkTheme = true) {
+        ChatContent(
+            state = ChatState(
+                messages = listOf(
+                    ChatMessage(text = "Hello! Ask me about sensors, system thermals, or compass heading.", isUser = false),
+                    ChatMessage(text = "How loud is it in here?", isUser = true),
+                    ChatMessage(text = "The room is around forty decibels SPL — Quiet, library level.", isUser = false)
+                )
+            ),
+            effects = kotlinx.coroutines.flow.emptyFlow(),
+            onIntent = {},
+            onModelsClick = {},
+            onSettingsClick = {},
+            onRadarClick = {}
+        )
+    }
+}
+
