@@ -37,7 +37,8 @@ data class MarketplaceState(
     val activeModelId: String? = null,
     val activeImageModelId: String? = null,
     val pendingModelId: String? = null,
-    val switchState: ModelSwitchState = ModelSwitchState.Idle
+    val switchState: ModelSwitchState = ModelSwitchState.Idle,
+    val deviceTotalRamGb: Double = 0.0
 ) : UiState {
     val isDownloading: Boolean get() = activeDownloads.isNotEmpty()
     val isSwitching: Boolean get() = switchState is ModelSwitchState.Switching || switchState is ModelSwitchState.WarmingUp

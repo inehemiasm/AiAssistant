@@ -24,11 +24,26 @@ class MarketplaceViewModel @Inject constructor(
     private val preferenceManager: PreferenceManager
 ) : BaseViewModel<MarketplaceState, MarketplaceIntent, MarketplaceEffect>(
     application,
-    MarketplaceState()
+    MarketplaceState(
+        deviceTotalRamGb = getDeviceTotalRamGb(application)
+    )
 ) {
 
     private val handledFinishedDownloads = mutableSetOf<String>()
     private val startedDownloadKeys = mutableSetOf<String>()
+
+    companion object {
+        private fun getDeviceTotalRamGb(application: Application): Double {
+            return try {
+                val activityManager = application.getSystemService(android.content.Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+                val memoryInfo = android.app.ActivityManager.MemoryInfo()
+                activityManager.getMemoryInfo(memoryInfo)
+                memoryInfo.totalMem / (1024.0 * 1024.0 * 1024.0)
+            } catch (e: Exception) {
+                0.0
+            }
+        }
+    }
 
     init {
         viewModelScope.launch {

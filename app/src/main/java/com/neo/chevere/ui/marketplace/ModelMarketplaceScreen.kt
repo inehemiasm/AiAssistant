@@ -337,6 +337,7 @@ fun DiscoverModelsList(
                         installedModel = installedVersion,
                         isDownloading = isDownloading,
                         downloadProgress = downloadProgress,
+                        deviceTotalRamGb = state.deviceTotalRamGb,
                         onDownload = {
                             onIntent(MarketplaceIntent.DownloadModel(model, baseDir))
                         },
@@ -498,6 +499,7 @@ fun RemoteModelCard(
     installedModel: InstalledModel?,
     isDownloading: Boolean,
     downloadProgress: Int?,
+    deviceTotalRamGb: Double,
     onDownload: () -> Unit,
     onClick: () -> Unit
 ) {
@@ -533,6 +535,11 @@ fun RemoteModelCard(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
+                }
+
+                if (deviceTotalRamGb > 0.0) {
+                    Spacer(Modifier.height(6.dp))
+                    RamCompatibilityBadge(model = model, deviceRamGb = deviceTotalRamGb)
                 }
 
                 Spacer(Modifier.height(8.dp))
@@ -837,6 +844,39 @@ private fun formatFileSize(size: Long): String {
     val units = arrayOf("B", "KB", "MB", "GB", "TB")
     val digitGroups = (log10(size.toDouble()) / log10(1024.0)).toInt()
     return "%.1f %s".format(size / 1024.0.pow(digitGroups.toDouble()), units[digitGroups])
+}
+
+@Composable
+fun RamCompatibilityBadge(model: ModelEntry, deviceRamGb: Double) {
+    val (compatibility, label) = model.getRamCompatibility(deviceRamGb)
+
+    val badgeColor = when (compatibility) {
+        RamCompatibility.OPTIMAL -> Color(0xFF00E676)
+        RamCompatibility.COMPATIBLE -> Color(0xFF29B6F6)
+        RamCompatibility.WARNING -> Color(0xFFFFB74D)
+        RamCompatibility.RISK -> Color(0xFFEF5350)
+    }
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .background(badgeColor.copy(alpha = 0.15f), shape = RoundedCornerShape(4.dp))
+            .padding(horizontal = 6.dp, vertical = 2.dp)
+    ) {
+        Icon(
+            Icons.Default.Memory,
+            contentDescription = null,
+            modifier = Modifier.size(12.dp),
+            tint = badgeColor
+        )
+        Spacer(Modifier.width(4.dp))
+        Text(
+            text = label,
+            style = Typography.labelSmall.copy(fontSize = 10.sp),
+            color = badgeColor,
+            fontWeight = FontWeight.Bold
+        )
+    }
 }
 
 @androidx.compose.ui.tooling.preview.Preview(showBackground = true)
