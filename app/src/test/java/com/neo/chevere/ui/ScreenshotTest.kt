@@ -2,7 +2,13 @@ package com.neo.chevere.ui
 
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onRoot
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import org.robolectric.Robolectric
 import com.github.takahirom.roborazzi.captureRoboImage
+import android.net.Uri
+import com.neo.chevere.data.agent.AgentState
+import com.neo.chevere.ui.chat.AgeVerificationRequest
 import com.neo.chevere.data.datasource.local.TaskEntity
 import com.neo.chevere.data.datasource.local.TaskStatus
 import com.neo.chevere.domain.*
@@ -57,6 +63,100 @@ class ScreenshotTest {
             }
         }
         composeTestRule.onRoot().captureRoboImage("screenshots/chat_screen.png")
+    }
+
+    @Test
+    fun captureChatScreen_withImageAttachment() {
+        composeTestRule.setContent {
+            HighTechAiTheme(darkTheme = true) {
+                ChatContent(
+                    state = ChatState(
+                        messages = listOf(
+                            ChatMessage(text = "Hello! Ask me about sensors, system thermals, or compass heading.", isUser = false),
+                            ChatMessage(text = "Can you check this image for me?", isUser = true)
+                        ),
+                        selectedImageUri = Uri.parse("content://dummy/image.jpg")
+                    ),
+                    effects = emptyFlow(),
+                    onIntent = {},
+                    onModelsClick = {},
+                    onSettingsClick = {},
+                    onRadarClick = {}
+                )
+            }
+        }
+        composeTestRule.onRoot().captureRoboImage("screenshots/chat_screen_with_image.png")
+    }
+
+    @Test
+    fun captureChatScreen_withAgeVerification() {
+        composeTestRule.setContent {
+            HighTechAiTheme(darkTheme = true) {
+                ChatContent(
+                    state = ChatState(
+                        messages = listOf(
+                            ChatMessage(text = "Please generate an image of a futuristic laboratory.", isUser = true)
+                        ),
+                        ageVerificationRequest = AgeVerificationRequest("Generate a futuristic laboratory", null)
+                    ),
+                    effects = emptyFlow(),
+                    onIntent = {},
+                    onModelsClick = {},
+                    onSettingsClick = {},
+                    onRadarClick = {}
+                )
+            }
+        }
+        composeTestRule.onRoot().captureRoboImage("screenshots/chat_screen_with_age_verification.png")
+    }
+
+    @Test
+    fun captureChatScreen_withActionConfirmation() {
+        composeTestRule.setContent {
+            HighTechAiTheme(darkTheme = true) {
+                ChatContent(
+                    state = ChatState(
+                        messages = listOf(
+                            ChatMessage(text = "Draft an email to Bob saying we are ready to build.", isUser = true)
+                        ),
+                        agentState = AgentState.WaitingForConfirmation(
+                            toolName = "draft_email",
+                            message = "Chevere AI wants to draft an email to bob@example.com."
+                        )
+                    ),
+                    effects = emptyFlow(),
+                    onIntent = {},
+                    onModelsClick = {},
+                    onSettingsClick = {},
+                    onRadarClick = {}
+                )
+            }
+        }
+        composeTestRule.onRoot().captureRoboImage("screenshots/chat_screen_with_action_confirmation.png")
+    }
+
+    @Test
+    fun captureChatScreen_withWebSearchToolRunning() {
+        composeTestRule.setContent {
+            HighTechAiTheme(darkTheme = true) {
+                ChatContent(
+                    state = ChatState(
+                        messages = listOf(
+                            ChatMessage(text = "What is the current temperature in Seattle?", isUser = true)
+                        ),
+                        agentState = AgentState.ExecutingTool(
+                            toolName = "get_weather"
+                        )
+                    ),
+                    effects = emptyFlow(),
+                    onIntent = {},
+                    onModelsClick = {},
+                    onSettingsClick = {},
+                    onRadarClick = {}
+                )
+            }
+        }
+        composeTestRule.onRoot().captureRoboImage("screenshots/chat_screen_with_tool_running.png")
     }
 
     @Test

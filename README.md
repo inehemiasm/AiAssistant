@@ -9,6 +9,10 @@ The project is built for experimenting with capable on-device assistants: small 
 
 ## Screenshots
 
+<details>
+<summary><b>📱 Core App Screens (Click to expand)</b></summary>
+<br/>
+
 <p align="center">
   <img src="app/screenshots/chat_screen.png" width="32%" alt="Chat Screen"/>
   <img src="app/screenshots/sensors_radar_screen.png" width="32%" alt="Sensors Radar Screen"/>
@@ -19,6 +23,19 @@ The project is built for experimenting with capable on-device assistants: small 
   <img src="app/screenshots/settings_screen.png" width="32%" alt="Settings Screen"/>
   <img src="app/screenshots/tasks_screen.png" width="32%" alt="Tasks Screen"/>
 </p>
+</details>
+
+<details>
+<summary><b>🤖 AI Agent & Chat Interactions (Click to expand)</b></summary>
+<br/>
+
+<p align="center">
+  <img src="app/screenshots/chat_screen_with_image.png" width="24%" alt="Chat with Image Attachment"/>
+  <img src="app/screenshots/chat_screen_with_tool_running.png" width="24%" alt="Agent Tool Running"/>
+  <img src="app/screenshots/chat_screen_with_action_confirmation.png" width="24%" alt="Action Confirmation Dialog"/>
+  <img src="app/screenshots/chat_screen_with_age_verification.png" width="24%" alt="Age Verification Dialog"/>
+</p>
+</details>
 
 ---
 

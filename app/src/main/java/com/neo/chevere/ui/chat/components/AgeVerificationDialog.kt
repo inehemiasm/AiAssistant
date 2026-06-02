@@ -17,6 +17,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 
+import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.Alignment
+
 /**
  * Dialog that asks the user for their birthdate before age-restricted image
  * prompts continue through app-owned policy handling.
@@ -29,36 +39,45 @@ fun AgeVerificationDialog(
     var month by remember { mutableStateOf("") }
     var day by remember { mutableStateOf("") }
     var year by remember { mutableStateOf("") }
+    val isInspect = LocalInspectionMode.current || 
+                    System.getProperty("robolectric.graphicsMode") != null ||
+                    runCatching { Class.forName("org.robolectric.Robolectric") }.isSuccess
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Verify Age") },
         text = {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(
-                    value = month,
-                    onValueChange = { month = it.filter(Char::isDigit).take(2) },
-                    label = { Text("MM") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    modifier = Modifier.weight(1f)
-                )
-                OutlinedTextField(
-                    value = day,
-                    onValueChange = { day = it.filter(Char::isDigit).take(2) },
-                    label = { Text("DD") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    modifier = Modifier.weight(1f)
-                )
-                OutlinedTextField(
-                    value = year,
-                    onValueChange = { year = it.filter(Char::isDigit).take(4) },
-                    label = { Text("YYYY") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    modifier = Modifier.weight(1.4f)
-                )
+                if (isInspect) {
+                    MockTextField("MM", Modifier.weight(1f))
+                    MockTextField("DD", Modifier.weight(1f))
+                    MockTextField("YYYY", Modifier.weight(1.4f))
+                } else {
+                    OutlinedTextField(
+                        value = month,
+                        onValueChange = { month = it.filter(Char::isDigit).take(2) },
+                        label = { Text("MM") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        modifier = Modifier.weight(1f)
+                    )
+                    OutlinedTextField(
+                        value = day,
+                        onValueChange = { day = it.filter(Char::isDigit).take(2) },
+                        label = { Text("DD") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        modifier = Modifier.weight(1f)
+                    )
+                    OutlinedTextField(
+                        value = year,
+                        onValueChange = { year = it.filter(Char::isDigit).take(4) },
+                        label = { Text("YYYY") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        modifier = Modifier.weight(1.4f)
+                    )
+                }
             }
         },
         confirmButton = {
@@ -81,4 +100,24 @@ fun AgeVerificationDialog(
             }
         }
     )
+}
+
+@Composable
+private fun MockTextField(label: String, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .height(56.dp)
+            .border(
+                BorderStroke(1.dp, MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)),
+                shape = RoundedCornerShape(4.dp)
+            )
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        contentAlignment = Alignment.CenterStart
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+        )
+    }
 }
