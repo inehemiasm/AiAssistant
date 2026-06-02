@@ -48,7 +48,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -66,6 +65,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.ui.Alignment
 import com.neo.chevere.ui.common.ChevereHaptic
 import com.neo.chevere.ui.common.performChevereHaptic
 import com.neo.chevere.ui.designsystem.AtmosphericTheme
@@ -157,59 +157,18 @@ fun SettingsContent(
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
 
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.5f),
-                    shape = RoundedCornerShape(16.dp),
-                    border = BorderStroke(
-                        1.dp,
-                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.1f)
-                    )
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = if (state.isDarkMode) Icons.Default.DarkMode else Icons.Default.LightMode,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(24.dp)
-                            )
-                            Spacer(Modifier.width(16.dp))
-                            Column {
-                                Text(
-                                    stringResource(R.string.high_tech_mode),
-                                    style = Typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    if (state.isDarkMode) stringResource(R.string.neural_dark_active) else stringResource(
-                                        R.string.standard_light_active
-                                    ),
-                                    style = Typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                        Switch(
-                            checked = state.isDarkMode,
-                            onCheckedChange = {
-                                hapticView.performChevereHaptic(ChevereHaptic.Selection)
-                                viewModel.onIntent(SettingsIntent.UpdateTheme(it))
-                            },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = MaterialTheme.colorScheme.primary,
-                                checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
-                                uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainerHighest
-                            )
-                        )
+                // High-Tech Mode Card (Theme)
+                SettingsToggleCard(
+                    icon = if (state.isDarkMode) Icons.Default.DarkMode else Icons.Default.LightMode,
+                    title = stringResource(R.string.high_tech_mode),
+                    subtitle = if (state.isDarkMode) stringResource(R.string.neural_dark_active) else stringResource(
+                        R.string.standard_light_active
+                    ),
+                    checked = state.isDarkMode,
+                    onCheckedChange = {
+                        viewModel.onIntent(SettingsIntent.UpdateTheme(it))
                     }
-                }
+                )
 
                 Spacer(Modifier.height(12.dp))
 
@@ -254,120 +213,28 @@ fun SettingsContent(
                 Spacer(Modifier.height(12.dp))
 
                 // Biometric Security Card
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.5f),
-                    shape = RoundedCornerShape(16.dp),
-                    border = BorderStroke(
-                        1.dp,
-                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.1f)
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Security,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(24.dp)
-                            )
-                            Spacer(Modifier.width(16.dp))
-                            Column {
-                                Text(
-                                    stringResource(R.string.biometric_lock),
-                                    style = Typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    stringResource(R.string.biometric_lock_desc),
-                                    style = Typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                        Switch(
-                            checked = state.isBiometricLockEnabled,
-                            onCheckedChange = {
-                                hapticView.performChevereHaptic(ChevereHaptic.Selection)
-                                viewModel.onIntent(SettingsIntent.UpdateBiometricLock(it))
-                            },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = MaterialTheme.colorScheme.primary,
-                                checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
-                                uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainerHighest
-                            )
-                        )
+                SettingsToggleCard(
+                    icon = Icons.Default.Security,
+                    title = stringResource(R.string.biometric_lock),
+                    subtitle = stringResource(R.string.biometric_lock_desc),
+                    checked = state.isBiometricLockEnabled,
+                    onCheckedChange = {
+                        viewModel.onIntent(SettingsIntent.UpdateBiometricLock(it))
                     }
-                }
+                )
 
                 Spacer(Modifier.height(12.dp))
 
                 // Download on Wi-Fi Only Card
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.5f),
-                    shape = RoundedCornerShape(16.dp),
-                    border = BorderStroke(
-                        1.dp,
-                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.1f)
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Storage,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(24.dp)
-                            )
-                            Spacer(Modifier.width(16.dp))
-                            Column {
-                                Text(
-                                    "Download models over Wi-Fi only",
-                                    style = Typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    "Restricts large on-device model downloads to Wi-Fi networks",
-                                    style = Typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                        Switch(
-                            checked = state.downloadOnWifiOnly,
-                            onCheckedChange = {
-                                hapticView.performChevereHaptic(ChevereHaptic.Selection)
-                                viewModel.onIntent(SettingsIntent.UpdateDownloadOnWifiOnly(it))
-                            },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = MaterialTheme.colorScheme.primary,
-                                checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
-                                uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainerHighest
-                            )
-                        )
+                SettingsToggleCard(
+                    icon = Icons.Default.Storage,
+                    title = "Download models over Wi-Fi only",
+                    subtitle = "Restricts large on-device model downloads to Wi-Fi networks",
+                    checked = state.downloadOnWifiOnly,
+                    onCheckedChange = {
+                        viewModel.onIntent(SettingsIntent.UpdateDownloadOnWifiOnly(it))
                     }
-                }
+                )
 
                 Spacer(Modifier.height(32.dp))
 
@@ -1184,6 +1051,75 @@ private fun ImageAspectRatioSegment(
                 text = "${ratio.pixelWidth}x${ratio.pixelHeight}",
                 style = Typography.bodySmall.copy(fontSize = 9.sp, fontFamily = FontFamily.Monospace),
                 color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+fun SettingsToggleCard(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    subtitle: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val hapticView = LocalView.current
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.5f),
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.1f)
+        ),
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f)
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(Modifier.width(16.dp))
+                Column {
+                    Text(
+                        text = title,
+                        style = Typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = subtitle,
+                        style = Typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            Spacer(Modifier.width(8.dp))
+            Switch(
+                checked = checked,
+                onCheckedChange = {
+                    hapticView.performChevereHaptic(ChevereHaptic.Selection)
+                    onCheckedChange(it)
+                },
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = MaterialTheme.colorScheme.primary,
+                    checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                    uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainerHighest
+                )
             )
         }
     }
