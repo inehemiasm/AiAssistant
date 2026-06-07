@@ -188,4 +188,4 @@ ui-designsystem/
 
 ## License
 
-This project is licensed under the MIT License. See [LICENSE](LICENSE).
+This project is licensed under custom terms. It is free to clone, modify, and run for personal, private, and educational use, but distribution or publishing (including to the Google Play Store or other marketplaces) is strictly prohibited. See [LICENSE](LICENSE) for full details.
