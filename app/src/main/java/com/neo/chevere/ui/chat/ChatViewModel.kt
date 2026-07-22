@@ -663,7 +663,8 @@ class ChatViewModel @Inject constructor(
                 !normalized.contains("event") && !normalized.contains("calendar") && !normalized.contains("email") &&
                 !normalized.contains("code") && !normalized.contains("file") && !normalized.contains("text") && !normalized.contains("app") &&
                 !normalized.contains("playlist") && !normalized.contains("reminder") && !normalized.contains("alarm") &&
-                !normalized.contains("timer") && !normalized.contains("note")
+                !normalized.contains("timer") && !normalized.contains("note") &&
+                !normalized.contains("invoice") && !normalized.contains("receipt") && !normalized.contains("bill")
 
         return isVisualCreation
     }
@@ -1056,7 +1057,8 @@ class ChatViewModel @Inject constructor(
             listOf(
                 app.getString(R.string.suggestion_describe_image),
                 app.getString(R.string.suggestion_what_is_in_photo),
-                app.getString(R.string.suggestion_extract_text)
+                app.getString(R.string.suggestion_extract_text),
+                app.getString(R.string.suggestion_scan_invoice)
             )
         } else {
             listOf(

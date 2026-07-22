@@ -9,6 +9,7 @@ import com.neo.chevere.data.datasource.local.InstalledModelDao
 import com.neo.chevere.data.datasource.local.RoomInstalledModelRegistry
 import com.neo.chevere.data.datasource.local.SearchCacheDao
 import com.neo.chevere.data.datasource.local.TaskDao
+import com.neo.chevere.data.datasource.local.InvoiceDao
 import com.neo.chevere.data.datasource.local.DocumentChunkDao
 import com.neo.chevere.domain.ChatHistoryRepository
 import com.neo.chevere.domain.InstalledModelRegistry
@@ -49,6 +50,11 @@ object DatabaseModule {
     @Provides
     fun provideTaskDao(database: AppDatabase): TaskDao {
         return database.taskDao()
+    }
+
+    @Provides
+    fun provideInvoiceDao(database: AppDatabase): InvoiceDao {
+        return database.invoiceDao()
     }
 
     @Provides

@@ -50,6 +50,7 @@ object TelemetryConstants {
         const val MODEL_MANAGEMENT = "model_management"
         const val SETTINGS = "settings"
         const val TASKS = "tasks"
+        const val INVOICES = "invoices"
         const val SYSTEM = "system"
     }
 
@@ -59,6 +60,7 @@ object TelemetryConstants {
         const val MODEL_DETAILS = "model_details"
         const val SETTINGS = "settings"
         const val TASKS = "tasks"
+        const val INVOICES = "invoices"
         const val BENCHMARK = "benchmark"
         const val UNKNOWN = "unknown"
     }
@@ -68,6 +70,7 @@ object TelemetryConstants {
         const val BOTTOM_NAV_MODELS = "bottom_nav_models"
         const val BOTTOM_NAV_SETTINGS = "bottom_nav_settings"
         const val BOTTOM_NAV_TASKS = "bottom_nav_tasks"
+        const val BOTTOM_NAV_INVOICES = "bottom_nav_invoices"
     }
 
     object Value {

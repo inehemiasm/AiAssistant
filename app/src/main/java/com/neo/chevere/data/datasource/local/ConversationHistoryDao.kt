@@ -48,4 +48,8 @@ interface ConversationHistoryDao {
     /** Inserts a single message and returns its auto-generated id. */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertMessage(message: ConversationMessageEntity): Long
+
+    /** Returns the most recently attached image URI across all messages. */
+    @Query("SELECT imageUri FROM conversation_messages WHERE imageUri IS NOT NULL ORDER BY id DESC LIMIT 1")
+    suspend fun getLastImageUri(): String?
 }

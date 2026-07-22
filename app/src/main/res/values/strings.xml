@@ -168,6 +168,19 @@
     <string name="task_completed">Task completed</string>
     <string name="task_pending">Task pending</string>
 
+    <!-- Invoices Screen -->
+    <string name="invoices_label">Invoices</string>
+    <string name="no_invoices">No invoices found. Scan or add an invoice!</string>
+    <string name="add_invoice_title">ADD LOCAL INVOICE</string>
+    <string name="invoice_vendor_hint">Vendor Name</string>
+    <string name="invoice_amount_hint">Total Amount</string>
+    <string name="invoice_currency_hint">Currency (e.g. USD)</string>
+    <string name="invoice_number_hint">Invoice Number (optional)</string>
+    <string name="invoice_date_hint">Date (YYYY-MM-DD, optional)</string>
+    <string name="invoice_items_hint">Items Summary (optional)</string>
+    <string name="add_invoice_button">ADD</string>
+    <string name="delete_invoice">Delete invoice</string>
+
     <!-- Benchmark & Diagnostics Screen -->
     <string name="benchmark_label">Diagnostics &amp; Benchmark</string>
     <string name="run_benchmark">RUN BENCHMARK</string>
@@ -194,6 +207,7 @@
     <string name="suggestion_describe_image">Describe this image.</string>
     <string name="suggestion_what_is_in_photo">What is in this photo?</string>
     <string name="suggestion_extract_text">Extract text from this image.</string>
+    <string name="suggestion_scan_invoice">Scan and import this invoice</string>
     <string name="suggestion_room_temp">How hot is my room?</string>
     <string name="suggestion_weather">How’s the weather today?</string>
     <string name="suggestion_light_level">How’s the light in here?</string>

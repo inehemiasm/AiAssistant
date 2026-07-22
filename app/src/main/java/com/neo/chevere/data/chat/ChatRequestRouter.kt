@@ -13,6 +13,7 @@ enum class RoutingCategory {
     DEVICE_ACTION,
     MODEL_MANAGEMENT,
     TASK_REGISTRY,
+    INVOICE_MANAGEMENT,
     SENSORS,
     DIRECT_CHAT
 }
@@ -40,6 +41,9 @@ class ChatRequestRouter @Inject constructor() {
         }
 
         return when {
+            // Invoice must be checked before image generation, because prompts like
+            // "create an invoice based off this image" contain image-gen keywords.
+            looksLikeInvoiceRequest(normalized) -> RoutingCategory.INVOICE_MANAGEMENT
             looksLikeImageGenerationRequest(normalized) -> RoutingCategory.IMAGE_GENERATION
             looksLikeSensorsRequest(normalized) -> RoutingCategory.SENSORS
             looksLikeLiveInformationRequest(normalized) -> RoutingCategory.LIVE_INFORMATION
@@ -48,6 +52,11 @@ class ChatRequestRouter @Inject constructor() {
             looksLikeTaskRegistryRequest(normalized) -> RoutingCategory.TASK_REGISTRY
             else -> RoutingCategory.DIRECT_CHAT
         }
+    }
+
+    private fun looksLikeInvoiceRequest(text: String): Boolean {
+        return text.contains("invoice") || text.contains("receipt") || text.contains("bill") ||
+                text.contains("invoices") || text.contains("receipts") || text.contains("bills")
     }
 
     fun shouldUseAgent(prompt: String): Boolean {
@@ -98,6 +107,8 @@ class ChatRequestRouter @Inject constructor() {
         if (!ChatRoutingLexicon.capabilityQuestionPrefixes.any { text.startsWith(it) }) return false
         if (!ChatRoutingLexicon.imageRequestVerbs.any { it in text }) return false
         if (!ChatRoutingLexicon.imageRequestNouns.any { it in text }) return false
+        // If the prompt mentions invoices/receipts/bills, it is NOT an image-generation question.
+        if (looksLikeInvoiceRequest(text)) return false
         return !hasConcreteImageDescription(text)
     }
 
@@ -138,7 +149,10 @@ class ChatRequestRouter @Inject constructor() {
                     "reminder",
                     "alarm",
                     "timer",
-                    "note"
+                    "note",
+                    "invoice",
+                    "receipt",
+                    "bill"
                 ).none { it in text }
 
         return isVisualCreation
@@ -169,11 +183,11 @@ class ChatRequestRouter @Inject constructor() {
 
     private companion object {
         const val DIRECT_CHAT_CAPABILITY_CONTEXT =
-            "You are Chevere AI running inside an Android app. You can answer questions, explain and write code, grade answers, summarize, translate, brainstorm, and help with Android/software work. App tools can handle image generation when the user describes the desired image, image analysis when an image is attached and supported, web/current-info search, weather, device sensor readings, sensor screens for radar/stud finder/spirit level/light/proximity, sharing/copying text, opening URLs/maps/apps, drafting email, creating calendar events, managing tasks/to-do list, and model/runtime management. If the user asks whether you can do something, answer the capability question and ask for missing details; do not perform the action or invent missing content."
+            "You are Chevere AI running inside an Android app. You can answer questions, explain and write code, grade answers, summarize, translate, brainstorm, and help with Android/software work. App tools can handle image generation when the user describes the desired image, image analysis when an image is attached and supported, web/current-info search, weather, device sensor readings, sensor screens for radar/stud finder/spirit level/light/proximity, sharing/copying text, opening URLs/maps/apps, drafting email, creating calendar events, managing tasks/to-do list, scanning/importing invoices, and model/runtime management. If the user asks whether you can do something, answer the capability question and ask for missing details; do not perform the action or invent missing content."
         const val VISION_CHAT_CAPABILITY_CONTEXT =
-            "You are Chevere AI running inside an Android app. The current user message includes an attached image. Answer by analyzing or describing that attached image and the user's question. Do not generate, create, edit, or replace an image from an attachment. If the user asks for image generation while an image is attached, explain what you can infer from the attached image and ask them to send a text-only image-generation prompt if they want a new image."
+            "You are Chevere AI running inside an Android app. The current user message includes an attached image. Answer by analyzing or describing that attached image and the user's question. Do not generate, create, edit, or replace an image from an attachment. If the user asks for image generation while an image is attached, explain what you can infer from the attached image and ask them to send a text-only image-generation prompt if they want a new image. If the user asks to import or scan an invoice/receipt from the attached image, you have the capability to extract the vendor, amount, date, items, and payment status from the image, and you MUST call the invoice_registry tool with action=import to save it locally. To determine payment status: if the image has a visible PAID stamp, watermark, or label, or if the balance due or amount owed is zero, set status=paid. If the invoice shows overdue or past due, set status=overdue. Otherwise default to status=pending."
         const val CAPABILITY_OVERVIEW_RESPONSE =
-            "I can chat, explain code, help with Android/Kotlin work, summarize, translate, brainstorm, grade answers, and reason through plans. In this app I can also use local tools for image generation, image analysis when you attach an image, web/current-info search, weather, live device sensor readings, sensor screens for radar/stud finder/spirit level/light/proximity, sharing or copying text, opening URLs/maps/apps, drafting email, creating calendar events, managing tasks/to-do list, and checking local model/runtime info. Tell me what you want to do and I will either answer directly or use the right tool."
+            "I can chat, explain code, help with Android/Kotlin work, summarize, translate, brainstorm, grade answers, and reason through plans. In this app I can also use local tools for image generation, image analysis when you attach an image, web/current-info search, weather, live device sensor readings, sensor screens for radar/stud finder/spirit level/light/proximity, sharing or copying text, opening URLs/maps/apps, drafting email, creating calendar events, managing tasks/to-do list, scanning/importing invoices or receipts, and checking local model/runtime info. Tell me what you want to do and I will either answer directly or use the right tool."
         const val IMAGE_CAPABILITY_RESPONSE =
             "Yes, I can generate images when an image-generation model is installed. Tell me what you want the image to show, plus any style, mood, lighting, or composition details, and I will create it."
         const val SENSORS_CAPABILITY_RESPONSE =

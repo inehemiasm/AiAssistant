@@ -55,6 +55,12 @@ class DatabaseConverters {
     @TypeConverter
     fun toTaskStatus(value: String) = enumValueOrDefault(value, TaskStatus.PENDING)
 
+    @TypeConverter
+    fun fromInvoiceStatus(value: InvoiceStatus) = value.name
+
+    @TypeConverter
+    fun toInvoiceStatus(value: String) = enumValueOrDefault(value, InvoiceStatus.PENDING)
+
     private inline fun <reified T : Enum<T>> enumValueOrDefault(value: String, default: T): T {
         return runCatching { enumValueOf<T>(value) }.getOrDefault(default)
     }

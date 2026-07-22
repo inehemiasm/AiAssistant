@@ -77,6 +77,9 @@ class ToolRegistry @Inject constructor(
             if (includedTools.any { it.name == Constants.Agent.IMAGE_GENERATION_TOOL_NAME }) {
                 append("For generate_image, improve the user's image request before the tool call. Expand vague prompts into a clear visual prompt while preserving intent. Do not call generate_image for websites, UIs, widgets, or code.\n")
             }
+            if (includedTools.any { it.name == "invoice_registry" }) {
+                append("For invoice scanning, parsing, or importing requests, you MUST extract the vendor, total_amount, currency, invoice_number, date, items, and payment status from the image or text, and then call invoice_registry with action=import to save it to the database. Detect payment status: if you see a PAID stamp, watermark, or zero balance due, pass status=paid. If you see overdue or past due, pass status=overdue. Otherwise use status=pending. Tell the user you are importing the invoice details.\n")
+            }
             append("\nTo call a tool, use the format: ${Constants.Agent.TOOL_CALL_PREFIX} tool_name, param1=value1, param2=value2]\n")
             append("For long or code-heavy arguments, quote the full value or use JSON-like arguments: ${Constants.Agent.TOOL_CALL_PREFIX} tool_name, {\"param\":\"value\"}]\n")
         }
@@ -137,6 +140,7 @@ class ToolRegistry @Inject constructor(
             "selectInstalledModel"
         )
         RoutingCategory.TASK_REGISTRY -> setOf("extract_tasks", "task_registry")
+        RoutingCategory.INVOICE_MANAGEMENT -> setOf("invoice_registry")
         RoutingCategory.SENSORS -> setOf("perform_app_action", "read_sensors")
         RoutingCategory.DIRECT_CHAT -> emptySet()
     }

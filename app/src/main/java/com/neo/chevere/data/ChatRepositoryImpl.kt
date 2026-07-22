@@ -143,22 +143,22 @@ class ChatRepositoryImpl @Inject constructor(
             )
         }
 
-        if (imageUri != null) {
-            return generateDirectChatResponse(prompt, imageUri)
-        }
-
-        chatRequestRouter.capabilityResponseFor(prompt)?.let { response ->
-            conversationContextManager.recordExchange(
-                prompt,
-                imageUri = null,
-                assistantResponse = response
-            )
-            return Result.success(response)
+        // Skip capability responses when an image is attached — the user is asking
+        // the model to analyze the attached image, not asking about capabilities.
+        if (imageUri == null) {
+            chatRequestRouter.capabilityResponseFor(prompt)?.let { response ->
+                conversationContextManager.recordExchange(
+                    prompt,
+                    imageUri = null,
+                    assistantResponse = response
+                )
+                return Result.success(response)
+            }
         }
 
         val routingCategory = chatRequestRouter.classifyRequest(prompt)
         if (routingCategory == com.neo.chevere.data.chat.RoutingCategory.DIRECT_CHAT) {
-            return generateDirectChatResponse(prompt, imageUri = null)
+            return generateDirectChatResponse(prompt, imageUri)
         }
 
         val conversationContext =

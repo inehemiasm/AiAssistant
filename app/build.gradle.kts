@@ -11,6 +11,9 @@ plugins {
     alias(libs.plugins.roborazzi)
 }
 
+
+
+
 ksp {
     arg("room.schemaLocation", "${projectDir}/schemas")
 }
@@ -109,6 +112,8 @@ android {
 }
 
 dependencies {
+
+
     implementation(project(":ui-designsystem"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -161,6 +166,10 @@ dependencies {
 
     implementation(libs.androidx.exifinterface)
     implementation(libs.androidx.datastore.preferences)
+    implementation(libs.androidx.profileinstaller)
+
+
+
 
     testImplementation(libs.junit)
     testImplementation(libs.mockito.kotlin)

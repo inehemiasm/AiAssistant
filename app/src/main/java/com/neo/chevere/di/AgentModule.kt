@@ -35,6 +35,9 @@ import com.neo.chevere.data.agent.tools.SelectModelTool
 import com.neo.chevere.data.agent.tools.ShareTextTool
 import com.neo.chevere.data.agent.tools.SummarizeTextTool
 import com.neo.chevere.data.agent.tools.TaskRegistryTool
+import com.neo.chevere.data.agent.tools.InvoiceRegistryTool
+import com.neo.chevere.data.datasource.local.InvoiceDao
+import com.neo.chevere.data.datasource.local.ConversationHistoryDao
 import com.neo.chevere.data.agent.tools.WeatherTool
 import com.neo.chevere.data.agent.tools.WebSearchTool
 import com.neo.chevere.data.datasource.local.SearchCacheDao
@@ -251,6 +254,13 @@ abstract class AgentModule {
         fun provideTaskRegistryTool(
             taskDao: TaskDao
         ): AgentTool = TaskRegistryTool(taskDao)
+
+        @Provides
+        @IntoSet
+        fun provideInvoiceRegistryTool(
+            invoiceDao: InvoiceDao,
+            conversationHistoryDao: ConversationHistoryDao
+        ): AgentTool = InvoiceRegistryTool(invoiceDao, conversationHistoryDao)
 
         @Provides
         @IntoSet

@@ -16,6 +16,7 @@ import com.neo.chevere.ui.radar.SensorsRadarScreen
 import com.neo.chevere.ui.settings.BenchmarkScreen
 import com.neo.chevere.ui.settings.SettingsScreen
 import com.neo.chevere.ui.tasks.TasksScreen
+import com.neo.chevere.ui.invoices.InvoicesScreen
 
 @Composable
 fun ChevereNavHost(
@@ -62,6 +63,10 @@ fun ChevereNavHost(
 
         composable<Route.Tasks> {
             TasksScreen()
+        }
+
+        composable<Route.Invoices> {
+            InvoicesScreen()
         }
 
         composable<Route.Benchmark> {

@@ -1,0 +1,13 @@
+HSPLcom/neo/chevere/MainActivity;-><init>()V
+HSPLcom/neo/chevere/MainActivity;->onCreate(Landroid/os/Bundle;)V
+HSPLcom/neo/chevere/ChevereApp;-><init>()V
+HSPLcom/neo/chevere/ChevereApp;->onCreate()V
+HSPLcom/neo/chevere/ui/chat/ChatScreenKt;->ChatScreen
+HSPLcom/neo/chevere/ui/marketplace/MarketplaceScreenKt;->MarketplaceScreen
+HSPLcom/neo/chevere/ui/tasks/TasksScreenKt;->TasksScreen
+HSPLcom/neo/chevere/ui/settings/SettingsScreenKt;->SettingsScreen
+HSPLcom/neo/chevere/ui/theme/ThemeKt;->ChevereTheme
+HSPLandroidx/compose/runtime/ComposerImpl;->startGroup
+HSPLandroidx/compose/runtime/ComposerImpl;->endGroup
+HSPLandroidx/compose/material3/TextKt;->Text
+HSPLandroidx/compose/foundation/layout/BoxKt;->Box
