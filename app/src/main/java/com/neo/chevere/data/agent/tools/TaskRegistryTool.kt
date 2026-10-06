@@ -1,5 +1,6 @@
 package com.neo.chevere.data.agent.tools
 
+import com.neo.chevere.data.agent.ui.AgentUiEnvelope
 import com.neo.chevere.data.agent.AgentTool
 import com.neo.chevere.data.agent.ToolResult
 import com.neo.chevere.data.datasource.local.TaskDao
@@ -14,7 +15,7 @@ class TaskRegistryTool @Inject constructor(
 ) : AgentTool {
     override val name: String = "task_registry"
     override val description: String =
-        "Manages the user's local tasks or to-do list (create, list, update/complete status, or delete tasks)."
+        "Manages the user's local tasks or to-do list (create, list, update/complete status, or delete tasks). Listing tasks displays an interactive checklist in chat."
     override val inputSchema: String =
         "action: One of 'create', 'list', 'update', 'delete'. title: Task title (required for 'create'). description: Optional task description. status: One of 'pending', 'completed' (for 'update'). id: The numeric task ID (required for 'update' or 'delete')."
 
@@ -32,14 +33,16 @@ class TaskRegistryTool @Inject constructor(
 
             "list" -> {
                 val tasks = taskDao.getAllTasks()
-                if (tasks.isEmpty()) {
-                    ToolResult.Success("No tasks found in the list.")
-                } else {
-                    val summary = tasks.joinToString("\n") { task ->
+                val visibleTasks = tasks.take(AgentUiEnvelope.MAX_TASKS)
+                val summary = if (tasks.isEmpty()) "No tasks found in the list." else {
+                    val heading = if (tasks.size > visibleTasks.size) {
+                        "Showing the latest ${visibleTasks.size} of ${tasks.size} tasks. Open Tasks for the full list."
+                    } else "Current tasks:"
+                    heading + "\n" + visibleTasks.joinToString("\n") { task ->
                         "[ID: ${task.id}] [${task.status}] ${task.title}${if (task.description.isNotBlank()) " - ${task.description}" else ""}"
                     }
-                    ToolResult.Success("Current tasks:\n$summary")
                 }
+                ToolResult.Success(AgentUiEnvelope.checklist(summary, visibleTasks.map { it.id }))
             }
 
             "update" -> {

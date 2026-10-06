@@ -13,6 +13,7 @@ import com.neo.chevere.data.download.WorkManagerModelDownloadManager
 import com.neo.chevere.data.inference.ImageGenerationManager
 import com.neo.chevere.data.inference.InferenceManager
 import com.neo.chevere.domain.ChatRepository
+import com.neo.chevere.data.agent.ui.AgentUiEnvelope
 import com.neo.chevere.domain.DownloadProgress
 import com.neo.chevere.domain.ImageGenerationRequest
 import com.neo.chevere.domain.ImageGenerationResult
@@ -157,7 +158,7 @@ class ChatRepositoryImpl @Inject constructor(
         }
 
         val routingCategory = chatRequestRouter.classifyRequest(prompt)
-        if (routingCategory == com.neo.chevere.data.chat.RoutingCategory.DIRECT_CHAT) {
+        if (imageUri != null || routingCategory == com.neo.chevere.data.chat.RoutingCategory.DIRECT_CHAT) {
             return generateDirectChatResponse(prompt, imageUri)
         }
 
@@ -175,7 +176,7 @@ class ChatRepositoryImpl @Inject constructor(
                 if (response.startsWith(Constants.Agent.IMAGE_GENERATION_RESULT_PREFIX)) {
                     "Generated an image from the user's prompt."
                 } else {
-                    response
+                    AgentUiEnvelope.displayText(response)
                 }
             conversationContextManager.recordExchange(prompt, imageUri, memoryResponse)
             triggerBackgroundSummarization()

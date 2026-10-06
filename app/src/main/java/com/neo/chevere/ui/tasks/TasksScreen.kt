@@ -240,11 +240,13 @@ fun TasksContent(
     }
 }
 
+/** Shared native task row; chat hosts omit deletion and disable status changes during writes. */
 @Composable
-private fun TaskRowItem(
+internal fun TaskRowItem(
     task: TaskEntity,
     onToggleStatus: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: (() -> Unit)? = null,
+    enabled: Boolean = true
 ) {
     val isCompleted = task.status == TaskStatus.COMPLETED
     val strokeColor = if (isCompleted) {
@@ -270,7 +272,7 @@ private fun TaskRowItem(
                 .padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = onToggleStatus) {
+            IconButton(onClick = onToggleStatus, enabled = enabled) {
                 Icon(
                     imageVector = if (isCompleted) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
                     contentDescription = if (isCompleted) stringResource(R.string.task_completed) else stringResource(R.string.task_pending),
@@ -300,7 +302,7 @@ private fun TaskRowItem(
                 }
             }
 
-            IconButton(onClick = onDelete) {
+            if (onDelete != null) IconButton(onClick = onDelete) {
                 Icon(
                     imageVector = Icons.Default.Delete,
                     contentDescription = stringResource(R.string.delete_task),

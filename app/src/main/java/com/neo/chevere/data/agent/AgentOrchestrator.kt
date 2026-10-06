@@ -3,6 +3,7 @@ package com.neo.chevere.data.agent
 import android.net.Uri
 import com.neo.chevere.core.Constants
 import com.neo.chevere.core.PiiUtils
+import com.neo.chevere.data.agent.ui.AgentUiEnvelope
 import com.neo.chevere.data.chat.RoutingCategory
 import com.neo.chevere.data.inference.InferenceManager
 import com.neo.chevere.domain.ContactsPermissionException
@@ -327,7 +328,8 @@ class AgentOrchestrator @Inject constructor(
             is ToolResult.Success -> {
                 Timber.tag(TAG).d("Tool ${tool.name} SUCCESS: ${PiiUtils.scrub(toolResult.data)}")
                 lastToolSummary = toolResult.data
-                if (toolResult.data.startsWith(Constants.Agent.IMAGE_GENERATION_RESULT_PREFIX)) {
+                if (toolResult.data.startsWith(Constants.Agent.IMAGE_GENERATION_RESULT_PREFIX) ||
+                    AgentUiEnvelope.decode(toolResult.data) != null) {
                     _agentState.value = AgentState.Completed(currentSteps.toList())
                     return Result.success(toolResult.data)
                 }

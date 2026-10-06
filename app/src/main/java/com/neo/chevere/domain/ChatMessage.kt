@@ -15,6 +15,7 @@ import com.neo.chevere.data.agent.AgentState
  * @property isExplicitImage `true` when the attached image should support explicit-content masking.
  * @property isImageMasked `true` when an explicit image attachment is currently hidden behind a mask.
  * @property agentState Optional AI Agent state/steps associated with this message.
+ * @property agentUiContent Optional structured UI requested by an agent tool.
  */
 data class ChatMessage(
     val text: String,
@@ -26,5 +27,6 @@ data class ChatMessage(
     val modelName: String? = null,
     val isExplicitImage: Boolean = false,
     val isImageMasked: Boolean = false,
-    val agentState: AgentState? = null
+    val agentState: AgentState? = null,
+    val agentUiContent: AgentUiContent? = null
 )
