@@ -3,6 +3,8 @@ package com.neo.chevere.data
 import com.neo.chevere.data.datasource.local.ConversationHistoryDao
 import com.neo.chevere.data.datasource.local.ConversationMessageEntity
 import com.neo.chevere.data.datasource.local.ConversationSessionEntity
+import com.neo.chevere.data.agent.ui.AgentUiEnvelope
+import com.neo.chevere.domain.AgentUiContent
 import com.neo.chevere.domain.ChatHistoryRepository
 import com.neo.chevere.domain.ChatMessage
 import com.neo.chevere.domain.ConversationSession
@@ -75,7 +77,8 @@ class ChatHistoryRepositoryImpl @Inject constructor(
     )
 
     private fun ConversationMessageEntity.toDomain() = ChatMessage(
-        text = text,
+        text = if (isUser) text else AgentUiEnvelope.displayText(text),
+        agentUiContent = if (isUser) null else AgentUiEnvelope.decode(text)?.checklist,
         isUser = isUser,
         imageUri = imageUri,
         modelName = modelName,
@@ -89,7 +92,12 @@ class ChatHistoryRepositoryImpl @Inject constructor(
 
     private fun ChatMessage.toEntity(sessionId: Long) = ConversationMessageEntity(
         sessionId = sessionId,
-        text = text,
+        text = when (val content = agentUiContent) {
+            is AgentUiContent.TaskChecklist -> AgentUiEnvelope.encode(
+                AgentUiEnvelope.Payload(text = text, checklist = content)
+            )
+            null -> text
+        },
         isUser = isUser,
         imageUri = imageUri,
         modelName = modelName,

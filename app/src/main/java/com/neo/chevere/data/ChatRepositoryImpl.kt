@@ -12,7 +12,9 @@ import com.neo.chevere.data.datasource.ModelCatalogDataSource
 import com.neo.chevere.data.download.WorkManagerModelDownloadManager
 import com.neo.chevere.data.inference.ImageGenerationManager
 import com.neo.chevere.data.inference.InferenceManager
+import com.neo.chevere.domain.AssistantResponse
 import com.neo.chevere.domain.ChatRepository
+import com.neo.chevere.data.agent.ui.AgentUiEnvelope
 import com.neo.chevere.domain.DownloadProgress
 import com.neo.chevere.domain.ImageGenerationRequest
 import com.neo.chevere.domain.ImageGenerationResult
@@ -134,7 +136,10 @@ class ChatRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun sendMessage(prompt: String, imageUri: Uri?): Result<String> {
+    override suspend fun sendMessage(prompt: String, imageUri: Uri?): Result<AssistantResponse> =
+        sendRawMessage(prompt, imageUri).map { it.toDomainResponse() }
+
+    private suspend fun sendRawMessage(prompt: String, imageUri: Uri?): Result<String> {
         cancelSummarization()
         _directPartialResponse.value = ""
         if (imageUri != null && !isVisionSupported()) {
@@ -157,7 +162,7 @@ class ChatRepositoryImpl @Inject constructor(
         }
 
         val routingCategory = chatRequestRouter.classifyRequest(prompt)
-        if (routingCategory == com.neo.chevere.data.chat.RoutingCategory.DIRECT_CHAT) {
+        if (imageUri != null || routingCategory == com.neo.chevere.data.chat.RoutingCategory.DIRECT_CHAT) {
             return generateDirectChatResponse(prompt, imageUri)
         }
 
@@ -175,12 +180,21 @@ class ChatRepositoryImpl @Inject constructor(
                 if (response.startsWith(Constants.Agent.IMAGE_GENERATION_RESULT_PREFIX)) {
                     "Generated an image from the user's prompt."
                 } else {
-                    response
+                    AgentUiEnvelope.displayText(response)
                 }
             conversationContextManager.recordExchange(prompt, imageUri, memoryResponse)
             triggerBackgroundSummarization()
         }
         return result
+    }
+
+    /** Serialization stays at the data boundary; UI receives only typed domain content. */
+    private fun String.toDomainResponse(): AssistantResponse {
+        val payload = AgentUiEnvelope.decode(this)
+        return AssistantResponse(
+            text = payload?.text ?: AgentUiEnvelope.displayText(this),
+            agentUiContent = payload?.checklist
+        )
     }
 
     private suspend fun generateDirectChatResponse(prompt: String, imageUri: Uri?): Result<String> {
@@ -241,12 +255,12 @@ class ChatRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun confirmAction(): Result<String> {
-        return agentOrchestrator.confirmAction()
+    override suspend fun confirmAction(): Result<AssistantResponse> {
+        return agentOrchestrator.confirmAction().map { it.toDomainResponse() }
     }
 
-    override suspend fun cancelAction(): Result<String> {
-        return agentOrchestrator.cancelAction()
+    override suspend fun cancelAction(): Result<AssistantResponse> {
+        return agentOrchestrator.cancelAction().map { it.toDomainResponse() }
     }
 
     override suspend fun clearConversation() {

@@ -596,6 +596,11 @@ fun ChatContent(
                 } else {
                     MessageList(
                         messages = state.messages,
+                        taskChecklistData = state.taskChecklistData,
+                        taskChecklists = state.taskChecklists,
+                        onSetTaskCompleted = { surfaceId, taskId, completed ->
+                            viewModel.onIntent(ChatIntent.SetTaskCompleted(surfaceId, taskId, completed))
+                        },
                         listState = listState,
                         streamingText = state.streamingText,
                         streamingModelName = state.selectedModel.replace(

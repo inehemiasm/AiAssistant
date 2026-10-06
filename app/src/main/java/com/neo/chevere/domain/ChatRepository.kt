@@ -35,9 +35,10 @@ interface ChatRepository {
     suspend fun initializeModel(modelPath: String, notify: Boolean = true): Result<Unit>
 
     /**
-     * Sends a message to the AI and receives a response through the agent loop.
+     * Sends a message and receives readable text with optional domain UI content.
+     * Tool-result transport and serialization are handled by the data implementation.
      */
-    suspend fun sendMessage(prompt: String, imageUri: Uri? = null): Result<String>
+    suspend fun sendMessage(prompt: String, imageUri: Uri? = null): Result<AssistantResponse>
 
     /**
      * Generates an image directly from the prompt using an installed image-generation model.
@@ -47,12 +48,12 @@ interface ChatRepository {
     /**
      * Confirms a pending action requested by a tool.
      */
-    suspend fun confirmAction(): Result<String>
+    suspend fun confirmAction(): Result<AssistantResponse>
 
     /**
      * Cancels a pending action requested by a tool.
      */
-    suspend fun cancelAction(): Result<String>
+    suspend fun cancelAction(): Result<AssistantResponse>
 
     /**
      * Clears the current conversation history and resets the agent state.

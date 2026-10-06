@@ -41,7 +41,7 @@ import com.neo.chevere.data.datasource.local.ConversationHistoryDao
 import com.neo.chevere.data.agent.tools.WeatherTool
 import com.neo.chevere.data.agent.tools.WebSearchTool
 import com.neo.chevere.data.datasource.local.SearchCacheDao
-import com.neo.chevere.data.datasource.local.TaskDao
+import com.neo.chevere.domain.TaskRepository
 import com.neo.chevere.data.inference.ImageGenerationManager
 import com.neo.chevere.domain.InstalledModelRegistry
 import dagger.Binds
@@ -252,8 +252,8 @@ abstract class AgentModule {
         @Provides
         @IntoSet
         fun provideTaskRegistryTool(
-            taskDao: TaskDao
-        ): AgentTool = TaskRegistryTool(taskDao)
+            taskRepository: TaskRepository
+        ): AgentTool = TaskRegistryTool(taskRepository)
 
         @Provides
         @IntoSet

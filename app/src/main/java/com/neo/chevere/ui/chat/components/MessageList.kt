@@ -84,6 +84,9 @@ import com.neo.chevere.data.agent.AgentState
 import com.neo.chevere.data.agent.AgentStep
 import com.neo.chevere.data.agent.ToolResult
 import com.neo.chevere.domain.ChatMessage
+import com.neo.chevere.ui.chat.a2ui.TaskChecklistUiModel
+import com.neo.chevere.ui.chat.a2ui.TaskChecklistData
+import com.neo.chevere.ui.chat.a2ui.TaskChecklistSurface
 import com.neo.chevere.ui.common.MarkdownContent
 import com.neo.chevere.ui.designsystem.Typography
 import java.text.SimpleDateFormat
@@ -113,7 +116,10 @@ fun MessageList(
     onShareMessage: (Int) -> Unit = {},
     onSaveImage: (Int) -> Unit = {},
     onPreviewHtmlFullScreen: (String) -> Unit = {},
-    onImageClick: (String) -> Unit = {}
+    onImageClick: (String) -> Unit = {},
+    taskChecklistData: TaskChecklistData = TaskChecklistData.Loading,
+    taskChecklists: Map<Int, TaskChecklistUiModel> = emptyMap(),
+    onSetTaskCompleted: (String, Int, Boolean) -> Unit = { _, _, _ -> }
 ) {
     LazyColumn(
         state = listState,
@@ -128,7 +134,10 @@ fun MessageList(
                 onShareMessage = { onShareMessage(index) },
                 onSaveImage = { onSaveImage(index) },
                 onPreviewHtmlFullScreen = onPreviewHtmlFullScreen,
-                onImageClick = onImageClick
+                onImageClick = onImageClick,
+                taskChecklistData = taskChecklistData,
+                taskChecklist = taskChecklists[index],
+                onSetTaskCompleted = onSetTaskCompleted
             )
         }
 
@@ -176,7 +185,10 @@ fun FuturisticChatBubble(
     onSaveImage: () -> Unit = {},
     onPreviewHtmlFullScreen: (String) -> Unit = {},
     onImageClick: (String) -> Unit = {},
-    showCursor: Boolean = false
+    showCursor: Boolean = false,
+    taskChecklistData: TaskChecklistData = TaskChecklistData.Loading,
+    taskChecklist: TaskChecklistUiModel? = null,
+    onSetTaskCompleted: (String, Int, Boolean) -> Unit = { _, _, _ -> }
 ) {
     val isUser = message.isUser
     val bubbleColor = if (isUser) {
@@ -256,7 +268,9 @@ fun FuturisticChatBubble(
                     }
                     SelectionContainer {
                         MarkdownContent(
-                            text = message.text,
+                            text = if (taskChecklist != null) {
+                                stringResource(R.string.a2ui_checklist_title) + "\n" + message.text.substringBefore('\n')
+                            } else message.text,
                             textStyle = Typography.bodyMedium.copy(
                                 lineHeight = 22.sp,
                                 color = onBubbleColor
@@ -264,6 +278,15 @@ fun FuturisticChatBubble(
                             textColor = onBubbleColor,
                             showCursor = showCursor,
                             onPreviewHtmlFullScreen = onPreviewHtmlFullScreen
+                        )
+                    }
+
+                    taskChecklist?.let { content ->
+                        TaskChecklistSurface(
+                            content = content,
+                            data = taskChecklistData,
+                            onSetCompleted = onSetTaskCompleted,
+                            modifier = Modifier.fillMaxWidth().padding(top = 12.dp)
                         )
                     }
 

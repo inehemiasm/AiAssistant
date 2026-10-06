@@ -233,4 +233,9 @@
     <string name="busy_phrase_6">Structuring cognitive flows…</string>
     <string name="busy_phrase_7">Synthesizing response…</string>
     <string name="busy_phrase_8">Finalizing thought process…</string>
+    <string name="a2ui_checklist_title">Your task checklist</string>
+    <string name="a2ui_no_tasks">No tasks in this checklist.</string>
+    <string name="a2ui_loading">Loading checklist…</string>
+    <string name="a2ui_unavailable">Checklist unavailable. Please ask to list tasks again.</string>
+    <string name="a2ui_update_failed">Could not update the task. Please try again.</string>
 </resources>

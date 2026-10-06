@@ -139,4 +139,9 @@
     <string name="busy_phrase_6">Estructurando flujos cognitivos…</string>
     <string name="busy_phrase_7">Sintetizando respuesta…</string>
     <string name="busy_phrase_8">Finalizando proceso de pensamiento…</string>
+    <string name="a2ui_checklist_title">Tu lista de tareas</string>
+    <string name="a2ui_no_tasks">No hay tareas en esta lista.</string>
+    <string name="a2ui_loading">Cargando lista de tareas…</string>
+    <string name="a2ui_unavailable">La lista no está disponible. Vuelve a pedir tus tareas.</string>
+    <string name="a2ui_update_failed">No se pudo actualizar la tarea. Inténtalo de nuevo.</string>
 </resources>

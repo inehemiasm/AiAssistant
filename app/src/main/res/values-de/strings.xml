@@ -139,4 +139,9 @@
     <string name="busy_phrase_6">Strukturiere kognitive Fluesse…</string>
     <string name="busy_phrase_7">Synthetisiere Antwort…</string>
     <string name="busy_phrase_8">Schliesse Denkprozess ab…</string>
+    <string name="a2ui_checklist_title">Deine Aufgabenliste</string>
+    <string name="a2ui_no_tasks">Keine Aufgaben in dieser Liste.</string>
+    <string name="a2ui_loading">Aufgabenliste wird geladen…</string>
+    <string name="a2ui_unavailable">Aufgabenliste nicht verfügbar. Bitte frage erneut nach deinen Aufgaben.</string>
+    <string name="a2ui_update_failed">Die Aufgabe konnte nicht aktualisiert werden. Bitte versuche es erneut.</string>
 </resources>

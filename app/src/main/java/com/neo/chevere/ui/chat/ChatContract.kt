@@ -1,5 +1,9 @@
 package com.neo.chevere.ui.chat
 
+import com.neo.chevere.ui.chat.a2ui.TaskChecklistData
+import com.neo.chevere.ui.chat.a2ui.TaskChecklistUiModel
+import com.neo.chevere.ui.chat.a2ui.toUiModel
+import com.neo.chevere.domain.AgentUiContent
 import android.net.Uri
 import com.neo.chevere.core.Constants
 import com.neo.chevere.core.UiEffect
@@ -60,8 +64,16 @@ data class ChatState(
     val currentSessionId: Long? = null,
     /** History sessions shown in the history bottom sheet. */
     val historySessions: List<ConversationSession> = emptyList(),
-    val suggestions: List<String> = emptyList()
+    val suggestions: List<String> = emptyList(),
+    val taskChecklistData: TaskChecklistData = TaskChecklistData.Loading
 ) : UiState {
+    /** Maps structured domain message content to renderer-facing presentation metadata. */
+    val taskChecklists: Map<Int, TaskChecklistUiModel>
+        get() = messages.mapIndexedNotNull { index, message ->
+            val content = message.agentUiContent as? AgentUiContent.TaskChecklist
+            if (!message.isUser && content != null) index to content.toUiModel() else null
+        }.toMap()
+
     val isReady: Boolean get() = runtimeState is RuntimeState.Ready
 
     val isLoading: Boolean
@@ -149,6 +161,8 @@ sealed class ChatIntent : UiIntent {
     data class RenameSession(val sessionId: Long, val newTitle: String) : ChatIntent()
     /** Triggers reload of model on resume if needed. */
     data object Resume : ChatIntent()
+    /** A validated user interaction on a task in a currently displayed agent surface. */
+    data class SetTaskCompleted(val surfaceId: String, val taskId: Int, val completed: Boolean) : ChatIntent()
 }
 
 sealed class ChatEffect : UiEffect {

@@ -52,6 +52,21 @@ class AgentOrchestratorTest {
     }
 
     @Test
+    fun taskChecklist_returnsToolPayloadWithoutAnotherModelPass() = runTest {
+        val payload = com.neo.chevere.data.agent.ui.AgentUiEnvelope.checklist("Tasks", listOf(7))
+        val taskTool = mock<AgentTool> { on { name } doReturn "task_registry" }
+        whenever(mockToolRegistry.getTool("task_registry")).doReturn(taskTool)
+        whenever(taskTool.execute(any())).doReturn(ToolResult.Success(payload))
+        whenever(mockInferenceManager.generateStream(any())).doReturn(
+            flowOf(InferenceResult.Success("[TOOL_CALL: task_registry, action=\"list\"]")))
+        assertEquals(payload, orchestrator.processUserRequest("List my tasks").getOrNull())
+        org.mockito.kotlin.verify(mockInferenceManager, org.mockito.kotlin.times(1)).generateStream(any())
+        assertTrue(orchestrator.agentState.value is AgentState.Completed)
+        val observation = orchestrator.agentState.value.steps.single().result as ToolResult.Success
+        assertEquals("Tasks", observation.data)
+    }
+
+    @Test
     fun processUserRequest_successFlow() = runTest {
         // Mock Tool Execution
         whenever(mockWeatherTool.execute(any())).doAnswer { invocation ->

@@ -165,6 +165,19 @@ Path: `app/src/main/java/com/neo/chevere/ui/`
 - Launcher icon and splash animation should use the same robot-head/cyan identity.
 - Keep attachment previews large enough to inspect and use a neutral remove affordance rather than an oversized destructive red control.
 
+## Layer Boundary Rules
+
+Apply these rules to new features and code changed by a task. Existing violations are not a pattern to copy; keep unrelated migrations outside the task scope.
+
+- Use explicit mappings: data DTOs / persistence entities → domain models → UI models. Do not reuse a Room entity or transport DTO as a domain or presentation model.
+- Keep database annotations, serialization contracts, transport envelopes, and SDK-specific models in the data layer. New domain models and repository contracts must remain independent of Room, serialization formats, Compose, and UI protocol libraries.
+- Repository implementations own data access, execution context, and data-to-domain mapping. ViewModels and shared application workflows use domain repository interfaces rather than DAOs or concrete data sources.
+- Decode and validate external or persisted payloads at the data boundary. Return typed domain results to ViewModels instead of asking UI code to parse JSON or tool/storage envelopes. Preserve compatibility with previously persisted payloads when changing codecs.
+- Map domain models to presentation models in the ViewModel / MVI presentation layer. Represent completion, loading, availability, and interaction states explicitly; composables render that state and emit intents.
+- Keep A2UI runtime types, catalogs, and protocol-to-presentation mappings inside the UI adapter. Catalog components consume UI models and must not construct Room entities. Domain content remains renderer-independent.
+- Route UI actions through MVI and domain repositories. Validate action membership and identifiers before writes, and prefer atomic field-specific updates when an action changes only one field.
+- When changing a boundary, verify the mappings and observable behavior with focused tests, including persisted-format compatibility where applicable. Review changed UI/domain imports for data infrastructure leaks before completing the task.
+
 ## Development Guidelines
 
 - Prefer existing patterns, MVI state, Hilt DI, and repository abstractions.

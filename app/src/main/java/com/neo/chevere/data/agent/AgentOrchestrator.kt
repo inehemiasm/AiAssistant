@@ -3,6 +3,7 @@ package com.neo.chevere.data.agent
 import android.net.Uri
 import com.neo.chevere.core.Constants
 import com.neo.chevere.core.PiiUtils
+import com.neo.chevere.data.agent.ui.AgentUiEnvelope
 import com.neo.chevere.data.chat.RoutingCategory
 import com.neo.chevere.data.inference.InferenceManager
 import com.neo.chevere.domain.ContactsPermissionException
@@ -231,7 +232,7 @@ class AgentOrchestrator @Inject constructor(
 
                         val lastIndex = currentSteps.indexOfLast { it.toolCall == toolCall }
                         if (lastIndex != -1) {
-                            currentSteps[lastIndex] = currentSteps[lastIndex].copy(result = toolResult)
+                            currentSteps[lastIndex] = currentSteps[lastIndex].copy(result = toolResult.asObservationResult())
                         }
 
                         val stopLoopResult = handleToolResult(tool, toolResult)
@@ -322,12 +323,19 @@ class AgentOrchestrator @Inject constructor(
         }
     }
 
+    /** Observation state contains readable summaries rather than storage/transport envelopes. */
+    private fun ToolResult.asObservationResult(): ToolResult = when (this) {
+        is ToolResult.Success -> ToolResult.Success(AgentUiEnvelope.displayText(data))
+        else -> this
+    }
+
     private suspend fun handleToolResult(tool: AgentTool, toolResult: ToolResult): Result<String>? {
         return when (toolResult) {
             is ToolResult.Success -> {
                 Timber.tag(TAG).d("Tool ${tool.name} SUCCESS: ${PiiUtils.scrub(toolResult.data)}")
                 lastToolSummary = toolResult.data
-                if (toolResult.data.startsWith(Constants.Agent.IMAGE_GENERATION_RESULT_PREFIX)) {
+                if (toolResult.data.startsWith(Constants.Agent.IMAGE_GENERATION_RESULT_PREFIX) ||
+                    AgentUiEnvelope.decode(toolResult.data) != null) {
                     _agentState.value = AgentState.Completed(currentSteps.toList())
                     return Result.success(toolResult.data)
                 }
@@ -384,7 +392,7 @@ class AgentOrchestrator @Inject constructor(
 
         val lastIndex = currentSteps.indexOfLast { it.result is ToolResult.NeedsConfirmation }
         if (lastIndex != -1) {
-            currentSteps[lastIndex] = currentSteps[lastIndex].copy(result = toolResult)
+            currentSteps[lastIndex] = currentSteps[lastIndex].copy(result = toolResult.asObservationResult())
         }
 
         when (toolResult) {
