@@ -82,10 +82,9 @@ import coil.compose.AsyncImage
 import com.neo.chevere.R
 import com.neo.chevere.data.agent.AgentState
 import com.neo.chevere.data.agent.AgentStep
-import com.neo.chevere.data.agent.ui.AgentUiEnvelope
 import com.neo.chevere.data.agent.ToolResult
 import com.neo.chevere.domain.ChatMessage
-import com.neo.chevere.domain.AgentUiContent
+import com.neo.chevere.ui.chat.a2ui.TaskChecklistUiModel
 import com.neo.chevere.ui.chat.a2ui.TaskChecklistData
 import com.neo.chevere.ui.chat.a2ui.TaskChecklistSurface
 import com.neo.chevere.ui.common.MarkdownContent
@@ -119,6 +118,7 @@ fun MessageList(
     onPreviewHtmlFullScreen: (String) -> Unit = {},
     onImageClick: (String) -> Unit = {},
     taskChecklistData: TaskChecklistData = TaskChecklistData.Loading,
+    taskChecklists: Map<Int, TaskChecklistUiModel> = emptyMap(),
     onSetTaskCompleted: (String, Int, Boolean) -> Unit = { _, _, _ -> }
 ) {
     LazyColumn(
@@ -136,6 +136,7 @@ fun MessageList(
                 onPreviewHtmlFullScreen = onPreviewHtmlFullScreen,
                 onImageClick = onImageClick,
                 taskChecklistData = taskChecklistData,
+                taskChecklist = taskChecklists[index],
                 onSetTaskCompleted = onSetTaskCompleted
             )
         }
@@ -186,6 +187,7 @@ fun FuturisticChatBubble(
     onImageClick: (String) -> Unit = {},
     showCursor: Boolean = false,
     taskChecklistData: TaskChecklistData = TaskChecklistData.Loading,
+    taskChecklist: TaskChecklistUiModel? = null,
     onSetTaskCompleted: (String, Int, Boolean) -> Unit = { _, _, _ -> }
 ) {
     val isUser = message.isUser
@@ -266,7 +268,7 @@ fun FuturisticChatBubble(
                     }
                     SelectionContainer {
                         MarkdownContent(
-                            text = if (message.agentUiContent is AgentUiContent.TaskChecklist && !isUser) {
+                            text = if (taskChecklist != null) {
                                 stringResource(R.string.a2ui_checklist_title) + "\n" + message.text.substringBefore('\n')
                             } else message.text,
                             textStyle = Typography.bodyMedium.copy(
@@ -279,14 +281,13 @@ fun FuturisticChatBubble(
                         )
                     }
 
-                    if (!isUser) when (val content = message.agentUiContent) {
-                        is AgentUiContent.TaskChecklist -> TaskChecklistSurface(
+                    taskChecklist?.let { content ->
+                        TaskChecklistSurface(
                             content = content,
                             data = taskChecklistData,
                             onSetCompleted = onSetTaskCompleted,
                             modifier = Modifier.fillMaxWidth().padding(top = 12.dp)
                         )
-                        null -> Unit
                     }
 
                     if (!isUser) {
@@ -988,7 +989,7 @@ private fun StepItem(
                         is ToolResult.NeedsConfirmation -> MaterialTheme.colorScheme.secondary
                     }
                     val resultText = when (result) {
-                        is ToolResult.Success -> AgentUiEnvelope.displayText(result.data)
+                        is ToolResult.Success -> result.data
                         is ToolResult.Error -> result.message
                         is ToolResult.NeedsConfirmation -> "Needs Confirmation: ${result.message}"
                     }

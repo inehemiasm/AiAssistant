@@ -29,6 +29,13 @@ class AgentUiEnvelopeTest {
         assertEquals("Normal answer", AgentUiEnvelope.displayText("Normal answer"))
     }
 
+    @Test fun originalV1StorageFixture_stillDecodesThroughDataDtos() {
+        val stored = AgentUiEnvelope.PREFIX +
+            """{"text":"Tasks","checklist":{"surfaceId":"surface-1","taskIds":[7]}}"""
+        assertEquals(AgentUiEnvelope.Payload(text = "Tasks", checklist =
+            AgentUiContent.TaskChecklist("surface-1", listOf(7))), AgentUiEnvelope.decode(stored))
+    }
+
     @Test fun checklist_boundsLargeTaskResults() {
         val encoded = AgentUiEnvelope.checklist("\n".repeat(100_000), (1..100).toList())
         val payload = requireNotNull(AgentUiEnvelope.decode(encoded))

@@ -232,7 +232,7 @@ class AgentOrchestrator @Inject constructor(
 
                         val lastIndex = currentSteps.indexOfLast { it.toolCall == toolCall }
                         if (lastIndex != -1) {
-                            currentSteps[lastIndex] = currentSteps[lastIndex].copy(result = toolResult)
+                            currentSteps[lastIndex] = currentSteps[lastIndex].copy(result = toolResult.asObservationResult())
                         }
 
                         val stopLoopResult = handleToolResult(tool, toolResult)
@@ -323,6 +323,12 @@ class AgentOrchestrator @Inject constructor(
         }
     }
 
+    /** Observation state contains readable summaries rather than storage/transport envelopes. */
+    private fun ToolResult.asObservationResult(): ToolResult = when (this) {
+        is ToolResult.Success -> ToolResult.Success(AgentUiEnvelope.displayText(data))
+        else -> this
+    }
+
     private suspend fun handleToolResult(tool: AgentTool, toolResult: ToolResult): Result<String>? {
         return when (toolResult) {
             is ToolResult.Success -> {
@@ -386,7 +392,7 @@ class AgentOrchestrator @Inject constructor(
 
         val lastIndex = currentSteps.indexOfLast { it.result is ToolResult.NeedsConfirmation }
         if (lastIndex != -1) {
-            currentSteps[lastIndex] = currentSteps[lastIndex].copy(result = toolResult)
+            currentSteps[lastIndex] = currentSteps[lastIndex].copy(result = toolResult.asObservationResult())
         }
 
         when (toolResult) {

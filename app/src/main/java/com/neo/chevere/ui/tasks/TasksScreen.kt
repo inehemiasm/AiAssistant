@@ -69,8 +69,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.neo.chevere.R
-import com.neo.chevere.data.datasource.local.TaskEntity
-import com.neo.chevere.data.datasource.local.TaskStatus
 import com.neo.chevere.ui.common.ChevereHaptic
 import com.neo.chevere.ui.common.performChevereHaptic
 import com.neo.chevere.ui.designsystem.Typography
@@ -177,8 +175,8 @@ fun TasksContent(
                     contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    val pending = state.tasks.filter { it.status == TaskStatus.PENDING }
-                    val completed = state.tasks.filter { it.status == TaskStatus.COMPLETED }
+                    val pending = state.pendingTasks
+                    val completed = state.completedTasks
 
                     if (pending.isNotEmpty()) {
                         items(pending, key = { it.id }) { task ->
@@ -243,12 +241,11 @@ fun TasksContent(
 /** Shared native task row; chat hosts omit deletion and disable status changes during writes. */
 @Composable
 internal fun TaskRowItem(
-    task: TaskEntity,
+    task: TaskUiModel,
     onToggleStatus: () -> Unit,
-    onDelete: (() -> Unit)? = null,
-    enabled: Boolean = true
+    onDelete: (() -> Unit)? = null
 ) {
-    val isCompleted = task.status == TaskStatus.COMPLETED
+    val isCompleted = task.isCompleted
     val strokeColor = if (isCompleted) {
         MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.1f)
     } else {
@@ -272,7 +269,7 @@ internal fun TaskRowItem(
                 .padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = onToggleStatus, enabled = enabled) {
+            IconButton(onClick = onToggleStatus, enabled = task.isEnabled) {
                 Icon(
                     imageVector = if (isCompleted) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
                     contentDescription = if (isCompleted) stringResource(R.string.task_completed) else stringResource(R.string.task_pending),
@@ -438,8 +435,8 @@ private fun TasksScreenPreview() {
         TasksContent(
             state = TasksState(
                 tasks = listOf(
-                    TaskEntity(id = 1, title = "Integrate camera permission check", description = "Use rememberLauncherForActivityResult to prompt camera access flow.", status = TaskStatus.COMPLETED),
-                    TaskEntity(id = 2, title = "Implement ambient sound sensor retry", description = "Automatically retry query when mic permission is granted.", status = TaskStatus.PENDING)
+                    TaskUiModel(id = 1, title = "Integrate camera permission check", description = "Use rememberLauncherForActivityResult to prompt camera access flow.", completion = TaskCompletionUiState.Completed),
+                    TaskUiModel(id = 2, title = "Implement ambient sound sensor retry", description = "Automatically retry query when mic permission is granted.", completion = TaskCompletionUiState.Pending)
                 )
             ),
             effects = kotlinx.coroutines.flow.emptyFlow(),

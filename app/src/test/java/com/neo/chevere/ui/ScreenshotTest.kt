@@ -9,8 +9,8 @@ import com.github.takahirom.roborazzi.captureRoboImage
 import android.net.Uri
 import com.neo.chevere.data.agent.AgentState
 import com.neo.chevere.ui.chat.AgeVerificationRequest
-import com.neo.chevere.data.datasource.local.TaskEntity
-import com.neo.chevere.data.datasource.local.TaskStatus
+import com.neo.chevere.ui.tasks.TaskUiModel
+import com.neo.chevere.ui.tasks.TaskCompletionUiState
 import com.neo.chevere.domain.*
 import com.neo.chevere.ui.chat.ChatContent
 import com.neo.chevere.ui.chat.ChatState
@@ -265,8 +265,8 @@ class ScreenshotTest {
                 TasksContent(
                     state = TasksState(
                         tasks = listOf(
-                            TaskEntity(id = 1, title = "Integrate camera permission check", description = "Use rememberLauncherForActivityResult to prompt camera access flow.", status = TaskStatus.COMPLETED),
-                            TaskEntity(id = 2, title = "Implement ambient sound sensor retry", description = "Automatically retry query when mic permission is granted.", status = TaskStatus.PENDING)
+                            TaskUiModel(id = 1, title = "Integrate camera permission check", description = "Use rememberLauncherForActivityResult to prompt camera access flow.", completion = TaskCompletionUiState.Completed),
+                            TaskUiModel(id = 2, title = "Implement ambient sound sensor retry", description = "Automatically retry query when mic permission is granted.", completion = TaskCompletionUiState.Pending)
                         )
                     ),
                     effects = emptyFlow(),

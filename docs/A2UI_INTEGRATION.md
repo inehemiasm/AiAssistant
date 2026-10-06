@@ -12,18 +12,34 @@ interactive local task checklists inside assistant messages.
    a stable surface ID, and up to 50 actual Room task IDs.
 3. The orchestrator returns the structured tool result immediately. The model does
    not need to generate a JSON layout or run another inference pass.
-4. ChatViewModel decodes the envelope and observes the existing Room task flow.
+4. ChatRepositoryImpl decodes the data envelope into a typed domain
+   `AssistantResponse`. ChatViewModel observes domain tasks through `TaskRepository`
+   and maps them into presentation models.
 5. `TaskChecklistSurface` creates an AndroidX `A2uiMessageProcessor` with the
    versioned Chevere catalog and emits standard typed `createSurface` and
    `updateComponents` messages. The renderer validates the component properties.
 6. The catalog wraps the same native `TaskRowItem` used by the Tasks screen.
 7. A tap dispatches an A2UI `set_task_completed` event. The adapter accepts only
    this event for the current surface/root and routes it to `ChatIntent.SetTaskCompleted`.
-   The ViewModel rechecks surface membership before an atomic Room status update.
+   The ViewModel rechecks surface membership before a repository status-only update.
 
 The Chevere tool/storage envelope is not an A2UI wire message. It bridges the local
 agent's existing string-result API to the official renderer's typed protocol API.
 There is no remote UI server or arbitrary model-authored layout ingestion in this PR.
+
+## Layer boundaries
+
+`TaskRepositoryImpl` owns Room access and maps `TaskEntity` to the pure domain
+`Task` and `TaskStatus`. Both ViewModels and the task tool use `TaskRepository`.
+The ViewModels map domain tasks into `TaskUiModel`, with sealed completion and
+interaction states; Compose and the A2UI catalog never receive Room entities.
+`ChatState` maps domain checklist metadata into `TaskChecklistUiModel`.
+
+Serialization DTOs and the versioned envelope codec live in the data layer.
+Domain `AgentUiContent` and `AssistantResponse` contain no serialization or
+AndroidX dependencies. The chat repository decodes tool responses before they
+reach the ViewModel; history uses the same data codec. The persisted version-1
+format remains unchanged. AndroidX protocol types stay in the UI adapter.
 
 ## State and persistence
 
@@ -71,7 +87,7 @@ Verify that the restored card uses current data and removes the deleted row.
 
 ## Results for this PR
 
-- 32 selected unit/Robolectric tests passed (new UI, tool, envelope, history and MVI
+- 52 selected unit/Robolectric tests passed (new UI, tool, envelope, history and MVI
   tests plus existing orchestrator and chat repository regression tests).
 - The native checklist was captured and visually inspected at phone chat width.
 - `:app:assembleDebug` passed.

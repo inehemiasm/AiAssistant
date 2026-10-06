@@ -1,7 +1,6 @@
 package com.neo.chevere.data.agent.ui
 
 import com.neo.chevere.domain.AgentUiContent
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.util.UUID
@@ -14,7 +13,6 @@ object AgentUiEnvelope {
     private val json = Json { ignoreUnknownKeys = true }
 
     /** Persisted readable summary and a renderer-independent checklist reference. */
-    @Serializable
     data class Payload(
         val version: Int = 1,
         val text: String,
@@ -30,18 +28,18 @@ object AgentUiEnvelope {
     )
 
     /** Encodes metadata for the existing string tool result and Room message text column. */
-    fun encode(payload: Payload): String = PREFIX + json.encodeToString(payload)
+    fun encode(payload: Payload): String = PREFIX + json.encodeToString(payload.toDto())
 
     /** Returns null for unsupported, malformed or oversized envelopes without exposing raw JSON. */
     fun decode(value: String): Payload? {
         if (!value.startsWith(PREFIX) || value.length > MAX_ENVELOPE_LENGTH) return null
-        return runCatching { json.decodeFromString<Payload>(value.removePrefix(PREFIX)) }
+        return runCatching { json.decodeFromString<AgentUiEnvelopeDto>(value.removePrefix(PREFIX)) }
             .getOrNull()?.takeIf {
                 it.version == 1 && it.checklist.surfaceId.matches(Regex("[a-zA-Z0-9-]{1,64}")) &&
                     it.checklist.taskIds.size <= MAX_TASKS &&
                     it.checklist.taskIds.all { id -> id > 0 } &&
                     it.checklist.taskIds.distinct().size == it.checklist.taskIds.size
-            }
+            }?.toPayload()
     }
 
     /** Keeps protocol metadata out of sharing, speech, and compressed conversation memory. */

@@ -4,9 +4,7 @@ import android.app.Application
 import com.neo.chevere.core.DispatcherProvider
 import com.neo.chevere.data.PreferenceManager
 import com.neo.chevere.data.agent.AgentState
-import com.neo.chevere.data.datasource.local.TaskDao
-import com.neo.chevere.data.datasource.local.TaskEntity
-import com.neo.chevere.data.datasource.local.TaskStatus
+import com.neo.chevere.ui.tasks.TaskCompletionUiState
 import com.neo.chevere.data.telemetry.AppTelemetry
 import com.neo.chevere.data.voice.VoiceInputManager
 import com.neo.chevere.domain.*
@@ -34,9 +32,9 @@ import org.robolectric.annotation.Config
 @Config(sdk = [33], application = Application::class)
 class ChatTaskActionTest {
     private val dispatcher = StandardTestDispatcher()
-    private val dao = mock<TaskDao>()
+    private val taskRepository = mock<TaskRepository>()
     private val store = androidx.lifecycle.ViewModelStore()
-    private val tasks = MutableStateFlow(listOf(TaskEntity(7, "Buy milk", "Two cartons")))
+    private val tasks = MutableStateFlow(listOf(Task(7, "Buy milk", "Two cartons", TaskStatus.PENDING, 123)))
     private lateinit var viewModel: ChatViewModel
 
     @Before fun setup() = runTest(dispatcher) {
@@ -55,8 +53,8 @@ class ChatTaskActionTest {
         whenever(history.getMessages(5)).thenReturn(listOf(ChatMessage(
             text = "Tasks", isUser = false,
             agentUiContent = AgentUiContent.TaskChecklist("surface-1", listOf(7)))))
-        whenever(dao.getAllTasksFlow()).thenReturn(tasks)
-        whenever(dao.setTaskStatus(any(), any())).thenReturn(1)
+        whenever(taskRepository.observeTasks()).thenReturn(tasks)
+        whenever(taskRepository.setTaskStatus(any(), any())).thenReturn(true)
         val dispatchers = object : DispatcherProvider {
             override val main = dispatcher
             override val io = dispatcher
@@ -64,7 +62,7 @@ class ChatTaskActionTest {
         }
         viewModel = ChatViewModel(RuntimeEnvironment.getApplication(), repository,
             mock<InitializeChatUseCase>(), mock<SendMessageUseCase>(), preferences,
-            dispatchers, mock<AppTelemetry>(), voice, history, dao)
+            dispatchers, mock<AppTelemetry>(), voice, history, taskRepository)
         store.put("chat", viewModel)
         advanceUntilIdle()
         viewModel.onIntent(ChatIntent.LoadSession(5))
@@ -80,12 +78,12 @@ class ChatTaskActionTest {
     @Test fun validAction_updatesOnlyTaskStatusAndObservesRoom() = runTest(dispatcher) {
         viewModel.onIntent(ChatIntent.SetTaskCompleted("surface-1", 7, true))
         advanceUntilIdle()
-        verify(dao).setTaskStatus(7, TaskStatus.COMPLETED)
-        verify(dao, never()).updateTask(any())
+        verify(taskRepository).setTaskStatus(7, TaskStatus.COMPLETED)
+        verify(taskRepository, never()).updateTask(any())
         tasks.value = listOf(tasks.value.single().copy(status = TaskStatus.COMPLETED))
         advanceUntilIdle()
         val state = viewModel.currentState.taskChecklistData as TaskChecklistData.Ready
-        assertEquals(TaskStatus.COMPLETED, state.tasks.single().status)
+        assertEquals(TaskCompletionUiState.Completed, state.tasks.single().completion)
         assertTrue(state.updatingIds.isEmpty())
     }
 
@@ -93,20 +91,20 @@ class ChatTaskActionTest {
         viewModel.onIntent(ChatIntent.SetTaskCompleted("other-surface", 7, true))
         viewModel.onIntent(ChatIntent.SetTaskCompleted("surface-1", 99, true))
         advanceUntilIdle()
-        verify(dao, never()).setTaskStatus(any(), any())
+        verify(taskRepository, never()).setTaskStatus(any(), any())
         viewModel.onIntent(ChatIntent.NewConversation)
         advanceUntilIdle()
         viewModel.onIntent(ChatIntent.SetTaskCompleted("surface-1", 7, true))
         advanceUntilIdle()
-        verify(dao, never()).setTaskStatus(any(), any())
+        verify(taskRepository, never()).setTaskStatus(any(), any())
     }
 
     @Test fun failedWrite_keepsRoomStateAndReportsError() = runTest(dispatcher) {
-        whenever(dao.setTaskStatus(7, TaskStatus.COMPLETED)).thenThrow(IllegalStateException("Disk failure"))
+        whenever(taskRepository.setTaskStatus(7, TaskStatus.COMPLETED)).thenThrow(IllegalStateException("Disk failure"))
         viewModel.onIntent(ChatIntent.SetTaskCompleted("surface-1", 7, true))
         advanceUntilIdle()
         val state = viewModel.currentState.taskChecklistData as TaskChecklistData.Ready
-        assertEquals(TaskStatus.PENDING, state.tasks.single().status)
+        assertEquals(TaskCompletionUiState.Pending, state.tasks.single().completion)
         assertTrue(state.updatingIds.isEmpty())
         assertTrue(viewModel.effect.filterIsInstance<ChatEffect.ShowToast>().first().message.isNotBlank())
     }

@@ -19,13 +19,12 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.neo.chevere.R
-import com.neo.chevere.domain.AgentUiContent
 import kotlinx.coroutines.launch
 
 /** Hosts AndroidX processing while the chat card is composed, including after history restore. */
 @Composable
 fun TaskChecklistSurface(
-    content: AgentUiContent.TaskChecklist,
+    content: TaskChecklistUiModel,
     data: TaskChecklistData,
     onSetCompleted: (surfaceId: String, taskId: Int, completed: Boolean) -> Unit,
     modifier: Modifier = Modifier
@@ -60,8 +59,8 @@ fun TaskChecklistSurface(
                 mapOf(
                     "id" to task.id.toString(), "title" to task.title,
                     "description" to task.description,
-                    "completed" to (task.status == com.neo.chevere.data.datasource.local.TaskStatus.COMPLETED),
-                    "enabled" to (task.id !in data.updatingIds)
+                    "completed" to task.isCompleted,
+                    "enabled" to task.isEnabled
                 )
             }
             processor.processMessage(A2uiUpdateComponentsMessage(content.surfaceId, listOf(

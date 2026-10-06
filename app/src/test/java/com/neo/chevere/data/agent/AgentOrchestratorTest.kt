@@ -62,6 +62,8 @@ class AgentOrchestratorTest {
         assertEquals(payload, orchestrator.processUserRequest("List my tasks").getOrNull())
         org.mockito.kotlin.verify(mockInferenceManager, org.mockito.kotlin.times(1)).generateStream(any())
         assertTrue(orchestrator.agentState.value is AgentState.Completed)
+        val observation = orchestrator.agentState.value.steps.single().result as ToolResult.Success
+        assertEquals("Tasks", observation.data)
     }
 
     @Test

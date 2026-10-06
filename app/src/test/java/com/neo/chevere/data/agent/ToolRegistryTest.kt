@@ -38,7 +38,7 @@ import com.neo.chevere.data.agent.tools.WebSearchTool
 import com.neo.chevere.data.chat.RoutingCategory
 import com.neo.chevere.data.datasource.local.DocumentChunkDao
 import com.neo.chevere.data.datasource.local.SearchCacheDao
-import com.neo.chevere.data.datasource.local.TaskDao
+import com.neo.chevere.domain.TaskRepository
 import com.neo.chevere.data.inference.ImageGenerationManager
 import com.neo.chevere.data.inference.InferenceManager
 import com.neo.chevere.domain.InstalledModelRegistry
@@ -60,7 +60,7 @@ class ToolRegistryTest {
     private lateinit var mockImageGenerationManager: ImageGenerationManager
     private lateinit var mockAppActionExecutor: AndroidAppActionExecutor
     private lateinit var mockSearchCacheDao: SearchCacheDao
-    private lateinit var mockTaskDao: TaskDao
+    private lateinit var mockTaskRepository: TaskRepository
     private lateinit var mockDocumentChunkDao: DocumentChunkDao
     private lateinit var mockInferenceManager: InferenceManager
 
@@ -75,7 +75,7 @@ class ToolRegistryTest {
         mockImageGenerationManager = mock()
         mockAppActionExecutor = mock()
         mockSearchCacheDao = mock()
-        mockTaskDao = mock()
+        mockTaskRepository = mock()
         mockDocumentChunkDao = mock()
         mockInferenceManager = mock()
 
@@ -107,7 +107,7 @@ class ToolRegistryTest {
             OpenAppTool(mockAppActionExecutor),
             OpenDeepLinkTool(mockAppActionExecutor),
             GetAppCapabilitiesTool(mockAppActionExecutor),
-            TaskRegistryTool(mockTaskDao),
+            TaskRegistryTool(mockTaskRepository),
             LocalDocumentRagTool(mockContext, mockDocumentChunkDao),
             QueryCalendarTool(mockContext),
             AlarmTimerTool(mockAppActionExecutor),

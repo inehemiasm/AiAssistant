@@ -14,8 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.neo.chevere.R
-import com.neo.chevere.data.datasource.local.TaskEntity
-import com.neo.chevere.data.datasource.local.TaskStatus
+import com.neo.chevere.ui.tasks.taskUiModelFromProtocol
 import com.neo.chevere.ui.tasks.TaskRowItem
 
 /** Version the catalog ID when changing property contracts; AndroidX owns schema validation. */
@@ -51,13 +50,11 @@ internal object TaskChecklistComponent : A2uiComponent {
                 val isCompleted = row[completed] ?: false
                 key(taskId) {
                     TaskRowItem(
-                        task = TaskEntity(
+                        task = taskUiModelFromProtocol(
                             id = taskId, title = row[title].orEmpty(),
                             description = row[descriptionProp].orEmpty(),
-                            status = if (isCompleted) TaskStatus.COMPLETED else TaskStatus.PENDING,
-                            createdAt = 0
+                            completed = isCompleted, enabled = row[enabled] == true
                         ),
-                        enabled = row[enabled] == true,
                         onToggleStatus = {
                             dispatchAction(mapOf("event" to mapOf(
                                 "name" to SET_TASK_COMPLETED,

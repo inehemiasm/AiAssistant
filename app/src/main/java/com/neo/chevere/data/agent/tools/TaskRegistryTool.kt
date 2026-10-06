@@ -3,15 +3,14 @@ package com.neo.chevere.data.agent.tools
 import com.neo.chevere.data.agent.ui.AgentUiEnvelope
 import com.neo.chevere.data.agent.AgentTool
 import com.neo.chevere.data.agent.ToolResult
-import com.neo.chevere.data.datasource.local.TaskDao
-import com.neo.chevere.data.datasource.local.TaskEntity
-import com.neo.chevere.data.datasource.local.TaskStatus
+import com.neo.chevere.domain.TaskRepository
+import com.neo.chevere.domain.TaskStatus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 class TaskRegistryTool @Inject constructor(
-    private val taskDao: TaskDao
+    private val taskRepository: TaskRepository
 ) : AgentTool {
     override val name: String = "task_registry"
     override val description: String =
@@ -26,13 +25,13 @@ class TaskRegistryTool @Inject constructor(
             "create" -> {
                 val title = args["title"]?.trim() ?: return@withContext ToolResult.Error("Missing 'title' argument for create action")
                 val desc = args["description"]?.trim().orEmpty()
-                val task = TaskEntity(title = title, description = desc)
-                val newId = taskDao.insertTask(task)
+                if (title.isBlank()) return@withContext ToolResult.Error("Task title cannot be empty")
+                val newId = taskRepository.createTask(title, desc)
                 ToolResult.Success("Task created successfully with ID: $newId and title: '$title'.")
             }
 
             "list" -> {
-                val tasks = taskDao.getAllTasks()
+                val tasks = taskRepository.getTasks()
                 val visibleTasks = tasks.take(AgentUiEnvelope.MAX_TASKS)
                 val summary = if (tasks.isEmpty()) "No tasks found in the list." else {
                     val heading = if (tasks.size > visibleTasks.size) {
@@ -48,7 +47,7 @@ class TaskRegistryTool @Inject constructor(
             "update" -> {
                 val idStr = args["id"]?.trim() ?: return@withContext ToolResult.Error("Missing task 'id' argument for update action")
                 val id = idStr.toIntOrNull() ?: return@withContext ToolResult.Error("Invalid 'id' format (must be numeric)")
-                val task = taskDao.getTaskById(id) ?: return@withContext ToolResult.Error("Task with ID $id not found")
+                val task = taskRepository.getTask(id) ?: return@withContext ToolResult.Error("Task with ID $id not found")
 
                 val newTitle = args["title"]?.trim() ?: task.title
                 val newDesc = args["description"]?.trim() ?: task.description
@@ -64,16 +63,16 @@ class TaskRegistryTool @Inject constructor(
                 }
 
                 val updatedTask = task.copy(title = newTitle, description = newDesc, status = newStatus)
-                taskDao.updateTask(updatedTask)
+                taskRepository.updateTask(updatedTask)
                 ToolResult.Success("Task $id updated successfully to: [${updatedTask.status}] ${updatedTask.title}.")
             }
 
             "delete" -> {
                 val idStr = args["id"]?.trim() ?: return@withContext ToolResult.Error("Missing task 'id' argument for delete action")
                 val id = idStr.toIntOrNull() ?: return@withContext ToolResult.Error("Invalid 'id' format (must be numeric)")
-                val task = taskDao.getTaskById(id) ?: return@withContext ToolResult.Error("Task with ID $id not found")
+                val task = taskRepository.getTask(id) ?: return@withContext ToolResult.Error("Task with ID $id not found")
 
-                taskDao.deleteTask(id)
+                taskRepository.deleteTask(id)
                 ToolResult.Success("Task $id ('${task.title}') deleted successfully.")
             }
 

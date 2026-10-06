@@ -1,6 +1,9 @@
 package com.neo.chevere.ui.chat
 
 import com.neo.chevere.ui.chat.a2ui.TaskChecklistData
+import com.neo.chevere.ui.chat.a2ui.TaskChecklistUiModel
+import com.neo.chevere.ui.chat.a2ui.toUiModel
+import com.neo.chevere.domain.AgentUiContent
 import android.net.Uri
 import com.neo.chevere.core.Constants
 import com.neo.chevere.core.UiEffect
@@ -64,6 +67,13 @@ data class ChatState(
     val suggestions: List<String> = emptyList(),
     val taskChecklistData: TaskChecklistData = TaskChecklistData.Loading
 ) : UiState {
+    /** Maps structured domain message content to renderer-facing presentation metadata. */
+    val taskChecklists: Map<Int, TaskChecklistUiModel>
+        get() = messages.mapIndexedNotNull { index, message ->
+            val content = message.agentUiContent as? AgentUiContent.TaskChecklist
+            if (!message.isUser && content != null) index to content.toUiModel() else null
+        }.toMap()
+
     val isReady: Boolean get() = runtimeState is RuntimeState.Ready
 
     val isLoading: Boolean

@@ -1,8 +1,9 @@
 package com.neo.chevere.ui.chat
 
-import com.neo.chevere.data.agent.ui.AgentUiEnvelope
-import com.neo.chevere.data.datasource.local.TaskDao
-import com.neo.chevere.data.datasource.local.TaskStatus
+import com.neo.chevere.domain.AssistantResponse
+import com.neo.chevere.domain.TaskRepository
+import com.neo.chevere.domain.TaskStatus
+import com.neo.chevere.ui.tasks.toUiModel
 import com.neo.chevere.domain.AgentUiContent
 import com.neo.chevere.ui.chat.a2ui.TaskChecklistData
 import kotlinx.coroutines.flow.catch
@@ -71,7 +72,7 @@ class ChatViewModel @Inject constructor(
     private val telemetry: AppTelemetry,
     private val voiceInputManager: VoiceInputManager,
     private val chatHistoryRepository: ChatHistoryRepository,
-    private val taskDao: TaskDao
+    private val taskRepository: TaskRepository
 ) : BaseViewModel<ChatState, ChatIntent, ChatEffect>(application, ChatState()) {
 
     private val explicitImagePromptPolicy = ExplicitImagePromptPolicy()
@@ -113,13 +114,13 @@ class ChatViewModel @Inject constructor(
         // 7. Observe history sessions for the bottom sheet
         observeHistorySessions()
         viewModelScope.launch {
-            taskDao.getAllTasksFlow().catch { error ->
+            taskRepository.observeTasks().catch { error ->
                 if (error is CancellationException) throw error
                 setState { copy(taskChecklistData = TaskChecklistData.Unavailable) }
             }.collect { tasks ->
                 setState {
                     val pending = (taskChecklistData as? TaskChecklistData.Ready)?.updatingIds.orEmpty()
-                    copy(taskChecklistData = TaskChecklistData.Ready(tasks, pending))
+                    copy(taskChecklistData = TaskChecklistData.Ready(tasks.map { it.toUiModel() }).withUpdatingIds(pending))
                 }
             }
         }
@@ -862,9 +863,9 @@ class ChatViewModel @Inject constructor(
     private suspend fun processAgentTurn(
         hasImage: Boolean,
         inputText: String,
-        action: suspend () -> Result<String>
+        action: suspend () -> Result<AssistantResponse>
     ) {
-        var result: Result<String>? = null
+        var result: Result<AssistantResponse>? = null
         val time = measureTimeMillis {
             result = try {
                 action()
@@ -877,7 +878,7 @@ class ChatViewModel @Inject constructor(
         val currentAgentState = repository.agentState.value
         repository.resetAgentState()
 
-        val responseText = result
+        val response = result
             ?.onSuccess {
                 telemetry.logChatTurnFinished(hasImage, success = true, durationMs = time)
             }
@@ -927,15 +928,15 @@ class ChatViewModel @Inject constructor(
                 return
             }
 
-        val uiPayload = AgentUiEnvelope.decode(responseText)
+        val responseText = response.text
         val imagePayload = parseGeneratedImagePayload(responseText)
         val aiMsg = ChatMessage(
-            text = imagePayload?.caption ?: AgentUiEnvelope.displayText(responseText),
-            agentUiContent = uiPayload?.checklist,
+            text = imagePayload?.caption ?: responseText,
+            agentUiContent = response.agentUiContent,
             isUser = false,
             inferenceTimeMs = time,
             inputTokenCount = estimateTokenCount(inputText),
-            outputTokenCount = estimateTokenCount(imagePayload?.caption ?: AgentUiEnvelope.displayText(responseText)),
+            outputTokenCount = estimateTokenCount(imagePayload?.caption ?: responseText),
             imageUri = imagePayload?.imageUri,
             modelName = currentState.selectedModel.replace(
                 Constants.ModelFiles.LITERTLM_EXTENSION,
@@ -958,12 +959,10 @@ class ChatViewModel @Inject constructor(
         if (intent.taskId !in surface.taskIds) return
         val data = currentState.taskChecklistData as? TaskChecklistData.Ready ?: return
         if (intent.taskId in data.updatingIds) return
-        setState { copy(taskChecklistData = data.copy(updatingIds = data.updatingIds + intent.taskId)) }
+        setState { copy(taskChecklistData = data.withUpdatingIds(data.updatingIds + intent.taskId)) }
         try {
-            withContext(dispatcherProvider.io) {
-                val status = if (intent.completed) TaskStatus.COMPLETED else TaskStatus.PENDING
-                taskDao.setTaskStatus(intent.taskId, status)
-            }
+            val status = if (intent.completed) TaskStatus.COMPLETED else TaskStatus.PENDING
+            taskRepository.setTaskStatus(intent.taskId, status)
         } catch (error: CancellationException) {
             throw error
         } catch (error: Exception) {
@@ -971,7 +970,7 @@ class ChatViewModel @Inject constructor(
         } finally {
             setState {
                 val latest = taskChecklistData as? TaskChecklistData.Ready
-                copy(taskChecklistData = latest?.copy(updatingIds = latest.updatingIds - intent.taskId)
+                copy(taskChecklistData = latest?.withUpdatingIds(latest.updatingIds - intent.taskId)
                     ?: taskChecklistData)
             }
         }
