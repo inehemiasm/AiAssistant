@@ -67,6 +67,16 @@ class AgentOrchestratorTest {
     }
 
     @Test
+    fun locationPermissionResultPropagatesForChatPermissionDialog() = runTest {
+        whenever(mockWeatherTool.execute(any())).doReturn(ToolResult.Error("LOCATION_PERMISSION_REQUIRED"))
+        whenever(mockInferenceManager.generateStream(any())).doReturn(
+            flowOf(InferenceResult.Success("[TOOL_CALL: get_weather, location=current]"))
+        )
+        val result = orchestrator.processUserRequest("How is the weather here?")
+        assertTrue(result.exceptionOrNull() is com.neo.chevere.domain.LocationPermissionException)
+    }
+
+    @Test
     fun processUserRequest_successFlow() = runTest {
         // Mock Tool Execution
         whenever(mockWeatherTool.execute(any())).doAnswer { invocation ->
