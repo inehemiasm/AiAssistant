@@ -14,6 +14,8 @@ import android.os.BatteryManager
 import android.os.Build
 import android.os.PowerManager
 import androidx.core.content.ContextCompat
+import com.neo.chevere.domain.AmbientLightRepository
+import com.neo.chevere.domain.AmbientLightReading
 import com.neo.chevere.core.MeasurementFormatter
 import com.neo.chevere.data.agent.AgentTool
 import com.neo.chevere.data.agent.ToolResult
@@ -49,7 +51,8 @@ import kotlin.math.sqrt
  * - Metal / Magnetic Detection (magnetic field strength in uT and proximity to metal/magnets)
  */
 class SensorsTool @Inject constructor(
-    @param:ApplicationContext private val context: Context
+    @param:ApplicationContext private val context: Context,
+    private val ambientLightRepository: AmbientLightRepository
 ) : AgentTool {
     override val name: String = "read_sensors"
     override val description: String = """
@@ -185,7 +188,8 @@ class SensorsTool @Inject constructor(
             return@withContext ToolResult.Error("MIC_PERMISSION_REQUIRED")
         }
 
-        val lightValue    = querySensorValue(Sensor.TYPE_LIGHT)
+        val lightReading = ambientLightRepository.readLight()
+        val lightValue = (lightReading as? AmbientLightReading.Available)?.lux
         val pressureValue = querySensorValue(Sensor.TYPE_PRESSURE)
         val ambientTemp   = querySensorValue(Sensor.TYPE_AMBIENT_TEMPERATURE)
         val batteryInfo   = getBatteryInfo()

@@ -75,10 +75,25 @@ class ChatRequestRouter @Inject constructor() {
         }
     }
 
+    /** Selects factual room-light requests, while leaving image questions, advice, and UI actions alone. */
+    fun isAmbientLightReadingRequest(prompt: String): Boolean {
+        val text = prompt.normalized().replace("’", "'").replace("how's", "how is").replace("hows ", "how is ")
+        if (isCapabilityOnlyQuestion(text)) return false
+        if (Regex("""\b(photo|image|picture|photograph|screen|display|flashlight)\b""").containsMatchIn(text)) return false
+        if (Regex("""\b(open|show|launch|navigate|improve|install|buy|recommend|explain)\b""").containsMatchIn(text)) return false
+        if (Regex("""^(what is|what's|define) ambient light\??$""").matches(text)) return false
+        return Regex("""\b(how is the light|ambient light|light levels?|room lighting)\b""").containsMatchIn(text) ||
+            (Regex("""\b(how (bright|dark)|is it (bright|dark))\b""").containsMatchIn(text) &&
+                Regex("""\b(room|here|environment|surroundings|it)\b""").containsMatchIn(text)) ||
+            (Regex("""\b(light|lighting)\b""").containsMatchIn(text) &&
+                Regex("""\b(room|here|environment|surroundings)\b""").containsMatchIn(text) &&
+                Regex("""\b(check|measure|read|how|what)\b""").containsMatchIn(text))
+    }
+
     private fun looksLikeSensorsRequest(text: String): Boolean {
         val hasSensorKeyword = ChatRoutingLexicon.sensorKeywords.any { it in text }
         val hasAmbientPhrase = ChatRoutingLexicon.ambientPhrases.any { it in text }
-        return hasSensorKeyword || hasAmbientPhrase
+        return isAmbientLightReadingRequest(text) || hasSensorKeyword || hasAmbientPhrase
     }
 
     private fun looksLikeTaskRegistryRequest(text: String): Boolean {

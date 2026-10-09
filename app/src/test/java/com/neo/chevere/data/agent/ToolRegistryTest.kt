@@ -97,7 +97,7 @@ class ToolRegistryTest {
             OpenMapsTool(mockAppActionExecutor),
             DraftEmailTool(mockAppActionExecutor),
             SearchContactsTool(mockContext),
-            SensorsTool(mockContext),
+            SensorsTool(mockContext, mock()),
             ReadLocalFileTool(mockContext),
             DeviceControlTool(mockAppActionExecutor),
             CreateCalendarEventTool(mockAppActionExecutor),

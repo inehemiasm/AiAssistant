@@ -11,6 +11,17 @@ class ChatRequestRouterTest {
     private val router = ChatRequestRouter()
 
     @Test
+    fun roomLightReadingsIncludeContractionsButExcludeAdviceAndPhotos() {
+        for (prompt in listOf("How’s the light in my room?", "How's the light?", "how is the light in the environment", "what is the lighting in here", "Check the light in my room", "how bright is the room")) {
+            assertTrue(prompt, router.isAmbientLightReadingRequest(prompt))
+            assertEquals(RoutingCategory.SENSORS, router.classifyRequest(prompt))
+        }
+        for (prompt in listOf("How bright is the Sun?", "How is the light in this photo?", "Improve the lighting in my room", "Open the light meter", "Can you detect ambient light?", "Explain ambient light")) {
+            assertFalse(prompt, router.isAmbientLightReadingRequest(prompt))
+        }
+    }
+
+    @Test
     fun capabilityOverview_returnsStaticResponseAndDoesNotUseAgent() {
         val prompt = "What can you do?"
 

@@ -60,6 +60,7 @@ class ChatRepositoryImplTest {
     private lateinit var installedModelRegistry: InstalledModelRegistry
     private lateinit var conversationContextManager: ConversationContextManager
     private lateinit var chatRequestRouter: ChatRequestRouter
+    private val ambientLightRepository = mock<com.neo.chevere.domain.AmbientLightRepository>()
     private lateinit var repository: ChatRepositoryImpl
 
     @Before
@@ -85,6 +86,7 @@ class ChatRepositoryImplTest {
             context = context,
             inferenceManager = inferenceManager,
             generateChatTurn = GenerateChatTurn(AndroidTextGenerationRuntime(inferenceManager, installedModelRegistry)),
+            ambientLightRepository = ambientLightRepository,
             modelCatalog = modelCatalog,
             downloadManager = downloadManager,
             agentOrchestrator = agentOrchestrator,
@@ -98,6 +100,32 @@ class ChatRepositoryImplTest {
                 override val default = testDispatcher
             }
         )
+    }
+
+    @Test
+    fun roomLightQuestionReadsHardwareWithoutAskingModelForImage() = runTest(testDispatcher) {
+        whenever(ambientLightRepository.readLight()).thenReturn(com.neo.chevere.domain.AmbientLightReading.Available(125.5f))
+        val answer = repository.sendMessage("How’s the light in my room?", null).getOrThrow().text
+        assertTrue(answer.contains("125.5 lux"))
+        assertTrue(answer.contains("at your phone"))
+        verify(inferenceManager, never()).generateStream(any())
+        verify(agentOrchestrator, never()).processUserRequest(any(), any(), any(), any())
+    }
+
+    @Test
+    fun missingLightSensorDoesNotRequestImageOrInventReading() = runTest(testDispatcher) {
+        whenever(ambientLightRepository.readLight()).thenReturn(com.neo.chevere.domain.AmbientLightReading.Unsupported)
+        val answer = repository.sendMessage("How is the light in my room?", null).getOrThrow().text
+        assertTrue(answer.contains("does not have an ambient light sensor"))
+        assertTrue(!answer.contains("lux") && !answer.contains("image"))
+    }
+
+    @Test
+    fun attachedRoomImageStillUsesVisionInsteadOfAmbientSensor() = runTest(testDispatcher) {
+        whenever(inferenceManager.isVisionSupported()).thenReturn(true)
+        whenever(inferenceManager.generateStream(any())).thenReturn(flowOf(InferenceResult.Success("Image lighting")))
+        assertEquals("Image lighting", repository.sendMessage("How is the light in my room?", Uri.parse("content://room/photo")).getOrThrow().text)
+        verify(ambientLightRepository, never()).readLight()
     }
 
     @Test

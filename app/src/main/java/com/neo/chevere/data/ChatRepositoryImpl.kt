@@ -17,6 +17,8 @@ import com.neo.chevere.data.download.WorkManagerModelDownloadManager
 import com.neo.chevere.data.inference.ImageGenerationManager
 import com.neo.chevere.data.inference.InferenceManager
 import com.neo.chevere.domain.AssistantResponse
+import com.neo.chevere.domain.AmbientLightRepository
+import com.neo.chevere.data.sensors.toChatSummary
 import com.neo.chevere.domain.ChatRepository
 import com.neo.chevere.data.agent.ui.AgentUiEnvelope
 import com.neo.chevere.domain.DownloadProgress
@@ -67,6 +69,7 @@ class ChatRepositoryImpl @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val inferenceManager: InferenceManager,
     private val generateChatTurn: GenerateChatTurn,
+    private val ambientLightRepository: AmbientLightRepository,
     private val modelCatalog: ModelCatalogDataSource,
     private val downloadManager: WorkManagerModelDownloadManager,
     private val agentOrchestrator: AgentOrchestrator,
@@ -164,6 +167,12 @@ class ChatRepositoryImpl @Inject constructor(
                 )
                 return Result.success(response)
             }
+        }
+
+        if (imageUri == null && chatRequestRouter.isAmbientLightReadingRequest(prompt)) {
+            val response = ambientLightRepository.readLight().toChatSummary()
+            conversationContextManager.recordExchange(prompt, imageUri = null, assistantResponse = response)
+            return Result.success(response)
         }
 
         val routingCategory = chatRequestRouter.classifyRequest(prompt)
