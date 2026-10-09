@@ -2,6 +2,10 @@ package com.neo.chevere.data
 
 import android.content.Context
 import android.net.Uri
+import com.neo.chevere.shared.chat.GenerateChatTurn
+import com.neo.chevere.shared.chat.ChatTurnUpdate
+import com.neo.chevere.shared.domain.MediaReference
+import com.neo.chevere.shared.inference.TextGenerationRequest
 import com.neo.chevere.core.Constants
 import com.neo.chevere.core.DispatcherProvider
 import com.neo.chevere.data.agent.AgentOrchestrator
@@ -62,6 +66,7 @@ private const val TAG = "ChatRepositoryImpl"
 class ChatRepositoryImpl @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val inferenceManager: InferenceManager,
+    private val generateChatTurn: GenerateChatTurn,
     private val modelCatalog: ModelCatalogDataSource,
     private val downloadManager: WorkManagerModelDownloadManager,
     private val agentOrchestrator: AgentOrchestrator,
@@ -198,39 +203,33 @@ class ChatRepositoryImpl @Inject constructor(
     }
 
     private suspend fun generateDirectChatResponse(prompt: String, imageUri: Uri?): Result<String> {
-        var contextualPrompt = ""
-        var lastResult: InferenceResult = InferenceResult.Failure("No output generated")
+        val contextualPrompt = buildDirectChatPrompt(prompt, imageUri)
+        var result: Result<String> = Result.failure(IllegalStateException("No output generated"))
         _directPartialResponse.value = ""
         val elapsedMs = measureTimeMillis {
-            contextualPrompt = buildDirectChatPrompt(prompt, imageUri)
-            inferenceManager.clearConversation()
-            inferenceManager.generateStream(InferenceRequest(contextualPrompt, imageUri)).collect { res ->
-                lastResult = res
-                if (res is InferenceResult.Success) {
-                    _directPartialResponse.value = res.text
+            try {
+                generateChatTurn(TextGenerationRequest(
+                    prompt = contextualPrompt,
+                    image = imageUri?.let { MediaReference.Uri(it.toString()) }
+                )).collect { update ->
+                    when (update) {
+                        is ChatTurnUpdate.Partial -> _directPartialResponse.value = update.text
+                        is ChatTurnUpdate.Completed -> result = Result.success(update.text)
+                        is ChatTurnUpdate.Failed -> result = Result.failure(Exception(update.failure.message))
+                    }
                 }
+            } finally {
+                _directPartialResponse.value = ""
             }
         }
-        _directPartialResponse.value = ""
         logDebug(
             "Direct chat turn completed in ${elapsedMs}ms. promptChars=${prompt.length}, contextChars=${contextualPrompt.length}, hasImage=${imageUri != null}"
         )
-
-        return when (val inferenceResult = lastResult) {
-            is InferenceResult.Success -> {
-                conversationContextManager.recordExchange(prompt, imageUri, inferenceResult.text)
-                triggerBackgroundSummarization()
-                Result.success(inferenceResult.text)
-            }
-
-            is InferenceResult.ImageSuccess -> Result.failure(
-                IllegalStateException("Image inference result is not supported in chat.")
-            )
-
-            is InferenceResult.Failure -> Result.failure(
-                inferenceResult.throwable ?: Exception(inferenceResult.message)
-            )
+        result.onSuccess { text ->
+            conversationContextManager.recordExchange(prompt, imageUri, text)
+            triggerBackgroundSummarization()
         }
+        return result
     }
 
     private fun buildDirectChatPrompt(prompt: String, imageUri: Uri?): String {

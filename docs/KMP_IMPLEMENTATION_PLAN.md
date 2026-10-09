@@ -16,7 +16,7 @@ This is an incremental migration. The Android application remains the production
 - [x] Add portable model, media, runtime-state, and text-generation contracts.
 - [x] Adapt Android's existing `InferenceManager` to the shared text runtime.
 - [ ] Create the Xcode `iosApp` entry point.
-- [ ] Move the first production vertical slice.
+- [x] Move Android direct-chat streaming orchestration into a shared use case.
 
 ## Batch history
 
@@ -34,7 +34,29 @@ Completed:
 
 No user-facing runtime behavior was changed. Existing chat code continues to call `InferenceManager` directly until the next vertical slice is migrated.
 
-Next batch: move the text-chat send/stream orchestration behind a shared use case, then make the existing Android `ChatRepositoryImpl` consume that shared use case.
+### Batch 2 — Android uses shared direct-chat orchestration
+
+`ChatRepositoryImpl` now invokes shared `GenerateChatTurn` through Hilt. The use
+case resets runtime history per turn, accumulates deltas, validates terminal
+completion, converts runtime errors to typed failures, and propagates cancellation.
+Android supplies the bounded prompt from `ConversationContextManager` and maps
+attachment URIs at the data boundary. Only completed turns enter conversation
+memory; partial text is cleared on success, failure, and cancellation.
+
+Attached images always take direct vision chat, including image-generation wording.
+Agent/tool orchestration, summarization, model management, storage, and Compose
+presentation remain Android implementations. The shared use case contains no
+Android, Hilt, or UI dependencies.
+
+Validation: 26 selected tests passed (7 shared tests and 19 Android repository /
+adapter tests), including bounded context, attachment routing, terminal failures,
+and cancellation cleanup. The debug APK built, installed, and launched on a
+connected Android device. An on-device model conversation and iOS compilation
+remain unverified.
+
+Next: provide an iOS runtime and app entry point, validate the framework on macOS,
+and migrate further portable workflows incrementally. No iOS runtime or working
+iOS application is delivered by this batch.
 
 ## Architectural decisions
 
