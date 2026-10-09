@@ -15,9 +15,11 @@ import com.neo.chevere.data.datasource.ModelCatalogDataSource
 import com.neo.chevere.data.datasource.RemoteModelDataSource
 import com.neo.chevere.data.inference.LlmEngineWrapper
 import com.neo.chevere.data.inference.RealLlmEngineWrapper
+import com.neo.chevere.data.inference.shared.AndroidTextGenerationRuntime
 import com.neo.chevere.data.telemetry.AppTelemetry
 import com.neo.chevere.data.telemetry.FirebaseAppTelemetry
 import com.neo.chevere.domain.ChatRepository
+import com.neo.chevere.shared.inference.TextGenerationRuntime
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -68,6 +70,12 @@ abstract class AppModule {
     abstract fun bindLlmEngineWrapper(
         realLlmEngineWrapper: RealLlmEngineWrapper
     ): LlmEngineWrapper
+
+    @Binds
+    @Singleton
+    abstract fun bindTextGenerationRuntime(
+        androidTextGenerationRuntime: AndroidTextGenerationRuntime
+    ): TextGenerationRuntime
 
     @Binds
     @Singleton
