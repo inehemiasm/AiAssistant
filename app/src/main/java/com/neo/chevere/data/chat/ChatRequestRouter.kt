@@ -29,10 +29,10 @@ enum class RoutingCategory {
 class ChatRequestRouter @Inject constructor() {
 
     fun buildDirectChatPrompt(contextualPrompt: String): String =
-        "$DIRECT_CHAT_CAPABILITY_CONTEXT\n\n$contextualPrompt"
+        "$DIRECT_CHAT_CAPABILITY_CONTEXT\n${com.neo.chevere.core.NumericResponsePolicy.INSTRUCTION}\n\n$contextualPrompt"
 
     fun buildVisionChatPrompt(contextualPrompt: String): String =
-        "$VISION_CHAT_CAPABILITY_CONTEXT\n\n$contextualPrompt"
+        "$VISION_CHAT_CAPABILITY_CONTEXT\n${com.neo.chevere.core.NumericResponsePolicy.INSTRUCTION}\n\n$contextualPrompt"
 
     fun classifyRequest(prompt: String): RoutingCategory {
         val normalized = prompt.normalized()

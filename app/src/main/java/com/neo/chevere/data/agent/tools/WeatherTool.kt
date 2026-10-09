@@ -1,6 +1,6 @@
 package com.neo.chevere.data.agent.tools
 
-import com.neo.chevere.core.NumberUtils
+import com.neo.chevere.core.MeasurementFormatter
 import com.neo.chevere.core.PiiUtils
 import com.neo.chevere.data.PreferenceManager
 import com.neo.chevere.data.agent.AgentTool
@@ -117,17 +117,12 @@ class WeatherTool @Inject constructor(
     }
 
     private fun formatWeatherValue(value: Double?, unitLabel: String): String {
-        if (value == null) return "N/A"
-        val rounded = Math.round(value).toInt()
-        val words = NumberUtils.toWords(rounded)
-        val expandedUnit = when (unitLabel) {
-            "F" -> "degrees Fahrenheit"
-            "C" -> "degrees Celsius"
-            "mph" -> "miles per hour"
-            "km/h" -> "kilometers per hour"
+        val unit = when (unitLabel) {
+            "F" -> "°F"
+            "C" -> "°C"
             else -> unitLabel
         }
-        return "$words $expandedUnit"
+        return MeasurementFormatter.measurement(value, unit, decimalPlaces = 0)
     }
 
     private fun isCurrentLocationRequest(location: String): Boolean {
