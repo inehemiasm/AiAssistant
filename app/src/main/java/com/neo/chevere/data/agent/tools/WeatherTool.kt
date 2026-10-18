@@ -1,11 +1,12 @@
 package com.neo.chevere.data.agent.tools
 
-import com.neo.chevere.core.NumberUtils
+import com.neo.chevere.core.MeasurementFormatter
 import com.neo.chevere.core.PiiUtils
 import com.neo.chevere.data.PreferenceManager
 import com.neo.chevere.data.agent.AgentTool
 import com.neo.chevere.data.agent.ToolResult
 import com.neo.chevere.data.location.LocationProvider
+import com.neo.chevere.data.location.LocationResolution
 import com.neo.chevere.domain.WeatherUnitSystem
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -45,13 +46,22 @@ class WeatherTool @Inject constructor(
             val lat: Double
             val lon: Double
             val cityName: String
+            var locationNote: String? = null
 
             if (isCurrent) {
-                if (!locationProvider.isPermissionGranted()) {
-                    return ToolResult.Error("LOCATION_PERMISSION_REQUIRED")
+                val resolution = locationProvider.resolveLocation()
+                val fix = when (resolution) {
+                    LocationResolution.PermissionRequired -> return ToolResult.Error("LOCATION_PERMISSION_REQUIRED")
+                    LocationResolution.Unavailable -> return ToolResult.Error(
+                        "Could not retrieve your location and no recent cached location is available. Enable location services or specify a city name."
+                    )
+                    is LocationResolution.Available -> resolution
                 }
-                val location = locationProvider.getCurrentLocation()
-                    ?: return ToolResult.Error("Could not retrieve current location. Please ensure location services are enabled.")
+                val location = fix.location
+                if (fix.cached) {
+                    val ageMinutes = ((System.currentTimeMillis() - location.time) / 60_000).coerceAtLeast(1)
+                    locationNote = "Location: cached fix from $ageMinutes min ago; weather may be for your previous location."
+                }
                 lat = location.latitude
                 lon = location.longitude
                 cityName = try {
@@ -98,6 +108,7 @@ class WeatherTool @Inject constructor(
             val current = weatherResponse.current_weather
             val result = buildString {
                 append("Current weather in $cityName:\n")
+                locationNote?.let { append("$it\n") }
                 append("- Temperature: ${formatWeatherValue(current.temperature, units.temperatureLabel)}\n")
                 append("- Condition: ${getWeatherCondition(current.weathercode)}\n")
                 append("- Wind Speed: ${formatWeatherValue(current.windspeed, units.windSpeedLabel)}\n")
@@ -110,6 +121,8 @@ class WeatherTool @Inject constructor(
             }
 
             ToolResult.Success(result)
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
         } catch (e: Exception) {
             Timber.tag(TAG).e(e, "Failed to get weather for $rawLocation")
             ToolResult.Error("Failed to fetch weather: ${e.message}")
@@ -117,17 +130,12 @@ class WeatherTool @Inject constructor(
     }
 
     private fun formatWeatherValue(value: Double?, unitLabel: String): String {
-        if (value == null) return "N/A"
-        val rounded = Math.round(value).toInt()
-        val words = NumberUtils.toWords(rounded)
-        val expandedUnit = when (unitLabel) {
-            "F" -> "degrees Fahrenheit"
-            "C" -> "degrees Celsius"
-            "mph" -> "miles per hour"
-            "km/h" -> "kilometers per hour"
+        val unit = when (unitLabel) {
+            "F" -> "°F"
+            "C" -> "°C"
             else -> unitLabel
         }
-        return "$words $expandedUnit"
+        return MeasurementFormatter.measurement(value, unit, decimalPlaces = 0)
     }
 
     private fun isCurrentLocationRequest(location: String): Boolean {

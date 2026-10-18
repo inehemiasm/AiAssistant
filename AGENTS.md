@@ -32,7 +32,10 @@ The project is an Android application using Clean Architecture and MVI, enhanced
 ### Modules
 
 - `:app`: Main Android application module.
+- `:shared`: Kotlin Multiplatform shared chat orchestration, domain models, and runtime abstractions.
 - `:ui-designsystem`: Shared design system, theme, typography, and reusable components.
+- `:image-generation`: Standalone Android library module containing `OnnxLocalDiffusionEngine` (`onnxruntime-android` / `onnxruntime-extensions-android`). Currently decoupled from `:app` so local image generation is disabled by default and can be re-enabled in the future.
+- `:baselineprofile`: Baseline profile generator module.
 
 ### Package Root
 
@@ -55,11 +58,10 @@ Path: `app/src/main/java/com/neo/chevere/data/`
   - `AgentOrchestrator`: Reason-Act-Observe loop.
   - `ToolRegistry`: Hilt-provided set of `AgentTool` implementations.
   - **Available Agent Tools:**
-    - `ImageGenerationTool` (`generate_image`): Agent-facing Stable Diffusion tool. Gemma improves prompts before calling it.
-    - `WebSearchTool` (`search_web`): Online web search.
+    - `WebSearchTool` (`web_search`): Online web search using `BuildConfig.WEB_SEARCH_PROXY_URL` when configured, `BuildConfig.SERPER_API_KEY` in debug builds, and key-less DuckDuckGo Instant Answer fallback in release builds.
     - `WeatherTool` (`get_weather`): Local and global weather info.
     - `SearchContactsTool` (`search_contacts`): Resolves local device contact emails by name.
-    - `TaskRegistryTool` (`task_registry`): Manages the local to-do checklist database (create, list, update, delete).
+    - `TaskRegistryTool` (`task_registry`): Manages the local to-do checklist database (create, list, update, delete) and emits A2UI task checklist envelopes.
     - `ExtractTasksTool` (`extract_tasks`): Extracts tasks from chat transcripts.
     - `SummarizeTextTool` (`summarize_text`): Compacts blocks of text locally.
     - `DeviceControlTool` (`control_device`): Modifies device settings (e.g., volume, display/DND shortcuts).
@@ -74,10 +76,12 @@ Path: `app/src/main/java/com/neo/chevere/data/`
       - `list_apps` / `launch_app` / `launch_app_home_screen` (`OpenAppTool`)
       - `perform_app_action` (`OpenDeepLinkTool` for specific app routes like Squarespace)
       - `get_app_capabilities` (scans intent/filter capacities of apps)
+    - `ImageGenerationTool` (`generate_image`): Retained in codebase for when `:image-generation` is re-enabled; currently omitted from `AgentModule.provideAgentTools`.
+- **AI Content Reporting** (`data/report/`):
+  - `AiContentReportRepository`: Scrubs PII via `PiiUtils.scrub`, logs `ai_content_reported` to `AppTelemetry`, and writes reports to Firestore collection `ai_content_reports`.
 - **Inference runtime** (`data/inference/`):
   - `InferenceManager`: LiteRT-LM model loading and chat inference.
-  - `ImageGenerationManager`: Selects compatible installed diffusion models.
-  - `OnnxLocalDiffusionEngine`: Runs Stable Diffusion generation using extracted ONNX files.
+  - `ImageGenerationManager` & `ImageGenerationEngineFactory`: Stubbed to return an informational error while `:image-generation` is decoupled from `:app`.
 - **Context management** (`data/context/`):
   - `ConversationContextManager`: Rolling context memory compressor for constrained on-device windows.
 - **Data sources** (`data/datasource/`):
@@ -98,25 +102,20 @@ Path: `app/src/main/java/com/neo/chevere/ui/`
 
 - **Chat Screen** (`ui/chat/`):
   - Chat MVI state lives in `ChatContract.kt`.
-  - `ChatTopBar` is brand/capability focused. It shows `CHEVERE AI` with `CHAT` and `IMAGE` readiness chips, not the selected model filename.
-  - Attached images must route through chat/vision inference. Do not route image attachments to the text-to-image backend unless the user explicitly invokes an image-generation flow without an attachment.
+  - `ChatTopBar` is brand/capability focused. It shows `CHEVERE AI` with the `CHAT` readiness chip (and hides `IMAGE` while image generation is disabled).
+  - Attached images must route through chat/vision inference.
   - Image-only sends default to `Describe this image.`.
   - Chat context should go through `ConversationContextManager`. Do not add unbounded message replay directly into LiteRT conversations.
-  - Assistant message actions should use share semantics. Do not reintroduce report/flag controls until a real reporting backend exists.
-  - `SendState.GeneratingImage` drives `GENERATING IMAGE...` UI while slash commands run.
-  - Slash commands `/image`, `/img`, and `/imagine` bypass Gemma and call `ChatRepository.generateImage`.
-  - If no healthy image-generation model is installed, image requests should show `ChatEffect.ShowImageModelDownloadPrompt` instead of falling through to a tool error.
-  - Explicit image requests show `AgeVerificationDialog` first.
-  - Explicit generated images are masked by default using `ChatMessage.isExplicitImage` and `ChatMessage.isImageMasked`.
+  - Assistant message actions include **Share** (`Icons.Default.Share`) and **Report/Flag** (`Icons.Default.Flag` → `ReportAiContentDialog` → `AiContentReportRepository`).
   - Sensor slash commands are silent navigation commands and should remove the just-appended user message before emitting `ChatEffect.NavigateToRadar`.
 - **Marketplace Screen** (`ui/marketplace/`):
   - Marketplace state observes both Room-installed models and WorkManager download progress.
-  - Marketplace UI should keep chat/vision models and image-generation models visually separated. Chat models can be selected as the active LLM; image models are used automatically by the image backend.
+  - Currently displays Chat & Vision models (the Image Generation tab is hidden while `:image-generation` is decoupled).
 - **Tasks Screen** (`ui/tasks/`):
   - Displays pending and completed tasks.
-  - Supports adding tasks through an `AddTaskDialog`, toggling completion, and deletion. Integrated with `TaskRegistryTool` at the data layer.
+  - Supports adding tasks through an `AddTaskDialog`, toggling completion, and deletion. Integrated with `TaskRegistryTool` and inline chat A2UI checklists.
 - **Settings & Benchmark** (`ui/settings/`):
-  - Settings Safety & Privacy content remains expandable and factual: local processing, release controls, user-controlled sharing, and local storage.
+  - Settings Safety & Privacy content remains expandable and factual: local processing, release controls, user-controlled sharing & reporting, and local storage.
   - **Benchmark Screen**: Runs local inference speed tests. Measures engine warmup time, Time-To-First-Token (TTFT), generation throughput (TPS), and logs physical hardware metrics (CPU/GPU acceleration, available RAM).
 
 ## Model Management Rules

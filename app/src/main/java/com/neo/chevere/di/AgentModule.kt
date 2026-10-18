@@ -138,15 +138,6 @@ abstract class AgentModule {
 
         @Provides
         @IntoSet
-        fun provideImageGenerationTool(
-            imageGenerationManager: ImageGenerationManager,
-            preferenceManager: PreferenceManager
-        ): AgentTool {
-            return ImageGenerationTool(imageGenerationManager, preferenceManager)
-        }
-
-        @Provides
-        @IntoSet
         fun provideRuntimeStatusTool(
             preferenceManager: PreferenceManager
         ): AgentTool {
@@ -192,8 +183,9 @@ abstract class AgentModule {
         @Provides
         @IntoSet
         fun provideSensorsTool(
-            @ApplicationContext context: Context
-        ): AgentTool = SensorsTool(context)
+            @ApplicationContext context: Context,
+            ambientLightRepository: com.neo.chevere.domain.AmbientLightRepository
+        ): AgentTool = SensorsTool(context, ambientLightRepository)
 
         @Provides
         @IntoSet

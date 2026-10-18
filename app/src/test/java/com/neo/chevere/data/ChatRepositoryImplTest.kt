@@ -2,6 +2,8 @@ package com.neo.chevere.data
 
 import android.content.Context
 import android.net.Uri
+import com.neo.chevere.shared.chat.GenerateChatTurn
+import com.neo.chevere.data.inference.shared.AndroidTextGenerationRuntime
 import com.neo.chevere.core.DispatcherProvider
 import com.neo.chevere.data.agent.AgentOrchestrator
 import com.neo.chevere.data.agent.AgentState
@@ -23,6 +25,7 @@ import com.neo.chevere.domain.ModelSource
 import com.neo.chevere.domain.ModelTaskType
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -41,6 +44,8 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.io.File
 
+@org.junit.runner.RunWith(org.robolectric.RobolectricTestRunner::class)
+@org.robolectric.annotation.Config(sdk = [34])
 @OptIn(ExperimentalCoroutinesApi::class)
 class ChatRepositoryImplTest {
 
@@ -55,6 +60,7 @@ class ChatRepositoryImplTest {
     private lateinit var installedModelRegistry: InstalledModelRegistry
     private lateinit var conversationContextManager: ConversationContextManager
     private lateinit var chatRequestRouter: ChatRequestRouter
+    private val ambientLightRepository = mock<com.neo.chevere.domain.AmbientLightRepository>()
     private lateinit var repository: ChatRepositoryImpl
 
     @Before
@@ -62,7 +68,9 @@ class ChatRepositoryImplTest {
         context = mock {
             on { filesDir } doReturn File("build/test-files")
         }
-        inferenceManager = mock()
+        inferenceManager = mock {
+            on { initStatus } doReturn MutableStateFlow(com.neo.chevere.domain.InitializationStatus.Uninitialized)
+        }
         modelCatalog = mock()
         downloadManager = mock()
         imageGenerationManager = mock()
@@ -77,6 +85,8 @@ class ChatRepositoryImplTest {
         repository = ChatRepositoryImpl(
             context = context,
             inferenceManager = inferenceManager,
+            generateChatTurn = GenerateChatTurn(AndroidTextGenerationRuntime(inferenceManager, installedModelRegistry)),
+            ambientLightRepository = ambientLightRepository,
             modelCatalog = modelCatalog,
             downloadManager = downloadManager,
             agentOrchestrator = agentOrchestrator,
@@ -93,9 +103,35 @@ class ChatRepositoryImplTest {
     }
 
     @Test
+    fun roomLightQuestionReadsHardwareWithoutAskingModelForImage() = runTest(testDispatcher) {
+        whenever(ambientLightRepository.readLight()).thenReturn(com.neo.chevere.domain.AmbientLightReading.Available(125.5f))
+        val answer = repository.sendMessage("How’s the light in my room?", null).getOrThrow().text
+        assertTrue(answer.contains("125.5 lux"))
+        assertTrue(answer.contains("at your phone"))
+        verify(inferenceManager, never()).generateStream(any())
+        verify(agentOrchestrator, never()).processUserRequest(any(), any(), any(), any())
+    }
+
+    @Test
+    fun missingLightSensorDoesNotRequestImageOrInventReading() = runTest(testDispatcher) {
+        whenever(ambientLightRepository.readLight()).thenReturn(com.neo.chevere.domain.AmbientLightReading.Unsupported)
+        val answer = repository.sendMessage("How is the light in my room?", null).getOrThrow().text
+        assertTrue(answer.contains("does not have an ambient light sensor"))
+        assertTrue(!answer.contains("lux") && !answer.contains("image"))
+    }
+
+    @Test
+    fun attachedRoomImageStillUsesVisionInsteadOfAmbientSensor() = runTest(testDispatcher) {
+        whenever(inferenceManager.isVisionSupported()).thenReturn(true)
+        whenever(inferenceManager.generateStream(any())).thenReturn(flowOf(InferenceResult.Success("Image lighting")))
+        assertEquals("Image lighting", repository.sendMessage("How is the light in my room?", Uri.parse("content://room/photo")).getOrThrow().text)
+        verify(ambientLightRepository, never()).readLight()
+    }
+
+    @Test
     fun sendMessage_whenVisionNotSupported_returnsFailure() = runTest(testDispatcher) {
         whenever(inferenceManager.isVisionSupported()).doReturn(false)
-        val mockUri = mock<Uri>()
+        val mockUri = Uri.parse("content://test/attached-image")
 
         val result = repository.sendMessage("test", mockUri)
 
@@ -235,7 +271,7 @@ class ChatRepositoryImplTest {
     @Test
     fun sendMessage_withAttachmentAlwaysUsesVisionDirectInference() = runTest(testDispatcher) {
         val prompt = "generate an image based on this image"
-        val mockUri = mock<Uri>()
+        val mockUri = Uri.parse("content://test/attached-image")
         whenever(inferenceManager.isVisionSupported()).doReturn(true)
         whenever(inferenceManager.generateStream(any())).doReturn(flowOf(InferenceResult.Success("I can describe the attached image.")))
 
@@ -248,6 +284,44 @@ class ChatRepositoryImplTest {
                     this.prompt.contains("Do not generate")
         })
         assertEquals("I can describe the attached image.", result.getOrNull()?.text)
+    }
+
+    @Test
+    fun sharedChatFailureDoesNotRecordPartialOutput() = runTest(testDispatcher) {
+        whenever(inferenceManager.generateStream(any())).doReturn(flowOf(
+            InferenceResult.Success("unfinished answer"), InferenceResult.Failure("runtime failed")
+        ))
+        val result = repository.sendMessage("hello", null)
+        assertTrue(result.isFailure)
+        assertEquals("runtime failed", result.exceptionOrNull()?.message)
+        assertTrue(!conversationContextManager.buildContextPrefix().contains("unfinished answer"))
+        assertEquals("", repository.activePartialResponse.first())
+    }
+
+    @Test
+    fun sharedChatReceivesBoundedContextAndRecordsCompletedTurn() = runTest(testDispatcher) {
+        conversationContextManager.recordExchange("My name is Alex", null, "Hello Alex")
+        whenever(inferenceManager.generateStream(any())).doReturn(flowOf(
+            InferenceResult.Success("Hello"), InferenceResult.Success("Hello again")
+        ))
+        assertEquals("Hello again", repository.sendMessage("hello", null).getOrNull()?.text)
+        verify(inferenceManager).generateStream(argThat { prompt.contains("My name is Alex") })
+        assertTrue(conversationContextManager.buildContextPrefix().contains("Hello again"))
+    }
+
+    @Test
+    fun cancellingSharedChatClearsPartialTextWithoutRecordingTurn() = runTest(testDispatcher) {
+        whenever(inferenceManager.generateStream(any())).doReturn(kotlinx.coroutines.flow.flow {
+            emit(InferenceResult.Success("unfinished"))
+            kotlinx.coroutines.awaitCancellation()
+        })
+        val job = launch { repository.sendMessage("hello", null) }
+        testScheduler.runCurrent()
+        job.cancel()
+        job.join()
+        assertTrue(job.isCancelled)
+        assertEquals("", repository.activePartialResponse.first())
+        assertTrue(!conversationContextManager.buildContextPrefix().contains("unfinished"))
     }
 
     @Test

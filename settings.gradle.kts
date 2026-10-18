@@ -23,4 +23,6 @@ rootProject.name = "ChevereAI"
 include(":app")
 include(":ui-designsystem")
 include(":baselineprofile")
+include(":shared")
+include(":image-generation")
 

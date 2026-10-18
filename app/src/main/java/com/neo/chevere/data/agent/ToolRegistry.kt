@@ -64,6 +64,7 @@ class ToolRegistry @Inject constructor(
             append("4. Call one tool only when the current request requires that tool's external capability.\n")
             append("5. Make sensible assumptions to fulfill requests immediately unless permission or safety checks are required.\n")
             append("6. After an observation, return a concise final answer for the user. Do not expose tool syntax in the final answer.\n")
+            append(com.neo.chevere.core.NumericResponsePolicy.INSTRUCTION)
             append("\n\nTools:\n")
             val includedToolNames = includedTools.map { it.name }.toSet()
             includedTools.forEach { tool ->

@@ -32,11 +32,15 @@ Chevere AI is an Android app using Clean Architecture, MVI, Room, Hilt, LiteRT-L
 ### Main Areas
 
 - `:app`: application code.
+- `:shared`: Kotlin Multiplatform shared chat orchestration, domain models, and runtime abstractions.
 - `:ui-designsystem`: shared theme/components.
+- `:image-generation`: standalone ONNX Runtime Android diffusion module (`OnnxLocalDiffusionEngine`), currently decoupled from `:app`.
+- `:baselineprofile`: Baseline profile generator module.
 - `domain/`: contracts, shared models, explicit prompt policy, model/runtime enums.
 - `data/agent/`: Reason-Act-Observe loop (`AgentOrchestrator`) and Hilt-provided tool registry.
-  - **Available Agent Tools**: `generate_image`, `search_web`, `get_weather`, `search_contacts`, `task_registry` (CRUD on database), `extract_tasks`, `summarize_text`, `control_device` (media/settings), `model_registry`, `read_sensors` (ambient temperature, sound SPL, light, pressure, battery, thermals, gyroscope, accelerometer, compass heading, proximity, spirit level flatness, metal detector, device postures), and `AppActionTools` (`copy_to_clipboard`, `share_text`, `open_url`, `open_maps`, `draft_email`, `create_calendar_event`, `list_apps`, `launch_app`, `launch_app_home_screen`, `perform_app_action`, `get_app_capabilities`).
-- `data/inference/`: LiteRT-LM chat and local image-generation runtimes.
+  - **Available Agent Tools**: `web_search` (proxy / debug Serper / key-less DuckDuckGo fallback), `get_weather`, `search_contacts`, `task_registry` (CRUD on database + A2UI checklist envelopes), `extract_tasks`, `summarize_text`, `control_device` (media/settings), `model_registry`, `read_sensors` (ambient temperature, sound SPL, light, pressure, battery, thermals, gyroscope, accelerometer, compass heading, proximity, spirit level flatness, metal detector, device postures), and `AppActionTools` (`copy_to_clipboard`, `share_text`, `open_url`, `open_maps`, `draft_email`, `create_calendar_event`, `list_apps`, `launch_app`, `launch_app_home_screen`, `perform_app_action`, `get_app_capabilities`). (`generate_image` is omitted while `:image-generation` is decoupled).
+- `data/report/`: `AiContentReportRepository` for PII-scrubbed user reports of AI responses (`ai_content_reports` in Firestore + `ai_content_reported` telemetry event).
+- `data/inference/`: LiteRT-LM chat runtime and stubbed `ImageGenerationEngineFactory`.
 - `data/context/`: compact conversation memory and prompt slicing for small on-device models.
 - `data/download/`: WorkManager download orchestration.
 - `data/datasource/local/`: Room database with entities:
@@ -44,38 +48,29 @@ Chevere AI is an Android app using Clean Architecture, MVI, Room, Hilt, LiteRT-L
   - `TaskEntity`: local to-do items.
   - `SearchCacheEntity`: cached web queries.
 - `data/datasource/`: Firestore and Hugging Face model catalogs. Kaggle discovery was removed.
-- `ui/chat/`: chat screen, capability-focused top bar, multimodal attachments, slash commands, image-model download prompt, age verification, explicit image masking, response sharing.
-- `ui/marketplace/`: grouped chat/image model discovery, download, selection, and deletion UI.
+- `ui/chat/`: chat screen, capability-focused top bar (`CHAT` chip), multimodal attachments, A2UI task checklists, sensor slash commands, response sharing, and in-app AI content reporting (`ReportAiContentDialog`).
+- `ui/marketplace/`: chat/vision model discovery, download, selection, and deletion UI.
 - `ui/tasks/`: local to-do screen (creation, completion toggling, deletion).
 - `ui/settings/`: Safety & Privacy options and a **Benchmark Screen** (speeds, warmup, TTFT, TPS, and device acceleration/RAM logs).
 
 ## Current Model Runtime Behavior
 
 - Text chat uses LiteRT-LM (`.litertlm` preferred).
-- Image generation can be invoked by:
-  - Gemma through `generate_image`, where prompts should be improved first.
-  - Slash commands `/image`, `/img`, `/imagine`, which bypass Gemma.
-- If no healthy image-generation model is installed, image requests should show a download prompt rather than letting the agent/tool loop fail.
-- Chat models and image models are separate capabilities. Selecting/activating a chat model should not be confused with making an image model available.
+- Local ONNX Stable Diffusion (`OnnxLocalDiffusionEngine`) lives in the standalone `:image-generation` module and is currently disabled in `:app`.
 - Attached images route through chat/vision inference, not image generation. Image-only sends should use `Describe this image.` as the prompt.
 - Chat context is rebuilt through `ConversationContextManager`: older turns become compact memory, recent turns stay verbatim, and the current request is appended fresh. Avoid relying on unbounded LiteRT conversation state for long chats.
-- ONNX diffusion bundles must be extracted directories with:
+- When `:image-generation` is enabled, ONNX diffusion bundles must be extracted directories with:
   - `text_encoder/model.ort`
   - `tokenizer/vocab.json`
   - `tokenizer/merges.txt`
   - `unet/model.ort`
   - `vae_decoder/model.ort`
-- ONNX diffusion is the only supported local image-generation backend.
 
-## Explicit Image Flow
+## Response Sharing & AI Content Reporting
 
-- Explicit image generation is debug-only. Release builds block explicit prompts before model execution.
-- In debug builds, explicit image prompts trigger an age-verification dialog.
-- Users under 18 are blocked from age-restricted image content.
-- Verified explicit image generations continue through the image backend.
-- Explicit generated images are masked by default in the chat UI.
-- Users can reveal or hide each masked image using the visibility toggle.
-- Assistant responses can be shared through the Android share sheet. Do not add report/flag UI until the app has a reporting mechanism.
+- Assistant responses can be shared through the Android share sheet (`Icons.Default.Share`).
+- Assistant responses include an in-app **Report / Flag** action (`Icons.Default.Flag`) that opens `ReportAiContentDialog` and submits PII-scrubbed reports via `AiContentReportRepository` to Firestore (`ai_content_reports`) and Firebase Analytics (`ai_content_reported`).
+- Explicit image generation (when `:image-generation` is enabled) is debug-only; release builds block explicit prompts before model execution.
 
 ## Download System Notes
 

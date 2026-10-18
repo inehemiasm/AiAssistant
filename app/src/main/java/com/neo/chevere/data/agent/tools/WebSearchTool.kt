@@ -13,22 +13,31 @@ import com.neo.chevere.data.datasource.local.SearchCacheEntity
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
+import io.ktor.client.request.get
 import io.ktor.client.request.header
+import io.ktor.client.request.parameter
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
 
 private const val TAG = "WebSearchTool"
+private const val DUCKDUCKGO_API_URL = "https://api.duckduckgo.com/"
 
 /**
- * A tool that allows the agent to search the web for real-time information using Serper.dev.
- * Implements a persistent Room-based cache with an LRU pruning strategy.
- * Includes internet connectivity checks to prevent unnecessary network requests.
+ * A tool that allows the agent to search the web for real-time information.
+ *
+ * Priority order:
+ * 1. Backend proxy (`BuildConfig.WEB_SEARCH_PROXY_URL`) when configured (recommended for production).
+ * 2. Direct Serper.dev (`BuildConfig.SERPER_API_KEY`) when present in debug builds.
+ * 3. Key-less DuckDuckGo Instant Answer API fallback when no client key or proxy is configured.
+ *
+ * Implements a persistent Room-based cache with an LRU pruning strategy and connectivity checks.
  */
 @Singleton
 class WebSearchTool @Inject constructor(
@@ -68,16 +77,40 @@ class WebSearchTool @Inject constructor(
             return ToolResult.Error("No internet connection. Web search is currently unavailable, and no valid cached result was found.")
         }
 
-        // 3. Call Serper API
+        // 3. Execute Search via Proxy, Serper (debug), or Key-less Fallback
         return try {
-            Timber.tag(TAG).d("Calling Serper API for: $query")
-            val response: SerperResponse = httpClient.post(Constants.WebSearch.SERPER_API_URL) {
-                header("X-API-KEY", BuildConfig.SERPER_API_KEY)
-                contentType(ContentType.Application.Json)
-                setBody(SerperRequest(q = query))
-            }.body()
+            val proxyUrl = BuildConfig.WEB_SEARCH_PROXY_URL.trim()
+            val serperKey = BuildConfig.SERPER_API_KEY.trim()
 
-            val formattedResults = formatSerperResults(response)
+            val formattedResults = when {
+                proxyUrl.isNotEmpty() -> {
+                    Timber.tag(TAG).d("Calling Web Search Proxy for: $query")
+                    val response: SerperResponse = httpClient.post(proxyUrl) {
+                        contentType(ContentType.Application.Json)
+                        setBody(SerperRequest(q = query))
+                    }.body()
+                    formatSerperResults(response)
+                }
+                serperKey.isNotEmpty() -> {
+                    Timber.tag(TAG).d("Calling Serper API for: $query")
+                    val response: SerperResponse = httpClient.post(Constants.WebSearch.SERPER_API_URL) {
+                        header("X-API-KEY", serperKey)
+                        contentType(ContentType.Application.Json)
+                        setBody(SerperRequest(q = query))
+                    }.body()
+                    formatSerperResults(response)
+                }
+                else -> {
+                    Timber.tag(TAG).d("Calling key-less DuckDuckGo Instant Answer API for: $query")
+                    val response: DuckDuckGoResponse = httpClient.get(DUCKDUCKGO_API_URL) {
+                        parameter("q", query)
+                        parameter("format", "json")
+                        parameter("no_html", "1")
+                        parameter("skip_disambig", "1")
+                    }.body()
+                    formatDuckDuckGoResults(response)
+                }
+            }
 
             // 4. Update Cache with LRU pruning
             try {
@@ -123,6 +156,27 @@ class WebSearchTool @Inject constructor(
         }
     }
 
+    private fun formatDuckDuckGoResults(response: DuckDuckGoResponse): String {
+        val snippets = mutableListOf<String>()
+        if (response.abstractText.isNotBlank()) {
+            val heading = response.heading.ifBlank { "Summary" }
+            snippets.add("[${heading}] ${response.abstractText}")
+        }
+        response.relatedTopics
+            .mapNotNull { it.text?.takeIf(String::isNotBlank) }
+            .take(3 - snippets.size)
+            .forEach { topicText ->
+                snippets.add(topicText)
+            }
+
+        return if (snippets.isNotEmpty()) {
+            "Top results found:\n" + snippets.mapIndexed { index, text -> "${index + 1}. $text" }
+                .joinToString("\n")
+        } else {
+            "No significant instant results found for this query."
+        }
+    }
+
     @Serializable
     data class SerperRequest(val q: String)
 
@@ -136,5 +190,17 @@ class WebSearchTool @Inject constructor(
         val title: String,
         val snippet: String,
         val link: String
+    )
+
+    @Serializable
+    data class DuckDuckGoResponse(
+        @SerialName("Heading") val heading: String = "",
+        @SerialName("AbstractText") val abstractText: String = "",
+        @SerialName("RelatedTopics") val relatedTopics: List<DuckDuckGoTopic> = emptyList()
+    )
+
+    @Serializable
+    data class DuckDuckGoTopic(
+        @SerialName("Text") val text: String? = null
     )
 }

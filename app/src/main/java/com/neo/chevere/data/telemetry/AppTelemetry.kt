@@ -54,6 +54,7 @@ interface AppTelemetry {
     )
 
     fun logStopRequested(activeWork: Boolean)
+    fun logAiContentReported(reason: String, modelId: String)
     fun recordNonFatal(throwable: Throwable, context: String)
 }
 
@@ -210,6 +211,14 @@ class FirebaseAppTelemetry @Inject constructor(
     override fun logStopRequested(activeWork: Boolean) {
         logEvent(TelemetryConstants.Event.GENERATION_STOP) {
             putString(TelemetryConstants.Param.ACTIVE_WORK, activeWork.toString())
+            putString(TelemetryConstants.Param.PRODUCT_AREA, TelemetryConstants.ProductArea.CHAT)
+        }
+    }
+
+    override fun logAiContentReported(reason: String, modelId: String) {
+        logEvent(TelemetryConstants.Event.AI_CONTENT_REPORTED) {
+            putString(TelemetryConstants.Param.REPORT_REASON, reason.safeValue())
+            putString(TelemetryConstants.Param.MODEL_ID, modelId.safeValue())
             putString(TelemetryConstants.Param.PRODUCT_AREA, TelemetryConstants.ProductArea.CHAT)
         }
     }
