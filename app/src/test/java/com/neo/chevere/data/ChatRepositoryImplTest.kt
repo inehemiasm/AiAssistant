@@ -304,7 +304,7 @@ class ChatRepositoryImplTest {
         whenever(inferenceManager.generateStream(any())).doReturn(flowOf(
             InferenceResult.Success("Hello"), InferenceResult.Success("Hello again")
         ))
-        assertEquals("Hello again", repository.sendMessage("hello", null).getOrNull())
+        assertEquals("Hello again", repository.sendMessage("hello", null).getOrNull()?.text)
         verify(inferenceManager).generateStream(argThat { prompt.contains("My name is Alex") })
         assertTrue(conversationContextManager.buildContextPrefix().contains("Hello again"))
     }

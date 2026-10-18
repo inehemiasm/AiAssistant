@@ -72,57 +72,60 @@
 <body>
     <div class="container">
         <h1>Privacy Policy</h1>
-        <p class="effective-date">Effective Date: October 26, 2023</p>
+        <p class="effective-date">Effective Date: October 17, 2026</p>
 
         <p>Chevere AI ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, and safeguard your information when you use our mobile application.</p>
 
         <div class="highlight">
-            <p><strong>Local-First Guarantee:</strong> Your conversation text, attached photos, and generated images stay on your device. We do not store or process your private AI interactions on our servers.</p>
+            <p><strong>Local-First Guarantee:</strong> Your conversation text and attached photos stay on your device. We do not store or process your private AI interactions on our servers unless you explicitly submit an AI content report.</p>
         </div>
 
         <h2>1. Local-First Philosophy</h2>
         <p>Chevere AI is designed with a "Local-First" architecture. This means:</p>
         <ul>
-            <li><strong>Chat Processing:</strong> Your conversations with the AI are processed entirely on your device using local Large Language Models (LLMs). Your prompts and the AI's responses are not sent to our servers.</li>
-            <li><strong>Image Processing:</strong> Images you attach or generate are processed locally.</li>
-            <li><strong>Storage:</strong> Your chat history and downloaded models are stored in the application's private storage on your device.</li>
+            <li><strong>Chat Processing:</strong> Your conversations with the AI are processed entirely on your device using local Large Language Models (LLMs). Your prompts and the AI's responses are not sent to our servers during normal use.</li>
+            <li><strong>Image Analysis:</strong> Images you attach for multimodal analysis are processed locally on your device.</li>
+            <li><strong>Storage:</strong> Your chat history, tasks, and downloaded models are stored in the application's private storage on your device.</li>
         </ul>
 
         <h2>2. Information We Collect</h2>
-        <p>While the core experience is offline, we use certain third-party services for app stability and improvement:</p>
+        <p>While the core experience is offline, we use certain third-party services for app stability, safety, and model discovery:</p>
         
         <h3>A. Telemetry and Analytics (Firebase)</h3>
         <p>We use Firebase Analytics and Crashlytics to monitor app performance and identify bugs. This may include:</p>
         <ul>
             <li>Device information (model, OS version).</li>
-            <li>App usage statistics (e.g., which screens are visited).</li>
-            <li>Crash logs and stack traces.</li>
-            <li>Anonymized identifiers.</li>
+            <li>App usage statistics and model initialization metrics.</li>
+            <li>Crash logs and non-fatal error stack traces.</li>
+            <li>Anonymized installation identifiers.</li>
         </ul>
 
-        <h3>B. Remote Configuration and Data (Firebase Firestore)</h3>
-        <p>We use Firebase Firestore to fetch the catalog of available AI models. We do not store your personal chat data in Firestore.</p>
+        <h3>B. Remote Model Catalog &amp; AI Content Reports (Firebase Firestore)</h3>
+        <ul>
+            <li><strong>Model Catalog:</strong> We use Firebase Firestore and Hugging Face Hub to fetch the catalog of downloadable AI models.</li>
+            <li><strong>User-Initiated AI Content Reports:</strong> You can flag/report any AI response using the in-app report button. When you submit a report, the selected reason, optional notes, active model identifier, and PII-scrubbed excerpts of the reported response and prompt are transmitted to our moderation database to improve safety filters.</li>
+        </ul>
 
         <h2>3. Permissions</h2>
-        <p>Chevere AI requests the following permissions to enable local tools and actions:</p>
+        <p>Chevere AI requests the following permissions only when you invoke the corresponding feature:</p>
         <ul>
-            <li><strong>Camera:</strong> Used only when you choose to take a photo to share with the AI.</li>
-            <li><strong>Internet:</strong> Used to download AI models and send anonymized telemetry.</li>
-            <li><strong>Notifications:</strong> Used to show the progress of model downloads.</li>
-            <li><strong>Foreground Service:</strong> Used to ensure model downloads complete if you leave the app.</li>
-            <li><strong>Contacts:</strong> Used locally by the Contacts Tool to lookup email addresses by name when you request app actions (e.g., drafting an email). This data is processed strictly on-device and is never uploaded.</li>
-            <li><strong>Location:</strong> Used locally by the Weather Tool to retrieve forecasts for your location. Location coordinates are sent directly to the weather provider and are never collected or stored on our servers.</li>
-            <li><strong>Calendar:</strong> Used locally by the Calendar Tool to draft and schedule events on your device calendar.</li>
+            <li><strong>Camera:</strong> Used only when you choose to take a photo to attach to a chat message.</li>
+            <li><strong>Microphone:</strong> Used only when you activate voice input (speech-to-text) or ask the assistant to measure ambient room noise levels (dB SPL). Audio is processed in real time on your device and is never recorded or uploaded.</li>
+            <li><strong>Internet:</strong> Used to download AI models, perform optional web/weather queries, and send anonymized telemetry.</li>
+            <li><strong>Notifications &amp; Foreground Service:</strong> Used to show progress and ensure multi-gigabyte AI model downloads complete reliably if you switch apps.</li>
+            <li><strong>Contacts:</strong> Used locally by the Contacts Tool to look up email addresses by name when you ask the assistant to draft an email. Contact data is processed strictly on-device and is never uploaded.</li>
+            <li><strong>Location:</strong> Used locally by the Weather Tool to retrieve forecasts for your area. Coordinates are sent directly to the weather provider and are never stored on our servers.</li>
+            <li><strong>Calendar:</strong> Used locally by the Calendar Tool to read or create events on your device calendar at your request.</li>
         </ul>
 
-        <h2>4. Data Security</h2>
-        <p>Data stored on your device is protected by the Android operating system's sandbox. Deleting the app removes all local models and chat history.</p>
+        <h2>4. Data Security &amp; Retention</h2>
+        <p>Data stored on your device is protected by the Android operating system's sandbox and optional biometric lock. Deleting your conversation history or uninstalling the app permanently removes all local models, tasks, and chat sessions from your device.</p>
 
         <h2>5. Changes to This Policy</h2>
         <p>We may update our Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page.</p>
 
         <h2>6. Contact Us</h2>
-        <p>If you have any questions about this Privacy Policy, please contact us at your support email address.</p>
+        <p>If you have any questions about this Privacy Policy, please contact us at support@chevere.ai.</p>
     </div>
 </body>
 </html>

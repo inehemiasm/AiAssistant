@@ -19,6 +19,7 @@ object TelemetryConstants {
         const val MODEL_DOWNLOAD_START = "model_download_start"
         const val MODEL_DOWNLOAD_FINISH = "model_download_finish"
         const val GENERATION_STOP = "generation_stop"
+        const val AI_CONTENT_REPORTED = "ai_content_reported"
     }
 
     object Param {
@@ -32,6 +33,7 @@ object TelemetryConstants {
         const val MODEL_ID = "model_id"
         const val PRODUCT_AREA = "product_area"
         const val PROMPT_LENGTH_BUCKET = "prompt_length_bucket"
+        const val REPORT_REASON = "report_reason"
         const val SCREEN_NAME = "screen_name"
         const val STATUS = "status"
     }

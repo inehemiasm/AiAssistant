@@ -32,7 +32,11 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         val serperApiKey: String = project.findProperty("SERPER_API_KEY")?.toString() ?: ""
+        val webSearchProxyUrl: String = System.getenv("WEB_SEARCH_PROXY_URL")
+            ?: project.findProperty("WEB_SEARCH_PROXY_URL")?.toString()
+            ?: ""
         buildConfigField("String", "SERPER_API_KEY", "\"$serperApiKey\"")
+        buildConfigField("String", "WEB_SEARCH_PROXY_URL", "\"$webSearchProxyUrl\"")
     }
 
     signingConfigs {
@@ -55,6 +59,8 @@ android {
 
     buildTypes {
         release {
+            // Never embed raw third-party API keys in release client binaries.
+            buildConfigField("String", "SERPER_API_KEY", "\"\"")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
@@ -164,8 +170,6 @@ dependencies {
 
     implementation(libs.google.ai.edge.litertlm)
     implementation(libs.mediapipe.tasks.genai)
-    implementation(libs.onnxruntime.android)
-    implementation(libs.onnxruntime.extensions.android)
 
     implementation(libs.androidx.exifinterface)
     implementation(libs.androidx.datastore.preferences)

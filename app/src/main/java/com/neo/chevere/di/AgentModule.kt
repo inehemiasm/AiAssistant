@@ -138,15 +138,6 @@ abstract class AgentModule {
 
         @Provides
         @IntoSet
-        fun provideImageGenerationTool(
-            imageGenerationManager: ImageGenerationManager,
-            preferenceManager: PreferenceManager
-        ): AgentTool {
-            return ImageGenerationTool(imageGenerationManager, preferenceManager)
-        }
-
-        @Provides
-        @IntoSet
         fun provideRuntimeStatusTool(
             preferenceManager: PreferenceManager
         ): AgentTool {

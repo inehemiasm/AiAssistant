@@ -19,6 +19,7 @@ import com.neo.chevere.core.BaseViewModel
 import com.neo.chevere.core.Constants
 import com.neo.chevere.core.DispatcherProvider
 import com.neo.chevere.data.PreferenceManager
+import com.neo.chevere.data.report.AiContentReportRepository
 import com.neo.chevere.data.telemetry.AppTelemetry
 import com.neo.chevere.data.telemetry.TelemetryConstants
 import com.neo.chevere.data.voice.VoiceInputManager
@@ -72,7 +73,8 @@ class ChatViewModel @Inject constructor(
     private val telemetry: AppTelemetry,
     private val voiceInputManager: VoiceInputManager,
     private val chatHistoryRepository: ChatHistoryRepository,
-    private val taskRepository: TaskRepository
+    private val taskRepository: TaskRepository,
+    private val aiContentReportRepository: AiContentReportRepository
 ) : BaseViewModel<ChatState, ChatIntent, ChatEffect>(application, ChatState()) {
 
     private val explicitImagePromptPolicy = ExplicitImagePromptPolicy()
@@ -290,6 +292,9 @@ class ChatViewModel @Inject constructor(
                 ChatIntent.DismissAgeVerification -> dismissAgeVerification()
                 is ChatIntent.ToggleExplicitImageMask -> toggleExplicitImageMask(intent.messageIndex)
                 is ChatIntent.ShareMessage -> shareMessage(intent.messageIndex)
+                is ChatIntent.OpenReportDialog -> openReportDialog(intent.messageIndex)
+                ChatIntent.DismissReportDialog -> setState { copy(reportDialogMessageIndex = null) }
+                is ChatIntent.SubmitReport -> submitReport(intent.reason, intent.details)
                 is ChatIntent.SaveImage -> saveImage(intent.messageIndex)
                 is ChatIntent.ReadMessageAloud -> readMessageAloud(intent.messageIndex)
                 ChatIntent.RetryLastMessage -> {
@@ -511,24 +516,6 @@ class ChatViewModel @Inject constructor(
             return
         }
 
-        if (explicitImagePromptPolicy.requiresAgeVerification(promptText)) {
-            if (!BuildConfig.DEBUG) {
-                appendAssistantMessage(
-                    Constants.ContentPolicy.EXPLICIT_RELEASE_BLOCK_MESSAGE,
-                    modelName = "CHEVERE AI"
-                )
-                return
-            }
-
-            setState {
-                copy(
-                    ageVerificationRequest = AgeVerificationRequest(promptText, imageUri),
-                    sendState = SendState.Idle
-                )
-            }
-            return
-        }
-
         // Sensor slash commands → navigate to Sensor Radar screen in the requested mode
         val trimmedLower = promptText.trim().lowercase()
         val sensorMode: String? = when {
@@ -547,17 +534,6 @@ class ChatViewModel @Inject constructor(
             // Remove the user message we just appended — it's a silent nav command
             setState { copy(messages = messages.dropLast(1), sendState = SendState.Idle, inputText = "") }
             sendEffect { ChatEffect.NavigateToRadar(mode = sensorMode) }
-            return
-        }
-
-        val imageCommand = parseImageCommand(promptText)
-        if ((imageCommand != null || looksLikeImageGenerationRequest(promptText)) && !hasInstalledImageGenerationModel()) {
-            promptForImageModelDownload()
-            return
-        }
-
-        if (imageCommand != null) {
-            startImageGenerationTurn(imageCommand.prompt, conditionImageUri = null)
             return
         }
 
@@ -803,6 +779,33 @@ class ChatViewModel @Inject constructor(
                 text = shareText,
                 imageUri = message.imageUri?.toUri()
             )
+        }
+    }
+
+    private fun openReportDialog(messageIndex: Int) {
+        val message = currentState.messages.getOrNull(messageIndex) ?: return
+        if (message.isUser) return
+        setState { copy(reportDialogMessageIndex = messageIndex) }
+    }
+
+    private fun submitReport(reason: String, details: String) {
+        val messageIndex = currentState.reportDialogMessageIndex ?: return
+        val message = currentState.messages.getOrNull(messageIndex) ?: run {
+            setState { copy(reportDialogMessageIndex = null) }
+            return
+        }
+
+        setState { copy(reportDialogMessageIndex = null) }
+        viewModelScope.launch(dispatcherProvider.io) {
+            aiContentReportRepository.submitReport(
+                messageText = message.text,
+                modelName = message.modelName ?: currentState.selectedModel.ifBlank { "unknown" },
+                reason = reason,
+                additionalDetails = details
+            )
+            sendEffect {
+                ChatEffect.ShowToast(application.getString(R.string.report_submitted_toast))
+            }
         }
     }
 

@@ -80,9 +80,6 @@ object Constants {
 
         /** Full registry of slash commands surfaced in the autocomplete menu. */
         val ALL: List<SlashCommand> = listOf(
-            SlashCommand("/image",    "Generate Image",   "Create an image from a text prompt"),
-            SlashCommand("/img",      "Generate Image",   "Shorthand for /image"),
-            SlashCommand("/imagine",  "Generate Image",   "Shorthand for /image"),
             SlashCommand("/sensors",  "Sensor Dashboard", "Open the full sensor radar screen"),
             SlashCommand("/stud",     "Stud Finder",      "Open the stud / metal detector screen"),
             SlashCommand("/level",    "Spirit Level",     "Open the spirit level screen"),

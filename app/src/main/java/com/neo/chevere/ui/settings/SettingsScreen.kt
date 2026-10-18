@@ -191,27 +191,6 @@ fun SettingsContent(
 
                 Spacer(Modifier.height(12.dp))
 
-                ImageGenerationDefaultsCard(
-                    selectedRatio = state.defaultImageAspectRatio,
-                    steps = state.defaultImageSteps,
-                    guidanceScale = state.defaultImageGuidanceScale,
-                    negativePrompt = state.defaultImageNegativePrompt,
-                    onRatioSelected = { ratio ->
-                        viewModel.onIntent(SettingsIntent.UpdateDefaultImageAspectRatio(ratio))
-                    },
-                    onStepsChanged = { steps ->
-                        viewModel.onIntent(SettingsIntent.UpdateDefaultImageSteps(steps))
-                    },
-                    onGuidanceScaleChanged = { scale ->
-                        viewModel.onIntent(SettingsIntent.UpdateDefaultImageGuidanceScale(scale))
-                    },
-                    onNegativePromptChanged = { prompt ->
-                        viewModel.onIntent(SettingsIntent.UpdateDefaultImageNegativePrompt(prompt))
-                    }
-                )
-
-                Spacer(Modifier.height(12.dp))
-
                 // Biometric Security Card
                 SettingsToggleCard(
                     icon = Icons.Default.Security,

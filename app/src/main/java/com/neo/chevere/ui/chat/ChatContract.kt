@@ -65,7 +65,9 @@ data class ChatState(
     /** History sessions shown in the history bottom sheet. */
     val historySessions: List<ConversationSession> = emptyList(),
     val suggestions: List<String> = emptyList(),
-    val taskChecklistData: TaskChecklistData = TaskChecklistData.Loading
+    val taskChecklistData: TaskChecklistData = TaskChecklistData.Loading,
+    /** Index of the assistant message currently being reported via ReportAiContentDialog, or null. */
+    val reportDialogMessageIndex: Int? = null
 ) : UiState {
     /** Maps structured domain message content to renderer-facing presentation metadata. */
     val taskChecklists: Map<Int, TaskChecklistUiModel>
@@ -141,6 +143,9 @@ sealed class ChatIntent : UiIntent {
     data object DismissAgeVerification : ChatIntent()
     data class ToggleExplicitImageMask(val messageIndex: Int) : ChatIntent()
     data class ShareMessage(val messageIndex: Int) : ChatIntent()
+    data class OpenReportDialog(val messageIndex: Int) : ChatIntent()
+    data object DismissReportDialog : ChatIntent()
+    data class SubmitReport(val reason: String, val details: String) : ChatIntent()
     data class SaveImage(val messageIndex: Int) : ChatIntent()
     data class ReadMessageAloud(val messageIndex: Int) : ChatIntent()
     data object RetryLastMessage : ChatIntent()

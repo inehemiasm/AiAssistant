@@ -103,7 +103,9 @@ fun ChatTopBar(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     CapabilityChip(label = "CHAT", ready = isChatReady)
-                    CapabilityChip(label = "IMAGE", ready = isImageReady)
+                    if (isImageReady) {
+                        CapabilityChip(label = "IMAGE", ready = true)
+                    }
                 }
             }
 

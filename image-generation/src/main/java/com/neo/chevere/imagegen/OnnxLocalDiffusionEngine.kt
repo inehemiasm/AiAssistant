@@ -1,4 +1,4 @@
-package com.neo.chevere.data.inference
+package com.neo.chevere.imagegen
 
 import ai.onnxruntime.OnnxJavaType
 import ai.onnxruntime.OnnxTensor
@@ -8,13 +8,9 @@ import ai.onnxruntime.TensorInfo
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Color
+import android.net.Uri
 import androidx.core.content.FileProvider
-import com.neo.chevere.core.Constants
-import com.neo.chevere.domain.ImageGenerationRequest
-import com.neo.chevere.domain.ImageGenerationResult
-import com.neo.chevere.domain.InstalledModel
-import com.neo.chevere.domain.LoadResult
-import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
@@ -23,36 +19,87 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import java.io.File
 import java.io.FileOutputStream
-import java.nio.IntBuffer
 import java.util.Locale
 import java.util.Random
 import java.util.regex.Pattern
-import javax.inject.Inject
-import javax.inject.Singleton
+import kotlin.math.cos
 import kotlin.math.ln
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
-private val TOKENIZER_VOCAB = Constants.ImageGeneration.ONNX_REQUIRED_FILES[1]
-private val TOKENIZER_MERGES = Constants.ImageGeneration.ONNX_REQUIRED_FILES[2]
+private val ONNX_REQUIRED_FILES = listOf(
+    "text_encoder/model.ort",
+    "tokenizer/vocab.json",
+    "tokenizer/merges.txt",
+    "unet/model.ort",
+    "vae_decoder/model.ort"
+)
+private val TOKENIZER_VOCAB = ONNX_REQUIRED_FILES[1]
+private val TOKENIZER_MERGES = ONNX_REQUIRED_FILES[2]
+private const val GENERATED_IMAGES_DIRECTORY = "generated_images"
+private const val GENERATED_IMAGE_PREFIX = "chevere_image_"
+private const val PNG_EXTENSION = ".png"
 private const val MAX_TOKENS = 77
 private const val START_TOKEN = 49406
 private const val END_TOKEN = 49407
 private const val LATENT_SCALE = 0.18215f
 
 /**
+ * Request parameters for generating an image with [OnnxLocalDiffusionEngine].
+ */
+data class DiffusionGenerationRequest(
+    val prompt: String,
+    val negativePrompt: String? = null,
+    val width: Int = 512,
+    val height: Int = 512,
+    val steps: Int = 20,
+    val guidanceScale: Float = 7.5f,
+    val seed: Long? = null,
+    val conditionImageUri: Uri? = null
+)
+
+/**
+ * Result of loading an ONNX diffusion bundle into [OnnxLocalDiffusionEngine].
+ */
+sealed interface DiffusionLoadResult {
+    data object Success : DiffusionLoadResult
+    data class Failure(val message: String, val throwable: Throwable? = null) : DiffusionLoadResult
+}
+
+/**
+ * Result of generating an image with [OnnxLocalDiffusionEngine].
+ */
+sealed interface DiffusionGenerationResult {
+    data class Success(
+        val imageUri: Uri,
+        val prompt: String,
+        val width: Int,
+        val height: Int,
+        val seed: Long?
+    ) : DiffusionGenerationResult
+
+    data class Failure(
+        val message: String,
+        val throwable: Throwable? = null
+    ) : DiffusionGenerationResult
+}
+
+/**
  * Local Stable Diffusion backend for Android ONNX Runtime bundles.
+ *
+ * Extracted into the standalone `:image-generation` module so that `:app` can
+ * omit the heavy ONNX Runtime native libraries until local image generation is
+ * re-enabled.
  *
  * The expected bundle shape matches common Android ONNX diffusion layouts:
  * `text_encoder/model.(ort|onnx)`, `tokenizer/vocab.json`, `tokenizer/merges.txt`,
  * `unet/model.(ort|onnx)`, and `vae_decoder/model.(ort|onnx)`.
  */
-@Singleton
-class OnnxLocalDiffusionEngine @Inject constructor(
-    @param:ApplicationContext private val context: Context
-) : ImageGenerationEngine {
+class OnnxLocalDiffusionEngine(
+    private val context: Context
+) {
     private val environment: OrtEnvironment = OrtEnvironment.getEnvironment()
     private var modelDirectory: File? = null
     private var textEncoder: OrtSession? = null
@@ -60,18 +107,18 @@ class OnnxLocalDiffusionEngine @Inject constructor(
     private var vaeDecoder: OrtSession? = null
     private var tokenizer: ClipTokenizer? = null
 
-    override suspend fun load(model: InstalledModel): LoadResult = withContext(Dispatchers.IO) {
-        val directory = File(model.filePath)
+    suspend fun load(modelFilePath: String): DiffusionLoadResult = withContext(Dispatchers.IO) {
+        val directory = File(modelFilePath)
         if (!directory.isDirectory) {
-            return@withContext LoadResult.Failure("ONNX diffusion model must be an extracted model directory.")
+            return@withContext DiffusionLoadResult.Failure("ONNX diffusion model must be an extracted model directory.")
         }
 
-        val missingFiles = Constants.ImageGeneration.ONNX_REQUIRED_FILES.filterNot { relativePath ->
+        val missingFiles = ONNX_REQUIRED_FILES.filterNot { relativePath ->
             File(directory, relativePath).isFile ||
-                    File(directory, relativePath.replace("/model.ort", "/model.onnx")).isFile
+                File(directory, relativePath.replace("/model.ort", "/model.onnx")).isFile
         }
         if (missingFiles.isNotEmpty()) {
-            return@withContext LoadResult.Failure(
+            return@withContext DiffusionLoadResult.Failure(
                 "ONNX diffusion model is missing required files: ${missingFiles.joinToString(", ")}"
             )
         }
@@ -87,10 +134,10 @@ class OnnxLocalDiffusionEngine @Inject constructor(
                 mergesFile = File(directory, TOKENIZER_MERGES)
             )
             modelDirectory = directory
-            LoadResult.Success
+            DiffusionLoadResult.Success
         } catch (throwable: Throwable) {
             unload()
-            LoadResult.Failure(
+            DiffusionLoadResult.Failure(
                 "Failed to load ONNX diffusion model: ${throwable.message}",
                 throwable
             )
@@ -106,56 +153,44 @@ class OnnxLocalDiffusionEngine @Inject constructor(
         val sessionOptions = OrtSession.SessionOptions().apply {
             if (modelFile.extension.equals("ort", ignoreCase = true)) {
                 addConfigEntry("session.load_model_format", "ORT")
-                // Optimization: use model bytes directly for initialization of ORT format models
                 addConfigEntry("session.use_ort_model_bytes_for_initialization", "1")
             }
 
-            // Enable XNNPACK for better CPU performance and support for mobile-optimized kernels.
             try {
                 addConfigEntry("session.use_xnnpack", "1")
                 addXnnpack(emptyMap())
-            } catch (e: Exception) {
-                // XNNPACK might not be available in all builds
+            } catch (_: Exception) {
             }
 
-            // Disable the NHWC transformer. This transformer attempts to fuse NCHW 
-            // convolutions into NHWC convolutions (NhwcConv). If the CPU provider 
-            // doesn't have kernels for these (common on Android), it leads to 
-            // 'Kernel not found' errors.
             try {
                 addConfigEntry("session.disable_nhwc_transformer", "1")
-            } catch (e: Exception) {
+            } catch (_: Exception) {
             }
 
-            // Use EXTENDED_OPT instead of ALL_OPT to avoid aggressive layout fusions 
-            // that trigger the NhwcConv issues.
             setOptimizationLevel(OrtSession.SessionOptions.OptLevel.EXTENDED_OPT)
 
-            // Limit thread pool to avoid starving the main UI thread during CPU-heavy operations.
             val cores = Runtime.getRuntime().availableProcessors()
             val numThreads = (cores / 2).coerceIn(2, 4)
             setIntraOpNumThreads(numThreads)
 
-            // Try to add NNAPI for hardware acceleration
             try {
                 addNnapi()
-            } catch (e: Exception) {
-                // NNAPI might not be available on all devices or emulators, fallback to CPU is automatic
+            } catch (_: Exception) {
             }
         }
         return environment.createSession(modelFile.absolutePath, sessionOptions)
     }
 
-    override suspend fun generate(request: ImageGenerationRequest): ImageGenerationResult =
+    suspend fun generate(request: DiffusionGenerationRequest): DiffusionGenerationResult =
         withContext(Dispatchers.Default) {
             val activeTokenizer = tokenizer
-                ?: return@withContext ImageGenerationResult.Failure("ONNX diffusion tokenizer is not loaded.")
+                ?: return@withContext DiffusionGenerationResult.Failure("ONNX diffusion tokenizer is not loaded.")
             val activeTextEncoder = textEncoder
-                ?: return@withContext ImageGenerationResult.Failure("ONNX diffusion text encoder is not loaded.")
+                ?: return@withContext DiffusionGenerationResult.Failure("ONNX diffusion text encoder is not loaded.")
             val activeUnet = unet
-                ?: return@withContext ImageGenerationResult.Failure("ONNX diffusion UNet is not loaded.")
+                ?: return@withContext DiffusionGenerationResult.Failure("ONNX diffusion UNet is not loaded.")
             val activeVaeDecoder = vaeDecoder
-                ?: return@withContext ImageGenerationResult.Failure("ONNX diffusion VAE decoder is not loaded.")
+                ?: return@withContext DiffusionGenerationResult.Failure("ONNX diffusion VAE decoder is not loaded.")
 
             try {
                 val width = request.width.coerceIn(256, 640).roundDownToMultipleOf(8)
@@ -198,7 +233,7 @@ class OnnxLocalDiffusionEngine @Inject constructor(
                     runVaeDecoder(activeVaeDecoder, multiplyLatents(latents, 1f / LATENT_SCALE))
                 val bitmap = decoded.toBitmap(width, height)
                 val imageUri = saveBitmap(bitmap)
-                ImageGenerationResult.Success(
+                DiffusionGenerationResult.Success(
                     imageUri = imageUri,
                     prompt = request.prompt,
                     width = width,
@@ -206,15 +241,15 @@ class OnnxLocalDiffusionEngine @Inject constructor(
                     seed = seed
                 )
             } catch (throwable: Throwable) {
-                if (throwable is kotlinx.coroutines.CancellationException) throw throwable
-                ImageGenerationResult.Failure(
+                if (throwable is CancellationException) throw throwable
+                DiffusionGenerationResult.Failure(
                     "ONNX diffusion generation failed: ${throwable.message}",
                     throwable
                 )
             }
         }
 
-    override suspend fun unload() {
+    fun unload() {
         textEncoder?.close()
         unet?.close()
         vaeDecoder?.close()
@@ -387,14 +422,14 @@ class OnnxLocalDiffusionEngine @Inject constructor(
         }
     }
 
-    private fun saveBitmap(bitmap: Bitmap): android.net.Uri {
+    private fun saveBitmap(bitmap: Bitmap): Uri {
         val outputDirectory = File(
             context.filesDir,
-            Constants.ImageGeneration.GENERATED_IMAGES_DIRECTORY
+            GENERATED_IMAGES_DIRECTORY
         ).apply { mkdirs() }
         val outputFile = File(
             outputDirectory,
-            "${Constants.ImageGeneration.GENERATED_IMAGE_PREFIX}${System.currentTimeMillis()}${Constants.ImageGeneration.PNG_EXTENSION}"
+            "$GENERATED_IMAGE_PREFIX${System.currentTimeMillis()}$PNG_EXTENSION"
         )
         FileOutputStream(outputFile).use { output ->
             bitmap.compress(Bitmap.CompressFormat.PNG, 100, output)
@@ -585,7 +620,7 @@ private fun createLatents(
     forEachLatent(latents) { channel, y, x ->
         val u1 = random.nextDouble().coerceAtLeast(1e-7)
         val u2 = random.nextDouble()
-        val value = sqrt(-2.0 * ln(u1)) * kotlin.math.cos(2.0 * Math.PI * u2)
+        val value = sqrt(-2.0 * ln(u1)) * cos(2.0 * Math.PI * u2)
         latents[0][channel][y][x] = (value * scale).toFloat()
     }
     return latents
@@ -599,7 +634,7 @@ private fun createEmptyLatents(
 }
 
 private fun duplicateBatch(latents: Array<Array<Array<FloatArray>>>): Array<Array<Array<FloatArray>>> {
-    return Array(2) { batch ->
+    return Array(2) {
         Array(4) { channel ->
             Array(latents[0][channel].size) { y ->
                 FloatArray(latents[0][channel][y].size) { x -> latents[0][channel][y][x] }

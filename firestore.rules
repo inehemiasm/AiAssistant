@@ -1,0 +1,69 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // -------------------------------------------------------------------------
+    // Helper Functions
+    // -------------------------------------------------------------------------
+    function incomingData() {
+      return request.resource.data;
+    }
+
+    function hasOnlyAllowedFields(allowedFields) {
+      return incomingData().keys().hasOnly(allowedFields);
+    }
+
+    function hasRequiredFields(requiredFields) {
+      return incomingData().keys().hasAll(requiredFields);
+    }
+
+    function validString(field, minLen, maxLen) {
+      return incomingData()[field] is string
+        && incomingData()[field].size() >= minLen
+        && incomingData()[field].size() <= maxLen;
+    }
+
+    function isValidAiContentReport() {
+      let allowed = [
+        'reason',
+        'modelName',
+        'messageSnippet',
+        'details',
+        'appVersion',
+        'createdAt'
+      ];
+      return hasOnlyAllowedFields(allowed)
+        && hasRequiredFields(allowed)
+        && validString('reason', 1, 80)
+        && validString('modelName', 1, 80)
+        && validString('messageSnippet', 1, 500)
+        && validString('details', 0, 300)
+        && validString('appVersion', 1, 64)
+        && incomingData().createdAt == request.time;
+    }
+
+    // -------------------------------------------------------------------------
+    // Public Model Catalog (read-only for clients)
+    // -------------------------------------------------------------------------
+    match /models/{modelId} {
+      allow get, list: if true;
+      allow create, update, delete: if false;
+    }
+
+    // -------------------------------------------------------------------------
+    // AI-Generated Content Reports (create-only with strict schema validation)
+    // -------------------------------------------------------------------------
+    match /ai_content_reports/{reportId} {
+      allow create: if isValidAiContentReport();
+      allow get, list, update, delete: if false;
+    }
+
+    // -------------------------------------------------------------------------
+    // Default Deny
+    // -------------------------------------------------------------------------
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

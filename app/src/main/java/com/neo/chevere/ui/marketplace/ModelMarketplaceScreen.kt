@@ -314,8 +314,7 @@ fun DiscoverModelsList(
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
             val groups = listOf(
-                "Chat and Vision Models" to state.chatRemoteModels,
-                "Image Generation Models" to state.imageRemoteModels
+                "Chat and Vision Models" to state.chatRemoteModels
             ).filter { (_, models) -> models.isNotEmpty() }
 
             groups.forEach { (title, models) ->
@@ -355,7 +354,7 @@ fun InstalledModelsList(
     onIntent: (MarketplaceIntent) -> Unit,
     onModelClick: (String) -> Unit
 ) {
-    if (state.localModels.isEmpty()) {
+    if (state.chatLocalModels.isEmpty()) {
         Box(
             Modifier
                 .fillMaxSize()
@@ -394,35 +393,6 @@ fun InstalledModelsList(
                         isPending = isPending,
                         isSwitching = isSwitching,
                         warmupStatus = if (isSwitching) (state.switchState as? ModelSwitchState.WarmingUp)?.progress else null,
-                        downloadProgress = downloadProgress,
-                        onSelect = { onIntent(MarketplaceIntent.SelectModel(model.id)) },
-                        onDelete = { onIntent(MarketplaceIntent.DeleteModel(model.id)) },
-                        onClick = { onModelClick(model.id) }
-                    )
-                }
-
-                if (state.imageLocalModels.isNotEmpty()) {
-                    item { ModelSectionHeader("Image Generation Models") }
-                }
-
-                items(state.imageLocalModels) { model ->
-                    val activeDownload = state.activeDownloads[model.id]
-                        ?: state.activeDownloads[model.fileName]
-                    val downloadProgress = (activeDownload as? DownloadProgress.Progress)?.percent
-
-                    val isActive = if (state.activeImageModelId != null) {
-                        state.activeImageModelId.removeSuffix(".zip") == model.id.removeSuffix(".zip")
-                    } else {
-                        val firstHealthy = state.imageLocalModels.firstOrNull { it.isHealthy }
-                        firstHealthy?.id?.removeSuffix(".zip") == model.id.removeSuffix(".zip")
-                    }
-
-                    LocalModelCard(
-                        model = model,
-                        isActive = isActive,
-                        isPending = false,
-                        isSwitching = model.isTransitioning,
-                        warmupStatus = null,
                         downloadProgress = downloadProgress,
                         onSelect = { onIntent(MarketplaceIntent.SelectModel(model.id)) },
                         onDelete = { onIntent(MarketplaceIntent.DeleteModel(model.id)) },

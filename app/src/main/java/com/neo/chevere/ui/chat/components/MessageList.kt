@@ -46,6 +46,7 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.StopCircle
 import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Share
@@ -101,8 +102,8 @@ import java.util.Locale
  * @param listState The state object to be used to control or observe the list's scroll position.
  * @param onToggleExplicitImageMask Called when the user reveals or hides a masked explicit image.
  * @param onShareMessage Called when the user wants to share an assistant message.
+ * @param onReportMessage Called when the user wants to report an assistant message.
  * @param onSaveImage Called when the user wants to save an assistant image.
- * @param onReadMessageAloud Called when the user wants the assistant response read aloud.
  */
 @Composable
 fun MessageList(
@@ -114,6 +115,7 @@ fun MessageList(
     agentState: AgentState = AgentState.Idle,
     onToggleExplicitImageMask: (Int) -> Unit = {},
     onShareMessage: (Int) -> Unit = {},
+    onReportMessage: (Int) -> Unit = {},
     onSaveImage: (Int) -> Unit = {},
     onPreviewHtmlFullScreen: (String) -> Unit = {},
     onImageClick: (String) -> Unit = {},
@@ -132,6 +134,7 @@ fun MessageList(
                 message = message,
                 onToggleExplicitImageMask = { onToggleExplicitImageMask(index) },
                 onShareMessage = { onShareMessage(index) },
+                onReportMessage = { onReportMessage(index) },
                 onSaveImage = { onSaveImage(index) },
                 onPreviewHtmlFullScreen = onPreviewHtmlFullScreen,
                 onImageClick = onImageClick,
@@ -174,14 +177,15 @@ fun MessageList(
  * @param message The [ChatMessage] to display.
  * @param onToggleExplicitImageMask Called when the explicit image visibility button is tapped.
  * @param onShareMessage Called when the share button is tapped.
+ * @param onReportMessage Called when the report/flag button is tapped.
  * @param onSaveImage Called when the save image button is tapped.
- * @param onReadMessageAloud Called when the read-aloud button is tapped.
  */
 @Composable
 fun FuturisticChatBubble(
     message: ChatMessage,
     onToggleExplicitImageMask: () -> Unit = {},
     onShareMessage: () -> Unit = {},
+    onReportMessage: () -> Unit = {},
     onSaveImage: () -> Unit = {},
     onPreviewHtmlFullScreen: (String) -> Unit = {},
     onImageClick: (String) -> Unit = {},
@@ -337,6 +341,18 @@ fun FuturisticChatBubble(
                                     Icon(
                                         imageVector = Icons.Default.Share,
                                         contentDescription = stringResource(R.string.share_message),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+
+                                IconButton(
+                                    onClick = onReportMessage,
+                                    modifier = Modifier.size(32.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Flag,
+                                        contentDescription = stringResource(R.string.report_message),
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                                         modifier = Modifier.size(18.dp)
                                     )

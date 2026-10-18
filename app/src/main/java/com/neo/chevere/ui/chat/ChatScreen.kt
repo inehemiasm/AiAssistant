@@ -121,6 +121,7 @@ import com.neo.chevere.ui.chat.components.FullscreenHtmlPreviewDialog
 import com.neo.chevere.ui.chat.components.FullscreenImagePreviewDialog
 import com.neo.chevere.ui.chat.components.MessageList
 import com.neo.chevere.ui.chat.components.ModelInitializationScreen
+import com.neo.chevere.ui.chat.components.ReportAiContentDialog
 import com.neo.chevere.ui.common.ChevereHaptic
 import com.neo.chevere.ui.common.ErrorSnackbar
 import com.neo.chevere.ui.common.hapticForFeedbackMessage
@@ -560,9 +561,7 @@ fun ChatContent(
                     isChatReady = state.localModels.any {
                         it.isHealthy && it.taskType != ModelTaskType.IMAGE_GENERATION
                     },
-                    isImageReady = state.localModels.any {
-                        it.isHealthy && (it.taskType == ModelTaskType.IMAGE_GENERATION || ModelCapability.IMAGE_GEN in it.capabilities)
-                    }
+                    isImageReady = false
                 )
             },
         snackbarHost = {
@@ -616,6 +615,10 @@ fun ChatContent(
                             hapticView.performChevereHaptic(ChevereHaptic.Action)
                             viewModel.onIntent(ChatIntent.ShareMessage(index))
                         },
+                        onReportMessage = { index ->
+                            hapticView.performChevereHaptic(ChevereHaptic.Selection)
+                            viewModel.onIntent(ChatIntent.OpenReportDialog(index))
+                        },
                         onSaveImage = { index ->
                             hapticView.performChevereHaptic(ChevereHaptic.Action)
                             viewModel.onIntent(ChatIntent.SaveImage(index))
@@ -625,6 +628,19 @@ fun ChatContent(
                         },
                         onImageClick = { uri ->
                             fullscreenPreviewState = FullscreenPreviewState.Image(uri)
+                        }
+                    )
+                }
+
+                if (state.reportDialogMessageIndex != null) {
+                    ReportAiContentDialog(
+                        onSubmit = { reason, details ->
+                            hapticView.performChevereHaptic(ChevereHaptic.Action)
+                            viewModel.onIntent(ChatIntent.SubmitReport(reason, details))
+                        },
+                        onDismiss = {
+                            hapticView.performChevereHaptic(ChevereHaptic.Selection)
+                            viewModel.onIntent(ChatIntent.DismissReportDialog)
                         }
                     )
                 }
@@ -1108,11 +1124,6 @@ private fun EmptyModelState(onModelsClick: () -> Unit) {
                 icon = Icons.Default.Memory,
                 title = stringResource(R.string.onboarding_heavy_title),
                 body = stringResource(R.string.onboarding_heavy_body)
-            )
-            OnboardingPoint(
-                icon = Icons.Default.Image,
-                title = stringResource(R.string.onboarding_image_title),
-                body = stringResource(R.string.onboarding_image_body)
             )
             OnboardingPoint(
                 icon = Icons.Default.CloudOff,
