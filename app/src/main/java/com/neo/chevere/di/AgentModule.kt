@@ -184,8 +184,9 @@ abstract class AgentModule {
         @IntoSet
         fun provideSensorsTool(
             @ApplicationContext context: Context,
-            ambientLightRepository: com.neo.chevere.domain.AmbientLightRepository
-        ): AgentTool = SensorsTool(context, ambientLightRepository)
+            ambientLightRepository: com.neo.chevere.domain.AmbientLightRepository,
+            ambientSoundRepository: com.neo.chevere.domain.AmbientSoundRepository
+        ): AgentTool = SensorsTool(context, ambientLightRepository, ambientSoundRepository)
 
         @Provides
         @IntoSet

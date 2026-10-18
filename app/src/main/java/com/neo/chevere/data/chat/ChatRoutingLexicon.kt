@@ -39,9 +39,9 @@ internal object ChatRoutingLexicon {
     )
 
     val sensorReadingActionTerms = setOf(
-        "read", "check", "measure", "tell me", "what is", "what's", "how hot",
-        "how cold", "how warm", "how bright", "how dark", "how loud", "how noisy",
-        "how quiet", "which way", "where is", "am i", "is it", "is there"
+        "read", "check", "measure", "listen", "hear", "sample", "tell me", "what is", "what's",
+        "how hot", "how cold", "how warm", "how bright", "how dark", "how loud", "how noisy",
+        "how quiet", "how silent", "which way", "where is", "am i", "is it", "is there"
     )
 
     val sensorKeywords = setOf(
@@ -51,7 +51,8 @@ internal object ChatRoutingLexicon {
         "room temp", "ambient temp", "temperature",
         "gyro", "gyroscope", "accelerometer", "magnetometer", "compass", "azimuth", "heading",
         "proximity", "flatness", "spirit level", "bubble level", "metal detector", "stud finder",
-        "magnetic", "decibel", "sound level", "noise level",
+        "magnetic", "decibel", "decibels", "sound level", "noise level", "ambient sound",
+        "ambient noise", "background sound", "background noise",
 
         // Spanish
         "sensores", "presión", "presion", "brillo", "batería", "bateria", "térmico",

@@ -18,6 +18,10 @@ import com.neo.chevere.data.inference.ImageGenerationManager
 import com.neo.chevere.data.inference.InferenceManager
 import com.neo.chevere.domain.AssistantResponse
 import com.neo.chevere.domain.AmbientLightRepository
+import com.neo.chevere.domain.AmbientSoundReading
+import com.neo.chevere.domain.AmbientSoundRepository
+import com.neo.chevere.domain.MicPermissionException
+import com.neo.chevere.data.sensors.AndroidAmbientSoundRepository
 import com.neo.chevere.data.sensors.toChatSummary
 import com.neo.chevere.domain.ChatRepository
 import com.neo.chevere.data.agent.ui.AgentUiEnvelope
@@ -77,7 +81,8 @@ class ChatRepositoryImpl @Inject constructor(
     private val installedModelRegistry: InstalledModelRegistry,
     private val conversationContextManager: ConversationContextManager,
     private val chatRequestRouter: ChatRequestRouter,
-    private val dispatcherProvider: DispatcherProvider
+    private val dispatcherProvider: DispatcherProvider,
+    private val ambientSoundRepository: AmbientSoundRepository = AndroidAmbientSoundRepository(context)
 ) : ChatRepository {
 
     private val _modelActivationEvents = Channel<String>(Channel.BUFFERED)
@@ -173,6 +178,17 @@ class ChatRepositoryImpl @Inject constructor(
             val response = ambientLightRepository.readLight().toChatSummary()
             conversationContextManager.recordExchange(prompt, imageUri = null, assistantResponse = response)
             return Result.success(response)
+        }
+
+        if (imageUri == null && chatRequestRouter.isAmbientSoundReadingRequest(prompt)) {
+            return when (val reading = ambientSoundRepository.readAmbientSound()) {
+                AmbientSoundReading.PermissionRequired -> Result.failure(MicPermissionException())
+                else -> {
+                    val response = reading.toChatSummary()
+                    conversationContextManager.recordExchange(prompt, imageUri = null, assistantResponse = response)
+                    Result.success(response)
+                }
+            }
         }
 
         val routingCategory = chatRequestRouter.classifyRequest(prompt)

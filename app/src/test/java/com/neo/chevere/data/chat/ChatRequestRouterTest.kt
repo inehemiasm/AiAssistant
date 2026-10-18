@@ -22,6 +22,31 @@ class ChatRequestRouterTest {
     }
 
     @Test
+    fun ambientSoundReadingsIncludeBackgroundNoiseAndMicListening() {
+        for (prompt in listOf(
+            "How noisy is my room?",
+            "How loud is it in here?",
+            "Listen to the background sound using the mic",
+            "What's the noise level?",
+            "Check the ambient sound",
+            "Measure decibels in here",
+            "¿Cuánto ruido hay?"
+        )) {
+            assertTrue(prompt, router.isAmbientSoundReadingRequest(prompt))
+            assertEquals(RoutingCategory.SENSORS, router.classifyRequest(prompt))
+        }
+        for (prompt in listOf(
+            "Open the decibel meter",
+            "Turn up the volume",
+            "Mute the sound",
+            "Can you detect sound level?",
+            "What is ambient noise?"
+        )) {
+            assertFalse(prompt, router.isAmbientSoundReadingRequest(prompt))
+        }
+    }
+
+    @Test
     fun capabilityOverview_returnsStaticResponseAndDoesNotUseAgent() {
         val prompt = "What can you do?"
 

@@ -44,6 +44,7 @@ class AgentOrchestrator @Inject constructor(
     private val loopMutex = Mutex()
     private var pendingConfirmation: (suspend () -> ToolResult)? = null
     private var lastPrompt: String = ""
+    private var lastUserPrompt: String = ""
     private var lastImageUri: Uri? = null
     private var stepCount = 0
     private var lastToolSummary: String? = null
@@ -83,6 +84,7 @@ class AgentOrchestrator @Inject constructor(
         }
 
         lastPrompt = initialPrompt
+        lastUserPrompt = prompt
         lastImageUri = imageUri
         stepCount = 0
         pendingConfirmation = null
@@ -216,9 +218,18 @@ class AgentOrchestrator @Inject constructor(
 
                         _agentState.value = AgentState.ExecutingTool(tool.name, currentSteps.toList())
 
+                        val effectiveArgs = if (tool.name == "read_sensors" &&
+                            toolCall.arguments["requestSound"] == null &&
+                            promptMentionsAmbientSound(lastUserPrompt)
+                        ) {
+                            toolCall.arguments + ("requestSound" to "true")
+                        } else {
+                            toolCall.arguments
+                        }
+
                         val toolResult = try {
                             withTimeout(tool.executionTimeoutMs()) {
-                                tool.execute(toolCall.arguments)
+                                tool.execute(effectiveArgs)
                             }
                         } catch (e: TimeoutCancellationException) {
                             Timber.tag(TAG).e("Tool ${tool.name} timed out.")
@@ -298,6 +309,15 @@ class AgentOrchestrator @Inject constructor(
 
         return "$prefix$trimmedContextualPrompt"
             .takeLast(Constants.Agent.MAX_PROMPT_CHAR_BUDGET)
+    }
+
+    private fun promptMentionsAmbientSound(prompt: String): Boolean {
+        val lower = prompt.lowercase()
+        return listOf(
+            "sound", "noise", "noisy", "loud", "quiet", "silent", "decibel", "db",
+            "mic", "microphone", "listen", "ruido", "ruidoso", "sonido", "bruit",
+            "bruyant", "barulho", "barulhento", "lärm", "larm", "geräusch", "うるさい", "騒音", "音量"
+        ).any { lower.contains(it) }
     }
 
     private fun AgentTool.executionTimeoutMs(): Long {

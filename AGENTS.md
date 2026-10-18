@@ -11,6 +11,7 @@ This file guides Codex and other coding agents working in this repository.
 - Run lint: `./gradlew lint`
 - Clean project: `./gradlew clean`
 - Install already built debug APK via ADB: `adb install -r app/build/outputs/apk/debug/app-debug.apk`
+- Run Maestro UI validation flow: `C:\maestro\bin\maestro.bat test .maestro/ambient_sound_validation.yaml` (or via the `maestro` MCP `run` tool)
 
 On Windows PowerShell, prefer:
 
@@ -23,6 +24,9 @@ $env:GRADLE_USER_HOME='C:\Users\nehem\.gradle'; .\gradlew.bat installDebug --no-
 
 # Install already built APK and launch
 adb install -r app/build/outputs/apk/debug/app-debug.apk; adb shell am start -n dev.neo.chevereai/com.neo.chevere.MainActivity
+
+# Run Maestro UI validation flow on connected device/emulator
+$env:JAVA_HOME='C:\Program Files\Eclipse Adoptium\jdk-17.0.18.8-hotspot'; $env:MAESTRO_CLI_NO_ANALYTICS='1'; $env:MAESTRO_CLI_ANALYSIS_NOTIFICATION_DISABLED='true'; C:\maestro\bin\maestro.bat test .maestro/ambient_sound_validation.yaml
 ```
 
 ## High-Level Architecture
@@ -187,4 +191,5 @@ Apply these rules to new features and code changed by a task. Existing violation
 - Surface actionable errors with `InstallStatus` and `DownloadProgress.Error`.
 - To access Android/localized resources in Jetpack Compose, prefer using the Compose API `val resources = LocalResources.current` instead of fetching them via `LocalContext.current.resources`.
 - After building the project, try to deploy, install, and launch the application on a connected device/emulator using `adb install` or the Gradle `installDebug` task followed by launching via ADB to verify success.
+- When modifying a user-facing scenario or UI flow, add or update a Maestro YAML flow under `.maestro/` and execute it (via the Maestro MCP `run` tool or `C:\maestro\bin\maestro.bat test .maestro/<flow>.yaml`) against the connected device/emulator to validate the modified scenario end-to-end.
 - Do not add `Co-Authored-By` or other AI/agent attribution to commits.

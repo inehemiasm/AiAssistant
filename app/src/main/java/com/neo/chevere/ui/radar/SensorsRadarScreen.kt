@@ -88,11 +88,16 @@ fun SensorsRadarContent(
     }
 
     LaunchedEffect(uiState.mode) {
-        if (uiState.mode == SensorMode.SOUND &&
-            androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.RECORD_AUDIO) ==
-            android.content.pm.PackageManager.PERMISSION_GRANTED
-        ) {
-            onMicPermissionGranted()
+        if (uiState.mode == SensorMode.SOUND || uiState.mode == SensorMode.ALL) {
+            if (androidx.core.content.ContextCompat.checkSelfPermission(
+                    context,
+                    android.Manifest.permission.RECORD_AUDIO
+                ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+            ) {
+                onMicPermissionGranted()
+            } else {
+                micPermissionLauncher.launch(android.Manifest.permission.RECORD_AUDIO)
+            }
         }
     }
 
@@ -175,7 +180,10 @@ fun SensorsRadarContent(
                     onCalibrate = calibrate,
                     onResetCalibration = resetCalibration,
                     onToggleAudio = toggleAudio,
-                    onToggleVibration = toggleVibration
+                    onToggleVibration = toggleVibration,
+                    onRequestMicPermission = {
+                        micPermissionLauncher.launch(android.Manifest.permission.RECORD_AUDIO)
+                    }
                 )
                 SensorMode.STUD -> StudFinderContent(
                     uiState = uiState,
@@ -271,7 +279,8 @@ private fun AllSensorsContent(
     onCalibrate: () -> Unit,
     onResetCalibration: () -> Unit,
     onToggleAudio: (Boolean) -> Unit,
-    onToggleVibration: (Boolean) -> Unit
+    onToggleVibration: (Boolean) -> Unit,
+    onRequestMicPermission: () -> Unit
 ) {
     StudFinderContent(
         uiState = uiState,
@@ -315,6 +324,60 @@ private fun AllSensorsContent(
                     text = if (uiState.proximityNear) "NEAR" else "FAR",
                     style = Typography.bodyLarge.copy(fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace),
                     color = if (uiState.proximityNear) MaterialTheme.colorScheme.error else primaryColor
+                )
+            }
+        }
+    }
+
+    // Ambient Sound (Microphone) card
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = surfaceContainer),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(14.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text(
+                    text = "BACKGROUND SOUND (MIC)",
+                    style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(4.dp))
+                if (uiState.micPermissionGranted) {
+                    Text(
+                        text = "${uiState.soundDbSpl.toInt()} dB SPL",
+                        style = Typography.bodyLarge.copy(fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace),
+                        color = if (uiState.soundDbSpl > 75f) MaterialTheme.colorScheme.error else primaryColor
+                    )
+                } else {
+                    Text(
+                        text = "PERMISSION REQUIRED",
+                        style = Typography.bodyMedium.copy(fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace),
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+            if (!uiState.micPermissionGranted) {
+                TextButton(onClick = onRequestMicPermission) {
+                    Text("GRANT MIC", color = primaryColor, style = Typography.labelLarge.copy(fontWeight = FontWeight.Bold))
+                }
+            } else {
+                val category = when {
+                    uiState.soundDbSpl < 30f -> "VERY QUIET"
+                    uiState.soundDbSpl < 45f -> "QUIET"
+                    uiState.soundDbSpl < 60f -> "MODERATE"
+                    uiState.soundDbSpl < 75f -> "LOUD"
+                    uiState.soundDbSpl < 90f -> "VERY LOUD"
+                    else -> "HEARING RISK"
+                }
+                Text(
+                    text = category,
+                    style = Typography.labelMedium.copy(fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace),
+                    color = if (uiState.soundDbSpl > 75f) MaterialTheme.colorScheme.error else primaryColor
                 )
             }
         }

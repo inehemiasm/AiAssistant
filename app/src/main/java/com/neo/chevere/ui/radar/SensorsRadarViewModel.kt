@@ -185,7 +185,7 @@ class SensorsRadarViewModel @Inject constructor(
             startAudioFeedbackLoop()
             startVibrationFeedbackLoop()
         }
-        if (mode == SensorMode.SOUND && hasMic) {
+        if ((mode == SensorMode.SOUND || mode == SensorMode.ALL) && hasMic) {
             startSoundMonitoring()
         }
     }
@@ -325,7 +325,7 @@ class SensorsRadarViewModel @Inject constructor(
 
     fun onMicPermissionGranted() {
         _uiState.update { it.copy(micPermissionGranted = true) }
-        if (mode == SensorMode.SOUND) {
+        if (mode == SensorMode.SOUND || mode == SensorMode.ALL) {
             startSoundMonitoring()
         }
     }
@@ -358,9 +358,12 @@ class SensorsRadarViewModel @Inject constructor(
                 
                 recorder.prepare()
                 recorder.start()
+                recorder.maxAmplitude // Prime baseline so first sample window is accurate
                 mediaRecorder = recorder
 
-                _uiState.update { it.copy(statusLabel = "MONITORING AMBIENT NOISE...") }
+                if (mode == SensorMode.SOUND) {
+                    _uiState.update { it.copy(statusLabel = "MONITORING AMBIENT NOISE...") }
+                }
 
                 while (true) {
                     delay(150L)
@@ -379,12 +382,14 @@ class SensorsRadarViewModel @Inject constructor(
                         state.copy(
                             soundDbSpl = dbSpl,
                             soundHistory = history,
-                            statusLabel = label
+                            statusLabel = if (mode == SensorMode.SOUND) label else state.statusLabel
                         )
                     }
                 }
             } catch (e: Exception) {
-                _uiState.update { it.copy(statusLabel = "SOUND PROBE ERROR: ${e.message}") }
+                if (mode == SensorMode.SOUND) {
+                    _uiState.update { it.copy(statusLabel = "SOUND PROBE ERROR: ${e.message}") }
+                }
             } finally {
                 runCatching { recorder.stop() }
                 runCatching { recorder.release() }

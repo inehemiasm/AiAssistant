@@ -1,0 +1,43 @@
+appId: dev.neo.chevereai
+name: Validate Ambient Sound Chat Reading and Sensor Radar
+---
+- launchApp:
+    clearState: false
+    permissions:
+      microphone: allow
+
+# Wait for splash screen and optional model initialization to complete
+- extendedWaitUntil:
+    visible: "Ask Chevere AI…"
+    timeout: 45000
+
+# 1. Test direct ambient sound reading in Chat
+- tapOn: "Ask Chevere AI…"
+- inputText: "How loud is it in here?"
+- tapOn: "Send"
+
+- extendedWaitUntil:
+    visible: ".*Background sound at your phone:.*"
+    timeout: 15000
+
+# 2. Test navigating to Sensor Radar via /sensors slash command and verifying the Background Sound (Mic) card
+- tapOn: "Ask Chevere AI…"
+- inputText: "/sensors"
+- tapOn: "Send"
+
+- extendedWaitUntil:
+    visible: "[ SENSOR RADAR ]"
+    timeout: 10000
+
+- scrollUntilVisible:
+    element:
+      text: "BACKGROUND SOUND (MIC)"
+    direction: DOWN
+    timeout: 10000
+
+- assertVisible: "BACKGROUND SOUND (MIC)"
+- assertVisible: ".*dB SPL.*"
+
+# Return to Chat screen
+- tapOn: "Back"
+- assertVisible: "Ask Chevere AI…"

@@ -90,10 +90,48 @@ class ChatRequestRouter @Inject constructor() {
                 Regex("""\b(check|measure|read|how|what)\b""").containsMatchIn(text))
     }
 
+    /**
+     * Selects factual ambient sound / background noise / microphone decibel requests,
+     * while leaving visual screen navigation, device volume adjustments, and definitions alone.
+     */
+    fun isAmbientSoundReadingRequest(prompt: String): Boolean {
+        val text = prompt.normalized()
+            .replace("’", "'")
+            .replace("how's", "how is")
+            .replace("hows ", "how is ")
+            .replace("what's", "what is")
+            .replace("whats ", "what is ")
+        if (isCapabilityOnlyQuestion(text)) return false
+        if (Regex("""\b(open|show|launch|navigate)\b.*\b(meter|visualizer|radar|screen|dashboard)\b""").containsMatchIn(text)) return false
+        if (Regex("""\b(set|turn|change|increase|decrease|raise|lower|mute|unmute)\b.*\b(volume|sound|audio)\b""").containsMatchIn(text)) return false
+        if (Regex("""^(what is|define) (ambient (sound|noise)|background (sound|noise)|decibels?)\??$""").matches(text)) return false
+        // Exclude compound multi-sensor requests (e.g. "check temperature and noise") so the full sensor tool handles them
+        if (Regex("""\b(temperature|pressure|barometer|battery|thermal|gyro|compass|proximity|light|lux|stud|metal)\b""").containsMatchIn(text)) return false
+
+        val englishMatch =
+            Regex("""\b(ambient (sound|noise)|background (sound|noise|audio)|noise levels?|sound levels?|decibels?|db spl|room noise)\b""").containsMatchIn(text) ||
+            Regex("""\b(how (loud|noisy|quiet|silent)|is it (loud|noisy|quiet|silent))\b""").containsMatchIn(text) ||
+            Regex("""\b(how is the (sound|noise|audio))\b""").containsMatchIn(text) ||
+            (Regex("""\b(listen|listening|hear|check|measure|read|detect|sample)\b""").containsMatchIn(text) &&
+                Regex("""\b(sound|noise|audio|mic|microphone|decibels?)\b""").containsMatchIn(text))
+
+        val multilingualMatch = listOf(
+            "cuánto ruido", "cuanto ruido", "qué tan ruidoso", "que tan ruidoso", "nivel de ruido",
+            "ruido ambiental", "cómo está el sonido", "como esta el sonido", "está silencioso", "decibeles",
+            "niveau sonore", "niveau de bruit", "bruit ambiant", "c'est bruyant", "quel bruit",
+            "nível de ruído", "nivel de ruido", "quão barulhento", "quao barulhento", "quanto barulho",
+            "como está o som", "como esta o som",
+            "wie laut ist es", "wie leise ist es", "lärmpegel", "larmpegel", "geräuschpegel", "gerauschpegel",
+            "音量はどれくらい", "うるさいですか", "騒音レベル"
+        ).any { it in text }
+
+        return englishMatch || multilingualMatch
+    }
+
     private fun looksLikeSensorsRequest(text: String): Boolean {
         val hasSensorKeyword = ChatRoutingLexicon.sensorKeywords.any { it in text }
         val hasAmbientPhrase = ChatRoutingLexicon.ambientPhrases.any { it in text }
-        return isAmbientLightReadingRequest(text) || hasSensorKeyword || hasAmbientPhrase
+        return isAmbientLightReadingRequest(text) || isAmbientSoundReadingRequest(text) || hasSensorKeyword || hasAmbientPhrase
     }
 
     private fun looksLikeTaskRegistryRequest(text: String): Boolean {

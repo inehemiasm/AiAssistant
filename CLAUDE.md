@@ -96,4 +96,5 @@ Chevere AI is an Android app using Clean Architecture, MVI, Room, Hilt, LiteRT-L
 - Use `InstallStatus`, sealed states, and enums instead of raw state strings.
 - If `InstalledModelEntity` changes, increment Room database version and provide migration handling.
 - After building the project, try to deploy, install, and launch the application on a connected device/emulator using `adb install` or the Gradle `installDebug` task followed by launching via ADB to verify success.
+- When modifying a user-facing scenario or UI flow, add or update a Maestro YAML flow under `.maestro/` and execute it (via the Maestro MCP `run` tool or `C:\maestro\bin\maestro.bat test .maestro/<flow>.yaml`) against the connected device/emulator to validate the modified scenario end-to-end.
 - Do not add AI attribution or `Co-Authored-By` lines to commits.

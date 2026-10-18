@@ -85,6 +85,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -206,14 +207,16 @@ fun ChatContent(
     onSettingsClick: () -> Unit,
     onRadarClick: (mode: String) -> Unit
 ) {
-    val viewModel = remember(state, effects, onIntent) {
+    val currentState by rememberUpdatedState(state)
+    val currentOnIntent by rememberUpdatedState(onIntent)
+    val viewModel = remember(effects) {
         object {
             fun onIntent(intent: ChatIntent) {
-                onIntent(intent)
+                currentOnIntent(intent)
             }
             val effect = effects
             val uiState = object {
-                val value = state
+                val value: ChatState get() = currentState
             }
         }
     }
@@ -415,7 +418,7 @@ fun ChatContent(
                 resources.getString(R.string.microphone_permission_granted),
                 Toast.LENGTH_SHORT
             ).show()
-            val lastMessage = state.messages.lastOrNull()
+            val lastMessage = currentState.messages.lastOrNull()
             val isAmbientSoundPermission = lastMessage != null && !lastMessage.isUser &&
                 lastMessage.text.contains("Microphone permission is required to measure the ambient sound level")
             if (isAmbientSoundPermission) {

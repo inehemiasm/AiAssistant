@@ -61,6 +61,7 @@ class ChatRepositoryImplTest {
     private lateinit var conversationContextManager: ConversationContextManager
     private lateinit var chatRequestRouter: ChatRequestRouter
     private val ambientLightRepository = mock<com.neo.chevere.domain.AmbientLightRepository>()
+    private val ambientSoundRepository = mock<com.neo.chevere.domain.AmbientSoundRepository>()
     private lateinit var repository: ChatRepositoryImpl
 
     @Before
@@ -98,7 +99,8 @@ class ChatRepositoryImplTest {
                 override val io = testDispatcher
                 override val main = testDispatcher
                 override val default = testDispatcher
-            }
+            },
+            ambientSoundRepository = ambientSoundRepository
         )
     }
 
@@ -118,6 +120,27 @@ class ChatRepositoryImplTest {
         val answer = repository.sendMessage("How is the light in my room?", null).getOrThrow().text
         assertTrue(answer.contains("does not have an ambient light sensor"))
         assertTrue(!answer.contains("lux") && !answer.contains("image"))
+    }
+
+    @Test
+    fun ambientSoundQuestionWithoutMicPermissionReturnsMicPermissionException() = runTest(testDispatcher) {
+        whenever(ambientSoundRepository.readAmbientSound()).thenReturn(com.neo.chevere.domain.AmbientSoundReading.PermissionRequired)
+        val result = repository.sendMessage("Listen to the background sound using the mic", null)
+        assertTrue(result.isFailure)
+        assertTrue(result.exceptionOrNull() is com.neo.chevere.domain.MicPermissionException)
+        verify(agentOrchestrator, never()).processUserRequest(any(), any(), any(), any())
+    }
+
+    @Test
+    fun ambientSoundQuestionWithMicPermissionReadsMicrophoneDirectly() = runTest(testDispatcher) {
+        whenever(ambientSoundRepository.readAmbientSound()).thenReturn(
+            com.neo.chevere.domain.AmbientSoundReading.Available(dbSpl = 42.0, peakAmplitude = 130)
+        )
+        val answer = repository.sendMessage("How noisy is my room?", null).getOrThrow().text
+        assertTrue(answer.contains("42 dB SPL"))
+        assertTrue(answer.contains("quiet, library level"))
+        verify(inferenceManager, never()).generateStream(any())
+        verify(agentOrchestrator, never()).processUserRequest(any(), any(), any(), any())
     }
 
     @Test
