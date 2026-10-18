@@ -53,15 +53,11 @@ Prefer `1.dp` outlines over shadows. Use `outlineVariant` at low alpha for inact
 
 ### 9. Top Bar Identity
 
-The chat top bar should represent Chevere AI and local capability readiness, not a single model filename. Use the `CHEVERE AI` brand title with compact readiness chips such as `CHAT` and `IMAGE`. Model selection and model details belong in the Models screen.
+The chat top bar should represent Chevere AI and local capability readiness, not a single model filename. Use the `CHEVERE AI` brand title with compact readiness chips (currently `CHAT`, while `IMAGE` is hidden unless `:image-generation` is enabled). Model selection and model details belong in the Models screen.
 
 ### 10. Generation Feedback
 
-Image generation can take minutes on device. Any image-generation path, including slash commands, must set `SendState.GeneratingImage` so the chat shows `GENERATING IMAGE...` and disables duplicate sends.
-
-If no healthy image-generation model is installed, image-generation requests should show a clear download prompt instead of silently failing or producing a generic assistant apology.
-
-Attached images are multimodal chat inputs. They should route to chat/vision inference, not text-to-image generation, unless a future explicit image-editing flow is added.
+Attached images are multimodal chat inputs. They should route to chat/vision inference, not text-to-image generation. (When the `:image-generation` module is enabled in the future, any image-generation path must set `SendState.GeneratingImage` so the chat shows `GENERATING IMAGE...` and disables duplicate sends).
 
 ### 11. Attachment Preview
 
@@ -69,7 +65,7 @@ Selected image thumbnails should be large enough to inspect before sending. Use 
 
 ### 12. Assistant Message Actions
 
-Assistant message controls should reflect available behavior. Use a share icon for Android share-sheet actions. Do not show report or flag controls until there is an actual reporting workflow.
+Assistant message controls should reflect available behavior. Provide both a **Share** icon (`Icons.Default.Share`) for Android share-sheet actions and a **Report / Flag** icon (`Icons.Default.Flag`) that opens `ReportAiContentDialog` (`AiContentReportRepository`).
 
 ### 13. Explicit Image Mask
 

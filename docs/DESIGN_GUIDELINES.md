@@ -66,10 +66,10 @@ Use uppercase for screen titles and compact status labels when it improves scana
 ### Chat Top Bar
 
 - Show the `CHEVERE AI` brand rather than a single selected model filename.
-- Use compact readiness chips for local capabilities, currently `CHAT` and `IMAGE`.
-- Keep chat model switching, image model readiness, downloads, and model details in the Models screen.
+- Use compact readiness chips for local capabilities (`CHAT` by default; `IMAGE` is hidden while `:image-generation` is decoupled).
+- Keep chat model switching, downloads, and model details in the Models screen.
 
-### Generated Images
+### Generated Images (when `:image-generation` is enabled)
 
 - Non-explicit generated images render normally.
 - Explicit generated images render blurred by default with:
@@ -79,13 +79,13 @@ Use uppercase for screen titles and compact status labels when it improves scana
 
 ### Assistant Message Actions
 
-- Use a share icon for response sharing through the Android share sheet.
-- Do not use flag/report icons until there is a real reporting mechanism.
+- Use a share icon (`Icons.Default.Share`) for response sharing through the Android share sheet.
+- Use a flag icon (`Icons.Default.Flag`) to open `ReportAiContentDialog` and submit PII-scrubbed AI content reports via `AiContentReportRepository`.
 
 ### Safety & Privacy Settings
 
 - Use expandable rows so the section stays scannable.
-- Explain local processing, release content controls, user-controlled sharing, and local storage.
+- Explain local processing, release content controls, user-controlled sharing & AI content reporting, and local storage.
 
 ### Launcher & Splash
 
