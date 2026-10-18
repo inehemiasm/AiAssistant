@@ -3,24 +3,23 @@ package com.neo.chevere.ui.tasks
 import android.app.Application
 import androidx.lifecycle.viewModelScope
 import com.neo.chevere.core.BaseViewModel
-import com.neo.chevere.data.datasource.local.TaskDao
-import com.neo.chevere.data.datasource.local.TaskEntity
-import com.neo.chevere.data.datasource.local.TaskStatus
+import com.neo.chevere.domain.TaskRepository
+import com.neo.chevere.domain.TaskStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+/** Maps domain tasks to UI state and dispatches user actions through the task repository. */
 @HiltViewModel
 class TasksViewModel @Inject constructor(
     application: Application,
-    private val taskDao: TaskDao
+    private val taskRepository: TaskRepository
 ) : BaseViewModel<TasksState, TasksIntent, TasksEffect>(application, TasksState()) {
-
     init {
         viewModelScope.launch {
-            taskDao.getAllTasksFlow().collectLatest { taskList ->
-                setState { copy(tasks = taskList) }
+            taskRepository.observeTasks().collectLatest { tasks ->
+                setState { copy(tasks = tasks.map { it.toUiModel() }) }
             }
         }
     }
@@ -32,25 +31,17 @@ class TasksViewModel @Inject constructor(
                     sendEffect { TasksEffect.ShowToast("Task title cannot be empty") }
                     return
                 }
-                val task = TaskEntity(title = intent.title, description = intent.description)
-                taskDao.insertTask(task)
+                taskRepository.createTask(intent.title, intent.description)
             }
-
             is TasksIntent.ToggleTaskStatus -> {
-                val task = taskDao.getTaskById(intent.id)
-                if (task != null) {
-                    val newStatus = if (task.status == TaskStatus.PENDING) {
-                        TaskStatus.COMPLETED
-                    } else {
-                        TaskStatus.PENDING
-                    }
-                    taskDao.updateTask(task.copy(status = newStatus))
+                val task = taskRepository.getTask(intent.id) ?: return
+                val newStatus = when (task.status) {
+                    TaskStatus.PENDING -> TaskStatus.COMPLETED
+                    TaskStatus.COMPLETED -> TaskStatus.PENDING
                 }
+                taskRepository.setTaskStatus(task.id, newStatus)
             }
-
-            is TasksIntent.DeleteTask -> {
-                taskDao.deleteTask(intent.id)
-            }
+            is TasksIntent.DeleteTask -> taskRepository.deleteTask(intent.id)
         }
     }
 }

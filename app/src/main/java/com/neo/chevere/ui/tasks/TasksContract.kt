@@ -3,11 +3,14 @@ package com.neo.chevere.ui.tasks
 import com.neo.chevere.core.UiEffect
 import com.neo.chevere.core.UiIntent
 import com.neo.chevere.core.UiState
-import com.neo.chevere.data.datasource.local.TaskEntity
 
+/** Presentation-only task state; grouping belongs to MVI rather than Compose layout code. */
 data class TasksState(
-    val tasks: List<TaskEntity> = emptyList()
-) : UiState
+    val tasks: List<TaskUiModel> = emptyList()
+) : UiState {
+    val pendingTasks: List<TaskUiModel> get() = tasks.filter { !it.isCompleted }
+    val completedTasks: List<TaskUiModel> get() = tasks.filter { it.isCompleted }
+}
 
 sealed class TasksIntent : UiIntent {
     data class AddTask(val title: String, val description: String) : TasksIntent()

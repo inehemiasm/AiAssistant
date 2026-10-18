@@ -24,6 +24,10 @@ interface TaskDao {
     @Update
     suspend fun updateTask(task: TaskEntity)
 
+    /** Updates status atomically without overwriting a concurrently edited title or description. */
+    @Query("UPDATE local_tasks SET status = :status WHERE id = :id")
+    suspend fun setTaskStatus(id: Int, status: TaskStatus): Int
+
     @Query("DELETE FROM local_tasks WHERE id = :id")
     suspend fun deleteTask(id: Int)
 }

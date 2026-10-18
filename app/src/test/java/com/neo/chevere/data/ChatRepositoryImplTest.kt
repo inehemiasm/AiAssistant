@@ -29,6 +29,7 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertFalse
 import org.junit.Before
 import org.junit.Test
 import org.mockito.kotlin.any
@@ -103,6 +104,28 @@ class ChatRepositoryImplTest {
     }
 
     @Test
+    fun checklistResult_isDecodedAtRepositoryBoundaryAndMemoryKeepsReadableText() = runTest(testDispatcher) {
+        val prompt = "list my tasks"
+        val payload = com.neo.chevere.data.agent.ui.AgentUiEnvelope.checklist("Current tasks: Buy milk", listOf(7))
+        whenever(agentOrchestrator.processUserRequest(prompt, null, null, RoutingCategory.TASK_REGISTRY))
+            .doReturn(Result.success(payload))
+        val response = repository.sendMessage(prompt).getOrThrow()
+        assertEquals("Current tasks: Buy milk", response.text)
+        assertEquals(listOf(7), (response.agentUiContent as com.neo.chevere.domain.AgentUiContent.TaskChecklist).taskIds)
+        assertFalse(conversationContextManager.buildContextPrefix().contains(
+            com.neo.chevere.data.agent.ui.AgentUiEnvelope.PREFIX))
+    }
+
+    @Test
+    fun confirmedChecklist_isDecodedAtRepositoryBoundary() = runTest(testDispatcher) {
+        val payload = com.neo.chevere.data.agent.ui.AgentUiEnvelope.checklist("Tasks", listOf(7))
+        whenever(agentOrchestrator.confirmAction()).doReturn(Result.success(payload))
+        val response = repository.confirmAction().getOrThrow()
+        assertEquals("Tasks", response.text)
+        assertTrue(response.agentUiContent is com.neo.chevere.domain.AgentUiContent.TaskChecklist)
+    }
+
+    @Test
     fun sendMessage_plainTextUsesDirectInference() = runTest(testDispatcher) {
         val prompt = "hello"
         whenever(inferenceManager.generateStream(any())).doReturn(flowOf(InferenceResult.Success("hi")))
@@ -115,7 +138,7 @@ class ChatRepositoryImplTest {
                     this.prompt.contains("You are Chevere AI") &&
                     this.prompt.endsWith(prompt)
         })
-        assertEquals("hi", result.getOrNull())
+        assertEquals("hi", result.getOrNull()?.text)
     }
 
     @Test
@@ -124,9 +147,9 @@ class ChatRepositoryImplTest {
 
         verify(inferenceManager, never()).generate(any())
         verify(agentOrchestrator, never()).processUserRequest(any(), any(), any(), any())
-        assertTrue(result.getOrNull()?.contains("image generation") == true)
-        assertTrue(result.getOrNull()?.contains("weather") == true)
-        assertTrue(result.getOrNull()?.contains("live device sensor readings") == true)
+        assertTrue(result.getOrNull()?.text?.contains("image generation") == true)
+        assertTrue(result.getOrNull()?.text?.contains("weather") == true)
+        assertTrue(result.getOrNull()?.text?.contains("live device sensor readings") == true)
     }
 
     @Test
@@ -135,7 +158,7 @@ class ChatRepositoryImplTest {
 
         verify(inferenceManager, never()).generate(any())
         verify(agentOrchestrator, never()).processUserRequest(any(), any(), any(), any())
-        assertTrue(result.getOrNull()?.contains("Tell me what you want") == true)
+        assertTrue(result.getOrNull()?.text?.contains("Tell me what you want") == true)
     }
 
     @Test
@@ -153,7 +176,7 @@ class ChatRepositoryImplTest {
         val result = repository.sendMessage(prompt, null)
 
         verify(agentOrchestrator).processUserRequest(prompt, null, null, RoutingCategory.LIVE_INFORMATION)
-        assertEquals("sunny", result.getOrNull())
+        assertEquals("sunny", result.getOrNull()?.text)
     }
 
     @Test
@@ -206,7 +229,7 @@ class ChatRepositoryImplTest {
         val result = repository.sendMessage(prompt, null)
 
         verify(agentOrchestrator).processUserRequest(prompt, null, null, RoutingCategory.IMAGE_GENERATION)
-        assertEquals("created", result.getOrNull())
+        assertEquals("created", result.getOrNull()?.text)
     }
 
     @Test
@@ -224,7 +247,7 @@ class ChatRepositoryImplTest {
                     this.prompt.contains("attached image") &&
                     this.prompt.contains("Do not generate")
         })
-        assertEquals("I can describe the attached image.", result.getOrNull())
+        assertEquals("I can describe the attached image.", result.getOrNull()?.text)
     }
 
     @Test
