@@ -42,6 +42,11 @@ import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
 
+import androidx.compose.foundation.horizontalScroll
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+
 @Composable
 fun SensorsRadarScreen(
     onBackClick: () -> Unit,
@@ -49,8 +54,25 @@ fun SensorsRadarScreen(
     viewModel: SensorsRadarViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_RESUME -> viewModel.onResume()
+                Lifecycle.Event.ON_PAUSE -> viewModel.onPause()
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
     SensorsRadarContent(
         uiState = uiState,
+        onSelectMode = { viewModel.selectMode(it) },
         onMicPermissionGranted = { viewModel.onMicPermissionGranted() },
         calibrate = { viewModel.calibrate() },
         resetCalibration = { viewModel.resetCalibration() },
@@ -71,7 +93,8 @@ fun SensorsRadarContent(
     toggleAudio: (Boolean) -> Unit,
     toggleVibration: (Boolean) -> Unit,
     onBackClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onSelectMode: (SensorMode) -> Unit = {}
 ) {
     val scrollState = rememberScrollState()
     val primaryColor = MaterialTheme.colorScheme.primary
@@ -102,12 +125,21 @@ fun SensorsRadarContent(
     }
 
     val screenTitle = when (uiState.mode) {
-        SensorMode.ALL      -> "[ SENSOR RADAR ]"
-        SensorMode.STUD     -> "[ STUD FINDER ]"
-        SensorMode.LEVEL    -> "[ SPIRIT LEVEL ]"
-        SensorMode.LIGHT    -> "[ AMBIENT LIGHT ]"
+        SensorMode.ALL       -> "[ SENSOR RADAR ]"
+        SensorMode.STUD      -> "[ STUD FINDER ]"
+        SensorMode.LEVEL     -> "[ SPIRIT LEVEL ]"
+        SensorMode.LIGHT     -> "[ AMBIENT LIGHT ]"
         SensorMode.PROXIMITY -> "[ PROXIMITY ]"
-        SensorMode.SOUND    -> "[ DECIBEL METER ]"
+        SensorMode.SOUND     -> "[ DECIBEL METER ]"
+    }
+
+    val isAlertState = when (uiState.mode) {
+        SensorMode.ALL -> uiState.magneticCalibrated > 35f || uiState.proximityNear || uiState.soundDbSpl > 75f
+        SensorMode.STUD -> uiState.magneticCalibrated > 35f
+        SensorMode.PROXIMITY -> uiState.proximityNear
+        SensorMode.SOUND -> uiState.soundDbSpl > 75f || !uiState.micPermissionGranted
+        SensorMode.LEVEL -> abs(uiState.pitch) >= 2.0f || abs(uiState.roll) >= 2.0f
+        SensorMode.LIGHT -> false
     }
 
     Scaffold(
@@ -158,14 +190,20 @@ fun SensorsRadarContent(
                 .verticalScroll(scrollState)
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            // ── Status Banner (all modes) ──────────────────────────────────
+            // ── Mode Selector Chips ────────────────────────────────────────
+            SensorModeSelectorRow(
+                selectedMode = uiState.mode,
+                onSelectMode = onSelectMode,
+                primaryColor = primaryColor,
+                surfaceContainer = surfaceContainer
+            )
+
+            // ── Status Banner (all modes, non-flickering) ──────────────────
             StatusBanner(
                 label = uiState.statusLabel,
-                alertColor = (uiState.mode == SensorMode.STUD && uiState.magneticCalibrated > 35f) ||
-                        (uiState.mode == SensorMode.PROXIMITY && uiState.proximityNear) ||
-                        (uiState.mode == SensorMode.SOUND && uiState.soundDbSpl > 75f),
+                alertColor = isAlertState,
                 primaryColor = primaryColor,
                 surfaceContainer = surfaceContainer
             )
@@ -181,6 +219,7 @@ fun SensorsRadarContent(
                     onResetCalibration = resetCalibration,
                     onToggleAudio = toggleAudio,
                     onToggleVibration = toggleVibration,
+                    onSelectMode = onSelectMode,
                     onRequestMicPermission = {
                         micPermissionLauncher.launch(android.Manifest.permission.RECORD_AUDIO)
                     }
@@ -193,7 +232,8 @@ fun SensorsRadarContent(
                     onCalibrate = calibrate,
                     onResetCalibration = resetCalibration,
                     onToggleAudio = toggleAudio,
-                    onToggleVibration = toggleVibration
+                    onToggleVibration = toggleVibration,
+                    showHistoryGraph = true
                 )
                 SensorMode.LEVEL -> SpiritLevelContent(
                     pitch = uiState.pitch,
@@ -240,6 +280,45 @@ fun SensorsRadarContent(
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
+private fun SensorModeSelectorRow(
+    selectedMode: SensorMode,
+    onSelectMode: (SensorMode) -> Unit,
+    primaryColor: Color,
+    surfaceContainer: Color
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        SensorMode.entries.forEach { mode ->
+            val selected = mode == selectedMode
+            Surface(
+                onClick = { onSelectMode(mode) },
+                shape = RoundedCornerShape(10.dp),
+                color = if (selected) primaryColor.copy(alpha = 0.18f) else surfaceContainer,
+                border = BorderStroke(
+                    width = 1.dp,
+                    color = if (selected) primaryColor else primaryColor.copy(alpha = 0.22f)
+                )
+            ) {
+                Text(
+                    text = mode.shortLabel,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+                    style = Typography.labelMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = FontFamily.Monospace,
+                        letterSpacing = 1.sp
+                    ),
+                    color = if (selected) primaryColor else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun StatusBanner(
     label: String,
     alertColor: Boolean,
@@ -280,6 +359,7 @@ private fun AllSensorsContent(
     onResetCalibration: () -> Unit,
     onToggleAudio: (Boolean) -> Unit,
     onToggleVibration: (Boolean) -> Unit,
+    onSelectMode: (SensorMode) -> Unit,
     onRequestMicPermission: () -> Unit
 ) {
     StudFinderContent(
@@ -290,19 +370,42 @@ private fun AllSensorsContent(
         onCalibrate = onCalibrate,
         onResetCalibration = onResetCalibration,
         onToggleAudio = onToggleAudio,
-        onToggleVibration = onToggleVibration
+        onToggleVibration = onToggleVibration,
+        showHistoryGraph = false
     )
 
-    // Light & Proximity row
+    // Light & Proximity row (tap either card to open its focused screen)
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Card(
+            onClick = { onSelectMode(SensorMode.LIGHT) },
             modifier = Modifier.weight(1f),
             colors = CardDefaults.cardColors(containerColor = surfaceContainer),
             shape = RoundedCornerShape(12.dp)
         ) {
+            val lightCategory = when {
+                uiState.lightLevel < 0f    -> "READING"
+                uiState.lightLevel < 10f   -> "DARK"
+                uiState.lightLevel < 200f  -> "DIM"
+                uiState.lightLevel < 1000f -> "NORMAL"
+                else                       -> "BRIGHT"
+            }
             Column(modifier = Modifier.padding(12.dp)) {
-                Text("AMBIENT LIGHT", style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "AMBIENT LIGHT",
+                        style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        lightCategory,
+                        style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace),
+                        color = primaryColor.copy(alpha = 0.85f)
+                    )
+                }
                 Spacer(Modifier.height(4.dp))
                 Text(
                     text = if (uiState.lightLevel >= 0f) "${uiState.lightLevel.toInt()} lx" else "N/A",
@@ -312,16 +415,33 @@ private fun AllSensorsContent(
             }
         }
         Card(
+            onClick = { onSelectMode(SensorMode.PROXIMITY) },
             modifier = Modifier.weight(1f),
             colors = CardDefaults.cardColors(containerColor = surfaceContainer),
             shape = RoundedCornerShape(12.dp)
         ) {
             Column(modifier = Modifier.padding(12.dp)) {
-                Text("PROXIMITY", style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "PROXIMITY",
+                        style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    if (uiState.proximityDistance >= 0f) {
+                        Text(
+                            String.format(java.util.Locale.US, "%.1f cm", uiState.proximityDistance),
+                            style = Typography.labelSmall.copy(fontFamily = FontFamily.Monospace),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    text = if (uiState.proximityNear) "NEAR" else "FAR",
+                    text = if (uiState.proximityNear) "NEAR" else "CLEAR",
                     style = Typography.bodyLarge.copy(fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace),
                     color = if (uiState.proximityNear) MaterialTheme.colorScheme.error else primaryColor
                 )
@@ -331,53 +451,71 @@ private fun AllSensorsContent(
 
     // Ambient Sound (Microphone) card
     Card(
+        onClick = {
+            if (uiState.micPermissionGranted) {
+                onSelectMode(SensorMode.SOUND)
+            } else {
+                onRequestMicPermission()
+            }
+        },
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = surfaceContainer),
         shape = RoundedCornerShape(12.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(14.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column {
-                Text(
-                    text = "BACKGROUND SOUND (MIC)",
-                    style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(Modifier.height(4.dp))
-                if (uiState.micPermissionGranted) {
+        Column(modifier = Modifier.fillMaxWidth().padding(14.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
                     Text(
-                        text = "${uiState.soundDbSpl.toInt()} dB SPL",
-                        style = Typography.bodyLarge.copy(fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace),
-                        color = if (uiState.soundDbSpl > 75f) MaterialTheme.colorScheme.error else primaryColor
+                        text = "BACKGROUND SOUND (MIC)",
+                        style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    Spacer(Modifier.height(4.dp))
+                    if (uiState.micPermissionGranted) {
+                        Text(
+                            text = "${uiState.soundDbSpl.toInt()} dB SPL",
+                            style = Typography.bodyLarge.copy(fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace),
+                            color = if (uiState.soundDbSpl > 75f) MaterialTheme.colorScheme.error else primaryColor
+                        )
+                    } else {
+                        Text(
+                            text = "PERMISSION REQUIRED",
+                            style = Typography.bodyMedium.copy(fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace),
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+                if (!uiState.micPermissionGranted) {
+                    TextButton(onClick = onRequestMicPermission) {
+                        Text("GRANT MIC", color = primaryColor, style = Typography.labelLarge.copy(fontWeight = FontWeight.Bold))
+                    }
                 } else {
+                    val category = when {
+                        uiState.soundDbSpl < 30f -> "VERY QUIET"
+                        uiState.soundDbSpl < 45f -> "QUIET"
+                        uiState.soundDbSpl < 60f -> "MODERATE"
+                        uiState.soundDbSpl < 75f -> "LOUD"
+                        uiState.soundDbSpl < 90f -> "VERY LOUD"
+                        else -> "HEARING RISK"
+                    }
                     Text(
-                        text = "PERMISSION REQUIRED",
-                        style = Typography.bodyMedium.copy(fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace),
-                        color = MaterialTheme.colorScheme.error
+                        text = category,
+                        style = Typography.labelMedium.copy(fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace),
+                        color = if (uiState.soundDbSpl > 75f) MaterialTheme.colorScheme.error else primaryColor
                     )
                 }
             }
-            if (!uiState.micPermissionGranted) {
-                TextButton(onClick = onRequestMicPermission) {
-                    Text("GRANT MIC", color = primaryColor, style = Typography.labelLarge.copy(fontWeight = FontWeight.Bold))
-                }
-            } else {
-                val category = when {
-                    uiState.soundDbSpl < 30f -> "VERY QUIET"
-                    uiState.soundDbSpl < 45f -> "QUIET"
-                    uiState.soundDbSpl < 60f -> "MODERATE"
-                    uiState.soundDbSpl < 75f -> "LOUD"
-                    uiState.soundDbSpl < 90f -> "VERY LOUD"
-                    else -> "HEARING RISK"
-                }
-                Text(
-                    text = category,
-                    style = Typography.labelMedium.copy(fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace),
-                    color = if (uiState.soundDbSpl > 75f) MaterialTheme.colorScheme.error else primaryColor
+            if (uiState.micPermissionGranted) {
+                Spacer(Modifier.height(8.dp))
+                LinearProgressIndicator(
+                    progress = { (uiState.soundDbSpl / 120f).coerceIn(0f, 1f) },
+                    modifier = Modifier.fillMaxWidth().height(6.dp),
+                    color = if (uiState.soundDbSpl > 75f) MaterialTheme.colorScheme.error else primaryColor,
+                    trackColor = primaryColor.copy(alpha = 0.15f)
                 )
             }
         }
@@ -385,23 +523,35 @@ private fun AllSensorsContent(
 
     // Spirit Level
     Card(
+        onClick = { onSelectMode(SensorMode.LEVEL) },
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = surfaceContainer),
         shape = RoundedCornerShape(12.dp)
     ) {
-        Column(
+        val isLevel = abs(uiState.pitch) < 2.0f && abs(uiState.roll) < 2.0f
+        Row(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("SPIRIT LEVEL", style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    "SPIRIT LEVEL",
+                    style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = if (isLevel) "● LEVEL" else "● TILTED",
+                    style = Typography.bodyLarge.copy(fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace),
+                    color = if (isLevel) primaryColor else MaterialTheme.colorScheme.error
+                )
+                Text(
+                    text = String.format(java.util.Locale.US, "P: %.1f°   R: %.1f°", uiState.pitch, uiState.roll),
+                    style = Typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
             SpiritLevelVisualizer(pitch = uiState.pitch, roll = uiState.roll, primaryColor = primaryColor)
-            Text(
-                text = if (abs(uiState.pitch) < 2.0f && abs(uiState.roll) < 2.0f) "LEVEL" else "TILTED",
-                style = Typography.labelMedium.copy(fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace),
-                color = if (abs(uiState.pitch) < 2.0f && abs(uiState.roll) < 2.0f) primaryColor else MaterialTheme.colorScheme.onSurfaceVariant
-            )
         }
     }
 }
@@ -419,7 +569,8 @@ private fun StudFinderContent(
     onCalibrate: () -> Unit,
     onResetCalibration: () -> Unit,
     onToggleAudio: (Boolean) -> Unit,
-    onToggleVibration: (Boolean) -> Unit
+    onToggleVibration: (Boolean) -> Unit,
+    showHistoryGraph: Boolean = true
 ) {
     RadarHUDVisualizer(
         magneticCalibrated = uiState.magneticCalibrated,
@@ -514,15 +665,17 @@ private fun StudFinderContent(
     }
 
     // History graph
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = surfaceContainer),
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text("SIGNAL HISTORY", style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
-                color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 8.dp))
-            HistoryGraph(history = uiState.magneticHistory, primaryColor = primaryColor)
+    if (showHistoryGraph) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = surfaceContainer),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text("SIGNAL HISTORY", style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 8.dp))
+                HistoryGraph(history = uiState.magneticHistory, primaryColor = primaryColor)
+            }
         }
     }
 }
