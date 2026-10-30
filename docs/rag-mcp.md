@@ -6,6 +6,10 @@ In chat, open **Add attachment → Import document** and select a UTF-8 `.txt` o
 
 Import displays an indexing result and prepares `/docs Summarize <filename>` in the composer. Ask `/docs What is the warranty policy?` or `Search my documents for warranty`. Search currently spans the indexed library, returns up to three chunks, and uses lexical TF-IDF matching. It does not provide semantic embeddings or PDF extraction. Name the relevant document in your question when needed.
 
+## Runtime prompt and grounding
+
+This file is developer documentation, not a prompt automatically sent to the local LLM. `ChatRequestRouter` selects document routing; `ToolRegistry` supplies the tool descriptions and grounding instructions. The model calls `document_rag`, receives retrieved excerpts as a tool observation, and generates an answer. It receives at most three chunks, so a long-document summary may omit sections. Filename mentions restrict the candidate chunks to matching documents.
+
 ## Remote MCP tools
 
 Ask `/mcp list tools at https://your-server.example/mcp`. Confirm the connection, then ask `/mcp call <tool> at https://your-server.example/mcp with arguments {...}`. The agent uses the `mcp` bridge; every remote operation requires confirmation. Tool calls verify that the server advertises the requested tool before execution.
@@ -19,3 +23,5 @@ Remote server output and document excerpts are untrusted content. The local mode
 Focused tests: `ChatRequestRouterTest`, `DocumentRagTest`, `DocumentImportTest`, `ChatTaskActionTest`.
 
 Picker smoke test: `.maestro/document_import_validation.yaml`. Requires a connected device with an initialized chat model. Full MCP interoperability should additionally be checked against the intended server before relying on its tools.
+
+Validation recorded for this change: focused unit tests and debug assembly passed; APK installation/launch and the picker smoke flow passed on ASUSAI2501C. Full on-device document retrieval and live MCP interoperability remain unverified.
