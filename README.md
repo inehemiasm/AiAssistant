@@ -204,16 +204,7 @@ ui-designsystem/
 image-generation/
   standalone ONNX Runtime Android local Stable Diffusion engine (OnnxLocalDiffusionEngine)
 
-distribution/
-  Play Store listing copy, Privacy Policy, and Google Play Console submission checklist
 ```
-
----
-
-## Notes
-
-- **Offline-First**: Core AI inference happens locally on device. Network access is used only for model downloads, weather geocoding, web search (`WEB_SEARCH_PROXY_URL` / debug `SERPER_API_KEY` / key-less DuckDuckGo fallback), and optional AI safety reports.
-- **Google Play Readiness**: See [`distribution/GOOGLE_PLAY_CHECKLIST.md`](distribution/GOOGLE_PLAY_CHECKLIST.md) for Data Safety answers, AI-Generated Content policy compliance, and Foreground Service declaration instructions.
 
 ---
 

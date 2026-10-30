@@ -61,10 +61,15 @@ gradle/gradle-daemon-jvm.properties
 
 # Distribution & Store Assets
 distribution/
+app/release/
 app/release/app-release.apk
-app/release/baselineProfiles/0/app-release.dm
-app/release/baselineProfiles/1/app-release.dm
+app/release/baselineProfiles/
 app/release/output-metadata.json
+
+# Local notes & scratchpads
+notes/
+*.notes.md
+*.scratch.md
 
 # Kotlin compiler caches
 .kotlin/
