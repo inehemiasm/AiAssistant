@@ -40,19 +40,19 @@ import kotlin.math.sqrt
  * Opening in a focused mode registers only the required hardware listener,
  * reducing CPU load and preventing device heating.
  */
-enum class SensorMode(val key: String) {
+enum class SensorMode(val key: String, val shortLabel: String) {
     /** All sensors — full radar dashboard. */
-    ALL("all"),
+    ALL("all", "ALL"),
     /** Magnetometer only — stud finder / metal detector. */
-    STUD("stud"),
-    /** Accelerometer only — spirit level / bubble level. */
-    LEVEL("level"),
-    /** Ambient light sensor only. */
-    LIGHT("light"),
-    /** Proximity sensor only. */
-    PROXIMITY("proximity"),
+    STUD("stud", "STUD"),
     /** Sound level sensor (decibel meter). */
-    SOUND("sound");
+    SOUND("sound", "SOUND"),
+    /** Accelerometer only — spirit level / bubble level. */
+    LEVEL("level", "LEVEL"),
+    /** Ambient light sensor only. */
+    LIGHT("light", "LIGHT"),
+    /** Proximity sensor only. */
+    PROXIMITY("proximity", "PROXIMITY");
 
     companion object {
         fun from(key: String?) = entries.firstOrNull { it.key == key } ?: ALL
@@ -80,20 +80,21 @@ data class RadarUiState(
 
 @HiltViewModel
 class SensorsRadarViewModel @Inject constructor(
-    @ApplicationContext private val context: Context,
+    @param:ApplicationContext private val context: Context,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    val mode: SensorMode = SensorMode.from(savedStateHandle["mode"])
+    private var activeMode: SensorMode = SensorMode.from(savedStateHandle["mode"])
+    private var isForeground: Boolean = true
 
-    private val _uiState = MutableStateFlow(RadarUiState(mode = mode))
+    private val _uiState = MutableStateFlow(RadarUiState(mode = activeMode))
     val uiState: StateFlow<RadarUiState> = _uiState.asStateFlow()
 
     private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
 
     private var toneGenerator: ToneGenerator? = try {
         ToneGenerator(AudioManager.STREAM_NOTIFICATION, 60)
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         null
     }
 
@@ -107,6 +108,9 @@ class SensorsRadarViewModel @Inject constructor(
 
     private var audioJob: Job? = null
     private var vibrationJob: Job? = null
+    private var soundJob: Job? = null
+    private var mediaRecorder: MediaRecorder? = null
+    private var soundRecordFile: java.io.File? = null
 
     private val sensorListener = object : SensorEventListener {
         override fun onSensorChanged(event: SensorEvent) {
@@ -119,43 +123,33 @@ class SensorsRadarViewModel @Inject constructor(
                     val calibrated = abs(magnitude - _uiState.value.baseline)
                     _uiState.update { state ->
                         val history = (state.magneticHistory + calibrated).takeLast(60)
-                        val status = when {
-                            calibrated > 250f -> "TARGET ACQUIRED: CRITICAL DETECT"
-                            calibrated > 100f -> "TARGET ACQUIRED: STRONG FIELD"
-                            calibrated > 35f  -> "TARGET ACQUIRED: WEAK DETECT"
-                            calibrated > 10f  -> "SIGNAL DETECTED"
-                            else              -> "SCANNING FOR STUDS / METALS..."
-                        }
-                        state.copy(
+                        val next = state.copy(
                             magneticMagnitude = magnitude,
                             magneticCalibrated = calibrated,
-                            magneticHistory = history,
-                            statusLabel = status
+                            magneticHistory = history
                         )
+                        next.copy(statusLabel = computeStatusLabel(next))
                     }
                 }
                 Sensor.TYPE_ACCELEROMETER -> {
                     val x = event.values[0]
                     val y = event.values[1]
                     val z = event.values[2]
-                    val pitch = Math.toDegrees(atan2(-x.toDouble(), sqrt((y * y + z * z).toDouble()))).toFloat()
-                    val roll = Math.toDegrees(atan2(y.toDouble(), z.toDouble())).toFloat()
+                    val rawPitch = Math.toDegrees(atan2(-x.toDouble(), sqrt((y * y + z * z).toDouble()))).toFloat()
+                    val rawRoll = Math.toDegrees(atan2(y.toDouble(), z.toDouble())).toFloat()
                     _uiState.update { state ->
-                        val status = if (abs(pitch) < 2.0f && abs(roll) < 2.0f) "LEVEL ✓" else
-                            "TILT  P:${String.format("%.1f", pitch)}°  R:${String.format("%.1f", roll)}°"
-                        state.copy(pitch = pitch, roll = roll, statusLabel = status)
+                        // Apply gentle low-pass smoothing to prevent high-frequency bubble jitter
+                        val smoothedPitch = if (state.pitch == 0f) rawPitch else state.pitch * 0.75f + rawPitch * 0.25f
+                        val smoothedRoll = if (state.roll == 0f) rawRoll else state.roll * 0.75f + rawRoll * 0.25f
+                        val next = state.copy(pitch = smoothedPitch, roll = smoothedRoll)
+                        next.copy(statusLabel = computeStatusLabel(next))
                     }
                 }
                 Sensor.TYPE_LIGHT -> {
                     val light = event.values[0]
                     _uiState.update { state ->
-                        val label = when {
-                            light < 10f   -> "DARK (${light.toInt()} lx)"
-                            light < 200f  -> "DIM (${light.toInt()} lx)"
-                            light < 1000f -> "NORMAL (${light.toInt()} lx)"
-                            else          -> "BRIGHT (${light.toInt()} lx)"
-                        }
-                        state.copy(lightLevel = light, statusLabel = label)
+                        val next = state.copy(lightLevel = light)
+                        next.copy(statusLabel = computeStatusLabel(next))
                     }
                 }
                 Sensor.TYPE_PROXIMITY -> {
@@ -163,11 +157,11 @@ class SensorsRadarViewModel @Inject constructor(
                     val maxRange = event.sensor.maximumRange
                     val near = proximity < min(5f, maxRange)
                     _uiState.update { state ->
-                        state.copy(
+                        val next = state.copy(
                             proximityDistance = proximity,
-                            proximityNear = near,
-                            statusLabel = if (near) "OBJECT DETECTED NEARBY" else "PATH CLEAR"
+                            proximityNear = near
                         )
+                        next.copy(statusLabel = computeStatusLabel(next))
                     }
                 }
             }
@@ -177,47 +171,145 @@ class SensorsRadarViewModel @Inject constructor(
     }
 
     init {
-        _uiState.update { it.copy(statusLabel = initialStatusLabel(mode)) }
         val hasMic = checkMicPermission()
-        _uiState.update { it.copy(micPermissionGranted = hasMic) }
-        registerSensors()
-        if (mode == SensorMode.ALL || mode == SensorMode.STUD) {
-            startAudioFeedbackLoop()
-            startVibrationFeedbackLoop()
+        _uiState.update { state ->
+            val next = state.copy(mode = activeMode, micPermissionGranted = hasMic)
+            next.copy(statusLabel = computeStatusLabel(next))
         }
-        if ((mode == SensorMode.SOUND || mode == SensorMode.ALL) && hasMic) {
-            startSoundMonitoring()
+        startActiveModePipelines()
+    }
+
+    /**
+     * Switches the active sensor mode in-place and reconfigures hardware listeners
+     * so only the needed sensors are active.
+     */
+    fun selectMode(newMode: SensorMode) {
+        if (activeMode == newMode) return
+        activeMode = newMode
+        val hasMic = checkMicPermission()
+        _uiState.update { state ->
+            val next = state.copy(mode = newMode, micPermissionGranted = hasMic)
+            next.copy(statusLabel = computeStatusLabel(next))
+        }
+        if (isForeground) {
+            startActiveModePipelines()
         }
     }
 
-    private fun initialStatusLabel(mode: SensorMode) = when (mode) {
-        SensorMode.ALL      -> "SCANNING FOR STUDS / METALS..."
-        SensorMode.STUD     -> "SCANNING FOR STUDS / METALS..."
-        SensorMode.LEVEL    -> "READING ORIENTATION..."
-        SensorMode.LIGHT    -> "READING AMBIENT LIGHT..."
-        SensorMode.PROXIMITY -> "READING PROXIMITY..."
-        SensorMode.SOUND    -> "MONITORING AMBIENT NOISE..."
+    /** Resumes hardware sensor and microphone listeners when the screen enters the foreground. */
+    fun onResume() {
+        isForeground = true
+        val hasMic = checkMicPermission()
+        _uiState.update { state ->
+            val next = state.copy(micPermissionGranted = hasMic)
+            next.copy(statusLabel = computeStatusLabel(next))
+        }
+        startActiveModePipelines()
+    }
+
+    /** Pauses hardware sensor and microphone listeners when the screen leaves the foreground. */
+    fun onPause() {
+        isForeground = false
+        stopAllPipelines()
+    }
+
+    private fun startActiveModePipelines() {
+        unregisterSensors()
+        audioJob?.cancel()
+        vibrationJob?.cancel()
+        registerSensors(activeMode)
+
+        if (activeMode == SensorMode.ALL || activeMode == SensorMode.STUD) {
+            startAudioFeedbackLoop()
+            startVibrationFeedbackLoop()
+        }
+
+        if (activeMode == SensorMode.SOUND || activeMode == SensorMode.ALL) {
+            if (checkMicPermission()) {
+                startSoundMonitoring()
+            } else {
+                releaseAudioRecorder()
+            }
+        } else {
+            releaseAudioRecorder()
+        }
+    }
+
+    private fun stopAllPipelines() {
+        unregisterSensors()
+        releaseAudioRecorder()
+        audioJob?.cancel()
+        vibrationJob?.cancel()
+    }
+
+    /**
+     * Computes a stable, non-flickering status banner label for the current mode.
+     * In [SensorMode.ALL], priority alerts surface first without individual sensors
+     * overwriting each other on every frame.
+     */
+    private fun computeStatusLabel(state: RadarUiState): String = when (state.mode) {
+        SensorMode.ALL -> when {
+            state.magneticCalibrated > 250f -> "TARGET ACQUIRED: CRITICAL FIELD"
+            state.magneticCalibrated > 100f -> "TARGET ACQUIRED: STRONG FIELD"
+            state.magneticCalibrated > 35f  -> "MAGNETIC ANOMALY DETECTED"
+            state.proximityNear             -> "PROXIMITY ALERT: OBJECT NEARBY"
+            state.soundDbSpl > 75f          -> "NOISE ALERT: LOUD ENVIRONMENT"
+            else                            -> "MULTI-SENSOR TELEMETRY ACTIVE"
+        }
+        SensorMode.STUD -> when {
+            state.magneticCalibrated > 250f -> "TARGET ACQUIRED: CRITICAL DETECT"
+            state.magneticCalibrated > 100f -> "TARGET ACQUIRED: STRONG FIELD"
+            state.magneticCalibrated > 35f  -> "TARGET ACQUIRED: WEAK DETECT"
+            state.magneticCalibrated > 10f  -> "SIGNAL DETECTED"
+            else                            -> "SCANNING FOR STUDS / METALS..."
+        }
+        SensorMode.LEVEL -> {
+            if (abs(state.pitch) < 2.0f && abs(state.roll) < 2.0f) {
+                "SURFACE LEVEL ✓"
+            } else {
+                "SURFACE TILTED"
+            }
+        }
+        SensorMode.LIGHT -> when {
+            state.lightLevel < 0f    -> "READING AMBIENT LIGHT..."
+            state.lightLevel < 10f   -> "ENVIRONMENT: DARK"
+            state.lightLevel < 200f  -> "ENVIRONMENT: DIM"
+            state.lightLevel < 1000f -> "ENVIRONMENT: NORMAL INDOOR"
+            else                     -> "ENVIRONMENT: BRIGHT"
+        }
+        SensorMode.PROXIMITY -> {
+            if (state.proximityNear) "OBJECT DETECTED NEARBY" else "PATH CLEAR"
+        }
+        SensorMode.SOUND -> when {
+            !state.micPermissionGranted -> "MICROPHONE PERMISSION REQUIRED"
+            state.soundDbSpl < 30f      -> "VERY QUIET ENVIRONMENT"
+            state.soundDbSpl < 45f      -> "QUIET • LIBRARY LEVEL"
+            state.soundDbSpl < 60f      -> "MODERATE AMBIENT NOISE"
+            state.soundDbSpl < 75f      -> "LOUD ENVIRONMENT"
+            state.soundDbSpl < 90f      -> "VERY LOUD ENVIRONMENT"
+            else                        -> "EXTREME NOISE • HEARING RISK"
+        }
     }
 
     fun calibrate() {
         val currentMag = _uiState.value.magneticMagnitude
         _uiState.update { state ->
-            state.copy(
+            val next = state.copy(
                 baseline = currentMag,
                 magneticCalibrated = 0f,
-                magneticHistory = emptyList(),
-                statusLabel = "CALIBRATED TO ${String.format(java.util.Locale.US, "%.1f", currentMag)} uT"
+                magneticHistory = emptyList()
             )
+            next.copy(statusLabel = computeStatusLabel(next))
         }
     }
 
     fun resetCalibration() {
         _uiState.update { state ->
-            state.copy(
+            val next = state.copy(
                 baseline = 0f,
-                magneticCalibrated = state.magneticMagnitude,
-                statusLabel = "CALIBRATION RESET"
+                magneticCalibrated = state.magneticMagnitude
             )
+            next.copy(statusLabel = computeStatusLabel(next))
         }
     }
 
@@ -229,9 +321,9 @@ class SensorsRadarViewModel @Inject constructor(
         _uiState.update { it.copy(vibrationEnabled = enabled) }
     }
 
-    private fun registerSensors() {
+    private fun registerSensors(targetMode: SensorMode) {
         val manager = sensorManager ?: return
-        when (mode) {
+        when (targetMode) {
             SensorMode.ALL -> {
                 manager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
                     ?.let { manager.registerListener(sensorListener, it, SensorManager.SENSOR_DELAY_UI) }
@@ -259,7 +351,7 @@ class SensorsRadarViewModel @Inject constructor(
                     ?.let { manager.registerListener(sensorListener, it, SensorManager.SENSOR_DELAY_NORMAL) }
             }
             SensorMode.SOUND -> {
-                // Sound mode uses MediaRecorder inside startSoundMonitoring, no standard Android Sensors are registered
+                // Sound mode uses MediaRecorder inside startSoundMonitoring
             }
         }
     }
@@ -319,23 +411,26 @@ class SensorsRadarViewModel @Inject constructor(
                 PackageManager.PERMISSION_GRANTED
     }
 
-    private var soundJob: Job? = null
-    private var mediaRecorder: MediaRecorder? = null
-    private var soundRecordFile: java.io.File? = null
-
     fun onMicPermissionGranted() {
-        _uiState.update { it.copy(micPermissionGranted = true) }
-        if (mode == SensorMode.SOUND || mode == SensorMode.ALL) {
+        _uiState.update { state ->
+            val next = state.copy(micPermissionGranted = true)
+            next.copy(statusLabel = computeStatusLabel(next))
+        }
+        if (isForeground && (activeMode == SensorMode.SOUND || activeMode == SensorMode.ALL)) {
             startSoundMonitoring()
         }
     }
 
     private fun startSoundMonitoring() {
+        if (soundJob?.isActive == true && mediaRecorder != null) return
         soundJob?.cancel()
         releaseAudioRecorder()
 
         if (!checkMicPermission()) {
-            _uiState.update { it.copy(micPermissionGranted = false) }
+            _uiState.update { state ->
+                val next = state.copy(micPermissionGranted = false)
+                next.copy(statusLabel = computeStatusLabel(next))
+            }
             return
         }
 
@@ -351,43 +446,36 @@ class SensorsRadarViewModel @Inject constructor(
                 recorder.setAudioSource(MediaRecorder.AudioSource.MIC)
                 recorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP)
                 recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB)
-                
+
                 val tmpFile = java.io.File(context.cacheDir, "sound_radar_probe.3gp")
                 soundRecordFile = tmpFile
                 recorder.setOutputFile(tmpFile.absolutePath)
-                
+
                 recorder.prepare()
                 recorder.start()
                 recorder.maxAmplitude // Prime baseline so first sample window is accurate
                 mediaRecorder = recorder
 
-                if (mode == SensorMode.SOUND) {
-                    _uiState.update { it.copy(statusLabel = "MONITORING AMBIENT NOISE...") }
-                }
-
                 while (true) {
-                    delay(150L)
+                    delay(180L)
                     val amplitude = recorder.maxAmplitude
-                    val dbSpl = formatDbSpl(amplitude)
+                    val rawDbSpl = formatDbSpl(amplitude)
                     _uiState.update { state ->
-                        val history = (state.soundHistory + dbSpl).takeLast(60)
-                        val label = when {
-                            dbSpl < 30f  -> "VERY QUIET (${dbSpl.toInt()} dB)"
-                            dbSpl < 45f  -> "QUIET (${dbSpl.toInt()} dB)"
-                            dbSpl < 60f  -> "MODERATE NOISE (${dbSpl.toInt()} dB)"
-                            dbSpl < 75f  -> "LOUD (${dbSpl.toInt()} dB)"
-                            dbSpl < 90f  -> "VERY LOUD (${dbSpl.toInt()} dB)"
-                            else         -> "HEARING RISK (${dbSpl.toInt()} dB)"
+                        val smoothedDb = if (state.soundDbSpl == 0f) {
+                            rawDbSpl
+                        } else {
+                            state.soundDbSpl * 0.65f + rawDbSpl * 0.35f
                         }
-                        state.copy(
-                            soundDbSpl = dbSpl,
-                            soundHistory = history,
-                            statusLabel = if (mode == SensorMode.SOUND) label else state.statusLabel
+                        val history = (state.soundHistory + smoothedDb).takeLast(60)
+                        val next = state.copy(
+                            soundDbSpl = smoothedDb,
+                            soundHistory = history
                         )
+                        next.copy(statusLabel = computeStatusLabel(next))
                     }
                 }
             } catch (e: Exception) {
-                if (mode == SensorMode.SOUND) {
+                if (activeMode == SensorMode.SOUND) {
                     _uiState.update { it.copy(statusLabel = "SOUND PROBE ERROR: ${e.message}") }
                 }
             } finally {
@@ -428,10 +516,7 @@ class SensorsRadarViewModel @Inject constructor(
 
     override fun onCleared() {
         super.onCleared()
-        unregisterSensors()
-        releaseAudioRecorder()
-        audioJob?.cancel()
-        vibrationJob?.cancel()
+        stopAllPipelines()
         try { toneGenerator?.release() } catch (_: Exception) {}
     }
 }
