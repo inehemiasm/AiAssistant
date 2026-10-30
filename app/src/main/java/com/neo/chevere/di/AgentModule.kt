@@ -256,6 +256,13 @@ abstract class AgentModule {
         ): AgentTool = InvoiceRegistryTool(invoiceDao, conversationHistoryDao)
 
         @Provides
+        fun provideDocumentRepository(implementation: com.neo.chevere.data.LocalDocumentRepository): com.neo.chevere.domain.DocumentRepository = implementation
+
+        @Provides
+        @IntoSet
+        fun provideMcpTool(): AgentTool = com.neo.chevere.data.agent.tools.McpTool()
+
+        @Provides
         @IntoSet
         fun provideLocalDocumentRagTool(
             @ApplicationContext context: Context,

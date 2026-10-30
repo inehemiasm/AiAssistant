@@ -10,6 +10,16 @@ import org.junit.Test
 class ChatRequestRouterTest {
     private val router = ChatRequestRouter()
 
+    @Test fun documentAndMcpRequestsReachAgent() {
+        for (prompt in listOf("/docs What is the refund policy?", "Search my documents for warranty", "Busca en mis documentos")) {
+            assertEquals(RoutingCategory.DOCUMENTS, router.classifyRequest(prompt))
+            assertTrue(router.shouldUseAgent(prompt))
+        }
+        assertEquals(RoutingCategory.MCP, router.classifyRequest("/mcp list tools at https://example.com/mcp"))
+        assertEquals(RoutingCategory.DIRECT_CHAT, router.classifyRequest("Hello"))
+    }
+
+
     @Test
     fun roomLightReadingsIncludeContractionsButExcludeAdviceAndPhotos() {
         for (prompt in listOf("How’s the light in my room?", "How's the light?", "how is the light in the environment", "what is the lighting in here", "Check the light in my room", "how bright is the room")) {

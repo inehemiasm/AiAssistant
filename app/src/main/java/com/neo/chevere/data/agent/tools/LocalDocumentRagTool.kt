@@ -81,19 +81,23 @@ class LocalDocumentRagTool @Inject constructor(
             return ToolResult.Success("No text (.txt) or markdown (.md) files found in $path.")
         }
 
+        var failedFiles = 0
         var filesIndexed = 0
         var totalChunksCreated = 0
 
         for (file in textFiles) {
             val text = try {
                 file.readText()
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: Exception) {
+                failedFiles++
                 continue
             }
             if (text.isBlank()) continue
 
             // Delete old chunks for this file
-            documentChunkDao.deleteChunksForFile(file.absolutePath)
+            // Replace the previous index only after all new chunks are ready.
 
             // Chunk document text: chunk size = 800 chars, overlap = 200 chars
             val chunks = chunkText(text, chunkSize = 800, overlap = 200)
@@ -105,16 +109,19 @@ class LocalDocumentRagTool @Inject constructor(
                     text = chunk
                 )
             }
-            documentChunkDao.insertChunks(entities)
+            documentChunkDao.replaceDocument(file.absolutePath, entities)
             filesIndexed++
             totalChunksCreated += entities.size
         }
 
-        return ToolResult.Success("RAG Index Completed: Successfully indexed $filesIndexed file(s) into $totalChunksCreated content chunks under $path.")
+        if (filesIndexed == 0) return ToolResult.Error("No readable documents were indexed. Import text or markdown using the document picker.")
+        return ToolResult.Success("Skipped $failedFiles unreadable files. RAG Index Completed: Successfully indexed $filesIndexed file(s) into $totalChunksCreated content chunks under $path.")
     }
 
     private suspend fun searchIndex(query: String): ToolResult {
-        val chunks = documentChunkDao.getAllChunks()
+        val indexedChunks = documentChunkDao.getAllChunks()
+        val namedChunks = indexedChunks.filter { query.contains(it.fileName, ignoreCase = true) }
+        val chunks = namedChunks.ifEmpty { indexedChunks }
         if (chunks.isEmpty()) {
             return ToolResult.Success("No documents are indexed. Please index a document folder first using: action='index' folderPath='...'")
         }
@@ -128,7 +135,7 @@ class LocalDocumentRagTool @Inject constructor(
         val totalChunks = chunks.size
         val idfMap = mutableMapOf<String, Double>()
         for (term in queryTokens) {
-            val docsWithTerm = chunks.count { it.text.contains(term, ignoreCase = true) }
+            val docsWithTerm = chunks.count { term in tokenize(it.text) }
             // Smoothed IDF
             idfMap[term] = ln(1.0 + (totalChunks.toDouble() / (docsWithTerm.toDouble() + 1.0))) + 1.0
         }
@@ -190,7 +197,10 @@ class LocalDocumentRagTool @Inject constructor(
             }
         }
 
-        val sortedMatches = matches.sortedByDescending { it.similarity }.take(3)
+        val sortedMatches = matches.sortedByDescending { it.similarity }.take(3).ifEmpty {
+            // A filename-only summary request still needs actual document evidence.
+            namedChunks.sortedBy { it.chunkIndex }.take(3).map { SearchMatch(it, 0.0) }
+        }
 
         return if (sortedMatches.isEmpty()) {
             ToolResult.Success("No matches found for query: '$query' in the local index.")
@@ -217,8 +227,8 @@ class LocalDocumentRagTool @Inject constructor(
     }
 
     private fun tokenize(text: String): List<String> {
-        val words = text.lowercase(Locale.getDefault())
-            .replace(Regex("[^a-zA-Z0-9\\s]"), " ")
+        val words = text.lowercase(Locale.ROOT)
+            .replace(Regex("[^\\p{L}\\p{N}\\s]"), " ")
             .split(Regex("\\s+"))
             .filter { it.isNotBlank() }
         return words.filter { it !in stopWords }

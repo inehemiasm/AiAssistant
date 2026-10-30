@@ -74,7 +74,8 @@ class ChatViewModel @Inject constructor(
     private val voiceInputManager: VoiceInputManager,
     private val chatHistoryRepository: ChatHistoryRepository,
     private val taskRepository: TaskRepository,
-    private val aiContentReportRepository: AiContentReportRepository
+    private val aiContentReportRepository: AiContentReportRepository,
+    private val documentRepository: com.neo.chevere.domain.DocumentRepository
 ) : BaseViewModel<ChatState, ChatIntent, ChatEffect>(application, ChatState()) {
 
     private val explicitImagePromptPolicy = ExplicitImagePromptPolicy()
@@ -272,6 +273,16 @@ class ChatViewModel @Inject constructor(
 
                 ChatIntent.ClearConversation -> clearConversation()
                 is ChatIntent.UpdateInputText -> setState { copy(inputText = intent.text) }
+                is ChatIntent.ImportDocument -> {
+                    sendEffect { ChatEffect.ShowToast("Indexing document…") }
+                    when (val result = documentRepository.importDocument(intent.reference)) {
+                        is com.neo.chevere.domain.DocumentImportResult.Imported -> {
+                            setState { copy(inputText = "/docs Summarize ${result.name}") }
+                            sendEffect { ChatEffect.ShowToast("Indexed ${result.name}: ${result.chunks} chunks") }
+                        }
+                        is com.neo.chevere.domain.DocumentImportResult.Failed -> sendEffect { ChatEffect.ShowToast(result.reason) }
+                    }
+                }
                 is ChatIntent.SelectImage -> setState {
                     copy(
                         selectedImageUri = intent.uri,
