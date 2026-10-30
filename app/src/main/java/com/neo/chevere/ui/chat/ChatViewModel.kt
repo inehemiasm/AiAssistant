@@ -890,7 +890,10 @@ class ChatViewModel @Inject constructor(
         }
 
         val currentAgentState = repository.agentState.value
-        repository.resetAgentState()
+        // Keep the pending callback and dialog alive until the user confirms or cancels.
+        if (currentAgentState !is AgentState.WaitingForConfirmation) {
+            repository.resetAgentState()
+        }
 
         val response = result
             ?.onSuccess {

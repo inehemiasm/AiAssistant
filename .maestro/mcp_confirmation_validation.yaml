@@ -1,0 +1,20 @@
+appId: dev.neo.chevereai
+name: MCP confirmation remains actionable
+---
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible: "Ask Chevere AI…"
+    timeout: 45000
+- tapOn: "Ask Chevere AI…"
+- inputText: "/mcp list tools at https://learn.microsoft.com/api/mcp"
+- tapOn: "Send"
+- extendedWaitUntil:
+    visible: "Confirm Action"
+    timeout: 60000
+- assertVisible: "Confirm"
+- assertVisible: "Cancel"
+- tapOn: "Cancel"
+- extendedWaitUntil:
+    notVisible: "Confirm Action"
+    timeout: 15000

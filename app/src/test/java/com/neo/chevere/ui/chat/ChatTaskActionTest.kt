@@ -35,12 +35,13 @@ class ChatTaskActionTest {
     private val taskRepository = mock<TaskRepository>()
     private val store = androidx.lifecycle.ViewModelStore()
     private val tasks = MutableStateFlow(listOf(Task(7, "Buy milk", "Two cartons", TaskStatus.PENDING, 123)))
+    private val repository = mock<ChatRepository>()
+    private val agentState = MutableStateFlow<AgentState>(AgentState.Idle)
     private lateinit var viewModel: ChatViewModel
 
     @Before fun setup() = runTest(dispatcher) {
         Dispatchers.setMain(dispatcher)
-        val repository = mock<ChatRepository>()
-        whenever(repository.agentState).thenReturn(MutableStateFlow(AgentState.Idle))
+        whenever(repository.agentState).thenReturn(agentState)
         whenever(repository.activePartialResponse).thenReturn(emptyFlow())
         whenever(repository.getInitStatus()).thenReturn(flowOf(InitializationStatus.Uninitialized))
         whenever(repository.getLocalModels()).thenReturn(emptyList())
@@ -67,6 +68,16 @@ class ChatTaskActionTest {
         advanceUntilIdle()
         viewModel.onIntent(ChatIntent.LoadSession(5))
         advanceUntilIdle()
+    }
+
+    @Test fun pendingConfirmationSurvivesTurnCompletion() = runTest(dispatcher) {
+        clearInvocations(repository)
+        agentState.value = AgentState.WaitingForConfirmation("mcp", "Connect to server?", emptyList())
+        whenever(repository.confirmAction()).thenReturn(Result.success(AssistantResponse("Confirmation required")))
+        viewModel.onIntent(ChatIntent.ConfirmAction)
+        advanceUntilIdle()
+        assertTrue(viewModel.currentState.isWaitingForConfirmation)
+        verify(repository, never()).resetAgentState()
     }
 
     @After fun tearDown() {
