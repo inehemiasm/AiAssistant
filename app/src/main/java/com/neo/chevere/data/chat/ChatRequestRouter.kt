@@ -15,6 +15,8 @@ enum class RoutingCategory {
     TASK_REGISTRY,
     INVOICE_MANAGEMENT,
     SENSORS,
+    DOCUMENTS,
+    MCP,
     DIRECT_CHAT
 }
 
@@ -41,6 +43,8 @@ class ChatRequestRouter @Inject constructor() {
         }
 
         return when {
+            normalized.startsWith("/mcp") || Regex("""\bmcp\b""").containsMatchIn(normalized) -> RoutingCategory.MCP
+            normalized.startsWith("/docs") || listOf("my documents", "my files", "indexed documents", "document search", "mis documentos", "document_rag").any { it in normalized } -> RoutingCategory.DOCUMENTS
             // Invoice must be checked before image generation, because prompts like
             // "create an invoice based off this image" contain image-gen keywords.
             looksLikeInvoiceRequest(normalized) -> RoutingCategory.INVOICE_MANAGEMENT

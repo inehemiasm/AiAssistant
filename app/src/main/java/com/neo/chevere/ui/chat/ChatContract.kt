@@ -133,6 +133,8 @@ sealed class ChatIntent : UiIntent {
     data object ClearError : ChatIntent()
     data object ClearConversation : ChatIntent()
     data class UpdateInputText(val text: String) : ChatIntent()
+    /** Imports a user-selected text document into the local library. */
+    data class ImportDocument(val reference: String) : ChatIntent()
     data class SelectImage(val uri: Uri?) : ChatIntent()
     data class SetTempCameraUri(val uri: Uri?) : ChatIntent()
     data object ConfirmAction : ChatIntent()

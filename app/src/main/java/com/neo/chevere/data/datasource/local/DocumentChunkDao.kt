@@ -10,6 +10,11 @@ import androidx.room.Query
  */
 @Dao
 interface DocumentChunkDao {
+    @androidx.room.Transaction
+    suspend fun replaceDocument(reference: String, chunks: List<DocumentChunkEntity>) {
+        deleteChunksForFile(reference)
+        insertChunks(chunks)
+    }
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertChunks(chunks: List<DocumentChunkEntity>)
 

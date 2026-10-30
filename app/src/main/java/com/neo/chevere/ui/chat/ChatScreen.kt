@@ -305,6 +305,11 @@ fun ChatContent(
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
 
+    val documentPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        uri?.let { viewModel.onIntent(ChatIntent.ImportDocument(it.toString())) }
+    }
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
@@ -774,6 +779,7 @@ fun ChatContent(
                             hapticView.performChevereHaptic(ChevereHaptic.Warning)
                             viewModel.onIntent(ChatIntent.StopResponse)
                         },
+                        onDocumentClick = { documentPickerLauncher.launch(arrayOf("text/plain", "text/markdown", "text/x-markdown")) },
                         onGalleryClick = {
                             hapticView.performChevereHaptic(ChevereHaptic.Selection)
                             imagePickerLauncher.launch("image/*")

@@ -88,6 +88,7 @@ fun ChatInputBar(
     onSend: () -> Unit,
     onStop: () -> Unit,
     selectedImageUri: Uri?,
+    onDocumentClick: () -> Unit = {},
     onGalleryClick: () -> Unit,
     onCameraClick: () -> Unit,
     onRemoveImage: () -> Unit,
@@ -214,7 +215,8 @@ fun ChatInputBar(
                         showAttachmentMenu = showAttachmentMenu,
                         onShowAttachmentMenu = { showAttachmentMenu = true },
                         onDismissAttachmentMenu = { showAttachmentMenu = false },
-                        onGalleryClick = onGalleryClick,
+                        onDocumentClick = onDocumentClick,
+            onGalleryClick = onGalleryClick,
                         onCameraClick = onCameraClick
                     )
                 }
@@ -283,6 +285,7 @@ private fun ComposerContent(
     showAttachmentMenu: Boolean,
     onShowAttachmentMenu: () -> Unit,
     onDismissAttachmentMenu: () -> Unit,
+    onDocumentClick: () -> Unit = {},
     onGalleryClick: () -> Unit,
     onCameraClick: () -> Unit
 ) {
@@ -292,6 +295,7 @@ private fun ComposerContent(
             showAttachmentMenu = showAttachmentMenu,
             onShowAttachmentMenu = onShowAttachmentMenu,
             onDismissAttachmentMenu = onDismissAttachmentMenu,
+            onDocumentClick = onDocumentClick,
             onGalleryClick = onGalleryClick,
             onCameraClick = onCameraClick
         )
@@ -340,6 +344,7 @@ private fun AttachmentButton(
     showAttachmentMenu: Boolean,
     onShowAttachmentMenu: () -> Unit,
     onDismissAttachmentMenu: () -> Unit,
+    onDocumentClick: () -> Unit = {},
     onGalleryClick: () -> Unit,
     onCameraClick: () -> Unit
 ) {
@@ -377,6 +382,10 @@ private fun AttachmentButton(
             tonalElevation = 8.dp,
             shadowElevation = 8.dp
         ) {
+            DropdownMenuItem(
+                text = { Text("Import document") },
+                onClick = { onDocumentClick(); onDismissAttachmentMenu() }
+            )
             DropdownMenuItem(
                 text = {
                     Text(

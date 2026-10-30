@@ -1,0 +1,13 @@
+appId: dev.neo.chevereai
+name: Document import picker is accessible
+---
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible: "Ask Chevere AI…"
+    timeout: 45000
+- tapOn: "Add attachment"
+- tapOn: "Import document"
+- assertVisible: "Recent"
+- back
+- assertVisible: "Ask Chevere AI…"
