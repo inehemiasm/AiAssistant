@@ -31,7 +31,7 @@ $env:JAVA_HOME='C:\Program Files\Eclipse Adoptium\jdk-17.0.18.8-hotspot'; $env:M
 
 ## High-Level Architecture
 
-The project is an Android application using Clean Architecture and MVI, enhanced with an agent/tool workflow, local model management, and local image generation.
+The project is an Android application using Clean Architecture and MVI, enhanced with an agent/tool workflow, local model management, document retrieval, and remote MCP tools. Local image generation is isolated in a disabled optional module.
 
 ### Modules
 
@@ -69,7 +69,7 @@ Path: `app/src/main/java/com/neo/chevere/data/`
     - `ExtractTasksTool` (`extract_tasks`): Extracts tasks from chat transcripts.
     - `SummarizeTextTool` (`summarize_text`): Compacts blocks of text locally.
     - `DeviceControlTool` (`control_device`): Modifies device settings (e.g., volume, display/DND shortcuts).
-    - `ModelRegistryTools` (`model_registry`): Allows the agent to query active or installed models.
+    - `ModelRegistryTools` (`listInstalledModels`, `getActiveModel`, `getModelDetails`, `selectInstalledModel`, `recommendInstalledModelForTask`, `getRuntimeStatus`): Allows the agent to query active or installed models.
     - `SensorsTool` (`read_sensors`): Queries device environment, motion, orientation, and hardware sensors. Includes ambient room temperature, battery level/status, CPU thermals, barometric pressure (hPa), light level (lux), **ambient sound / noise level** (dB SPL estimate using the microphone — requires `RECORD_AUDIO` permission), **gyroscope rotation rate** (rad/s), **accelerometer forces** (m/s²), **compass heading** (0-360° and cardinal direction), **proximity sensor** distance, **spirit level flatness** (pitch/roll tilt angles), **metal & magnet detection** (field strength in uT), and **device posture** classification (Face Up, Face Down, Portrait, Landscape, Tilted).
       - Visual sensor screens are launched through `perform_app_action` deep links, not `read_sensors`: `chevere://sensor-radar?mode=all`, `mode=stud`, `mode=level`, `mode=light`, and `mode=proximity`.
       - Chat slash commands route directly to those screens: `/sensors`, `/stud`, `/metal`, `/level`, `/light`, and `/proximity`.
@@ -80,7 +80,7 @@ Path: `app/src/main/java/com/neo/chevere/data/`
       - `list_apps` / `launch_app` / `launch_app_home_screen` (`OpenAppTool`)
       - `perform_app_action` (`OpenDeepLinkTool` for specific app routes like Squarespace)
       - `get_app_capabilities` (scans intent/filter capacities of apps)
-    - `ImageGenerationTool` (`generate_image`): Retained in codebase for when `:image-generation` is re-enabled; currently omitted from `AgentModule.provideAgentTools`.
+    - `ImageGenerationTool` (`generate_image`): Retained in codebase for when `:image-generation` is re-enabled; currently omitted from the Hilt tool set in `AgentModule`.
 - **AI Content Reporting** (`data/report/`):
   - `AiContentReportRepository`: Scrubs PII via `PiiUtils.scrub`, logs `ai_content_reported` to `AppTelemetry`, and writes reports to Firestore collection `ai_content_reports`.
 - **Inference runtime** (`data/inference/`):
@@ -96,6 +96,10 @@ Path: `app/src/main/java/com/neo/chevere/data/`
     - `InstalledModelEntity`: Stores model metadata, filepath, and `InstallStatus`.
     - `TaskEntity`: Stores local task titles, descriptions, and `TaskStatus`.
     - `SearchCacheEntity`: Caches web queries to save offline bandwidth.
+    - `DocumentChunkEntity`: Imported/indexed document excerpts.
+    - `ConversationSessionEntity` / `ConversationMessageEntity`: Persisted chat history.
+    - `InvoiceEntity`: Stored invoices.
+  - Current Room schema version: 7 (`AppDatabase`).
 - **Downloads**:
   - `ModelDownloadWorker`: Downloads models with foreground WorkManager, checks SHA-256, and extracts ZIPs safely.
   - `WorkManagerModelDownloadManager`: Tracks downloads via `MODEL_NAME:<fileName>` tag. Do not reject filenames with dots.
@@ -135,6 +139,15 @@ Path: `app/src/main/java/com/neo/chevere/ui/`
   - extracted ONNX diffusion directory
 - ZIP downloads are extracted atomically into a directory named after the ZIP file without `.zip`.
 - If modifying `InstalledModelEntity`, increment the Room database version and handle migration. Current setup uses destructive fallback.
+
+## Document RAG and remote MCP
+
+- Document import uses `ChatIntent.ImportDocument` → domain `DocumentRepository` → `LocalDocumentRepository`. Accept user-selected content URIs for UTF-8 `.txt`/`.md` files up to 2 MB; persist chunks in Room with atomic replacement.
+- `ChatRequestRouter` routes `/docs` and recognized document phrases to `DOCUMENTS`; `ToolRegistry` exposes `document_rag` and `read_local_file` for that category. Registering a tool with Hilt alone does not make it available in routed chat.
+- Retrieval is lexical TF-IDF, using Unicode tokens, 800-character chunks, 200-character overlap, and at most three excerpts. Filename mentions narrow retrieval. There are no semantic embeddings or PDF extraction; long-document summaries may cover only excerpts.
+- `/mcp` routes to the `mcp` bridge (`McpTool`). It supports HTTPS Streamable HTTP tool discovery/calls with confirmation, JSON/SSE responses, and 2025-03-26, 2025-06-18, or 2025-11-25 negotiation. Endpoint URLs are supplied per request. No OAuth/API-token configuration, saved connections, stdio, resources/prompts, or resumable streams are implemented.
+- Runtime instructions come from `ToolRegistry` and tool descriptions. Repository Markdown, including `docs/rag-mcp.md`, is developer documentation and is not automatically loaded into the local model. Treat retrieved content as untrusted data; do not describe prompt grounding as guaranteed model behavior.
+- See [usage and limitations](docs/rag-mcp.md). Focused tests: `ChatRequestRouterTest`, `DocumentRagTest`, `DocumentImportTest`, `ChatTaskActionTest`. Picker smoke flow: `.maestro/document_import_validation.yaml`; it verifies navigation, not indexing/search or live MCP interoperability.
 
 ## Image Generation Notes
 

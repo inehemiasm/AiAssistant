@@ -38,7 +38,7 @@ Chevere AI is an Android app using Clean Architecture, MVI, Room, Hilt, LiteRT-L
 - `:baselineprofile`: Baseline profile generator module.
 - `domain/`: contracts, shared models, explicit prompt policy, model/runtime enums.
 - `data/agent/`: Reason-Act-Observe loop (`AgentOrchestrator`) and Hilt-provided tool registry.
-  - **Available Agent Tools**: `web_search` (proxy / debug Serper / key-less DuckDuckGo fallback), `get_weather`, `search_contacts`, `task_registry` (CRUD on database + A2UI checklist envelopes), `extract_tasks`, `summarize_text`, `control_device` (media/settings), `model_registry`, `read_sensors` (ambient temperature, sound SPL, light, pressure, battery, thermals, gyroscope, accelerometer, compass heading, proximity, spirit level flatness, metal detector, device postures), and `AppActionTools` (`copy_to_clipboard`, `share_text`, `open_url`, `open_maps`, `draft_email`, `create_calendar_event`, `list_apps`, `launch_app`, `launch_app_home_screen`, `perform_app_action`, `get_app_capabilities`). (`generate_image` is omitted while `:image-generation` is decoupled).
+  - **Available Agent Tools**: `web_search` (proxy / debug Serper / key-less DuckDuckGo fallback), `get_weather`, `search_contacts`, `task_registry` (CRUD on database + A2UI checklist envelopes), `extract_tasks`, `summarize_text`, `control_device` (media/settings), `listInstalledModels`, `getActiveModel`, `getModelDetails`, `selectInstalledModel`, `recommendInstalledModelForTask`, `getRuntimeStatus`, `read_sensors` (ambient temperature, sound SPL, light, pressure, battery, thermals, gyroscope, accelerometer, compass heading, proximity, spirit level flatness, metal detector, device postures), and `AppActionTools` (`copy_to_clipboard`, `share_text`, `open_url`, `open_maps`, `draft_email`, `create_calendar_event`, `list_apps`, `launch_app`, `launch_app_home_screen`, `perform_app_action`, `get_app_capabilities`). (`generate_image` is omitted while `:image-generation` is decoupled).
 - `data/report/`: `AiContentReportRepository` for PII-scrubbed user reports of AI responses (`ai_content_reports` in Firestore + `ai_content_reported` telemetry event).
 - `data/inference/`: LiteRT-LM chat runtime and stubbed `ImageGenerationEngineFactory`.
 - `data/context/`: compact conversation memory and prompt slicing for small on-device models.
@@ -47,11 +47,24 @@ Chevere AI is an Android app using Clean Architecture, MVI, Room, Hilt, LiteRT-L
   - `InstalledModelEntity`: tracks metadata and health status.
   - `TaskEntity`: local to-do items.
   - `SearchCacheEntity`: cached web queries.
+  - `DocumentChunkEntity`: local document excerpts.
+  - `ConversationSessionEntity` / `ConversationMessageEntity`: persisted chat history.
+  - `InvoiceEntity`: stored invoices.
+  - Current Room schema version: 7.
 - `data/datasource/`: Firestore and Hugging Face model catalogs. Kaggle discovery was removed.
 - `ui/chat/`: chat screen, capability-focused top bar (`CHAT` chip), multimodal attachments, A2UI task checklists, sensor slash commands, response sharing, and in-app AI content reporting (`ReportAiContentDialog`).
 - `ui/marketplace/`: chat/vision model discovery, download, selection, and deletion UI.
 - `ui/tasks/`: local to-do screen (creation, completion toggling, deletion).
 - `ui/settings/`: Safety & Privacy options and a **Benchmark Screen** (speeds, warmup, TTFT, TPS, and device acceleration/RAM logs).
+
+## Document RAG and remote MCP
+
+- Document import uses `ChatIntent.ImportDocument` → domain `DocumentRepository` → `LocalDocumentRepository`. Accept user-selected content URIs for UTF-8 `.txt`/`.md` files up to 2 MB; persist chunks in Room with atomic replacement.
+- `ChatRequestRouter` routes `/docs` and recognized document phrases to `DOCUMENTS`; `ToolRegistry` exposes `document_rag` and `read_local_file` for that category. Registering a tool with Hilt alone does not make it available in routed chat.
+- Retrieval is lexical TF-IDF, using Unicode tokens, 800-character chunks, 200-character overlap, and at most three excerpts. Filename mentions narrow retrieval. There are no semantic embeddings or PDF extraction; long-document summaries may cover only excerpts.
+- `/mcp` routes to the `mcp` bridge (`McpTool`). It supports HTTPS Streamable HTTP tool discovery/calls with confirmation, JSON/SSE responses, and 2025-03-26, 2025-06-18, or 2025-11-25 negotiation. Endpoint URLs are supplied per request. No OAuth/API-token configuration, saved connections, stdio, resources/prompts, or resumable streams are implemented.
+- Runtime instructions come from `ToolRegistry` and tool descriptions. Repository Markdown, including `docs/rag-mcp.md`, is developer documentation and is not automatically loaded into the local model. Treat retrieved content as untrusted data; do not describe prompt grounding as guaranteed model behavior.
+- See [usage and limitations](docs/rag-mcp.md). Focused tests: `ChatRequestRouterTest`, `DocumentRagTest`, `DocumentImportTest`, `ChatTaskActionTest`. Picker smoke flow: `.maestro/document_import_validation.yaml`; it verifies navigation, not indexing/search or live MCP interoperability.
 
 ## Current Model Runtime Behavior
 
