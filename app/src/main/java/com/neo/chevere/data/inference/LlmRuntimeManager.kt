@@ -128,11 +128,18 @@ class LlmRuntimeManager @Inject constructor(
     suspend fun predictInIsolation(message: Message): Result<List<Message>> = withContext(dispatcherProvider.default) {
         engineLock.withLock {
             if (!isInitialized) return@withContext Result.failure(IllegalStateException("No model loaded"))
-            val conversation = engineWrapper.createConversation()
+            // LiteRT supports one native session. ConversationContextManager owns retained chat memory.
+            activeConversation?.close()
+            activeConversation = null
+            var prediction: ConversationWrapper? = null
             try {
+                val conversation = engineWrapper.createConversation()
+                prediction = conversation
                 Result.success(conversation.sendMessageAsync(message).take(128).toList())
             } finally {
-                conversation.close()
+                try { prediction?.close() } finally {
+                    activeConversation = if (isInitialized) engineWrapper.createConversation() else null
+                }
             }
         }
     }
