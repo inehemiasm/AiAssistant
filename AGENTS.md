@@ -206,3 +206,10 @@ Apply these rules to new features and code changed by a task. Existing violation
 - After building the project, try to deploy, install, and launch the application on a connected device/emulator using `adb install` or the Gradle `installDebug` task followed by launching via ADB to verify success.
 - When modifying a user-facing scenario or UI flow, add or update a Maestro YAML flow under `.maestro/` and execute it (via the Maestro MCP `run` tool or `C:\maestro\bin\maestro.bat test .maestro/<flow>.yaml`) against the connected device/emulator to validate the modified scenario end-to-end.
 - Do not add `Co-Authored-By` or other AI/agent attribution to commits.
+
+## Agent harness behavior
+
+- `AgentOrchestrator` enforces the same routed tool names used for discovery, preserves a bounded current-request/policy/observation prompt across steps, and allows multi-tool continuation within the five-step budget.
+- Cancel ends the pending run without another model pass. Confirmed callbacks have a timeout and propagate coroutine cancellation. Reaching the step budget reports an incomplete outcome rather than claiming success.
+- Regression coverage lives in `AgentOrchestratorTest`, `ToolRegistryTest`, and `ChatTaskActionTest`; `.maestro/mcp_confirmation_validation.yaml` checks actionable confirmation and cancellation.
+- Runs remain in memory. Durable checkpoints, complete typed argument schemas, cross-category planning, idempotency/retry policy, and independent completion verification are follow-up work.

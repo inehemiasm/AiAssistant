@@ -51,6 +51,51 @@ class AgentOrchestratorTest {
         whenever(mockToolRegistry.getTool("delete_file")).doReturn(mockConfirmationTool)
     }
 
+    @Test fun multiStepRetainsGoalPolicyAndBoundedObservations() = runTest {
+        val goal = "Check Austin weather then check Boston weather and compare"
+        var pass = 0
+        whenever(mockWeatherTool.execute(any())).doReturn(ToolResult.Success("Sunny " + "x".repeat(20000)))
+        whenever(mockInferenceManager.generateStream(any())).doAnswer { invocation ->
+            val prompt = (invocation.arguments[0] as InferenceRequest).prompt
+            assertTrue(prompt.length <= Constants.Agent.MAX_PROMPT_CHAR_BUDGET)
+            assertTrue(prompt.contains(goal))
+            assertTrue(prompt.contains("Mock System Prompt"))
+            pass++
+            if (pass > 1) assertTrue(prompt.contains("OBSERVATION from get_weather"))
+            flowOf(InferenceResult.Success(when (pass) {
+                1 -> "[TOOL_CALL: get_weather, location=Austin]"
+                2 -> "[TOOL_CALL: get_weather, location=Boston]"
+                else -> "Both cities have sunny weather."
+            }))
+        }
+        assertEquals("Both cities have sunny weather.", orchestrator.processUserRequest(goal).getOrNull())
+        org.mockito.kotlin.verify(mockWeatherTool, org.mockito.kotlin.times(2)).execute(any())
+    }
+
+    @Test fun registeredButUnadvertisedToolIsRejected() = runTest {
+        val category = com.neo.chevere.data.chat.RoutingCategory.LIVE_INFORMATION
+        whenever(mockToolRegistry.allowedToolNames(category)).thenReturn(setOf("get_weather"))
+        whenever(mockToolRegistry.getToolsSystemPrompt(category)).thenReturn("Weather tools only")
+        var pass = 0
+        whenever(mockInferenceManager.generateStream(any())).doAnswer {
+            flowOf(InferenceResult.Success(if (++pass == 1) "[TOOL_CALL: delete_file, path=file.txt]" else "That action is unavailable for this request."))
+        }
+        orchestrator.processUserRequest("Weather in Austin", routingCategory = category)
+        org.mockito.kotlin.verify(mockConfirmationTool, org.mockito.kotlin.never()).execute(any())
+        assertTrue(orchestrator.agentState.value.steps.single().result is ToolResult.Error)
+    }
+
+    @Test fun confirmedCallbackPropagatesCancellation() = runTest {
+        whenever(mockConfirmationTool.execute(any())).thenReturn(ToolResult.NeedsConfirmation("Proceed?") {
+            throw kotlinx.coroutines.CancellationException("stopped")
+        })
+        whenever(mockInferenceManager.generateStream(any())).thenReturn(flowOf(InferenceResult.Success("[TOOL_CALL: delete_file, path=file.txt]")))
+        orchestrator.processUserRequest("Delete file")
+        var canceled = false
+        try { orchestrator.confirmAction() } catch (_: kotlinx.coroutines.CancellationException) { canceled = true }
+        assertTrue(canceled)
+    }
+
     @Test
     fun taskChecklist_returnsToolPayloadWithoutAnotherModelPass() = runTest {
         val payload = com.neo.chevere.data.agent.ui.AgentUiEnvelope.checklist("Tasks", listOf(7))
@@ -143,7 +188,7 @@ class AgentOrchestratorTest {
 
         assertTrue(result.isSuccess)
         // Fallback summary is used when loop ends
-        assertEquals("75 degrees", result.getOrNull())
+        assertTrue(result.getOrThrow().contains("full request may be incomplete"))
     }
 
     @Test
@@ -203,7 +248,8 @@ class AgentOrchestratorTest {
 
         val cancelResult = orchestrator.cancelAction()
         assertTrue(cancelResult.isSuccess)
-        assertEquals("Deletion canceled by user request.", cancelResult.getOrNull())
+        assertEquals("Action canceled. No pending action was executed.", cancelResult.getOrNull())
+        org.mockito.kotlin.verify(mockInferenceManager, org.mockito.kotlin.times(1)).generateStream(any())
         assertTrue(!confirmCalled)
     }
 

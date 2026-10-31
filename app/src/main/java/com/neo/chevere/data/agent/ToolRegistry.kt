@@ -27,6 +27,9 @@ class ToolRegistry @Inject constructor(
      * @param name The name of the tool to find.
      * @return The [AgentTool] if found, or `null` otherwise.
      */
+    /** Uses the same category policy for tool execution as for prompt discovery. */
+    fun allowedToolNames(category: RoutingCategory): Set<String> = category.toolNamesForCategory()
+
     fun getTool(name: String): AgentTool? = tools.find { it.name == name }
 
     /**
@@ -63,7 +66,7 @@ class ToolRegistry @Inject constructor(
             append("3. Answer directly when no external action is needed.\n")
             append("4. Call one tool only when the current request requires that tool's external capability.\n")
             append("5. Make sensible assumptions to fulfill requests immediately unless permission or safety checks are required.\n")
-            append("6. After an observation, return a concise final answer for the user. Do not expose tool syntax in the final answer.\n")
+            append("6. After each observation, check the current request. Call the next necessary tool until the task is complete or blocked; then report the observed outcome concisely. Never claim an action succeeded without a successful tool result. Do not expose tool syntax in the final answer.\n")
             append(com.neo.chevere.core.NumericResponsePolicy.INSTRUCTION)
             append("\n\nTools:\n")
             val includedToolNames = includedTools.map { it.name }.toSet()
