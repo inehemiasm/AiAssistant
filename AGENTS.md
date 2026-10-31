@@ -220,3 +220,9 @@ Apply these rules to new features and code changed by a task. Existing violation
 - `ChatViewModel` owns prediction lifecycle: clear/cancel when busy, typing, awaiting confirmation, changing models or sessions. Empty conversations show no fixed fallback topics. A pill fills the composer and never sends automatically.
 - `LlmRuntimeManager.predictInIsolation` uses an engine-locked temporary conversation, closed on completion/cancellation. LiteRT permits one native session: close the idle chat session before prediction and recreate it afterward; retained chat memory comes from ConversationContextManager. Prediction has a 12-second timeout and 128 streamed-chunk cap; it does not call agent tools or modify chat memory. Actual attachment pixels are not included in prediction context.
 - Tests: `LocalChatSuggestionRepositoryTest`, `ChatTaskActionTest`; device flow: `.maestro/contextual_suggestions_validation.yaml`.
+
+## Capability descriptions
+
+- `data/chat/ChatCapabilities.kt` owns the current overview and model capability copy. Keep deterministic answers, direct chat, vision prompts, and agent instructions aligned with enabled features.
+- Describe Chevere as general-purpose: coding assistance spans languages/platforms. Image generation is unavailable in the current build; compatible vision models can analyze attachments. Include document search and confirmed remote MCP tools with their current limitations.
+- Regression tests: `ChatRequestRouterTest`; on-device flow: `.maestro/capabilities_validation.yaml`.

@@ -72,8 +72,24 @@ class ChatRequestRouterTest {
     fun imageCapabilityQuestion_doesNotUseAgent() {
         val prompt = "Can you generate images?"
 
-        assertNotNull(router.capabilityResponseFor(prompt))
+        assertTrue(router.capabilityResponseFor(prompt)!!.contains("Image generation is not available"))
         assertFalse(router.shouldUseAgent(prompt))
+    }
+
+    @Test fun capabilityPromptsAreGeneralPurposeAndMatchEnabledFeatures() {
+        val overview = router.capabilityResponseFor("What can you do?")!!
+        val direct = router.buildDirectChatPrompt("Help debug my Python program")
+        val vision = router.buildVisionChatPrompt("Can you create a new image?")
+        for (text in listOf(overview, direct)) {
+            assertTrue(text.contains("across languages and platforms"))
+            assertTrue(text.contains("/docs"))
+            assertTrue(text.contains("/mcp"))
+            assertTrue(text.contains("Image generation is not available"))
+            assertFalse(text.contains("help with Android/Kotlin"))
+            assertFalse(text.contains("tools for image generation"))
+        }
+        assertFalse(vision.contains("text-only image-generation prompt"))
+        assertTrue(vision.contains("image generation is not available"))
     }
 
     @Test

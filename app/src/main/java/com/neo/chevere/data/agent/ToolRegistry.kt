@@ -60,7 +60,8 @@ class ToolRegistry @Inject constructor(
         if (includedTools.isEmpty()) return ""
 
         return buildString {
-            append("Agent protocol:\n")
+            append(com.neo.chevere.data.chat.ChatCapabilities.AGENT_CONTEXT)
+            append("\n\nAgent protocol:\n")
             append("1. Treat the latest CURRENT USER REQUEST as the task to complete now.\n")
             append("2. Use conversation history only for context, not as a task list.\n")
             append("3. Answer directly when no external action is needed.\n")
