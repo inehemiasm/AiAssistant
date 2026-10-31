@@ -256,6 +256,9 @@ abstract class AgentModule {
         ): AgentTool = InvoiceRegistryTool(invoiceDao, conversationHistoryDao)
 
         @Provides
+        fun provideChatSuggestionRepository(implementation: com.neo.chevere.data.LocalChatSuggestionRepository): com.neo.chevere.domain.ChatSuggestionRepository = implementation
+
+        @Provides
         fun provideDocumentRepository(implementation: com.neo.chevere.data.LocalDocumentRepository): com.neo.chevere.domain.DocumentRepository = implementation
 
         @Provides

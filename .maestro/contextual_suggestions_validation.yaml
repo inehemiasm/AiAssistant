@@ -1,0 +1,19 @@
+appId: dev.neo.chevereai
+name: Contextual predictions fill a draft without sending
+---
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible: "Ask Chevere AI…"
+    timeout: 45000
+- tapOn: "Ask Chevere AI…"
+- inputText: "Give me two vegetarian dinner ideas using lentils."
+- tapOn: "Send"
+- extendedWaitUntil:
+    visible: "Suggested next message: .*"
+    timeout: 90000
+- tapOn:
+    text: "Suggested next message: .*"
+    index: 0
+- assertNotVisible: "Suggested next message: .*"
+- assertVisible: "Send"

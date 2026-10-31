@@ -36,6 +36,8 @@ class ChatTaskActionTest {
     private val store = androidx.lifecycle.ViewModelStore()
     private val tasks = MutableStateFlow(listOf(Task(7, "Buy milk", "Two cartons", TaskStatus.PENDING, 123)))
     private val repository = mock<ChatRepository>()
+    private val suggestionRepository = mock<ChatSuggestionRepository>()
+    private val initialization = MutableStateFlow<InitializationStatus>(InitializationStatus.Uninitialized)
     private val agentState = MutableStateFlow<AgentState>(AgentState.Idle)
     private lateinit var viewModel: ChatViewModel
 
@@ -43,7 +45,7 @@ class ChatTaskActionTest {
         Dispatchers.setMain(dispatcher)
         whenever(repository.agentState).thenReturn(agentState)
         whenever(repository.activePartialResponse).thenReturn(emptyFlow())
-        whenever(repository.getInitStatus()).thenReturn(flowOf(InitializationStatus.Uninitialized))
+        whenever(repository.getInitStatus()).thenReturn(initialization)
         whenever(repository.getLocalModels()).thenReturn(emptyList())
         val preferences = mock<PreferenceManager>()
         whenever(preferences.selectedModelPreference).thenReturn(flowOf(null))
@@ -63,11 +65,26 @@ class ChatTaskActionTest {
         }
         viewModel = ChatViewModel(RuntimeEnvironment.getApplication(), repository,
             mock<InitializeChatUseCase>(), mock<SendMessageUseCase>(), preferences,
-            dispatchers, mock<AppTelemetry>(), voice, history, taskRepository, mock(), mock())
+            dispatchers, mock<AppTelemetry>(), voice, history, taskRepository, mock(), mock(), suggestionRepository)
         store.put("chat", viewModel)
         advanceUntilIdle()
         viewModel.onIntent(ChatIntent.LoadSession(5))
         advanceUntilIdle()
+    }
+
+    @Test fun suggestionsReflectConversationAndDisappearWhileDrafting() = runTest(dispatcher) {
+        whenever(suggestionRepository.predict(any(), any())).thenReturn(listOf("Show completed tasks", "Add a task for tomorrow"))
+        initialization.value = InitializationStatus.Ready
+        advanceUntilIdle()
+        assertEquals(listOf("Show completed tasks", "Add a task for tomorrow"), viewModel.currentState.suggestions)
+        val snapshot = argumentCaptor<List<ChatMessage>>()
+        verify(suggestionRepository).predict(snapshot.capture(), eq(false))
+        assertEquals("Tasks", snapshot.firstValue.last().text)
+        viewModel.onIntent(ChatIntent.UpdateInputText("Show completed tasks"))
+        advanceUntilIdle()
+        assertTrue(viewModel.currentState.suggestions.isEmpty())
+        assertEquals("Show completed tasks", viewModel.currentState.inputText)
+        verify(repository, never()).sendMessage(any(), any())
     }
 
     @Test fun pendingConfirmationSurvivesTurnCompletion() = runTest(dispatcher) {

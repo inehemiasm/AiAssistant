@@ -213,3 +213,10 @@ Apply these rules to new features and code changed by a task. Existing violation
 - Cancel ends the pending run without another model pass. Confirmed callbacks have a timeout and propagate coroutine cancellation. Reaching the step budget reports an incomplete outcome rather than claiming success.
 - Regression coverage lives in `AgentOrchestratorTest`, `ToolRegistryTest`, and `ChatTaskActionTest`; `.maestro/mcp_confirmation_validation.yaml` checks actionable confirmation and cancellation.
 - Runs remain in memory. Durable checkpoints, complete typed argument schemas, cross-category planning, idempotency/retry policy, and independent completion verification are follow-up work.
+
+## Contextual composer suggestions
+
+- Suggestion pills are predicted by the local model from up to four recent messages and attachment presence through domain `ChatSuggestionRepository`. `LocalChatSuggestionRepository` validates output into at most three short draft strings.
+- `ChatViewModel` owns prediction lifecycle: clear/cancel when busy, typing, awaiting confirmation, changing models or sessions. Empty conversations show no fixed fallback topics. A pill fills the composer and never sends automatically.
+- `LlmRuntimeManager.predictInIsolation` uses an engine-locked temporary conversation, closed on completion/cancellation. Prediction has a 12-second timeout and 128 streamed-chunk cap; it does not call agent tools or modify chat memory. Actual attachment pixels are not included in prediction context.
+- Tests: `LocalChatSuggestionRepositoryTest`, `ChatTaskActionTest`; device flow: `.maestro/contextual_suggestions_validation.yaml`.
