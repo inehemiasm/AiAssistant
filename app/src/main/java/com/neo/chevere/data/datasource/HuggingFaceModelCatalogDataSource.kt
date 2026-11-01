@@ -29,7 +29,8 @@ private data class HFModelDto(
     val runtimeType: String = "LiteRT",
     val sha256: String? = null,
     val license: String? = null,
-    val repositoryFiles: List<String> = emptyList()
+    val repositoryFiles: List<String> = emptyList(),
+    val description: String? = null
 )
 
 /**
@@ -60,7 +61,7 @@ class HuggingFaceModelCatalogDataSource @Inject constructor(
                 ModelEntry(
                     name = dto.displayName,
                     url = dto.downloadUrl,
-                    description = "Source: ${dto.repoId} (Curated)",
+                    description = dto.description ?: "Source: ${dto.repoId} (Curated)",
                     provider = "Hugging Face",
                     sizeBytes = dto.sizeBytes,
                     runtimeType = dto.runtimeType,

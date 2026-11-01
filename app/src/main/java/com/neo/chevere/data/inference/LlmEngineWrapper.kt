@@ -1,5 +1,6 @@
 package com.neo.chevere.data.inference
 
+import com.google.ai.edge.litertlm.ConversationConfig
 import com.google.ai.edge.litertlm.Conversation
 import com.google.ai.edge.litertlm.Engine
 import com.google.ai.edge.litertlm.EngineConfig
@@ -29,14 +30,16 @@ interface ConversationWrapper {
 @Singleton
 class RealLlmEngineWrapper @Inject constructor() : LlmEngineWrapper {
     private var engine: Engine? = null
+    private var conversationConfig = ConversationConfig()
 
     override fun initialize(config: EngineConfig) {
+        conversationConfig = ModelRuntimeProfile.conversationConfig(config.modelPath)
         engine = Engine(config).apply { initialize() }
     }
 
     override fun createConversation(): ConversationWrapper {
         val conversation =
-            engine?.createConversation() ?: throw IllegalStateException("Engine not initialized")
+            engine?.createConversation(conversationConfig) ?: throw IllegalStateException("Engine not initialized")
         return RealConversationWrapper(conversation)
     }
 

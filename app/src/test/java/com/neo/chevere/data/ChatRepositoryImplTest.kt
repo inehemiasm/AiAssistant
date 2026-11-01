@@ -205,8 +205,10 @@ class ChatRepositoryImplTest {
         val result = repository.sendMessage("What can you do?", null)
 
         verify(inferenceManager, never()).generate(any())
+        verify(inferenceManager, never()).generateStream(any())
         verify(agentOrchestrator, never()).processUserRequest(any(), any(), any(), any())
-        assertTrue(result.getOrNull()?.text?.contains("image generation") == true)
+        assertTrue(result.isSuccess)
+        assertTrue(result.getOrThrow().text.contains("Image generation is not available in this build."))
         assertTrue(result.getOrNull()?.text?.contains("weather") == true)
         assertTrue(result.getOrNull()?.text?.contains("live device sensor readings") == true)
     }
@@ -216,8 +218,13 @@ class ChatRepositoryImplTest {
         val result = repository.sendMessage("Can you generate images?", null)
 
         verify(inferenceManager, never()).generate(any())
+        verify(inferenceManager, never()).generateStream(any())
         verify(agentOrchestrator, never()).processUserRequest(any(), any(), any(), any())
-        assertTrue(result.getOrNull()?.text?.contains("Tell me what you want") == true)
+        assertTrue(result.isSuccess)
+        val response = result.getOrThrow().text
+        assertTrue(response.contains("Image generation is not available in this build."))
+        assertTrue(response.contains("compatible vision model"))
+        assertTrue(response.contains("describe attached images"))
     }
 
     @Test

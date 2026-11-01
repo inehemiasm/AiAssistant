@@ -1,0 +1,23 @@
+appId: dev.neo.chevereai
+name: Previously downloaded Web Gemma loads as GPU text-only
+---
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible: "Library"
+    timeout: 45000
+- tapOn: "Library"
+- tapOn: "Models Library"
+- scrollUntilVisible:
+    element: "GEMMA 4 E2B IT (TEXT-ONLY GPU)"
+    direction: DOWN
+    timeout: 60000
+- tapOn: "GEMMA 4 E2B IT (TEXT-ONLY GPU)"
+- scrollUntilVisible:
+    element: "ACTIVATE ENGINE"
+    direction: DOWN
+    timeout: 20000
+- tapOn: "ACTIVATE ENGINE"
+- extendedWaitUntil:
+    visible: "ENGINE ACTIVE"
+    timeout: 180000

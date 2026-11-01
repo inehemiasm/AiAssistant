@@ -120,7 +120,7 @@ See [RAG/MCP usage and limitations](docs/rag-mcp.md) for supported behavior and 
 - **UI**: Jetpack Compose, Material 3, AndroidX Compose A2UI
 - **Architecture**: Clean Architecture, MVI
 - **Dependency injection**: Hilt
-- **Local LLM runtime**: Google AI Edge LiteRT-LM & MediaPipe GenAI
+- **Local LLM runtime**: Google AI Edge LiteRT-LM 0.19.0; includes experimental [Spark X2.6 INT8 CPU support](docs/spark-x2.6-testing.md).
 - **Optional Image runtime (`:image-generation`)**: ONNX Runtime Android (standalone module, currently disabled in `:app`)
 - **Storage**: Room & DataStore Preferences
 - **Background work**: WorkManager foreground services (`dataSync`) for safe, resumable downloads

@@ -49,6 +49,18 @@ class LlmResponseMapperTest {
     }
 
     @Test
+    fun mapToString_excludesThoughtChannelEvenWhenItContainsToolInstructions() {
+        val message = Message.model(
+            contents = Contents.of(Content.Text("Visible answer")),
+            channels = mapOf("thought" to "[TOOL_CALL: control_device]"),
+        )
+        assertEquals("Visible answer", mapper.mapToString(message))
+        assertEquals("", mapper.mapToString(Message.model(
+            channels = mapOf("thought" to "Private reasoning"),
+        )))
+    }
+
+    @Test
     fun mapToString_withMixedContentIncludingImages_extractsTextOnly() {
         val contents = Contents.of(
             Content.ImageBytes(byteArrayOf(0)),

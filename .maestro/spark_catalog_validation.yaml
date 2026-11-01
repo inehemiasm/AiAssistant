@@ -1,0 +1,25 @@
+appId: dev.neo.chevereai
+name: Spark CPU variant is available with accurate limitations
+---
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible: "Library"
+    timeout: 45000
+- tapOn: "Library"
+- tapOn: "Models Library"
+- scrollUntilVisible:
+    element: "SPARK X2.6 4B (INT8 CPU)"
+    direction: DOWN
+    timeout: 60000
+- assertVisible: "SPARK X2.6 4B (INT8 CPU)"
+- assertVisible: ".*Experimental text-only model.*"
+- tapOn: "SPARK X2.6 4B (INT8 CPU)"
+- scrollUntilVisible:
+    element: "DOWNLOAD ENGINE"
+    direction: DOWN
+    timeout: 20000
+- tapOn: "DOWNLOAD ENGINE"
+- assertVisible: "Download requirements"
+- assertVisible: "Download"
+- tapOn: "Cancel"

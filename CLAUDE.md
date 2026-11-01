@@ -69,6 +69,7 @@ Chevere AI is an Android app using Clean Architecture, MVI, Room, Hilt, LiteRT-L
 ## Current Model Runtime Behavior
 
 - Text chat uses LiteRT-LM (`.litertlm` preferred).
+- LiteRT-LM 0.19.0 supports the experimental curated Spark X2.6 full INT8 CPU model. `ModelRuntimeProfile` sets its 4096-token context and disables thinking; preserve channel separation. See `docs/spark-x2.6-testing.md` for limitations and validation.
 - Local ONNX Stable Diffusion (`OnnxLocalDiffusionEngine`) lives in the standalone `:image-generation` module and is currently disabled in `:app`.
 - Attached images route through chat/vision inference, not image generation. Image-only sends should use `Describe this image.` as the prompt.
 - Chat context is rebuilt through `ConversationContextManager`: older turns become compact memory, recent turns stay verbatim, and the current request is appended fresh. Avoid relying on unbounded LiteRT conversation state for long chats.
