@@ -1,5 +1,6 @@
 package com.neo.chevere.ui.tasks
 
+import com.neo.chevere.R
 import android.app.Application
 import androidx.lifecycle.viewModelScope
 import com.neo.chevere.core.BaseViewModel
@@ -28,7 +29,7 @@ class TasksViewModel @Inject constructor(
         when (intent) {
             is TasksIntent.AddTask -> {
                 if (intent.title.isBlank()) {
-                    sendEffect { TasksEffect.ShowToast("Task title cannot be empty") }
+                    sendEffect { TasksEffect.ShowToast(getApplication<android.app.Application>().getString(R.string.ui_task_title_cannot_be_empty)) }
                     return
                 }
                 taskRepository.createTask(intent.title, intent.description)

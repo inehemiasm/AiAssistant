@@ -28,6 +28,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
@@ -159,7 +160,7 @@ fun ModelSelectorCard(
                             border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
                         ) {
                             Text(
-                                "SELECTED",
+                                stringResource(com.neo.chevere.ui.designsystem.R.string.selected),
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                 style = Typography.labelSmall.copy(fontSize = 9.sp, fontWeight = FontWeight.Bold),
                                 color = MaterialTheme.colorScheme.primary
@@ -179,9 +180,9 @@ fun ModelSelectorCard(
                 Spacer(Modifier.height(16.dp))
                 
                 Row {
-                    ModelStatItem(Icons.Default.Storage, params, " Billion Params")
+                    ModelStatItem(Icons.Default.Storage, params, " " + stringResource(com.neo.chevere.ui.designsystem.R.string.billion_params))
                     Spacer(Modifier.width(16.dp))
-                    ModelStatItem(Icons.Default.Memory, vram, " VRAM Required")
+                    ModelStatItem(Icons.Default.Memory, vram, " " + stringResource(com.neo.chevere.ui.designsystem.R.string.vram_required))
                 }
             }
             

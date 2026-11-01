@@ -1,6 +1,7 @@
 package com.neo.chevere.data.inference
 
 import android.content.Context
+import com.neo.chevere.R
 import com.google.ai.edge.litertlm.Backend
 import com.google.ai.edge.litertlm.EngineConfig
 import com.google.ai.edge.litertlm.Message
@@ -53,7 +54,7 @@ class LlmRuntimeManager @Inject constructor(
         enableVision: Boolean
     ): Result<Unit> = withContext(dispatcherProvider.default) {
         engineLock.withLock {
-            _initStatus.value = InitializationStatus.Initializing("RESETTING RUNTIME...")
+            _initStatus.value = InitializationStatus.Initializing(context.getString(R.string.ui_resetting_runtime))
             closeCurrentResources()
 
             val neuralCache = File(context.cacheDir, Constants.Inference.NEURAL_CACHE_DIR).apply {
@@ -65,7 +66,13 @@ class LlmRuntimeManager @Inject constructor(
             var lastError: Throwable? = null
 
             for ((main, vision, label) in backends) {
-                _initStatus.value = InitializationStatus.Initializing("ATTEMPTING: $label")
+                val backendLabel = context.getString(when (label) {
+                    "GPU + Vision" -> R.string.ui_gpu_with_vision
+                    "CPU + Vision" -> R.string.ui_cpu_with_vision
+                    "GPU Text-Only" -> R.string.ui_gpu_text_only
+                    else -> R.string.ui_cpu_text_only
+                })
+                _initStatus.value = InitializationStatus.Initializing(context.getString(R.string.ui_attempting_1_s, backendLabel))
                 val result = runCatching {
                     val config = EngineConfig(
                         modelPath = modelPath,
@@ -77,7 +84,7 @@ class LlmRuntimeManager @Inject constructor(
 
                     engineWrapper.initialize(config)
 
-                    _initStatus.value = InitializationStatus.Initializing("WARMING UP $label...")
+                    _initStatus.value = InitializationStatus.Initializing(context.getString(R.string.ui_warming_up_1_s, backendLabel))
                     performWarmup(vision != null)
                     activeConversation = engineWrapper.createConversation()
                 }
@@ -102,9 +109,9 @@ class LlmRuntimeManager @Inject constructor(
             }
 
             val failureMessage = if (ModelRuntimeProfile.isTextOnlyGpu(modelPath)) {
-                "This text-only Gemma variant requires a compatible GPU. Try the standard Gemma 4 E2B model if GPU loading fails."
+                context.getString(R.string.ui_this_text_only_gemma_variant_requires_a_compatible_gpu_try_the_s)
             } else {
-                "Model loading failed. Check that this model variant supports your device and runtime, or try another model."
+                context.getString(R.string.ui_model_loading_failed_check_that_this_model_variant_supports_your)
             }
             _initStatus.value = InitializationStatus.Failure(failureMessage, lastError)
             Result.failure(IllegalStateException(failureMessage, lastError))
@@ -132,7 +139,7 @@ class LlmRuntimeManager @Inject constructor(
     /** Predicts UI follow-ups without changing the active chat conversation. */
     suspend fun predictInIsolation(message: Message): Result<List<Message>> = withContext(dispatcherProvider.default) {
         engineLock.withLock {
-            if (!isInitialized) return@withContext Result.failure(IllegalStateException("No model loaded"))
+            if (!isInitialized) return@withContext Result.failure(IllegalStateException(context.getString(R.string.ui_no_model_loaded)))
             // LiteRT supports one native session. ConversationContextManager owns retained chat memory.
             activeConversation?.close()
             activeConversation = null
@@ -153,7 +160,7 @@ class LlmRuntimeManager @Inject constructor(
         withContext(dispatcherProvider.default) {
             engineLock.withLock {
                 val conversation = activeConversation ?: return@withContext Result.failure(
-                    IllegalStateException("No active conversation")
+                    IllegalStateException(context.getString(R.string.ui_no_active_conversation))
                 )
                 try {
                     Result.success(conversation.sendMessage(message))
@@ -168,7 +175,7 @@ class LlmRuntimeManager @Inject constructor(
     fun sendMessageAsync(message: Message): Flow<Result<Message>> = flow {
         engineLock.withLock {
             val conversation = activeConversation ?: run {
-                emit(Result.failure(IllegalStateException("No active conversation")))
+                emit(Result.failure(IllegalStateException(context.getString(R.string.ui_no_active_conversation))))
                 return@withLock
             }
             try {

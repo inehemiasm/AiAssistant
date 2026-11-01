@@ -3,6 +3,7 @@ package com.neo.chevere.data
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import com.neo.chevere.R
 import android.content.pm.ServiceInfo
 import android.os.Build
 import androidx.core.app.NotificationCompat
@@ -68,14 +69,14 @@ class ModelDownloadWorker @AssistedInject constructor(
         Timber.tag(TAG).d("Worker started. Name: $modelName, URL: $uri")
 
         if (uri == null || modelName == null || modelId == null) {
-            return@withContext Result.failure(workDataOf(Constants.Download.OUTPUT_ERROR to "Missing metadata"))
+            return@withContext Result.failure(workDataOf(Constants.Download.OUTPUT_ERROR to applicationContext.getString(R.string.ui_missing_metadata)))
         }
 
         if (!modelName.endsWith(Constants.ModelFiles.LITERTLM_EXTENSION) &&
             !modelName.endsWith(Constants.ModelFiles.BIN_EXTENSION) &&
             !modelName.endsWith(Constants.ModelFiles.ZIP_EXTENSION)
         ) {
-            return@withContext Result.failure(workDataOf(Constants.Download.OUTPUT_ERROR to "Unsupported file type"))
+            return@withContext Result.failure(workDataOf(Constants.Download.OUTPUT_ERROR to applicationContext.getString(R.string.ui_unsupported_file_type)))
         }
 
         val targetFile = File(applicationContext.filesDir, modelName)
@@ -107,12 +108,12 @@ class ModelDownloadWorker @AssistedInject constructor(
                 if (!isSupportedExtractedModelBundle(tempDir)) {
                     tempDir.deleteRecursively()
                     installedModelRegistry.updateInstallStatus(modelId, InstallStatus.FAILED)
-                    throw IOException("Downloaded repository is not a supported image model bundle.")
+                    throw IOException(applicationContext.getString(R.string.ui_downloaded_repository_is_not_a_supported_image_model_bundle))
                 }
                 if (!tempDir.renameTo(targetDir)) {
                     tempDir.deleteRecursively()
                     installedModelRegistry.updateInstallStatus(modelId, InstallStatus.FAILED)
-                    throw IOException("Failed to finalize downloaded image model")
+                    throw IOException(applicationContext.getString(R.string.ui_failed_to_finalize_downloaded_image_model))
                 }
                 installedModelRegistry.updateInstallStatus(modelId, InstallStatus.INSTALLED)
                 setProgress(workDataOf(Constants.Download.PROGRESS to 100))
@@ -148,7 +149,7 @@ class ModelDownloadWorker @AssistedInject constructor(
                     val actualSha256 = calculateSha256(tempFile)
                     if (!actualSha256.equals(expectedSha256, ignoreCase = true)) {
                         installedModelRegistry.updateInstallStatus(modelId, InstallStatus.CORRUPTED)
-                        throw IOException("Checksum mismatch")
+                        throw IOException(applicationContext.getString(R.string.ui_checksum_mismatch))
                     }
                 }
 
@@ -169,13 +170,13 @@ class ModelDownloadWorker @AssistedInject constructor(
                         tempDir.deleteRecursively()
                         installedModelRegistry.updateInstallStatus(modelId, InstallStatus.FAILED)
                         throw IOException(
-                            "Downloaded ZIP is not a supported model bundle. Missing required component files."
+                            applicationContext.getString(R.string.ui_downloaded_zip_is_not_a_supported_model_bundle_missing_required_)
                         )
                     }
                     if (!tempDir.renameTo(targetDir)) {
                         tempDir.deleteRecursively()
                         installedModelRegistry.updateInstallStatus(modelId, InstallStatus.FAILED)
-                        throw IOException("Failed to finalize extracted image model")
+                        throw IOException(applicationContext.getString(R.string.ui_failed_to_finalize_extracted_image_model))
                     }
                     tempFile.delete()
                     installedModelRegistry.updateInstallStatus(modelId, InstallStatus.INSTALLED)
@@ -199,11 +200,11 @@ class ModelDownloadWorker @AssistedInject constructor(
                     Result.success()
                 } else {
                     installedModelRegistry.updateInstallStatus(modelId, InstallStatus.FAILED)
-                    throw IOException("Finalization failed")
+                    throw IOException(applicationContext.getString(R.string.ui_finalization_failed))
                 }
             } else {
                 installedModelRegistry.updateInstallStatus(modelId, InstallStatus.FAILED)
-                throw IOException("Empty file")
+                throw IOException(applicationContext.getString(R.string.ui_empty_file))
             }
         } catch (e: CancellationException) {
             // User explicitly canceled; discard the partial file so a fresh start is guaranteed.
@@ -235,7 +236,7 @@ class ModelDownloadWorker @AssistedInject constructor(
             if (!willRetry) {
                 // Max retries exhausted; clean up and report permanent failure.
                 // Keep the partial files on standard network/transient failures. Discard only on corruption.
-                val isCorruption = e.message?.contains("Checksum mismatch") == true ||
+                val isCorruption = e.message?.contains(applicationContext.getString(R.string.ui_checksum_mismatch)) == true ||
                         e.message?.contains("ZIP") == true ||
                         e.message?.contains("extracted") == true ||
                         e.message?.contains("finalize") == true
@@ -287,7 +288,7 @@ class ModelDownloadWorker @AssistedInject constructor(
             while (entry != null) {
                 val outputFile = File(canonicalTarget, entry.name).canonicalFile
                 if (!outputFile.path.startsWith(canonicalTarget.path + File.separator)) {
-                    throw IOException("Unsafe zip entry: ${entry.name}")
+                    throw IOException(applicationContext.getString(R.string.ui_unsafe_zip_entry_1_s, entry.name))
                 }
 
                 if (entry.isDirectory) {
@@ -316,7 +317,7 @@ class ModelDownloadWorker @AssistedInject constructor(
             val destination = File(targetDir, repositoryFile.relativePath).canonicalFile
             val canonicalTarget = targetDir.canonicalFile
             if (!destination.path.startsWith(canonicalTarget.path + File.separator)) {
-                throw IOException("Unsafe repository file path: ${repositoryFile.relativePath}")
+                throw IOException(applicationContext.getString(R.string.ui_unsafe_repository_file_path_1_s, repositoryFile.relativePath))
             }
             destination.parentFile?.mkdirs()
 
@@ -387,7 +388,7 @@ class ModelDownloadWorker @AssistedInject constructor(
     }
 
     override suspend fun getForegroundInfo(): ForegroundInfo {
-        val modelName = inputData.getString(Constants.Download.INPUT_MODEL_NAME) ?: "Model"
+        val modelName = inputData.getString(Constants.Download.INPUT_MODEL_NAME) ?: applicationContext.getString(R.string.notification_model_fallback)
         return getForegroundInfoHelper(0, modelName)
     }
 
@@ -395,12 +396,12 @@ class ModelDownloadWorker @AssistedInject constructor(
         createNotificationChannel()
         val cancelIntent = WorkManager.getInstance(applicationContext).createCancelPendingIntent(id)
         val notification = NotificationCompat.Builder(applicationContext, channelId)
-            .setContentTitle("Downloading $modelName")
-            .setContentText("Progress: $progress%")
+            .setContentTitle(applicationContext.getString(R.string.notification_downloading_model, modelName))
+            .setContentText(applicationContext.getString(R.string.notification_download_progress, progress))
             .setSmallIcon(android.R.drawable.stat_sys_download)
             .setProgress(100, progress, false)
             .setOngoing(true)
-            .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Cancel", cancelIntent)
+            .addAction(android.R.drawable.ic_menu_close_clear_cancel, applicationContext.getString(R.string.cancel_button), cancelIntent)
             .build()
 
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {

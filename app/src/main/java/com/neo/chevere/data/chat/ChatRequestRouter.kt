@@ -20,6 +20,9 @@ enum class RoutingCategory {
     DIRECT_CHAT
 }
 
+/** Identifies app-authored capability answers independently of their display language. */
+internal enum class CapabilityAnswer { OVERVIEW, IMAGE, SENSORS }
+
 /**
  * Classifies chat prompts before they reach the repository orchestration layer.
  *
@@ -68,13 +71,22 @@ class ChatRequestRouter @Inject constructor() {
     }
 
     fun capabilityResponseFor(prompt: String): String? {
+        return when (capabilityAnswerFor(prompt)) {
+            CapabilityAnswer.OVERVIEW -> CAPABILITY_OVERVIEW_RESPONSE
+            CapabilityAnswer.IMAGE -> IMAGE_CAPABILITY_RESPONSE
+            CapabilityAnswer.SENSORS -> SENSORS_CAPABILITY_RESPONSE
+            null -> null
+        }
+    }
+
+    internal fun capabilityAnswerFor(prompt: String): CapabilityAnswer? {
         val normalized = prompt.normalized()
         if (normalized.isBlank()) return null
 
         return when {
-            isCapabilityOverviewQuestion(normalized) -> CAPABILITY_OVERVIEW_RESPONSE
-            isImageCapabilityQuestion(normalized) -> IMAGE_CAPABILITY_RESPONSE
-            isSensorsCapabilityQuestion(normalized) -> SENSORS_CAPABILITY_RESPONSE
+            isCapabilityOverviewQuestion(normalized) -> CapabilityAnswer.OVERVIEW
+            isImageCapabilityQuestion(normalized) -> CapabilityAnswer.IMAGE
+            isSensorsCapabilityQuestion(normalized) -> CapabilityAnswer.SENSORS
             else -> null
         }
     }

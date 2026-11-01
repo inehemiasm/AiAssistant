@@ -1,5 +1,6 @@
 package com.neo.chevere.ui.chat.components
 
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColor
 import androidx.compose.animation.core.RepeatMode
@@ -196,6 +197,8 @@ fun FuturisticChatBubble(
     taskChecklist: TaskChecklistUiModel? = null,
     onSetTaskCompleted: (String, Int, Boolean) -> Unit = { _, _, _ -> }
 ) {
+    val formatLocale = LocalConfiguration.current.locales[0]
+    val textResources = LocalResources.current
     val isUser = message.isUser
     val bubbleColor = if (isUser) {
         MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.56f)
@@ -307,12 +310,12 @@ fun FuturisticChatBubble(
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 message.inferenceTimeMs?.let { timeMs ->
                                     val seconds = timeMs / 1000.0
-                                    Badge(text = "%.2fs".format(Locale.US, seconds))
+                                    Badge(text = textResources.getString(R.string.duration_seconds_short, seconds))
                                     message.inputTokenCount?.let { inputTokens ->
-                                        Badge(text = "IN $inputTokens TOK")
+                                        Badge(text = textResources.getString(R.string.ui_in_1_s_tok, inputTokens))
                                     }
                                     message.outputTokenCount?.let { outputTokens ->
-                                        Badge(text = "OUT $outputTokens TOK")
+                                        Badge(text = textResources.getString(R.string.ui_out_1_s_tok, outputTokens))
                                     }
                                 } ?: run {
                                     Badge(text = stringResource(R.string.hardware_accel))
@@ -394,6 +397,7 @@ private fun GeneratedMessageImage(
     onToggleMask: () -> Unit,
     onClick: () -> Unit
 ) {
+    val textResources = LocalResources.current
     Box(
         modifier = Modifier
             .padding(bottom = 8.dp)
@@ -427,7 +431,7 @@ private fun GeneratedMessageImage(
                 IconButton(onClick = onToggleMask, modifier = Modifier.size(40.dp)) {
                     Icon(
                         imageVector = if (isMasked) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                        contentDescription = if (isMasked) "Show explicit image" else "Hide explicit image",
+                        contentDescription = if (isMasked) textResources.getString(R.string.ui_show_explicit_image) else textResources.getString(R.string.ui_hide_explicit_image),
                         tint = MaterialTheme.colorScheme.onSurface
                     )
                 }
@@ -440,7 +444,7 @@ private fun GeneratedMessageImage(
                     modifier = Modifier.align(Alignment.Center)
                 ) {
                     Text(
-                        text = "EXPLICIT IMAGE",
+                        text = textResources.getString(R.string.ui_explicit_image),
                         color = MaterialTheme.colorScheme.onSurface,
                         style = Typography.labelSmall.copy(
                             fontSize = 10.sp,
@@ -486,6 +490,7 @@ fun EmbeddedAgentThoughts(
     agentState: AgentState,
     modifier: Modifier = Modifier
 ) {
+    val textResources = LocalResources.current
     var expanded by remember { mutableStateOf(false) }
     val steps = agentState.steps
     val isBusy = agentState is AgentState.Planning || agentState is AgentState.ExecutingTool
@@ -527,7 +532,7 @@ fun EmbeddedAgentThoughts(
                 Spacer(modifier = Modifier.width(8.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Agent Thoughts",
+                        text = textResources.getString(R.string.ui_agent_thoughts),
                         style = Typography.titleSmall.copy(
                             fontWeight = FontWeight.Bold,
                             fontSize = 12.sp,
@@ -538,7 +543,7 @@ fun EmbeddedAgentThoughts(
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        text = if (steps.isNotEmpty()) "${steps.size} step${if (steps.size > 1) "s" else ""} completed" else statusText,
+                        text = if (steps.isNotEmpty()) textResources.getQuantityString(R.plurals.agent_completed_steps, steps.size, steps.size) else statusText,
                         style = Typography.labelSmall.copy(fontSize = 9.sp),
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
                         maxLines = 1,
@@ -548,7 +553,7 @@ fun EmbeddedAgentThoughts(
             }
             Icon(
                 imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                contentDescription = if (expanded) "Collapse thoughts" else "Expand thoughts",
+                contentDescription = if (expanded) textResources.getString(R.string.ui_collapse_thoughts) else textResources.getString(R.string.ui_expand_thoughts),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(18.dp)
             )
@@ -565,7 +570,7 @@ fun EmbeddedAgentThoughts(
             ) {
                 if (steps.isEmpty()) {
                     Text(
-                        text = "No recorded steps.",
+                        text = textResources.getString(R.string.ui_no_recorded_steps),
                         style = Typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -588,6 +593,7 @@ fun AgentThoughtCard(
     agentState: AgentState,
     modifier: Modifier = Modifier
 ) {
+    val textResources = LocalResources.current
     var expanded by remember { mutableStateOf(false) }
     val steps = agentState.steps
     val isBusy = agentState is AgentState.Planning || agentState is AgentState.ExecutingTool
@@ -715,7 +721,7 @@ fun AgentThoughtCard(
                         Spacer(modifier = Modifier.width(10.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Agent Thought Process",
+                                text = textResources.getString(R.string.ui_agent_thought_process),
                                 style = Typography.titleSmall.copy(
                                     fontWeight = FontWeight.Bold,
                                     letterSpacing = 0.sp
@@ -738,7 +744,7 @@ fun AgentThoughtCard(
                         AgentStatusIcon(agentState, isBusy)
                         Icon(
                             imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                            contentDescription = if (expanded) "Collapse thought process" else "Expand thought process",
+                            contentDescription = if (expanded) textResources.getString(R.string.ui_collapse_thought_process) else textResources.getString(R.string.ui_expand_thought_process),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(22.dp)
                         )
@@ -814,6 +820,7 @@ fun AgentThoughtCard(
 
 @Composable
 private fun AgentStatusIcon(agentState: AgentState, isBusy: Boolean) {
+    val textResources = LocalResources.current
     when {
         isBusy -> CircularProgressIndicator(
             color = MaterialTheme.colorScheme.primary,
@@ -825,7 +832,7 @@ private fun AgentStatusIcon(agentState: AgentState, isBusy: Boolean) {
 
         agentState is AgentState.Completed -> Icon(
             imageVector = Icons.Default.CheckCircle,
-            contentDescription = "Completed",
+            contentDescription = textResources.getString(R.string.ui_completed),
             tint = Color(0xFF00C853),
             modifier = Modifier
                 .padding(end = 8.dp)
@@ -834,7 +841,7 @@ private fun AgentStatusIcon(agentState: AgentState, isBusy: Boolean) {
 
         agentState is AgentState.Error -> Icon(
             imageVector = Icons.Default.Error,
-            contentDescription = "Error",
+            contentDescription = textResources.getString(R.string.ui_error),
             tint = MaterialTheme.colorScheme.error,
             modifier = Modifier
                 .padding(end = 8.dp)
@@ -849,6 +856,7 @@ private fun StepItem(
     step: AgentStep,
     isLast: Boolean
 ) {
+    val textResources = LocalResources.current
     var showArguments by remember { mutableStateOf(false) }
     var showResult by remember { mutableStateOf(false) }
 
@@ -917,9 +925,9 @@ private fun StepItem(
         ) {
             Text(
                 text = if (step.toolCall != null) {
-                    "Calling: ${step.toolCall.toolName}"
+                    textResources.getString(R.string.ui_calling_1_s, step.toolCall.toolName)
                 } else {
-                    "Reasoning"
+                    textResources.getString(R.string.ui_reasoning)
                 },
                 style = Typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                 color = MaterialTheme.colorScheme.primary
@@ -948,7 +956,7 @@ private fun StepItem(
                     )
                     Spacer(Modifier.width(4.dp))
                     Text(
-                        text = "Arguments",
+                        text = textResources.getString(R.string.ui_arguments),
                         style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.secondary
                     )
@@ -994,7 +1002,7 @@ private fun StepItem(
                     )
                     Spacer(Modifier.width(4.dp))
                     Text(
-                        text = "Observation Result",
+                        text = textResources.getString(R.string.ui_observation_result),
                         style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.secondary
                     )
@@ -1009,7 +1017,7 @@ private fun StepItem(
                     val resultText = when (result) {
                         is ToolResult.Success -> result.data
                         is ToolResult.Error -> result.message
-                        is ToolResult.NeedsConfirmation -> "Needs Confirmation: ${result.message}"
+                        is ToolResult.NeedsConfirmation -> textResources.getString(R.string.ui_needs_confirmation_1_s, result.message)
                     }
                     Text(
                         text = resultText,
@@ -1033,22 +1041,29 @@ private fun StepItem(
     }
 }
 
-private fun agentStatusText(agentState: AgentState): String = when (agentState) {
-    is AgentState.Planning -> "Planning the next move"
-    is AgentState.ExecutingTool -> "Using ${agentState.toolName}"
-    is AgentState.WaitingForConfirmation -> "Waiting for confirmation"
-    is AgentState.Completed -> "${agentState.steps.size} step${if (agentState.steps.size == 1) "" else "s"} completed"
-    is AgentState.Error -> "Stopped with an error"
-    AgentState.Idle -> "Idle"
+@Composable
+private fun agentStatusText(agentState: AgentState): String {
+    val textResources = LocalResources.current
+    return when (agentState) {
+    is AgentState.Planning -> textResources.getString(R.string.ui_planning_the_next_move)
+    is AgentState.ExecutingTool -> textResources.getString(R.string.ui_using_1_s, agentState.toolName)
+    is AgentState.WaitingForConfirmation -> textResources.getString(R.string.ui_waiting_for_confirmation)
+    is AgentState.Completed -> textResources.getQuantityString(R.plurals.agent_completed_steps, agentState.steps.size, agentState.steps.size)
+    is AgentState.Error -> textResources.getString(R.string.ui_stopped_with_an_error)
+    AgentState.Idle -> textResources.getString(R.string.ui_idle)
 }
 
+}
+
+@Composable
 private fun latestAgentActivity(agentState: AgentState): String {
+    val textResources = LocalResources.current
     val latest = agentState.steps.lastOrNull()
     return when {
         latest?.thought?.isNotBlank() == true -> latest.thought
-        latest?.toolCall != null -> "Let me call ${latest.toolCall.toolName}..."
-        agentState is AgentState.ExecutingTool -> "Let me call ${agentState.toolName}..."
-        agentState is AgentState.Planning -> "I am deciding which local tool, if any, is needed."
+        latest?.toolCall != null -> textResources.getString(R.string.ui_let_me_call_1_s, latest.toolCall.toolName)
+        agentState is AgentState.ExecutingTool -> textResources.getString(R.string.ui_let_me_call_1_s, agentState.toolName)
+        agentState is AgentState.Planning -> textResources.getString(R.string.ui_i_am_deciding_which_local_tool_if_any_is_needed)
         agentState is AgentState.WaitingForConfirmation -> agentState.message
         else -> ""
     }

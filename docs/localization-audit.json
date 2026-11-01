@@ -1,0 +1,45 @@
+{
+  "languages": [
+    "en",
+    "es",
+    "fr",
+    "de"
+  ],
+  "modules": {
+    "app": {
+      "translatable_entries": 723,
+      "locales": {
+        "es": {
+          "missing": 0,
+          "extra": 0
+        },
+        "fr": {
+          "missing": 0,
+          "extra": 0
+        },
+        "de": {
+          "missing": 0,
+          "extra": 0
+        }
+      }
+    },
+    "ui-designsystem": {
+      "translatable_entries": 3,
+      "locales": {
+        "es": {
+          "missing": 0,
+          "extra": 0
+        },
+        "fr": {
+          "missing": 0,
+          "extra": 0
+        },
+        "de": {
+          "missing": 0,
+          "extra": 0
+        }
+      }
+    }
+  },
+  "errors": []
+}

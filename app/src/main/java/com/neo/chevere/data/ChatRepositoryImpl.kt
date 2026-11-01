@@ -1,6 +1,8 @@
 package com.neo.chevere.data
 
 import android.content.Context
+import com.neo.chevere.R
+import com.neo.chevere.data.chat.CapabilityAnswer
 import android.net.Uri
 import com.neo.chevere.shared.chat.GenerateChatTurn
 import com.neo.chevere.shared.chat.ChatTurnUpdate
@@ -164,7 +166,12 @@ class ChatRepositoryImpl @Inject constructor(
         // Skip capability responses when an image is attached — the user is asking
         // the model to analyze the attached image, not asking about capabilities.
         if (imageUri == null) {
-            chatRequestRouter.capabilityResponseFor(prompt)?.let { response ->
+            chatRequestRouter.capabilityAnswerFor(prompt)?.let { answer ->
+                val response = context.getString(when (answer) {
+                    CapabilityAnswer.OVERVIEW -> R.string.capability_overview
+                    CapabilityAnswer.IMAGE -> R.string.capability_image
+                    CapabilityAnswer.SENSORS -> R.string.capability_sensors
+                })
                 conversationContextManager.recordExchange(
                     prompt,
                     imageUri = null,
@@ -175,7 +182,7 @@ class ChatRepositoryImpl @Inject constructor(
         }
 
         if (imageUri == null && chatRequestRouter.isAmbientLightReadingRequest(prompt)) {
-            val response = ambientLightRepository.readLight().toChatSummary()
+            val response = ambientLightRepository.readLight().toChatSummary(context)
             conversationContextManager.recordExchange(prompt, imageUri = null, assistantResponse = response)
             return Result.success(response)
         }
@@ -184,7 +191,7 @@ class ChatRepositoryImpl @Inject constructor(
             return when (val reading = ambientSoundRepository.readAmbientSound()) {
                 AmbientSoundReading.PermissionRequired -> Result.failure(MicPermissionException())
                 else -> {
-                    val response = reading.toChatSummary()
+                    val response = reading.toChatSummary(context)
                     conversationContextManager.recordExchange(prompt, imageUri = null, assistantResponse = response)
                     Result.success(response)
                 }

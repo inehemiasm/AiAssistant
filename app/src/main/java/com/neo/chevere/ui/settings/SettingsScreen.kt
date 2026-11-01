@@ -1,5 +1,7 @@
 package com.neo.chevere.ui.settings
 
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.runtime.LaunchedEffect
 
 import androidx.compose.animation.AnimatedVisibility
@@ -108,6 +110,7 @@ fun SettingsContent(
     onBenchmarkClick: () -> Unit,
     onRadarClick: () -> Unit
 ) {
+    val textResources = LocalResources.current
     val viewModel = remember(onIntent) {
         object {
             fun onIntent(intent: SettingsIntent) {
@@ -218,8 +221,8 @@ fun SettingsContent(
                 // Download on Wi-Fi Only Card
                 SettingsToggleCard(
                     icon = Icons.Default.Storage,
-                    title = "Download models over Wi-Fi only",
-                    subtitle = "Restricts large on-device model downloads to Wi-Fi networks",
+                    title = textResources.getString(R.string.ui_download_models_over_wi_fi_only),
+                    subtitle = textResources.getString(R.string.ui_restricts_large_on_device_model_downloads_to_wi_fi_networks),
                     checked = state.downloadOnWifiOnly,
                     onCheckedChange = {
                         viewModel.onIntent(SettingsIntent.UpdateDownloadOnWifiOnly(it))
@@ -239,7 +242,7 @@ fun SettingsContent(
 
                 SystemInfoRow(stringResource(R.string.version_label), state.appVersion)
                 SystemInfoRow(stringResource(R.string.engine_label), state.engineInfo)
-                SystemInfoRow(stringResource(R.string.protocol_label), state.protocolInfo)
+                SystemInfoRow(stringResource(R.string.protocol_label), stringResource(R.string.on_device_inference))
 
                 Spacer(Modifier.height(16.dp))
 
@@ -275,12 +278,12 @@ fun SettingsContent(
                             Spacer(Modifier.width(16.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    "Sensor Radar",
+                                    textResources.getString(R.string.ui_sensor_radar_970b56),
                                     style = Typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
-                                    "Stud finder, metal detector & spirit level",
+                                    textResources.getString(R.string.ui_stud_finder_metal_detector_spirit_level),
                                     style = Typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -377,7 +380,7 @@ fun SettingsContent(
                 Spacer(Modifier.height(12.dp))
 
                 androidx.compose.material3.TextButton(onClick = { onIntent(SettingsIntent.OpenLicenses) }) {
-                    Text("Open source licenses")
+                    Text(textResources.getString(R.string.ui_open_source_licenses))
                 }
                 // Privacy Policy External Link Card
                 val privacyUrl = stringResource(R.string.privacy_policy_url)
@@ -452,6 +455,7 @@ private fun WeatherUnitsCard(
     selectedUnitSystem: WeatherUnitSystem,
     onUnitSelected: (WeatherUnitSystem) -> Unit
 ) {
+    val textResources = LocalResources.current
     var expanded by remember { mutableStateOf(false) }
     val hapticView = LocalView.current
 
@@ -482,7 +486,7 @@ private fun WeatherUnitsCard(
                 )
                 Icon(
                     imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    contentDescription = if (expanded) "Collapse" else "Expand",
+                    contentDescription = if (expanded) textResources.getString(R.string.ui_collapse) else textResources.getString(R.string.ui_expand),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(22.dp)
                 )
@@ -651,6 +655,7 @@ private fun AtmosphericThemesCard(
     selectedTheme: AtmosphericTheme,
     onThemeSelected: (AtmosphericTheme) -> Unit
 ) {
+    val textResources = LocalResources.current
     var expanded by remember { mutableStateOf(false) }
     val hapticView = LocalView.current
 
@@ -674,14 +679,14 @@ private fun AtmosphericThemesCard(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    "ATMOSPHERIC PRESETS",
+                    textResources.getString(R.string.ui_atmospheric_presets),
                     style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.weight(1f)
                 )
                 Icon(
                     imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    contentDescription = if (expanded) "Collapse" else "Expand",
+                    contentDescription = if (expanded) textResources.getString(R.string.ui_collapse) else textResources.getString(R.string.ui_expand),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(22.dp)
                 )
@@ -698,7 +703,7 @@ private fun AtmosphericThemesCard(
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         ThemePresetSegment(
-                            name = "CLASSIC CYAN",
+                            name = textResources.getString(R.string.ui_classic_cyan),
                             primaryColor = Color(0xFF00BFA5),
                             backgroundColor = Color(0xFF07111D),
                             selected = selectedTheme == AtmosphericTheme.CLASSIC_CYAN,
@@ -706,7 +711,7 @@ private fun AtmosphericThemesCard(
                             onClick = { onThemeSelected(AtmosphericTheme.CLASSIC_CYAN) }
                         )
                         ThemePresetSegment(
-                            name = "MATRIX GREEN",
+                            name = textResources.getString(R.string.ui_matrix_green),
                             primaryColor = Color(0xFF00FF66),
                             backgroundColor = Color(0xFF020904),
                             selected = selectedTheme == AtmosphericTheme.MATRIX_GREEN,
@@ -719,7 +724,7 @@ private fun AtmosphericThemesCard(
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         ThemePresetSegment(
-                            name = "CYBERPUNK GOLD",
+                            name = textResources.getString(R.string.ui_cyberpunk_gold),
                             primaryColor = Color(0xFFFF9E00),
                             backgroundColor = Color(0xFF0C0700),
                             selected = selectedTheme == AtmosphericTheme.CYBERPUNK_GOLD,
@@ -727,7 +732,7 @@ private fun AtmosphericThemesCard(
                             onClick = { onThemeSelected(AtmosphericTheme.CYBERPUNK_GOLD) }
                         )
                         ThemePresetSegment(
-                            name = "OBSIDIAN DARK",
+                            name = textResources.getString(R.string.ui_obsidian_dark),
                             primaryColor = Color(0xFFD2BFFF),
                             backgroundColor = Color(0xFF040306),
                             selected = selectedTheme == AtmosphericTheme.OBSIDIAN_DARK,
@@ -815,6 +820,8 @@ private fun ImageGenerationDefaultsCard(
     onGuidanceScaleChanged: (Float) -> Unit,
     onNegativePromptChanged: (String) -> Unit
 ) {
+    val formatLocale = LocalConfiguration.current.locales[0]
+    val textResources = LocalResources.current
     var expanded by remember { mutableStateOf(false) }
     val hapticView = LocalView.current
 
@@ -838,14 +845,14 @@ private fun ImageGenerationDefaultsCard(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    "IMAGE GENERATION DEFAULTS",
+                    textResources.getString(R.string.ui_image_generation_defaults),
                     style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.weight(1f)
                 )
                 Icon(
                     imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    contentDescription = if (expanded) "Collapse" else "Expand",
+                    contentDescription = if (expanded) textResources.getString(R.string.ui_collapse) else textResources.getString(R.string.ui_expand),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(22.dp)
                 )
@@ -854,7 +861,7 @@ private fun ImageGenerationDefaultsCard(
                 Column(modifier = Modifier.padding(top = 14.dp)) {
                     // Aspect Ratio selection
                     Text(
-                        "ASPECT RATIO",
+                        textResources.getString(R.string.ui_aspect_ratio),
                         style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold, fontSize = 10.sp),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(bottom = 8.dp)
@@ -916,7 +923,7 @@ private fun ImageGenerationDefaultsCard(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            "INFERENCE STEPS",
+                            textResources.getString(R.string.ui_inference_steps),
                             style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold, fontSize = 10.sp),
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -948,12 +955,12 @@ private fun ImageGenerationDefaultsCard(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            "GUIDANCE SCALE",
+                            textResources.getString(R.string.ui_guidance_scale),
                             style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold, fontSize = 10.sp),
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            text = String.format(java.util.Locale.US, "%.1f", guidanceScale),
+                            text = String.format(formatLocale, "%.1f", guidanceScale),
                             style = Typography.bodyMedium.copy(fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold),
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -977,10 +984,10 @@ private fun ImageGenerationDefaultsCard(
                     OutlinedTextField(
                         value = negativePrompt,
                         onValueChange = onNegativePromptChanged,
-                        label = { Text("DEFAULT NEGATIVE PROMPT", style = Typography.labelSmall.copy(fontSize = 10.sp)) },
+                        label = { Text(textResources.getString(R.string.ui_default_negative_prompt), style = Typography.labelSmall.copy(fontSize = 10.sp)) },
                         placeholder = {
                             Text(
-                                "e.g. blurry, low quality, distorted",
+                                textResources.getString(R.string.ui_e_g_blurry_low_quality_distorted),
                                 style = Typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
                             )
                         },

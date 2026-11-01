@@ -13,6 +13,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Check localization coverage and format arguments
+        run: python3 scripts/check_localization.py
+
       - name: set up JDK 21
         uses: actions/setup-java@v4
         with:

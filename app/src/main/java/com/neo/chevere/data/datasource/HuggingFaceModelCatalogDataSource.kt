@@ -1,5 +1,6 @@
 package com.neo.chevere.data.datasource
 
+import com.neo.chevere.R
 import android.content.Context
 import com.neo.chevere.core.Constants
 import com.neo.chevere.domain.ModelEntry
@@ -61,7 +62,11 @@ class HuggingFaceModelCatalogDataSource @Inject constructor(
                 ModelEntry(
                     name = dto.displayName,
                     url = dto.downloadUrl,
-                    description = dto.description ?: "Source: ${dto.repoId} (Curated)",
+                    description = when (dto.fileName) {
+                        "Spark-X2.6-4B_int8.litertlm" -> context.getString(R.string.ui_experimental_text_only_model_4_24_gb_download_additional_free_ra)
+                        "gemma-4-E2B-it-web.litertlm" -> context.getString(R.string.ui_text_only_web_optimized_conversion_requires_a_compatible_gpu_no_)
+                        else -> dto.description
+                    } ?: context.getString(R.string.ui_source_1_s_curated, dto.repoId),
                     provider = "Hugging Face",
                     sizeBytes = dto.sizeBytes,
                     runtimeType = dto.runtimeType,
@@ -113,7 +118,7 @@ class HuggingFaceModelCatalogDataSource @Inject constructor(
                     ModelEntry(
                         name = hubModel.id.split("/").last(),
                         url = "https://huggingface.co/${hubModel.id}/resolve/main/$targetFile",
-                        description = "ID: ${hubModel.id} • ${hubModel.likes} likes • ${hubModel.downloads} downloads",
+                        description = context.getString(R.string.ui_id_1_s_2_s_likes_3_s_downloads, hubModel.id, hubModel.likes, hubModel.downloads),
                         provider = "HF Hub",
                         fileName = targetFile,
                         sizeBytes = sibling.size,

@@ -1,5 +1,6 @@
 package com.neo.chevere.data.download
 
+import com.neo.chevere.R
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.Data
@@ -30,7 +31,8 @@ private const val TAG = "DownloadManager"
 @Singleton
 class WorkManagerModelDownloadManager @Inject constructor(
     private val workManager: WorkManager,
-    private val preferenceManager: PreferenceManager
+    private val preferenceManager: PreferenceManager,
+    @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context
 ) {
     companion object {
         const val TAG_MODEL_DOWNLOAD = Constants.Download.TAG_MODEL_DOWNLOAD
@@ -135,12 +137,12 @@ class WorkManagerModelDownloadManager @Inject constructor(
             WorkInfo.State.SUCCEEDED -> DownloadProgress.Finished
             WorkInfo.State.FAILED -> {
                 val error = workInfo.outputData.getString(Constants.Download.OUTPUT_ERROR)
-                    ?: "Download failed."
+                    ?: context.getString(R.string.ui_download_failed)
                 DownloadProgress.Error(error)
             }
 
             WorkInfo.State.ENQUEUED, WorkInfo.State.BLOCKED -> DownloadProgress.Progress(0)
-            WorkInfo.State.CANCELLED -> DownloadProgress.Error("Download cancelled.")
+            WorkInfo.State.CANCELLED -> DownloadProgress.Error(context.getString(R.string.ui_download_cancelled))
             null -> DownloadProgress.Progress(0)
         }
     }

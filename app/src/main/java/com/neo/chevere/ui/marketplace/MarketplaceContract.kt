@@ -25,6 +25,15 @@ sealed class ModelSwitchState {
 }
 
 /**
+ * Visibility and detail state of the model-selection guidance.
+ */
+sealed interface ModelGuidanceState {
+    data object Compact : ModelGuidanceState
+    data object Expanded : ModelGuidanceState
+    data object Dismissed : ModelGuidanceState
+}
+
+/**
  * The UI state for the Model Marketplace screen.
  */
 data class MarketplaceState(
@@ -38,7 +47,8 @@ data class MarketplaceState(
     val activeImageModelId: String? = null,
     val pendingModelId: String? = null,
     val switchState: ModelSwitchState = ModelSwitchState.Idle,
-    val deviceTotalRamGb: Double = 0.0
+    val deviceTotalRamGb: Double = 0.0,
+    val modelGuidance: ModelGuidanceState = ModelGuidanceState.Compact
 ) : UiState {
     val isDownloading: Boolean get() = activeDownloads.isNotEmpty()
     val isSwitching: Boolean get() = switchState is ModelSwitchState.Switching || switchState is ModelSwitchState.WarmingUp
@@ -57,6 +67,9 @@ data class MarketplaceState(
 }
 
 sealed class MarketplaceIntent : UiIntent {
+    data object ExpandModelGuidance : MarketplaceIntent()
+    data object CollapseModelGuidance : MarketplaceIntent()
+    data object DismissModelGuidance : MarketplaceIntent()
     data object FetchModels : MarketplaceIntent()
     data class DownloadModel(val model: ModelEntry, val baseDir: String) : MarketplaceIntent()
     data class DeleteModel(val modelId: String) : MarketplaceIntent()

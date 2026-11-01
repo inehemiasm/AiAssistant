@@ -1,5 +1,6 @@
 package com.neo.chevere.data.agent.actions
 
+import com.neo.chevere.R
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -58,40 +59,40 @@ class DefaultAndroidAppActionExecutor @Inject constructor(
             }
         } catch (e: Exception) {
             Timber.tag(TAG).e(e, "Error executing action: ${request::class.simpleName}")
-            AppActionResult.Error(e.message ?: "Unknown error")
+            AppActionResult.Error(e.message ?: context.getString(R.string.ui_unknown_error))
         }
     }
 
     private fun copyToClipboard(text: String): AppActionResult {
         val sanitizedText = sanitizeInput(text)
-        if (sanitizedText.isEmpty()) return AppActionResult.Error("Text is empty")
+        if (sanitizedText.isEmpty()) return AppActionResult.Error(context.getString(R.string.ui_text_is_empty))
 
         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        val clip = ClipData.newPlainText("Assistant Copy", sanitizedText)
+        val clip = ClipData.newPlainText(context.getString(R.string.ui_assistant_copy), sanitizedText)
         clipboard.setPrimaryClip(clip)
         Timber.tag(TAG).d("Successfully copied to clipboard: ${sanitizedText.take(20)}...")
-        return AppActionResult.Success("Copied to clipboard")
+        return AppActionResult.Success(context.getString(R.string.ui_copied_to_clipboard))
     }
 
     private fun shareText(text: String): AppActionResult {
         val sanitizedText = sanitizeInput(text)
-        if (sanitizedText.isEmpty()) return AppActionResult.Error("Text is empty")
+        if (sanitizedText.isEmpty()) return AppActionResult.Error(context.getString(R.string.ui_text_is_empty))
 
         val intent = Intent(Intent.ACTION_SEND).apply {
             type = "text/plain"
             putExtra(Intent.EXTRA_TEXT, sanitizedText)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
-        val chooser = Intent.createChooser(intent, "Share via").apply {
+        val chooser = Intent.createChooser(intent, context.getString(R.string.ui_share_via)).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         context.startActivity(chooser)
-        return AppActionResult.Success("Share sheet opened")
+        return AppActionResult.Success(context.getString(R.string.ui_share_sheet_opened))
     }
 
     private fun openUrl(url: String): AppActionResult {
         val sanitizedUrl = sanitizeInput(url)
-        if (sanitizedUrl.isEmpty()) return AppActionResult.Error("URL is empty")
+        if (sanitizedUrl.isEmpty()) return AppActionResult.Error(context.getString(R.string.ui_url_is_empty))
 
         val normalizedUrl = if (!sanitizedUrl.startsWith(Constants.AppActions.HTTP_SCHEME) &&
             !sanitizedUrl.startsWith(Constants.AppActions.HTTPS_SCHEME)
@@ -110,14 +111,14 @@ class DefaultAndroidAppActionExecutor @Inject constructor(
 
             if (intent.resolveActivity(context.packageManager) != null || isCommonBrowserPresent()) {
                 context.startActivity(intent)
-                AppActionResult.Success("Opened URL: $normalizedUrl")
+                AppActionResult.Success(context.getString(R.string.ui_opened_url_1_s, normalizedUrl))
             } else {
                 Timber.tag(TAG).w("No activity found to handle URL: $normalizedUrl")
-                AppActionResult.Error("No browser application found to open this URL")
+                AppActionResult.Error(context.getString(R.string.ui_no_browser_application_found_to_open_this_url))
             }
         } catch (e: Exception) {
             Timber.tag(TAG).e(e, "Failed to open URL: $normalizedUrl")
-            AppActionResult.Error("Invalid URL format: $normalizedUrl")
+            AppActionResult.Error(context.getString(R.string.ui_invalid_url_format_1_s, normalizedUrl))
         }
     }
 
@@ -139,7 +140,7 @@ class DefaultAndroidAppActionExecutor @Inject constructor(
 
     private fun openMaps(query: String): AppActionResult {
         val sanitizedQuery = sanitizeInput(query)
-        if (sanitizedQuery.isEmpty()) return AppActionResult.Error("Search query is empty")
+        if (sanitizedQuery.isEmpty()) return AppActionResult.Error(context.getString(R.string.ui_search_query_is_empty))
 
         val gmmIntentUri =
             "${Constants.AppActions.MAPS_QUERY_URI}${Uri.encode(sanitizedQuery)}".toUri()
@@ -150,14 +151,14 @@ class DefaultAndroidAppActionExecutor @Inject constructor(
 
         return if (mapIntent.resolveActivity(context.packageManager) != null) {
             context.startActivity(mapIntent)
-            AppActionResult.Success("Maps opened for: $sanitizedQuery")
+            AppActionResult.Success(context.getString(R.string.ui_maps_opened_for_1_s, sanitizedQuery))
         } else {
             mapIntent.setPackage(null)
             if (mapIntent.resolveActivity(context.packageManager) != null) {
                 context.startActivity(mapIntent)
-                AppActionResult.Success("Maps opened for: $sanitizedQuery")
+                AppActionResult.Success(context.getString(R.string.ui_maps_opened_for_1_s, sanitizedQuery))
             } else {
-                AppActionResult.Error("Google Maps or a compatible maps app is not installed")
+                AppActionResult.Error(context.getString(R.string.ui_google_maps_or_a_compatible_maps_app_is_not_installed))
             }
         }
     }
@@ -173,9 +174,9 @@ class DefaultAndroidAppActionExecutor @Inject constructor(
 
         return if (intent.resolveActivity(context.packageManager) != null) {
             context.startActivity(intent)
-            AppActionResult.Success("Email draft opened")
+            AppActionResult.Success(context.getString(R.string.ui_email_draft_opened))
         } else {
-            AppActionResult.Error("No email application found")
+            AppActionResult.Error(context.getString(R.string.ui_no_email_application_found))
         }
     }
 
@@ -196,9 +197,9 @@ class DefaultAndroidAppActionExecutor @Inject constructor(
 
         return if (intent.resolveActivity(context.packageManager) != null) {
             context.startActivity(intent)
-            AppActionResult.Success("Calendar event screen opened")
+            AppActionResult.Success(context.getString(R.string.ui_calendar_event_screen_opened))
         } else {
-            AppActionResult.Error("No calendar application found")
+            AppActionResult.Error(context.getString(R.string.ui_no_calendar_application_found))
         }
     }
 
@@ -211,7 +212,7 @@ class DefaultAndroidAppActionExecutor @Inject constructor(
         val activities = packageManager.queryIntentActivities(intent, PackageManager.MATCH_ALL)
 
         if (activities.isEmpty()) {
-            return AppActionResult.Success("No apps found for action: ${request.action}")
+            return AppActionResult.Success(context.getString(R.string.ui_no_apps_found_for_action_1_s, request.action))
         }
 
         val appList = activities.joinToString("\n") { resolveInfo ->
@@ -220,7 +221,7 @@ class DefaultAndroidAppActionExecutor @Inject constructor(
             "- $label ($pkg)"
         }
 
-        return AppActionResult.Success("Found the following apps:\n$appList")
+        return AppActionResult.Success(context.getString(R.string.ui_found_the_following_apps_n_1_s, appList))
     }
 
     private fun listInstalledApps(): AppActionResult {
@@ -231,7 +232,7 @@ class DefaultAndroidAppActionExecutor @Inject constructor(
 
         val apps = pm.queryIntentActivities(mainIntent, 0)
         if (apps.isEmpty()) {
-            return AppActionResult.Error("No apps with launcher icons found. Check app permissions.")
+            return AppActionResult.Error(context.getString(R.string.ui_no_apps_with_launcher_icons_found_check_app_permissions))
         }
 
         val appList = apps
@@ -240,7 +241,7 @@ class DefaultAndroidAppActionExecutor @Inject constructor(
             .sorted()
             .joinToString(", ")
 
-        return AppActionResult.Success("The following apps are installed: $appList")
+        return AppActionResult.Success(context.getString(R.string.ui_the_following_apps_are_installed_1_s, appList))
     }
 
     private fun getAppCapabilities(appName: String): AppActionResult {
@@ -254,7 +255,7 @@ class DefaultAndroidAppActionExecutor @Inject constructor(
         val match = apps.find {
             it.loadLabel(pm).toString().lowercase().contains(sanitizedName) ||
                     it.activityInfo.packageName.lowercase().contains(sanitizedName)
-        } ?: return AppActionResult.Error("Could not find an app named '$appName'")
+        } ?: return AppActionResult.Error(context.getString(R.string.ui_could_not_find_an_app_named_1_s, appName))
 
         val packageName = match.activityInfo.packageName
         val label = match.loadLabel(pm).toString()
@@ -263,21 +264,21 @@ class DefaultAndroidAppActionExecutor @Inject constructor(
 
         // Define more specific intents to check for accurate capability detection
         val specificIntents = listOf(
-            Intent(Intent.ACTION_SEND).apply { type = "text/plain" } to "Sharing text or files",
+            Intent(Intent.ACTION_SEND).apply { type = "text/plain" } to context.getString(R.string.ui_sharing_text_or_files),
             Intent(
                 Intent.ACTION_VIEW,
                 "${Constants.AppActions.HTTPS_SCHEME}example.com".toUri()
-            ) to "Opening web links (HTTP/HTTPS)",
-            Intent(Intent.ACTION_VIEW, "geo:0,0".toUri()) to "Handling map/location requests",
+            ) to context.getString(R.string.ui_opening_web_links_http_https),
+            Intent(Intent.ACTION_VIEW, "geo:0,0".toUri()) to context.getString(R.string.ui_handling_map_location_requests),
             Intent(
                 Intent.ACTION_SENDTO,
                 (Constants.AppActions.MAILTO_SCHEME + "test@example.com").toUri()
-            ) to "Sending emails",
+            ) to context.getString(R.string.ui_sending_emails),
             Intent(Intent.ACTION_INSERT).apply {
                 data = CalendarContract.Events.CONTENT_URI
-            } to "Creating calendar events",
-            Intent(Intent.ACTION_DIAL, "tel:123".toUri()) to "Making calls",
-            Intent(Intent.ACTION_PICK).apply { type = "image/*" } to "Picking images/files"
+            } to context.getString(R.string.ui_creating_calendar_events),
+            Intent(Intent.ACTION_DIAL, "tel:123".toUri()) to context.getString(R.string.ui_making_calls),
+            Intent(Intent.ACTION_PICK).apply { type = "image/*" } to context.getString(R.string.ui_picking_images_files)
         )
 
         specificIntents.forEach { (intent, description) ->
@@ -288,14 +289,14 @@ class DefaultAndroidAppActionExecutor @Inject constructor(
         }
 
         val capabilitiesStr = if (capabilities.isEmpty()) {
-            "No common public actions detected, but it can be launched normally."
+            context.getString(R.string.ui_no_common_public_actions_detected_but_it_can_be_launched_normall)
         } else {
             capabilities.distinct().joinToString("\n- ", prefix = "- ")
         }
 
         return AppActionResult.Success(
-            "App: $label\n" +
-                    "Package: $packageName\n" +
+            context.getString(R.string.ui_app_1_s_n, label) +
+                    context.getString(R.string.ui_package_1_s_n, packageName) +
                     "Capabilities:\n$capabilitiesStr"
         )
     }
@@ -305,9 +306,9 @@ class DefaultAndroidAppActionExecutor @Inject constructor(
         return if (intent != null) {
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             context.startActivity(intent)
-            AppActionResult.Success("Launched app: $packageName")
+            AppActionResult.Success(context.getString(R.string.ui_launched_app_1_s, packageName))
         } else {
-            AppActionResult.Error("Could not find launch intent for package: $packageName")
+            AppActionResult.Error(context.getString(R.string.ui_could_not_find_launch_intent_for_package_1_s, packageName))
         }
     }
 
@@ -333,7 +334,7 @@ class DefaultAndroidAppActionExecutor @Inject constructor(
         return if (match != null) {
             launchApp(match.activityInfo.packageName)
         } else {
-            AppActionResult.Error("Could not find an app named '$name' on your device.")
+            AppActionResult.Error(context.getString(R.string.ui_could_not_find_an_app_named_1_s_on_your_device, name))
         }
     }
 
@@ -354,12 +355,12 @@ class DefaultAndroidAppActionExecutor @Inject constructor(
 
             if (intent.resolveActivity(context.packageManager) != null) {
                 context.startActivity(intent)
-                AppActionResult.Success("Opened deep link: $uriString")
+                AppActionResult.Success(context.getString(R.string.ui_opened_deep_link_1_s, uriString))
             } else {
-                AppActionResult.Error("No app found that can handle this deep link: $uriString")
+                AppActionResult.Error(context.getString(R.string.ui_no_app_found_that_can_handle_this_deep_link_1_s, uriString))
             }
         } catch (t: Throwable) {
-            AppActionResult.Error("Failed to open deep link: ${t.message}")
+            AppActionResult.Error(context.getString(R.string.ui_failed_to_open_deep_link_1_s, t.message))
         }
     }
 
@@ -369,11 +370,11 @@ class DefaultAndroidAppActionExecutor @Inject constructor(
             "media", "music" -> controlMedia(request)
             "brightness" -> openSystemSettings(
                 action = Settings.ACTION_DISPLAY_SETTINGS,
-                successMessage = "Opened Display settings so you can adjust screen brightness."
+                successMessage = context.getString(R.string.ui_opened_display_settings_so_you_can_adjust_screen_brightness)
             )
             "do_not_disturb", "dnd" -> openSystemSettings(
                 action = Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS,
-                successMessage = "Opened Do Not Disturb access settings."
+                successMessage = context.getString(R.string.ui_opened_do_not_disturb_access_settings)
             )
             else -> AppActionResult.Error(
                 "Unsupported device control '${request.control}'. Supported controls: volume, music, brightness, do_not_disturb."
@@ -396,7 +397,7 @@ class DefaultAndroidAppActionExecutor @Inject constructor(
         audioManager.dispatchMediaKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, keyEventCode))
         audioManager.dispatchMediaKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_UP, keyEventCode))
 
-        return AppActionResult.Success("Media control action ${request.action.uppercase()} executed successfully.")
+        return AppActionResult.Success(context.getString(R.string.ui_media_control_action_1_s_executed_successfully, request.action.uppercase()))
     }
 
     private fun controlVolume(request: DeviceControlRequest): AppActionResult {
@@ -419,7 +420,7 @@ class DefaultAndroidAppActionExecutor @Inject constructor(
             "set" -> {
                 val max = audioManager.getStreamMaxVolume(stream)
                 val value = request.value?.coerceIn(0, 100)
-                    ?: return AppActionResult.Error("Missing volume value from 0 to 100.")
+                    ?: return AppActionResult.Error(context.getString(R.string.ui_missing_volume_value_from_0_to_100))
                 val volume = ((value / 100.0) * max).toInt().coerceIn(0, max)
                 audioManager.setStreamVolume(stream, volume, flags)
             }
@@ -427,7 +428,7 @@ class DefaultAndroidAppActionExecutor @Inject constructor(
                 "Unsupported volume action '${request.action}'. Use up, down, mute, unmute, or set."
             )
         }
-        return AppActionResult.Success("Updated media volume.")
+        return AppActionResult.Success(context.getString(R.string.ui_updated_media_volume))
     }
 
     private fun openSystemSettings(action: String, successMessage: String): AppActionResult {
@@ -438,7 +439,7 @@ class DefaultAndroidAppActionExecutor @Inject constructor(
             context.startActivity(intent)
             AppActionResult.Success(successMessage)
         } else {
-            AppActionResult.Error("No system settings screen found for this control.")
+            AppActionResult.Error(context.getString(R.string.ui_no_system_settings_screen_found_for_this_control))
         }
     }
 
@@ -446,13 +447,13 @@ class DefaultAndroidAppActionExecutor @Inject constructor(
         val intent = Intent(android.provider.AlarmClock.ACTION_SET_ALARM).apply {
             putExtra(android.provider.AlarmClock.EXTRA_HOUR, request.hour)
             putExtra(android.provider.AlarmClock.EXTRA_MINUTES, request.minutes)
-            putExtra(android.provider.AlarmClock.EXTRA_MESSAGE, request.message ?: "Chevere AI Alarm")
+            putExtra(android.provider.AlarmClock.EXTRA_MESSAGE, request.message ?: context.getString(R.string.ui_chevere_ai_alarm))
             putExtra(android.provider.AlarmClock.EXTRA_SKIP_UI, true)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         return if (intent.resolveActivity(context.packageManager) != null) {
             context.startActivity(intent)
-            AppActionResult.Success("Alarm set for ${"%02d".format(request.hour)}:${"%02d".format(request.minutes)} with label: '${request.message ?: "Chevere AI Alarm"}'")
+            AppActionResult.Success(context.getString(R.string.ui_alarm_set_for_1_s_2_s_with_label_3_s, "%02d".format(request.hour), "%02d".format(request.minutes), request.message ?: context.getString(R.string.ui_chevere_ai_alarm)))
         } else {
             // In case AlarmClock intent is not supported directly, launch system clock app
             val fallbackIntent = Intent(android.provider.AlarmClock.ACTION_SET_ALARM).apply {
@@ -460,9 +461,9 @@ class DefaultAndroidAppActionExecutor @Inject constructor(
             }
             if (fallbackIntent.resolveActivity(context.packageManager) != null) {
                 context.startActivity(fallbackIntent)
-                AppActionResult.Success("Opened clock app to set alarm.")
+                AppActionResult.Success(context.getString(R.string.ui_opened_clock_app_to_set_alarm))
             } else {
-                AppActionResult.Error("No clock or alarm application found on device")
+                AppActionResult.Error(context.getString(R.string.ui_no_clock_or_alarm_application_found_on_device))
             }
         }
     }
@@ -470,15 +471,15 @@ class DefaultAndroidAppActionExecutor @Inject constructor(
     private fun setTimer(request: SetTimerRequest): AppActionResult {
         val intent = Intent(android.provider.AlarmClock.ACTION_SET_TIMER).apply {
             putExtra(android.provider.AlarmClock.EXTRA_LENGTH, request.lengthSeconds)
-            putExtra(android.provider.AlarmClock.EXTRA_MESSAGE, request.message ?: "Chevere AI Timer")
+            putExtra(android.provider.AlarmClock.EXTRA_MESSAGE, request.message ?: context.getString(R.string.ui_chevere_ai_timer))
             putExtra(android.provider.AlarmClock.EXTRA_SKIP_UI, true)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         return if (intent.resolveActivity(context.packageManager) != null) {
             context.startActivity(intent)
-            AppActionResult.Success("Timer set for ${request.lengthSeconds} seconds with label: '${request.message ?: "Chevere AI Timer"}'")
+            AppActionResult.Success(context.getString(R.string.ui_timer_set_for_1_s_seconds_with_label_2_s, request.lengthSeconds, request.message ?: context.getString(R.string.ui_chevere_ai_timer)))
         } else {
-            AppActionResult.Error("No timer application found on device")
+            AppActionResult.Error(context.getString(R.string.ui_no_timer_application_found_on_device))
         }
     }
 
@@ -488,9 +489,9 @@ class DefaultAndroidAppActionExecutor @Inject constructor(
         }
         return if (intent.resolveActivity(context.packageManager) != null) {
             context.startActivity(intent)
-            AppActionResult.Success("Alarms screen opened.")
+            AppActionResult.Success(context.getString(R.string.ui_alarms_screen_opened))
         } else {
-            AppActionResult.Error("No alarm application found on device")
+            AppActionResult.Error(context.getString(R.string.ui_no_alarm_application_found_on_device))
         }
     }
 }

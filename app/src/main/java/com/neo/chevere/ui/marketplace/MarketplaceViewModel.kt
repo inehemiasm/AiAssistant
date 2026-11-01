@@ -1,5 +1,6 @@
 package com.neo.chevere.ui.marketplace
 
+import com.neo.chevere.R
 import android.app.Application
 import androidx.lifecycle.viewModelScope
 import com.neo.chevere.core.BaseViewModel
@@ -123,12 +124,15 @@ class MarketplaceViewModel @Inject constructor(
                 setState { copy(remoteModels = models, catalogState = CatalogState.Idle) }
             }
             .onFailure { e ->
-                setState { copy(catalogState = CatalogState.Error(e.message ?: "Fetch failed")) }
+                setState { copy(catalogState = CatalogState.Error(e.message ?: getApplication<android.app.Application>().getString(R.string.ui_fetch_failed))) }
             }
     }
 
     override suspend fun handleIntent(intent: MarketplaceIntent) {
         when (intent) {
+            MarketplaceIntent.ExpandModelGuidance -> setState { copy(modelGuidance = ModelGuidanceState.Expanded) }
+            MarketplaceIntent.CollapseModelGuidance -> setState { copy(modelGuidance = ModelGuidanceState.Compact) }
+            MarketplaceIntent.DismissModelGuidance -> setState { copy(modelGuidance = ModelGuidanceState.Dismissed) }
             MarketplaceIntent.FetchModels -> fetchRemoteModels()
             is MarketplaceIntent.DownloadModel -> {
                 val fileName = intent.model.effectiveFileName
@@ -136,7 +140,7 @@ class MarketplaceViewModel @Inject constructor(
                 val isAlreadyDownloading = currentState.activeDownloads[fileName] is DownloadProgress.Progress ||
                         currentState.activeDownloads[installedId] is DownloadProgress.Progress
                 if (isAlreadyDownloading) {
-                    sendEffect { MarketplaceEffect.ShowToast("This model is already downloading") }
+                    sendEffect { MarketplaceEffect.ShowToast(getApplication<android.app.Application>().getString(R.string.ui_this_model_is_already_downloading)) }
                     return
                 }
                 downloadModel(intent.model)
@@ -144,13 +148,13 @@ class MarketplaceViewModel @Inject constructor(
 
             is MarketplaceIntent.DeleteModel -> {
                 if (intent.modelId == currentState.activeModelId) {
-                    sendEffect { MarketplaceEffect.ShowToast("Cannot delete active model. Switch models first.") }
+                    sendEffect { MarketplaceEffect.ShowToast(getApplication<android.app.Application>().getString(R.string.ui_cannot_delete_active_model_switch_models_first)) }
                     return
                 }
 
                 val model = currentState.localModels.find { it.id == intent.modelId }
                 if (model?.isTransitioning == true || currentState.isSwitching) {
-                    sendEffect { MarketplaceEffect.ShowToast("Cannot delete while model is busy.") }
+                    sendEffect { MarketplaceEffect.ShowToast(getApplication<android.app.Application>().getString(R.string.ui_cannot_delete_while_model_is_busy)) }
                     return
                 }
 
@@ -163,14 +167,14 @@ class MarketplaceViewModel @Inject constructor(
                 val model = currentState.localModels.find { it.id == intent.modelId }
 
                 if (model?.installStatus != InstallStatus.INSTALLED) {
-                    sendEffect { MarketplaceEffect.ShowToast("Model is not ready for selection.") }
+                    sendEffect { MarketplaceEffect.ShowToast(getApplication<android.app.Application>().getString(R.string.ui_model_is_not_ready_for_selection)) }
                     return
                 }
 
                 if (model.activationCategory() == ModelActivationCategory.IMAGE_GENERATION) {
                     viewModelScope.launch {
                         preferenceManager.updateSelectedImageModel(intent.modelId)
-                        sendEffect { MarketplaceEffect.ShowToast("${model.displayName} activated for image generation") }
+                        sendEffect { MarketplaceEffect.ShowToast(getApplication<android.app.Application>().getString(R.string.ui_1_s_activated_for_image_generation, model.displayName)) }
                     }
                     return
                 }
@@ -207,11 +211,11 @@ class MarketplaceViewModel @Inject constructor(
                         copy(
                             switchState = ModelSwitchState.Error(
                                 modelId,
-                                e.message ?: "Unknown error"
+                                e.message ?: getApplication<android.app.Application>().getString(R.string.ui_unknown_error)
                             )
                         )
                     }
-                    sendEffect { MarketplaceEffect.ShowToast("Failed to switch: ${e.message}") }
+                    sendEffect { MarketplaceEffect.ShowToast(getApplication<android.app.Application>().getString(R.string.ui_failed_to_switch_1_s, e.message)) }
                 }
         }
     }
@@ -245,7 +249,7 @@ class MarketplaceViewModel @Inject constructor(
         if (!installedModel.isHealthy) return
 
         if (finishedKey in startedDownloadKeys || remoteEntry?.let { it.effectiveFileName in startedDownloadKeys || it.effectiveInstalledId in startedDownloadKeys } == true) {
-            sendEffect { MarketplaceEffect.ShowToast("Download complete: ${installedModel.displayName}") }
+            sendEffect { MarketplaceEffect.ShowToast(getApplication<android.app.Application>().getString(R.string.ui_download_complete_1_s, installedModel.displayName)) }
         }
 
         when (installedModel.activationCategory()) {
@@ -262,7 +266,7 @@ class MarketplaceViewModel @Inject constructor(
                     .filter { it.isHealthy && it.activationCategory() == ModelActivationCategory.IMAGE_GENERATION }
                 if (healthyImageModels.size == 1) {
                     preferenceManager.updateSelectedImageModel(installedModel.id)
-                    sendEffect { MarketplaceEffect.ShowToast("${installedModel.displayName} activated for image generation") }
+                    sendEffect { MarketplaceEffect.ShowToast(getApplication<android.app.Application>().getString(R.string.ui_1_s_activated_for_image_generation, installedModel.displayName)) }
                 }
             }
         }
@@ -279,10 +283,10 @@ class MarketplaceViewModel @Inject constructor(
                         switchState = ModelSwitchState.Ready(model.id)
                     )
                 }
-                sendEffect { MarketplaceEffect.ShowToast("${model.displayName} activated") }
+                sendEffect { MarketplaceEffect.ShowToast(getApplication<android.app.Application>().getString(R.string.ui_1_s_activated, model.displayName)) }
             }
             .onFailure { e ->
-                sendEffect { MarketplaceEffect.ShowToast("Downloaded, but activation failed: ${e.message}") }
+                sendEffect { MarketplaceEffect.ShowToast(getApplication<android.app.Application>().getString(R.string.ui_downloaded_but_activation_failed_1_s, e.message)) }
             }
     }
 }

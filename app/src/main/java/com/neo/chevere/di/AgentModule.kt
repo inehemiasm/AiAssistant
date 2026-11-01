@@ -197,8 +197,9 @@ abstract class AgentModule {
         @Provides
         @IntoSet
         fun provideDeviceControlTool(
-            executor: AndroidAppActionExecutor
-        ): AgentTool = DeviceControlTool(executor)
+            executor: AndroidAppActionExecutor,
+            @ApplicationContext context: Context
+        ): AgentTool = DeviceControlTool(executor, context)
 
         @Provides
         @IntoSet
@@ -245,8 +246,9 @@ abstract class AgentModule {
         @Provides
         @IntoSet
         fun provideTaskRegistryTool(
-            taskRepository: TaskRepository
-        ): AgentTool = TaskRegistryTool(taskRepository)
+            taskRepository: TaskRepository,
+            @ApplicationContext context: Context
+        ): AgentTool = TaskRegistryTool(taskRepository, context)
 
         @Provides
         @IntoSet
@@ -263,7 +265,7 @@ abstract class AgentModule {
 
         @Provides
         @IntoSet
-        fun provideMcpTool(): AgentTool = com.neo.chevere.data.agent.tools.McpTool()
+        fun provideMcpTool(@ApplicationContext context: Context): AgentTool = com.neo.chevere.data.agent.tools.McpTool(context)
 
         @Provides
         @IntoSet
@@ -281,7 +283,8 @@ abstract class AgentModule {
         @Provides
         @IntoSet
         fun provideAlarmTimerTool(
-            executor: AndroidAppActionExecutor
-        ): AgentTool = AlarmTimerTool(executor)
+            executor: AndroidAppActionExecutor,
+            @ApplicationContext context: Context
+        ): AgentTool = AlarmTimerTool(executor, context)
     }
 }

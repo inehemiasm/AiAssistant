@@ -1,5 +1,7 @@
 package com.neo.chevere.ui.chat.components
 
+import androidx.compose.ui.platform.LocalResources
+import com.neo.chevere.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.text.KeyboardOptions
@@ -36,27 +38,28 @@ fun AgeVerificationDialog(
     onSubmit: (year: Int, month: Int, day: Int) -> Unit,
     onDismiss: () -> Unit
 ) {
+    val textResources = LocalResources.current
     var month by remember { mutableStateOf("") }
     var day by remember { mutableStateOf("") }
     var year by remember { mutableStateOf("") }
-    val isInspect = LocalInspectionMode.current || 
+    val isInspect = LocalInspectionMode.current ||
                     System.getProperty("robolectric.graphicsMode") != null ||
                     runCatching { Class.forName("org.robolectric.Robolectric") }.isSuccess
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Verify Age") },
+        title = { Text(textResources.getString(R.string.ui_verify_age)) },
         text = {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (isInspect) {
-                    MockTextField("MM", Modifier.weight(1f))
-                    MockTextField("DD", Modifier.weight(1f))
-                    MockTextField("YYYY", Modifier.weight(1.4f))
+                    MockTextField(textResources.getString(R.string.ui_mm), Modifier.weight(1f))
+                    MockTextField(textResources.getString(R.string.ui_dd), Modifier.weight(1f))
+                    MockTextField(textResources.getString(R.string.ui_yyyy), Modifier.weight(1.4f))
                 } else {
                     OutlinedTextField(
                         value = month,
                         onValueChange = { month = it.filter(Char::isDigit).take(2) },
-                        label = { Text("MM") },
+                        label = { Text(textResources.getString(R.string.ui_mm)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
                         modifier = Modifier.weight(1f)
@@ -64,7 +67,7 @@ fun AgeVerificationDialog(
                     OutlinedTextField(
                         value = day,
                         onValueChange = { day = it.filter(Char::isDigit).take(2) },
-                        label = { Text("DD") },
+                        label = { Text(textResources.getString(R.string.ui_dd)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
                         modifier = Modifier.weight(1f)
@@ -72,7 +75,7 @@ fun AgeVerificationDialog(
                     OutlinedTextField(
                         value = year,
                         onValueChange = { year = it.filter(Char::isDigit).take(4) },
-                        label = { Text("YYYY") },
+                        label = { Text(textResources.getString(R.string.ui_yyyy)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
                         modifier = Modifier.weight(1.4f)
@@ -91,12 +94,12 @@ fun AgeVerificationDialog(
                     )
                 }
             ) {
-                Text("Continue")
+                Text(textResources.getString(R.string.ui_continue))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(textResources.getString(R.string.ui_cancel))
             }
         }
     )

@@ -99,7 +99,7 @@ class ToolRegistryTest {
             SearchContactsTool(mockContext),
             SensorsTool(mockContext, mock()),
             ReadLocalFileTool(mockContext),
-            DeviceControlTool(mockAppActionExecutor),
+            DeviceControlTool(mockAppActionExecutor, mockContext),
             CreateCalendarEventTool(mockAppActionExecutor),
             SearchAppsTool(mockAppActionExecutor),
             ListAppsTool(mockAppActionExecutor),
@@ -107,10 +107,10 @@ class ToolRegistryTest {
             OpenAppTool(mockAppActionExecutor),
             OpenDeepLinkTool(mockAppActionExecutor),
             GetAppCapabilitiesTool(mockAppActionExecutor),
-            TaskRegistryTool(mockTaskRepository),
+            TaskRegistryTool(mockTaskRepository, mockContext),
             LocalDocumentRagTool(mockContext, mockDocumentChunkDao),
             QueryCalendarTool(mockContext),
-            AlarmTimerTool(mockAppActionExecutor),
+            AlarmTimerTool(mockAppActionExecutor, mockContext),
             AnalyzeImageTool(mockInferenceManager)
         )
     }

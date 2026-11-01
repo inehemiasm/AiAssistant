@@ -239,7 +239,8 @@ Apply these rules to new features and code changed by a task. Existing violation
 - Voice input requests offline recognition through Android, but provider behavior may involve network access. Keep permission, onboarding, settings and privacy disclosures accurate.
 - The open-source notices viewer is reached via Settings MVI effects using Google OSS Licenses. Generated notices do not replace model/conversion/asset/API license review.
 - Generate exact runtime coordinates using `:app:releaseDependencyInventory`. Run `scripts/build_license_inventory.py` for cached POM metadata and `scripts/check_native_alignment.py` against the actual APK/AAB. Keep unknown licensing explicit.
-- Partial translations remain lint warnings for the initial US release; stale privacy translations fall back to corrected English. Translation QA is still required.
+- English, Spanish, French, and German are declared in `res/xml/locales_config.xml`. All app-owned UI copy belongs in localized resources; keep machine identifiers, tool schemas, model names, logs, and user/external content unchanged. Use plurals for counts and observable configuration for locale-sensitive UI formatting.
+- `python scripts/check_localization.py` checks resource coverage, duplicates, format arguments and literal UI copy in CI. `LocalizationResourcesTest` verifies actual Android locale selection. MissingTranslation lint remains a warning for the initial US release; the resource coverage check must pass. Translation and layout QA are still required.
 - Policy/terms drafts are not automatically deployed. Retention, publisher/contact information and external declarations require verified operational choices before production.
 
 ### Production reporting gate

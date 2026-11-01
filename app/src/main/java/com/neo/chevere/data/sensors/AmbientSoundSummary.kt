@@ -1,5 +1,7 @@
 package com.neo.chevere.data.sensors
 
+import android.content.Context
+import com.neo.chevere.R
 import com.neo.chevere.core.MeasurementFormatter
 import com.neo.chevere.domain.AmbientSoundReading
 
@@ -34,4 +36,22 @@ private fun soundDescription(dbSpl: Double): String = when {
     dbSpl < 75.0 -> "loud, busy office or traffic"
     dbSpl < 90.0 -> "very loud, heavy machinery or concert"
     else -> "extremely loud, potential hearing risk"
+}
+
+/** Renders app-authored sensor answers using the active Android locale. */
+internal fun AmbientSoundReading.toChatSummary(context: Context): String = when (this) {
+    is AmbientSoundReading.Available -> {
+        val description = context.getString(when {
+            dbSpl < 30 -> R.string.ui_very_quiet_near_silence
+            dbSpl < 45 -> R.string.ui_quiet_library_level_b9f249
+            dbSpl < 60 -> R.string.ui_moderate_noise_normal_conversation
+            dbSpl < 75 -> R.string.ui_loud_busy_office_or_traffic
+            dbSpl < 90 -> R.string.ui_very_loud_heavy_machinery_or_concert
+            else -> R.string.ui_extremely_loud_potential_hearing_risk
+        })
+        context.getString(R.string.ui_background_sound_at_your_phone_1_s_uncalibrated_estimate_2_s, MeasurementFormatter.measurement(dbSpl.toDouble(), "dB SPL", 0), description)
+    }
+    AmbientSoundReading.Silence -> context.getString(R.string.ui_background_sound_at_your_phone_inaudible_or_near_silence_20_db_s)
+    AmbientSoundReading.PermissionRequired -> context.getString(R.string.ui_microphone_permission_is_required_to_measure_the_ambient_sound_l_fae33e)
+    is AmbientSoundReading.Unavailable -> context.getString(R.string.ui_could_not_measure_the_background_sound_level_right_now)
 }

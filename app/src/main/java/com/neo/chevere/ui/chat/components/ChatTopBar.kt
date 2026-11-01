@@ -1,5 +1,6 @@
 package com.neo.chevere.ui.chat.components
 
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -45,6 +46,7 @@ fun ChatTopBar(
     isImageReady: Boolean,
     modifier: Modifier = Modifier
 ) {
+    val textResources = LocalResources.current
     val topBarShape = RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp)
 
     Surface(
@@ -102,9 +104,9 @@ fun ChatTopBar(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    CapabilityChip(label = "CHAT", ready = isChatReady)
+                    CapabilityChip(label = textResources.getString(R.string.ui_chat), ready = isChatReady)
                     if (isImageReady) {
-                        CapabilityChip(label = "IMAGE", ready = true)
+                        CapabilityChip(label = textResources.getString(R.string.ui_image), ready = true)
                     }
                 }
             }

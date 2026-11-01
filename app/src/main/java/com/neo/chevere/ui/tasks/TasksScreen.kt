@@ -1,5 +1,6 @@
 package com.neo.chevere.ui.tasks
 
+import androidx.compose.ui.platform.LocalResources
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -92,6 +93,7 @@ fun TasksContent(
     effects: kotlinx.coroutines.flow.Flow<TasksEffect>,
     onIntent: (TasksIntent) -> Unit
 ) {
+    val textResources = LocalResources.current
     val viewModel = remember(state, effects, onIntent) {
         object {
             fun onIntent(intent: TasksIntent) {
@@ -156,7 +158,7 @@ fun TasksContent(
                 shape = CircleShape,
                 modifier = Modifier.padding(bottom = 16.dp, end = 8.dp)
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Add Task", modifier = Modifier.size(24.dp))
+                Icon(Icons.Default.Add, contentDescription = textResources.getString(R.string.ui_add_task), modifier = Modifier.size(24.dp))
             }
         },
         containerColor = Color.Transparent
@@ -198,7 +200,7 @@ fun TasksContent(
                         item {
                             Spacer(Modifier.height(12.dp))
                             Text(
-                                text = "COMPLETED",
+                                text = textResources.getString(R.string.ui_completed_6dc2da),
                                 style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
                                 color = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)

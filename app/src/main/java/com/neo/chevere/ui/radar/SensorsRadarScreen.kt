@@ -1,5 +1,8 @@
 package com.neo.chevere.ui.radar
 
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalResources
+import com.neo.chevere.R
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.*
@@ -96,6 +99,7 @@ fun SensorsRadarContent(
     modifier: Modifier = Modifier,
     onSelectMode: (SensorMode) -> Unit = {}
 ) {
+    val textResources = LocalResources.current
     val scrollState = rememberScrollState()
     val primaryColor = MaterialTheme.colorScheme.primary
     val secondaryColor = MaterialTheme.colorScheme.secondary
@@ -125,12 +129,12 @@ fun SensorsRadarContent(
     }
 
     val screenTitle = when (uiState.mode) {
-        SensorMode.ALL       -> "[ SENSOR RADAR ]"
-        SensorMode.STUD      -> "[ STUD FINDER ]"
-        SensorMode.LEVEL     -> "[ SPIRIT LEVEL ]"
-        SensorMode.LIGHT     -> "[ AMBIENT LIGHT ]"
-        SensorMode.PROXIMITY -> "[ PROXIMITY ]"
-        SensorMode.SOUND     -> "[ DECIBEL METER ]"
+        SensorMode.ALL       -> textResources.getString(R.string.ui_sensor_radar)
+        SensorMode.STUD      -> textResources.getString(R.string.ui_stud_finder)
+        SensorMode.LEVEL     -> textResources.getString(R.string.ui_spirit_level)
+        SensorMode.LIGHT     -> textResources.getString(R.string.ui_ambient_light)
+        SensorMode.PROXIMITY -> textResources.getString(R.string.ui_proximity)
+        SensorMode.SOUND     -> textResources.getString(R.string.ui_decibel_meter)
     }
 
     val isAlertState = when (uiState.mode) {
@@ -160,7 +164,7 @@ fun SensorsRadarContent(
                     IconButton(onClick = onBackClick) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
+                            contentDescription = textResources.getString(R.string.back),
                             tint = primaryColor
                         )
                     }
@@ -170,7 +174,7 @@ fun SensorsRadarContent(
                         IconButton(onClick = { calibrate() }) {
                             Icon(
                                 imageVector = Icons.Default.LocationSearching,
-                                contentDescription = "Calibrate",
+                                contentDescription = textResources.getString(R.string.ui_calibrate),
                                 tint = primaryColor
                             )
                         }
@@ -202,7 +206,7 @@ fun SensorsRadarContent(
 
             // ── Status Banner (all modes, non-flickering) ──────────────────
             StatusBanner(
-                label = uiState.statusLabel,
+                label = uiState.statusLabel.ifBlank { textResources.getString(R.string.ui_initializing) },
                 alertColor = isAlertState,
                 primaryColor = primaryColor,
                 surfaceContainer = surfaceContainer
@@ -286,6 +290,7 @@ private fun SensorModeSelectorRow(
     primaryColor: Color,
     surfaceContainer: Color
 ) {
+    val textResources = LocalResources.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -304,7 +309,7 @@ private fun SensorModeSelectorRow(
                 )
             ) {
                 Text(
-                    text = mode.shortLabel,
+                    text = textResources.getString(mode.shortLabelRes),
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
                     style = Typography.labelMedium.copy(
                         fontWeight = FontWeight.Bold,
@@ -362,6 +367,8 @@ private fun AllSensorsContent(
     onSelectMode: (SensorMode) -> Unit,
     onRequestMicPermission: () -> Unit
 ) {
+    val formatLocale = LocalConfiguration.current.locales[0]
+    val textResources = LocalResources.current
     StudFinderContent(
         uiState = uiState,
         primaryColor = primaryColor,
@@ -383,11 +390,11 @@ private fun AllSensorsContent(
             shape = RoundedCornerShape(12.dp)
         ) {
             val lightCategory = when {
-                uiState.lightLevel < 0f    -> "READING"
-                uiState.lightLevel < 10f   -> "DARK"
-                uiState.lightLevel < 200f  -> "DIM"
-                uiState.lightLevel < 1000f -> "NORMAL"
-                else                       -> "BRIGHT"
+                uiState.lightLevel < 0f    -> textResources.getString(R.string.ui_reading)
+                uiState.lightLevel < 10f   -> textResources.getString(R.string.ui_dark)
+                uiState.lightLevel < 200f  -> textResources.getString(R.string.ui_dim)
+                uiState.lightLevel < 1000f -> textResources.getString(R.string.ui_normal)
+                else                       -> textResources.getString(R.string.ui_bright)
             }
             Column(modifier = Modifier.padding(12.dp)) {
                 Row(
@@ -396,7 +403,7 @@ private fun AllSensorsContent(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        "AMBIENT LIGHT",
+                        textResources.getString(R.string.ui_ambient_light_aa7bd5),
                         style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -408,7 +415,7 @@ private fun AllSensorsContent(
                 }
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    text = if (uiState.lightLevel >= 0f) "${uiState.lightLevel.toInt()} lx" else "N/A",
+                    text = if (uiState.lightLevel >= 0f) "${uiState.lightLevel.toInt()} lx" else textResources.getString(R.string.ui_n_a),
                     style = Typography.bodyLarge.copy(fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace),
                     color = primaryColor
                 )
@@ -427,13 +434,13 @@ private fun AllSensorsContent(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        "PROXIMITY",
+                        textResources.getString(R.string.ui_proximity_795c24),
                         style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     if (uiState.proximityDistance >= 0f) {
                         Text(
-                            String.format(java.util.Locale.US, "%.1f cm", uiState.proximityDistance),
+                            String.format(formatLocale, "%.1f cm", uiState.proximityDistance),
                             style = Typography.labelSmall.copy(fontFamily = FontFamily.Monospace),
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -441,7 +448,7 @@ private fun AllSensorsContent(
                 }
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    text = if (uiState.proximityNear) "NEAR" else "CLEAR",
+                    text = if (uiState.proximityNear) textResources.getString(R.string.ui_near) else textResources.getString(R.string.ui_clear),
                     style = Typography.bodyLarge.copy(fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace),
                     color = if (uiState.proximityNear) MaterialTheme.colorScheme.error else primaryColor
                 )
@@ -470,7 +477,7 @@ private fun AllSensorsContent(
             ) {
                 Column {
                     Text(
-                        text = "BACKGROUND SOUND (MIC)",
+                        text = textResources.getString(R.string.ui_background_sound_mic),
                         style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -483,7 +490,7 @@ private fun AllSensorsContent(
                         )
                     } else {
                         Text(
-                            text = "PERMISSION REQUIRED",
+                            text = textResources.getString(R.string.ui_permission_required),
                             style = Typography.bodyMedium.copy(fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace),
                             color = MaterialTheme.colorScheme.error
                         )
@@ -491,16 +498,16 @@ private fun AllSensorsContent(
                 }
                 if (!uiState.micPermissionGranted) {
                     TextButton(onClick = onRequestMicPermission) {
-                        Text("GRANT MIC", color = primaryColor, style = Typography.labelLarge.copy(fontWeight = FontWeight.Bold))
+                        Text(textResources.getString(R.string.ui_grant_mic), color = primaryColor, style = Typography.labelLarge.copy(fontWeight = FontWeight.Bold))
                     }
                 } else {
                     val category = when {
-                        uiState.soundDbSpl < 30f -> "VERY QUIET"
-                        uiState.soundDbSpl < 45f -> "QUIET"
-                        uiState.soundDbSpl < 60f -> "MODERATE"
-                        uiState.soundDbSpl < 75f -> "LOUD"
-                        uiState.soundDbSpl < 90f -> "VERY LOUD"
-                        else -> "HEARING RISK"
+                        uiState.soundDbSpl < 30f -> textResources.getString(R.string.ui_very_quiet)
+                        uiState.soundDbSpl < 45f -> textResources.getString(R.string.ui_quiet)
+                        uiState.soundDbSpl < 60f -> textResources.getString(R.string.ui_moderate)
+                        uiState.soundDbSpl < 75f -> textResources.getString(R.string.ui_loud)
+                        uiState.soundDbSpl < 90f -> textResources.getString(R.string.ui_very_loud)
+                        else -> textResources.getString(R.string.ui_hearing_risk)
                     }
                     Text(
                         text = category,
@@ -536,17 +543,17 @@ private fun AllSensorsContent(
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    "SPIRIT LEVEL",
+                    textResources.getString(R.string.ui_spirit_level_095a4e),
                     style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    text = if (isLevel) "● LEVEL" else "● TILTED",
+                    text = if (isLevel) textResources.getString(R.string.ui_level) else textResources.getString(R.string.ui_tilted),
                     style = Typography.bodyLarge.copy(fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace),
                     color = if (isLevel) primaryColor else MaterialTheme.colorScheme.error
                 )
                 Text(
-                    text = String.format(java.util.Locale.US, "P: %.1f°   R: %.1f°", uiState.pitch, uiState.roll),
+                    text = String.format(formatLocale, "P: %.1f°   R: %.1f°", uiState.pitch, uiState.roll),
                     style = Typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -572,6 +579,8 @@ private fun StudFinderContent(
     onToggleVibration: (Boolean) -> Unit,
     showHistoryGraph: Boolean = true
 ) {
+    val formatLocale = LocalConfiguration.current.locales[0]
+    val textResources = LocalResources.current
     RadarHUDVisualizer(
         magneticCalibrated = uiState.magneticCalibrated,
         primaryColor = primaryColor,
@@ -588,19 +597,19 @@ private fun StudFinderContent(
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically) {
                 Column {
-                    Text("MAGNETIC READING", style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                    Text(textResources.getString(R.string.ui_magnetic_reading), style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(
-                        text = String.format(java.util.Locale.US, "%.1f μT", uiState.magneticMagnitude),
+                        text = String.format(formatLocale, "%.1f μT", uiState.magneticMagnitude),
                         style = Typography.headlineMedium.copy(fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace),
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 }
                 Column(horizontalAlignment = Alignment.End) {
-                    Text("CALIBRATED (Δ)", style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                    Text(textResources.getString(R.string.ui_calibrated), style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                         color = primaryColor)
                     Text(
-                        text = String.format(java.util.Locale.US, "%.1f μT", uiState.magneticCalibrated),
+                        text = String.format(formatLocale, "%.1f μT", uiState.magneticCalibrated),
                         style = Typography.headlineMedium.copy(fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace),
                         color = primaryColor
                     )
@@ -612,17 +621,17 @@ private fun StudFinderContent(
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    String.format(java.util.Locale.US, "Baseline: %.1f μT", uiState.baseline),
+                    textResources.getString(R.string.ui_baseline_1_1f_t, uiState.baseline),
                     style = Typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TextButton(onClick = { onCalibrate() }) {
-                        Text("TARE / ZERO OUT", color = primaryColor, style = Typography.labelLarge)
+                        Text(textResources.getString(R.string.ui_tare_zero_out), color = primaryColor, style = Typography.labelLarge)
                     }
                     if (uiState.baseline > 0f) {
                         IconButton(onClick = { onResetCalibration() }) {
-                            Icon(Icons.Default.Refresh, "Reset Calibration",
+                            Icon(Icons.Default.Refresh, textResources.getString(R.string.ui_reset_calibration),
                                 tint = MaterialTheme.colorScheme.error)
                         }
                     }
@@ -645,10 +654,10 @@ private fun StudFinderContent(
             ) {
                 Icon(
                     imageVector = if (uiState.audioEnabled) Icons.Default.Hearing else Icons.Default.HearingDisabled,
-                    contentDescription = "Audio Alert",
+                    contentDescription = textResources.getString(R.string.ui_audio_alert),
                     tint = if (uiState.audioEnabled) primaryColor else MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Text("SOUND", style = Typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                Text(textResources.getString(R.string.ui_sound), style = Typography.labelLarge.copy(fontWeight = FontWeight.Bold),
                     color = if (uiState.audioEnabled) primaryColor else MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Row(
@@ -656,9 +665,9 @@ private fun StudFinderContent(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.clickable { onToggleVibration(!uiState.vibrationEnabled) }.padding(8.dp)
             ) {
-                Icon(Icons.Default.Vibration, "Haptic Alert",
+                Icon(Icons.Default.Vibration, textResources.getString(R.string.ui_haptic_alert),
                     tint = if (uiState.vibrationEnabled) primaryColor else MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("HAPTICS", style = Typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                Text(textResources.getString(R.string.ui_haptics), style = Typography.labelLarge.copy(fontWeight = FontWeight.Bold),
                     color = if (uiState.vibrationEnabled) primaryColor else MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
@@ -672,7 +681,7 @@ private fun StudFinderContent(
             shape = RoundedCornerShape(12.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text("SIGNAL HISTORY", style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
+                Text(textResources.getString(R.string.ui_signal_history), style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 8.dp))
                 HistoryGraph(history = uiState.magneticHistory, primaryColor = primaryColor)
             }
@@ -691,6 +700,8 @@ private fun SpiritLevelContent(
     primaryColor: Color,
     surfaceContainer: Color
 ) {
+    val formatLocale = LocalConfiguration.current.locales[0]
+    val textResources = LocalResources.current
     val isLevel = abs(pitch) < 2.0f && abs(roll) < 2.0f
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -704,25 +715,25 @@ private fun SpiritLevelContent(
         ) {
             SpiritLevelVisualizer(pitch = pitch, roll = roll, primaryColor = primaryColor, size = 160.dp)
             Text(
-                text = if (isLevel) "● LEVEL" else "● TILTED",
+                text = if (isLevel) textResources.getString(R.string.ui_level) else textResources.getString(R.string.ui_tilted),
                 style = Typography.headlineMedium.copy(fontWeight = FontWeight.ExtraBold, fontFamily = FontFamily.Monospace),
                 color = if (isLevel) primaryColor else MaterialTheme.colorScheme.error
             )
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("PITCH", style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                    Text(textResources.getString(R.string.ui_pitch), style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(
-                        text = String.format(java.util.Locale.US, "%.1f°", pitch),
+                        text = String.format(formatLocale, "%.1f°", pitch),
                         style = Typography.headlineSmall.copy(fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace),
                         color = if (abs(pitch) < 2f) primaryColor else MaterialTheme.colorScheme.error
                     )
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("ROLL", style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                    Text(textResources.getString(R.string.ui_roll), style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(
-                        text = String.format(java.util.Locale.US, "%.1f°", roll),
+                        text = String.format(formatLocale, "%.1f°", roll),
                         style = Typography.headlineSmall.copy(fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace),
                         color = if (abs(roll) < 2f) primaryColor else MaterialTheme.colorScheme.error
                     )
@@ -742,13 +753,14 @@ private fun LightSensorContent(
     primaryColor: Color,
     surfaceContainer: Color
 ) {
+    val textResources = LocalResources.current
     val category = when {
-        lightLevel < 0     -> "READING..."
-        lightLevel < 10f   -> "DARK"
-        lightLevel < 200f  -> "DIM"
-        lightLevel < 1000f -> "NORMAL"
-        lightLevel < 5000f -> "BRIGHT"
-        else               -> "VERY BRIGHT"
+        lightLevel < 0     -> textResources.getString(R.string.ui_reading_46db10)
+        lightLevel < 10f   -> textResources.getString(R.string.ui_dark)
+        lightLevel < 200f  -> textResources.getString(R.string.ui_dim)
+        lightLevel < 1000f -> textResources.getString(R.string.ui_normal)
+        lightLevel < 5000f -> textResources.getString(R.string.ui_bright)
+        else               -> textResources.getString(R.string.ui_very_bright)
     }
     val brightness = if (lightLevel >= 0f) (lightLevel / 10000f).coerceIn(0f, 1f) else 0f
 
@@ -793,6 +805,8 @@ private fun ProximitySensorContent(
     primaryColor: Color,
     surfaceContainer: Color
 ) {
+    val formatLocale = LocalConfiguration.current.locales[0]
+    val textResources = LocalResources.current
     val pulseScale by animateFloatAsState(
         targetValue = if (near) 1.18f else 1.0f,
         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
@@ -825,12 +839,12 @@ private fun ProximitySensorContent(
                     modifier = Modifier.size(48.dp))
             }
             Text(
-                text = if (near) "NEAR" else "CLEAR",
+                text = if (near) textResources.getString(R.string.ui_near) else textResources.getString(R.string.ui_clear),
                 style = Typography.displaySmall.copy(fontWeight = FontWeight.ExtraBold, fontFamily = FontFamily.Monospace),
                 color = if (near) MaterialTheme.colorScheme.error else primaryColor
             )
             Text(
-                text = if (distance >= 0f) String.format(java.util.Locale.US, "%.1f cm", distance) else "—",
+                text = if (distance >= 0f) String.format(formatLocale, "%.1f cm", distance) else "—",
                 style = Typography.titleMedium.copy(fontFamily = FontFamily.Monospace),
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -849,6 +863,7 @@ fun RadarHUDVisualizer(
     secondaryColor: Color,
     modifier: Modifier = Modifier
 ) {
+    val formatLocale = LocalConfiguration.current.locales[0]
     val infiniteTransition = rememberInfiniteTransition(label = "RadarSweep")
     val sweepAngle by infiniteTransition.animateFloat(
         initialValue = 0f,
@@ -907,7 +922,7 @@ fun RadarHUDVisualizer(
                 tint = if (magneticCalibrated > 35f) Color.Red else primaryColor, modifier = Modifier.size(28.dp))
             Spacer(Modifier.height(4.dp))
             Text(
-                text = String.format(java.util.Locale.US, "%.0f", magneticCalibrated),
+                text = String.format(formatLocale, "%.0f", magneticCalibrated),
                 style = Typography.headlineMedium.copy(fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace, fontSize = 28.sp),
                 color = if (magneticCalibrated > 35f) Color.Red else primaryColor
             )
@@ -991,6 +1006,7 @@ private fun MicPermissionPromptCard(
     primaryColor: Color,
     surfaceContainer: Color
 ) {
+    val textResources = LocalResources.current
     Card(
         modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
         colors = CardDefaults.cardColors(containerColor = surfaceContainer),
@@ -1004,17 +1020,17 @@ private fun MicPermissionPromptCard(
         ) {
             Icon(
                 imageVector = Icons.Default.HearingDisabled,
-                contentDescription = "Permission Required",
+                contentDescription = textResources.getString(R.string.ui_permission_required_f949e3),
                 tint = MaterialTheme.colorScheme.error,
                 modifier = Modifier.size(64.dp)
             )
             Text(
-                text = "MICROPHONE REQUIRED",
+                text = textResources.getString(R.string.ui_microphone_required),
                 style = Typography.titleMedium.copy(fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace),
                 color = MaterialTheme.colorScheme.error
             )
             Text(
-                text = "Recording permission is needed to measure ambient decibels (dB SPL) in real-time.",
+                text = textResources.getString(R.string.ui_recording_permission_is_needed_to_measure_ambient_decibels_db_sp),
                 style = Typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
@@ -1026,7 +1042,7 @@ private fun MicPermissionPromptCard(
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Text(
-                    text = "GRANT ACCESS",
+                    text = textResources.getString(R.string.ui_grant_access),
                     style = Typography.labelLarge.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.onPrimary
                 )
@@ -1042,13 +1058,14 @@ private fun SoundSensorContent(
     primaryColor: Color,
     surfaceContainer: Color
 ) {
+    val textResources = LocalResources.current
     val category = when {
-        dbSpl < 30f  -> "VERY QUIET"
-        dbSpl < 45f  -> "QUIET"
-        dbSpl < 60f  -> "MODERATE"
-        dbSpl < 75f  -> "LOUD"
-        dbSpl < 90f  -> "VERY LOUD"
-        else         -> "HEARING RISK"
+        dbSpl < 30f  -> textResources.getString(R.string.ui_very_quiet)
+        dbSpl < 45f  -> textResources.getString(R.string.ui_quiet)
+        dbSpl < 60f  -> textResources.getString(R.string.ui_moderate)
+        dbSpl < 75f  -> textResources.getString(R.string.ui_loud)
+        dbSpl < 90f  -> textResources.getString(R.string.ui_very_loud)
+        else         -> textResources.getString(R.string.ui_hearing_risk)
     }
 
     val warningColor = when {
@@ -1084,7 +1101,7 @@ private fun SoundSensorContent(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text("AUDIO WAVEFORM", style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
+            Text(textResources.getString(R.string.ui_audio_waveform), style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             WaveformBouncer(dbSpl = dbSpl, color = warningColor)
         }
@@ -1126,7 +1143,7 @@ private fun SoundSensorContent(
         shape = RoundedCornerShape(16.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text("SOUND HISTORY (dB)", style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
+            Text(textResources.getString(R.string.ui_sound_history_db), style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
                 color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 8.dp))
             HistoryGraph(history = history, primaryColor = warningColor)
         }
@@ -1141,7 +1158,7 @@ private fun WaveformBouncer(
 ) {
     val barCount = 20
     val intensity = (dbSpl / 120f).coerceIn(0f, 1f)
-    
+
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -1186,6 +1203,7 @@ private fun DecibelHUDVisualizer(
     waveOffset: Float,
     modifier: Modifier = Modifier
 ) {
+    val formatLocale = LocalConfiguration.current.locales[0]
     val intensity = (dbSpl / 120f).coerceIn(0f, 1f)
     val pulseScale by animateFloatAsState(
         targetValue = 1f + (intensity * 0.15f),
@@ -1202,10 +1220,10 @@ private fun DecibelHUDVisualizer(
         Canvas(modifier = Modifier.fillMaxSize().padding(8.dp)) {
             val center = Offset(size.width / 2, size.height / 2)
             val radius = size.minDimension / 2
-            
+
             drawCircle(color = primaryColor.copy(alpha = 0.12f), radius = radius, style = Stroke(width = 2f))
             drawCircle(color = primaryColor.copy(alpha = 0.12f), radius = radius * 0.75f, style = Stroke(width = 2f))
-            
+
             val waveRadius = radius * 0.75f
             val path = Path()
             val points = 80
@@ -1242,7 +1260,7 @@ private fun DecibelHUDVisualizer(
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                text = String.format(java.util.Locale.US, "%.0f", dbSpl),
+                text = String.format(formatLocale, "%.0f", dbSpl),
                 style = Typography.headlineMedium.copy(fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace, fontSize = 32.sp),
                 color = primaryColor
             )

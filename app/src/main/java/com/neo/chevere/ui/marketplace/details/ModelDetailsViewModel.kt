@@ -1,5 +1,6 @@
 package com.neo.chevere.ui.marketplace.details
 
+import com.neo.chevere.R
 import android.app.Application
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
@@ -113,7 +114,7 @@ class ModelDetailsViewModel @Inject constructor(
                                 val displayName = currentState.installedModel?.displayName
                                     ?: currentState.modelEntry?.name
                                     ?: modelId
-                                sendEffect { ModelDetailsEffect.ShowToast("Download complete: $displayName") }
+                                sendEffect { ModelDetailsEffect.ShowToast(getApplication<android.app.Application>().getString(R.string.ui_download_complete_1_s, displayName)) }
                             }
                             maybeAutoActivateAfterDownload()
                         }
@@ -193,14 +194,14 @@ class ModelDetailsViewModel @Inject constructor(
         viewModelScope.launch {
             repository.cancelModelDownload(entry?.effectiveFileName ?: modelId)
             setState { copy(isActionInProgress = false, downloadProgress = null) }
-            sendEffect { ModelDetailsEffect.ShowToast("Download canceled") }
+            sendEffect { ModelDetailsEffect.ShowToast(getApplication<android.app.Application>().getString(R.string.ui_download_canceled)) }
         }
     }
 
     private fun deleteModel() {
         if (currentState.isActive) {
             Timber.tag(TAG).w("Delete aborted: Model is active")
-            sendEffect { ModelDetailsEffect.ShowToast("Cannot delete active model") }
+            sendEffect { ModelDetailsEffect.ShowToast(getApplication<android.app.Application>().getString(R.string.ui_cannot_delete_active_model)) }
             return
         }
 
@@ -208,11 +209,11 @@ class ModelDetailsViewModel @Inject constructor(
             setState { copy(isActionInProgress = true) }
             Timber.tag(TAG).i("Deleting model: $modelId")
             if (repository.deleteModel(modelId)) {
-                sendEffect { ModelDetailsEffect.ShowToast("Model deleted") }
+                sendEffect { ModelDetailsEffect.ShowToast(getApplication<android.app.Application>().getString(R.string.ui_model_deleted)) }
                 handleIntent(ModelDetailsIntent.LoadDetails(modelId))
             } else {
                 Timber.tag(TAG).e("Delete failed for $modelId")
-                sendEffect { ModelDetailsEffect.ShowToast("Failed to delete model") }
+                sendEffect { ModelDetailsEffect.ShowToast(getApplication<android.app.Application>().getString(R.string.ui_failed_to_delete_model)) }
             }
             setState { copy(isActionInProgress = false) }
         }
@@ -221,7 +222,7 @@ class ModelDetailsViewModel @Inject constructor(
     private fun selectModel() {
         if (currentState.installedModel?.isHealthy != true) {
             Timber.tag(TAG).w("Select aborted: Model not healthy")
-            sendEffect { ModelDetailsEffect.ShowToast("Model is not ready") }
+            sendEffect { ModelDetailsEffect.ShowToast(getApplication<android.app.Application>().getString(R.string.ui_model_is_not_ready)) }
             return
         }
 
@@ -251,7 +252,7 @@ class ModelDetailsViewModel @Inject constructor(
             if (isImage) {
                 preferenceManager.updateSelectedImageModel(model.id)
                 setState { copy(isActionInProgress = false, isActive = true) }
-                sendEffect { ModelDetailsEffect.ShowToast("Image model activated") }
+                sendEffect { ModelDetailsEffect.ShowToast(getApplication<android.app.Application>().getString(R.string.ui_image_model_activated)) }
             } else {
                 Timber.tag(TAG).i("[SWITCH] Initializing Engine with path: ${model.filePath}")
                 repository.initializeModel(model.filePath)
@@ -259,12 +260,12 @@ class ModelDetailsViewModel @Inject constructor(
                         Timber.tag(TAG).i("[SWITCH] Engine Ready. Updating DataStore to: $modelId")
                         preferenceManager.updateSelectedModel(modelId)
                         setState { copy(isActionInProgress = false) }
-                        sendEffect { ModelDetailsEffect.ShowToast("Model activated") }
+                        sendEffect { ModelDetailsEffect.ShowToast(getApplication<android.app.Application>().getString(R.string.ui_model_activated)) }
                     }
                     .onFailure { e ->
                         Timber.tag(TAG).e(e, "[SWITCH] Engine Init FAILED")
                         setState { copy(isActionInProgress = false) }
-                        sendEffect { ModelDetailsEffect.ShowToast("Switch failed: ${e.message}") }
+                        sendEffect { ModelDetailsEffect.ShowToast(getApplication<android.app.Application>().getString(R.string.ui_switch_failed_1_s, e.message)) }
                     }
             }
         }
@@ -296,7 +297,7 @@ class ModelDetailsViewModel @Inject constructor(
                 }
                 if (healthyImageModels.size == 1) {
                     preferenceManager.updateSelectedImageModel(installedModel.id)
-                    sendEffect { ModelDetailsEffect.ShowToast("${installedModel.displayName} activated for image generation") }
+                    sendEffect { ModelDetailsEffect.ShowToast(getApplication<android.app.Application>().getString(R.string.ui_1_s_activated_for_image_generation, installedModel.displayName)) }
                 }
             }
         }
@@ -307,10 +308,10 @@ class ModelDetailsViewModel @Inject constructor(
             .onSuccess {
                 preferenceManager.updateSelectedModel(model.id)
                 setState { copy(isActionInProgress = false, isActive = true) }
-                sendEffect { ModelDetailsEffect.ShowToast("${model.displayName} activated") }
+                sendEffect { ModelDetailsEffect.ShowToast(getApplication<android.app.Application>().getString(R.string.ui_1_s_activated, model.displayName)) }
             }
             .onFailure { e ->
-                sendEffect { ModelDetailsEffect.ShowToast("Downloaded, but activation failed: ${e.message}") }
+                sendEffect { ModelDetailsEffect.ShowToast(getApplication<android.app.Application>().getString(R.string.ui_downloaded_but_activation_failed_1_s, e.message)) }
             }
     }
 }

@@ -163,12 +163,12 @@ class ChatViewModel @Inject constructor(
 
     private fun observeSelectedModel() {
         viewModelScope.launch {
-            // We don't drop(1) here. We want to initialize whatever is currently saved 
+            // We don't drop(1) here. We want to initialize whatever is currently saved
             // as soon as the ViewModel starts.
             preferenceManager.selectedModelPreference.collectLatest { savedModel ->
                 val currentModel = currentState.selectedModel
 
-                // If there's a saved model and it's different from our current state, 
+                // If there's a saved model and it's different from our current state,
                 // or if we aren't ready yet, trigger initialization.
                 if (savedModel != null && (savedModel != currentModel || currentState.runtimeState is RuntimeState.Uninitialized)) {
                     val models = withContext(dispatcherProvider.io) { repository.getLocalModels() }
@@ -276,11 +276,11 @@ class ChatViewModel @Inject constructor(
                 ChatIntent.ClearConversation -> clearConversation()
                 is ChatIntent.UpdateInputText -> setState { copy(inputText = intent.text) }
                 is ChatIntent.ImportDocument -> {
-                    sendEffect { ChatEffect.ShowToast("Indexing document…") }
+                    sendEffect { ChatEffect.ShowToast(getApplication<android.app.Application>().getString(R.string.ui_indexing_document)) }
                     when (val result = documentRepository.importDocument(intent.reference)) {
                         is com.neo.chevere.domain.DocumentImportResult.Imported -> {
                             setState { copy(inputText = "/docs Summarize ${result.name}") }
-                            sendEffect { ChatEffect.ShowToast("Indexed ${result.name}: ${result.chunks} chunks") }
+                            sendEffect { ChatEffect.ShowToast(getApplication<android.app.Application>().getString(R.string.ui_indexed_1_s_2_s_chunks, result.name, result.chunks)) }
                         }
                         is com.neo.chevere.domain.DocumentImportResult.Failed -> sendEffect { ChatEffect.ShowToast(result.reason) }
                     }
@@ -498,7 +498,7 @@ class ChatViewModel @Inject constructor(
     private suspend fun sendMessage(text: String, imageUri: Uri?) {
         sendEffect { ChatEffect.HideKeyboard }
         val promptText = text.ifBlank {
-            if (imageUri != null) "Describe this image." else text
+            if (imageUri != null) getApplication<android.app.Application>().getString(R.string.suggestion_describe_image) else text
         }
         lastUserMessage = promptText
         val userMsg = ChatMessage(promptText, isUser = true, imageUri = imageUri?.toString())
@@ -566,7 +566,7 @@ class ChatViewModel @Inject constructor(
         if (!BuildConfig.DEBUG) {
             setState { copy(ageVerificationRequest = null, sendState = SendState.Idle) }
             appendAssistantMessage(
-                Constants.ContentPolicy.EXPLICIT_RELEASE_BLOCK_MESSAGE,
+                getApplication<android.app.Application>().getString(R.string.capability_image),
                 modelName = "CHEVERE AI"
             )
             return
@@ -575,19 +575,19 @@ class ChatViewModel @Inject constructor(
         val birthdate = try {
             LocalDate.of(year, month, day)
         } catch (_: DateTimeException) {
-            sendEffect { ChatEffect.ShowToast("Enter a valid birthdate.") }
+            sendEffect { ChatEffect.ShowToast(getApplication<android.app.Application>().getString(R.string.ui_enter_a_valid_birthdate)) }
             return
         }
 
         if (birthdate.isAfter(LocalDate.now())) {
-            sendEffect { ChatEffect.ShowToast("Enter a valid birthdate.") }
+            sendEffect { ChatEffect.ShowToast(getApplication<android.app.Application>().getString(R.string.ui_enter_a_valid_birthdate)) }
             return
         }
 
         setState { copy(ageVerificationRequest = null) }
         val age = Period.between(birthdate, LocalDate.now()).years
         val message = if (age < 18) {
-            "You must be 18 or older to request age-restricted image content."
+            getApplication<android.app.Application>().getString(R.string.ui_you_must_be_18_or_older_to_request_age_restricted_image_content)
         } else {
             when (val decision = explicitImagePromptPolicy.evaluate(request.prompt)) {
                 ExplicitImagePromptDecision.Allow -> null
@@ -609,7 +609,7 @@ class ChatViewModel @Inject constructor(
 
     private suspend fun dismissAgeVerification() {
         setState { copy(ageVerificationRequest = null, sendState = SendState.Idle) }
-        appendAssistantMessage("Age verification was canceled.", modelName = "CHEVERE AI")
+        appendAssistantMessage(getApplication<android.app.Application>().getString(R.string.ui_age_verification_was_canceled), modelName = "CHEVERE AI")
     }
 
     private suspend fun appendAssistantMessage(
@@ -631,7 +631,7 @@ class ChatViewModel @Inject constructor(
 
     private suspend fun promptForImageModelDownload() {
         appendAssistantMessage(
-            text = "Image generation needs a local image model first. Download an image generation model from Models, then try this prompt again.",
+            text = getApplication<android.app.Application>().getString(R.string.ui_image_generation_needs_a_local_image_model_first_download_an_ima),
             modelName = "CHEVERE AI"
         )
         sendEffect { ChatEffect.ShowImageModelDownloadPrompt }
@@ -717,7 +717,7 @@ class ChatViewModel @Inject constructor(
         imageGenerationJob?.cancel()
         imageGenerationJob = null
         setState { copy(sendState = SendState.Idle) }
-        appendAssistantMessage("Image generation canceled.", modelName = "CHEVERE AI")
+        appendAssistantMessage(getApplication<android.app.Application>().getString(R.string.ui_image_generation_canceled), modelName = "CHEVERE AI")
     }
 
     private suspend fun stopActiveResponse() {
@@ -730,7 +730,7 @@ class ChatViewModel @Inject constructor(
         repository.resetAgentState()
         setState { copy(sendState = SendState.Idle) }
         if (hadActiveWork) {
-            appendAssistantMessage("Response stopped.", modelName = "CHEVERE AI")
+            appendAssistantMessage(getApplication<android.app.Application>().getString(R.string.ui_response_stopped), modelName = "CHEVERE AI")
         }
     }
 
@@ -775,20 +775,20 @@ class ChatViewModel @Inject constructor(
         if (message.isUser) return
 
         val shareText = buildString {
-            appendLine("Chevere AI Response")
+            appendLine(getApplication<android.app.Application>().getString(R.string.ui_chevere_ai_response))
             message.modelName?.let { modelName ->
-                appendLine("Generated by: $modelName")
+                appendLine(getApplication<android.app.Application>().getString(R.string.ui_generated_by_1_s, modelName))
             }
             appendLine()
             appendLine(message.text)
             appendLine()
             appendLine("---")
-            appendLine("Shared via Chevere AI")
+            appendLine(getApplication<android.app.Application>().getString(R.string.ui_shared_via_chevere_ai))
         }
 
         sendEffect {
             ChatEffect.ShareMessage(
-                title = "Share AI Response",
+                title = getApplication<android.app.Application>().getString(R.string.ui_share_ai_response),
                 text = shareText,
                 imageUri = message.imageUri?.toUri()
             )
@@ -832,7 +832,7 @@ class ChatViewModel @Inject constructor(
         val imageUri = message.imageUri ?: return
         if (message.isExplicitImage && message.isImageMasked) {
             viewModelScope.launch {
-                sendEffect { ChatEffect.ShowToast("Reveal the image before saving it.") }
+                sendEffect { ChatEffect.ShowToast(getApplication<android.app.Application>().getString(R.string.ui_reveal_the_image_before_saving_it)) }
             }
             return
         }
@@ -914,21 +914,21 @@ class ChatViewModel @Inject constructor(
                 val errorMsg = when (e) {
                     is LocationPermissionException -> {
                         sendEffect { ChatEffect.RequestLocationPermission }
-                        "Location permission is required to get local weather automatically. Please grant the permission or specify a city name (e.g. 'weather in Paris')."
+                        getApplication<android.app.Application>().getString(R.string.ui_location_permission_is_required_to_get_local_weather_automatical)
                     }
                     is ContactsPermissionException -> {
                         sendEffect { ChatEffect.RequestContactsPermission }
-                        "Contacts permission is required to look up people on this device. Please grant the permission or provide the email address directly."
+                        getApplication<android.app.Application>().getString(R.string.ui_contacts_permission_is_required_to_look_up_people_on_this_device)
                     }
                     is CalendarPermissionException -> {
                         sendEffect { ChatEffect.RequestCalendarPermission }
-                        "Calendar permission is required to read calendar events on this device. Please grant the permission."
+                        getApplication<android.app.Application>().getString(R.string.ui_calendar_permission_is_required_to_read_calendar_events_on_this_)
                     }
                     is MicPermissionException -> {
                         sendEffect { ChatEffect.RequestMicPermission }
-                        "Microphone permission is required to measure the ambient sound level. Please grant the permission and try again."
+                        getApplication<android.app.Application>().getString(R.string.ui_microphone_permission_is_required_to_measure_the_ambient_sound_l_9f5b1d)
                     }
-                    else -> e.message ?: "Action failed"
+                    else -> e.message ?: getApplication<android.app.Application>().getString(R.string.ui_action_failed)
                 }
                 val aiMsg = ChatMessage(
                     text = errorMsg,
@@ -1050,7 +1050,7 @@ class ChatViewModel @Inject constructor(
                 setState {
                     copy(
                         sendState = SendState.Error(
-                            e.message ?: "Image generation failed"
+                            e.message ?: getApplication<android.app.Application>().getString(R.string.ui_image_generation_failed)
                         )
                     )
                 }
@@ -1063,11 +1063,11 @@ class ChatViewModel @Inject constructor(
             }
 
         val aiMsg = ChatMessage(
-            text = "Generated image for: ${generation.prompt}",
+            text = getApplication<android.app.Application>().getString(R.string.ui_generated_image_for_1_s, generation.prompt),
             isUser = false,
             inferenceTimeMs = time,
             inputTokenCount = estimateTokenCount(prompt),
-            outputTokenCount = estimateTokenCount("Generated image for: ${generation.prompt}"),
+            outputTokenCount = estimateTokenCount(getApplication<android.app.Application>().getString(R.string.ui_generated_image_for_1_s, generation.prompt)),
             imageUri = generation.imageUri.toString(),
             modelName = currentState.selectedModel.replace(Constants.ModelFiles.ZIP_EXTENSION, "")
                 .uppercase(),
@@ -1100,7 +1100,7 @@ class ChatViewModel @Inject constructor(
         val prompt = fields["prompt"].orEmpty()
         return GeneratedImagePayload(
             imageUri = uri,
-            caption = if (prompt.isBlank()) "Generated image" else "Generated image for: $prompt"
+            caption = if (prompt.isBlank()) getApplication<android.app.Application>().getString(R.string.ui_generated_image) else getApplication<android.app.Application>().getString(R.string.ui_generated_image_for_1_s, prompt)
         )
     }
 
