@@ -30,7 +30,7 @@
     "downloadUrl": "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it.litertlm",
     "sizeBytes": 2765953024,
     "supportsVision": true,
-    "license": "Gemma Terms of Use"
+    "license": "Apache-2.0"
   },
   {
     "id": "gemma-4-e2b-it-q4",
@@ -41,7 +41,7 @@
     "downloadUrl": "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it-web.litertlm",
     "sizeBytes": 2008432640,
     "supportsVision": true,
-    "license": "Gemma Terms of Use"
+    "license": "Apache-2.0"
   },
   {
     "id": "qwen-2.5-coder-1.5b-it",
@@ -83,7 +83,7 @@
     "downloadUrl": "https://huggingface.co/litert-community/gemma-4-E4B-it-litert-lm/resolve/main/gemma-4-E4B-it.litertlm",
     "sizeBytes": 5165953024,
     "supportsVision": false,
-    "license": "Gemma Terms of Use"
+    "license": "Apache-2.0"
   },
   {
     "id": "local-diffusion-dreamshaper-onnx",

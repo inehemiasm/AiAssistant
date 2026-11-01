@@ -1,5 +1,8 @@
 package com.neo.chevere.ui.chat.components
 
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
+
 import android.net.Uri
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -621,6 +624,7 @@ private fun SuggestionChip(
                 ambientColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
                 spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
             )
+            .semantics { contentDescription = "Suggested next message: $suggestion" }
             .clickable(onClick = onClick)
     ) {
         Text(

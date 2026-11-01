@@ -1,6 +1,7 @@
 import com.google.firebase.appdistribution.gradle.firebaseAppDistribution
 plugins {
     alias(libs.plugins.android.application)
+    id("com.google.android.gms.oss-licenses-plugin")
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.google.services)
     alias(libs.plugins.firebase.crashlytics)
@@ -68,14 +69,9 @@ android {
                 "proguard-rules.pro"
             )
             
-            // Only use release signing if config is actually provided
-            val releaseSigning = signingConfigs.getByName("release")
-            signingConfig = if (releaseSigning.storeFile?.exists() == true) {
-                releaseSigning
-            } else {
-                signingConfigs.getByName("debug")
-            }
-            
+            // Production artifacts must never silently use the debug key.
+            signingConfig = signingConfigs.getByName("release")
+
             firebaseAppDistribution {
                 artifactType = "APK"
                 groups = "internal-testers"
@@ -107,6 +103,11 @@ android {
             useLegacyPackaging = false
         }
     }
+    lint {
+        // Android falls back to English for untranslated strings. Keep these visible as warnings
+        // for the initial US release; translation review remains tracked in docs/release-review.md.
+        warning += "MissingTranslation"
+    }
     testOptions {
         unitTests {
             isIncludeAndroidResources = true
@@ -118,6 +119,7 @@ android {
 }
 
 dependencies {
+    implementation("com.google.android.gms:play-services-oss-licenses:17.5.3")
 
 
     implementation(project(":ui-designsystem"))
@@ -169,7 +171,6 @@ dependencies {
     implementation(libs.guava.listenablefuture)
 
     implementation(libs.google.ai.edge.litertlm)
-    implementation(libs.mediapipe.tasks.genai)
 
     implementation(libs.androidx.exifinterface)
     implementation(libs.androidx.datastore.preferences)
@@ -194,4 +195,28 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+}
+
+// Keep debug/test/lint tasks usable without exposing or requiring release secrets.
+tasks.configureEach {
+    if (name == "validateSigningRelease") {
+        doFirst {
+            val signing = android.signingConfigs.getByName("release")
+            require(signing.storeFile?.isFile == true && !signing.storePassword.isNullOrBlank() &&
+                !signing.keyAlias.isNullOrBlank() && !signing.keyPassword.isNullOrBlank()) {
+                "Release signing is required. Configure RELEASE_STORE_FILE, RELEASE_STORE_PASSWORD, RELEASE_KEY_ALIAS, and RELEASE_KEY_PASSWORD. Debug-key fallback is prohibited."
+            }
+        }
+    }
+}
+
+// Exact resolved runtime inventory for release license review; not a legal clearance assertion.
+tasks.register("releaseDependencyInventory") {
+    doLast {
+        val output = layout.buildDirectory.file("reports/release/dependencies.txt").get().asFile
+        output.parentFile.mkdirs()
+        output.writeText(configurations.getByName("releaseRuntimeClasspath").incoming.resolutionResult.allComponents
+            .mapNotNull { it.moduleVersion?.toString() }.distinct().sorted().joinToString("\n"))
+        println("Release dependency inventory: ${output.absolutePath}")
+    }
 }

@@ -1,0 +1,24 @@
+{
+  "score": 2,
+  "summary": "The previous report-create rule validated fields but permitted unauthenticated intake. The new database is closed, and local report writes are now denied pending a protected intake design. This prevents public abuse but does not provide working production reporting.",
+  "findings": [
+    {
+      "check": "Identity and abuse controls",
+      "severity": "major",
+      "issue": "The prior schema-only create rule could be invoked outside the app by any caller. Length limits do not authenticate or rate-limit submissions.",
+      "recommendation": "Keep report writes closed until app verification or a protected, rate-limited intake endpoint is configured and tested. Do not restore open writes just to make the client succeed."
+    },
+    {
+      "check": "Read and mutation isolation",
+      "severity": "minor",
+      "issue": "Client report reads, updates and deletes are denied, which protects report contents. Administrator review/deletion must use restricted IAM access; that operational workflow has not been verified.",
+      "recommendation": "Assign a least-privilege reviewer and verify authorized review and deletion without granting general clients report-list access."
+    },
+    {
+      "check": "Retention and deletion",
+      "severity": "moderate",
+      "issue": "No retention period or deletion automation has been approved or verified.",
+      "recommendation": "Choose a period, implement deletion, account for billing requirements and verify it before making a public privacy promise."
+    }
+  ]
+}

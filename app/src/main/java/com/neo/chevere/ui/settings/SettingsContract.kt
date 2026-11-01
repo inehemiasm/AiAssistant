@@ -23,6 +23,7 @@ data class SettingsState(
 ) : UiState
 
 sealed class SettingsIntent : UiIntent {
+    data object OpenLicenses : SettingsIntent()
     data class UpdateTheme(val isDark: Boolean) : SettingsIntent()
     data class UpdateAtmosphericTheme(val theme: AtmosphericTheme) : SettingsIntent()
     data class UpdateWeatherUnitSystem(val unitSystem: WeatherUnitSystem) : SettingsIntent()
@@ -34,4 +35,6 @@ sealed class SettingsIntent : UiIntent {
     data class UpdateDownloadOnWifiOnly(val enabled: Boolean) : SettingsIntent()
 }
 
-sealed class SettingsEffect : UiEffect
+sealed class SettingsEffect : UiEffect {
+    data object OpenLicenses : SettingsEffect()
+}

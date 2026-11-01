@@ -6,6 +6,8 @@ import com.neo.chevere.domain.TaskStatus
 import com.neo.chevere.ui.tasks.toUiModel
 import com.neo.chevere.domain.AgentUiContent
 import com.neo.chevere.ui.chat.a2ui.TaskChecklistData
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.catch
 import android.Manifest
 import android.app.Application
@@ -75,7 +77,8 @@ class ChatViewModel @Inject constructor(
     private val chatHistoryRepository: ChatHistoryRepository,
     private val taskRepository: TaskRepository,
     private val aiContentReportRepository: AiContentReportRepository,
-    private val documentRepository: com.neo.chevere.domain.DocumentRepository
+    private val documentRepository: com.neo.chevere.domain.DocumentRepository,
+    private val suggestionRepository: com.neo.chevere.domain.ChatSuggestionRepository
 ) : BaseViewModel<ChatState, ChatIntent, ChatEffect>(application, ChatState()) {
 
     private val explicitImagePromptPolicy = ExplicitImagePromptPolicy()
@@ -128,8 +131,7 @@ class ChatViewModel @Inject constructor(
             }
         }
 
-        // 8. Initialize suggestions
-        setState { copy(suggestions = getSuggestions(false)) }
+        observeSuggestions()
     }
 
     private fun observeActivePartialResponse() {
@@ -286,7 +288,7 @@ class ChatViewModel @Inject constructor(
                 is ChatIntent.SelectImage -> setState {
                     copy(
                         selectedImageUri = intent.uri,
-                        suggestions = getSuggestions(intent.uri != null)
+                        suggestions = emptyList()
                     )
                 }
                 is ChatIntent.SetTempCameraUri -> setState { copy(tempCameraUri = intent.uri) }
@@ -360,7 +362,7 @@ class ChatViewModel @Inject constructor(
                     messages = emptyList(),
                     currentSessionId = null,
                     selectedImageUri = null,
-                    suggestions = getSuggestions(false)
+                    suggestions = emptyList()
                 )
             }
         }
@@ -414,7 +416,7 @@ class ChatViewModel @Inject constructor(
                     currentSessionId = null,
                     inputText = "",
                     selectedImageUri = null,
-                    suggestions = getSuggestions(false)
+                    suggestions = emptyList()
                 )
             }
             sendEffect { ChatEffect.CloseHistorySheet }
@@ -437,7 +439,7 @@ class ChatViewModel @Inject constructor(
                     messages = messages,
                     currentSessionId = sessionId,
                     selectedImageUri = null,
-                    suggestions = getSuggestions(false)
+                    suggestions = emptyList()
                 )
             }
             sendEffect { ChatEffect.ScrollToBottom }
@@ -509,7 +511,7 @@ class ChatViewModel @Inject constructor(
                 sendState = SendState.Sending,
                 inputText = "",
                 selectedImageUri = null,
-                suggestions = getSuggestions(false)
+                suggestions = emptyList()
             )
         }
         sendEffect { ChatEffect.ScrollToBottom }
@@ -808,14 +810,16 @@ class ChatViewModel @Inject constructor(
 
         setState { copy(reportDialogMessageIndex = null) }
         viewModelScope.launch(dispatcherProvider.io) {
-            aiContentReportRepository.submitReport(
+            val result = aiContentReportRepository.submitReport(
                 messageText = message.text,
                 modelName = message.modelName ?: currentState.selectedModel.ifBlank { "unknown" },
                 reason = reason,
                 additionalDetails = details
             )
             sendEffect {
-                ChatEffect.ShowToast(application.getString(R.string.report_submitted_toast))
+                ChatEffect.ShowToast(application.getString(
+                    if (result.isSuccess) R.string.report_submitted_toast else R.string.report_failed_toast
+                ))
             }
         }
     }
@@ -1116,28 +1120,30 @@ class ChatViewModel @Inject constructor(
      */
     private data class ImageCommand(val prompt: String)
 
-    private fun getSuggestions(hasImage: Boolean): List<String> {
-        val app = getApplication<Application>()
-        return if (hasImage) {
-            listOf(
-                app.getString(R.string.suggestion_describe_image),
-                app.getString(R.string.suggestion_what_is_in_photo),
-                app.getString(R.string.suggestion_extract_text),
-                app.getString(R.string.suggestion_scan_invoice)
-            )
-        } else {
-            listOf(
-                app.getString(R.string.suggestion_room_temp),
-                app.getString(R.string.suggestion_weather),
-                app.getString(R.string.suggestion_light_level),
-                app.getString(R.string.suggestion_noise_level),
-                app.getString(R.string.suggestion_battery_thermals),
-                app.getString(R.string.suggestion_kotlin_coroutine),
-                app.getString(R.string.suggestion_clean_architecture),
-                app.getString(R.string.suggestion_optimize_code)
-            )
+    /** Cancels obsolete predictions when the conversation, task, or model changes. */
+    private fun observeSuggestions() {
+        viewModelScope.launch {
+            uiState.map { state ->
+                SuggestionContext(state.messages.takeLast(4), state.selectedImageUri != null,
+                    state.currentSessionId, state.selectedModel,
+                    state.isReady && !state.isAiBusy && !state.isWaitingForConfirmation && state.inputText.isBlank())
+            }.distinctUntilChanged().collectLatest { context ->
+                setState { copy(suggestions = emptyList()) }
+                if (!context.available || (context.messages.isEmpty() && !context.hasImage)) return@collectLatest
+                kotlinx.coroutines.delay(500)
+                val predictions = withContext(dispatcherProvider.default) {
+                    suggestionRepository.predict(context.messages, context.hasImage)
+                }
+                setState { copy(suggestions = predictions) }
+            }
         }
     }
+
+    /** Presentation snapshot used to discard predictions from superseded tasks. */
+    private data class SuggestionContext(
+        val messages: List<ChatMessage>, val hasImage: Boolean, val sessionId: Long?,
+        val model: String, val available: Boolean
+    )
 
     private companion object {
         const val APPROX_CHARS_PER_TOKEN = 4.0

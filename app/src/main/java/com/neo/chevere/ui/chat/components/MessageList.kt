@@ -92,6 +92,8 @@ import com.neo.chevere.ui.common.MarkdownContent
 import com.neo.chevere.ui.designsystem.Typography
 import java.text.SimpleDateFormat
 import java.util.Date
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.core.os.ConfigurationCompat
 import java.util.Locale
 
 /**
@@ -364,7 +366,7 @@ fun FuturisticChatBubble(
             }
 
             val footerText = if (isUser) {
-                val time = SimpleDateFormat("h:mm a", Locale.getDefault()).format(Date())
+                val time = SimpleDateFormat("h:mm a", ConfigurationCompat.getLocales(LocalConfiguration.current)[0] ?: Locale.ROOT).format(Date())
                 "$time - ${stringResource(R.string.sent_status)}"
             } else {
                 message.modelName ?: stringResource(R.string.model_optimization_info)

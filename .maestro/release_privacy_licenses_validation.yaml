@@ -1,0 +1,22 @@
+appId: dev.neo.chevereai
+name: Privacy disclosures and packaged licenses
+---
+- launchApp:
+    clearState: false
+- tapOn: "Settings"
+- scrollUntilVisible:
+    element:
+      text: "SAFETY & PRIVACY"
+    direction: DOWN
+- tapOn: "SAFETY & PRIVACY"
+- scrollUntilVisible:
+    element:
+      text: "Open source licenses"
+    direction: DOWN
+- tapOn: "Open source licenses"
+- extendedWaitUntil:
+    visible: "Open source licenses"
+    timeout: 20000
+- assertNotVisible: "SAFETY & PRIVACY"
+- back
+- assertVisible: "Open source licenses"

@@ -1,0 +1,21 @@
+appId: dev.neo.chevereai
+name: Capabilities match the current build
+---
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible: "Ask Chevere AI…"
+    timeout: 45000
+- tapOn: "Ask Chevere AI…"
+- inputText: "What can you do?"
+- tapOn: "Send"
+- extendedWaitUntil:
+    visible: ".*across languages and platforms.*"
+    timeout: 20000
+- assertVisible: ".*Image generation is not available in this build.*"
+- tapOn: "Ask Chevere AI…"
+- inputText: "Can you generate images?"
+- tapOn: "Send"
+- extendedWaitUntil:
+    visible: "Image generation is not available in this build. With a compatible vision model, I can describe attached images and help extract text from them."
+    timeout: 20000

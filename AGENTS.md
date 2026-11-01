@@ -206,3 +206,38 @@ Apply these rules to new features and code changed by a task. Existing violation
 - After building the project, try to deploy, install, and launch the application on a connected device/emulator using `adb install` or the Gradle `installDebug` task followed by launching via ADB to verify success.
 - When modifying a user-facing scenario or UI flow, add or update a Maestro YAML flow under `.maestro/` and execute it (via the Maestro MCP `run` tool or `C:\maestro\bin\maestro.bat test .maestro/<flow>.yaml`) against the connected device/emulator to validate the modified scenario end-to-end.
 - Do not add `Co-Authored-By` or other AI/agent attribution to commits.
+
+## Agent harness behavior
+
+- `AgentOrchestrator` enforces the same routed tool names used for discovery, preserves a bounded current-request/policy/observation prompt across steps, and allows multi-tool continuation within the five-step budget.
+- Cancel ends the pending run without another model pass. Confirmed callbacks have a timeout and propagate coroutine cancellation. Reaching the step budget reports an incomplete outcome rather than claiming success.
+- Regression coverage lives in `AgentOrchestratorTest`, `ToolRegistryTest`, and `ChatTaskActionTest`; `.maestro/mcp_confirmation_validation.yaml` checks actionable confirmation and cancellation.
+- Runs remain in memory. Durable checkpoints, complete typed argument schemas, cross-category planning, idempotency/retry policy, and independent completion verification are follow-up work.
+
+## Contextual composer suggestions
+
+- Suggestion pills are predicted by the local model from up to four recent messages and attachment presence through domain `ChatSuggestionRepository`. `LocalChatSuggestionRepository` validates output into at most three short draft strings.
+- `ChatViewModel` owns prediction lifecycle: clear/cancel when busy, typing, awaiting confirmation, changing models or sessions. Empty conversations show no fixed fallback topics. A pill fills the composer and never sends automatically.
+- `LlmRuntimeManager.predictInIsolation` uses an engine-locked temporary conversation, closed on completion/cancellation. LiteRT permits one native session: close the idle chat session before prediction and recreate it afterward; retained chat memory comes from ConversationContextManager. Prediction has a 12-second timeout and 128 streamed-chunk cap; it does not call agent tools or modify chat memory. Actual attachment pixels are not included in prediction context.
+- Tests: `LocalChatSuggestionRepositoryTest`, `ChatTaskActionTest`; device flow: `.maestro/contextual_suggestions_validation.yaml`.
+
+## Capability descriptions
+
+- `data/chat/ChatCapabilities.kt` owns the current overview and model capability copy. Keep deterministic answers, direct chat, vision prompts, and agent instructions aligned with enabled features.
+- Describe Chevere as general-purpose: coding assistance spans languages/platforms. Image generation is unavailable in the current build; compatible vision models can analyze attachments. Include document search and confirmed remote MCP tools with their current limitations.
+- Regression tests: `ChatRequestRouterTest`; on-device flow: `.maestro/capabilities_validation.yaml`.
+
+## Release hardening
+
+- Release signing must use configured production credentials; never restore debug-key fallback. Verify the upload certificate against Play Console before uploading.
+- `AiSafetyPolicy.INSTRUCTION` supplies baseline guidance to chat/vision/agent/suggestion paths; it is not a validated moderation system. See `docs/release-review.md` for open gates.
+- Report timeouts must surface failure, and coroutine cancellation must propagate. Never log raw throwable messages, tool arguments, prompts, or paths to release telemetry.
+- Voice input requests offline recognition through Android, but provider behavior may involve network access. Keep permission, onboarding, settings and privacy disclosures accurate.
+- The open-source notices viewer is reached via Settings MVI effects using Google OSS Licenses. Generated notices do not replace model/conversion/asset/API license review.
+- Generate exact runtime coordinates using `:app:releaseDependencyInventory`. Run `scripts/build_license_inventory.py` for cached POM metadata and `scripts/check_native_alignment.py` against the actual APK/AAB. Keep unknown licensing explicit.
+- Partial translations remain lint warnings for the initial US release; stale privacy translations fall back to corrected English. Translation QA is still required.
+- Policy/terms drafts are not automatically deployed. Retention, publisher/contact information and external declarations require verified operational choices before production.
+
+### Production reporting gate
+
+The Standard `(default)` Firestore database is provisioned in `aiassistant-88f75` / `us-central1`. Current deployed rules deliberately deny client report writes until protected intake and operational retention/review controls are configured. Do not restore unauthenticated report writes. Schema validation alone is not anti-abuse protection. Report submission errors must be displayed truthfully. See `docs/release-review.md` and `docs/firestore-security-audit.json`.

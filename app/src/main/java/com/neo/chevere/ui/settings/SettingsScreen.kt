@@ -1,5 +1,7 @@
 package com.neo.chevere.ui.settings
 
+import androidx.compose.runtime.LaunchedEffect
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -79,6 +81,15 @@ fun SettingsScreen(
     onRadarClick: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
+    val context = androidx.compose.ui.platform.LocalContext.current
+    LaunchedEffect(viewModel) {
+        viewModel.effect.collect { effect ->
+            when (effect) {
+                SettingsEffect.OpenLicenses -> context.startActivity(android.content.Intent(context,
+                    com.google.android.gms.oss.licenses.v2.OssLicensesMenuActivity::class.java))
+            }
+        }
+    }
     SettingsContent(
         state = state,
         onIntent = { viewModel.onIntent(it) },
@@ -365,6 +376,9 @@ fun SettingsContent(
                 )
                 Spacer(Modifier.height(12.dp))
 
+                androidx.compose.material3.TextButton(onClick = { onIntent(SettingsIntent.OpenLicenses) }) {
+                    Text("Open source licenses")
+                }
                 // Privacy Policy External Link Card
                 val privacyUrl = stringResource(R.string.privacy_policy_url)
                 Surface(

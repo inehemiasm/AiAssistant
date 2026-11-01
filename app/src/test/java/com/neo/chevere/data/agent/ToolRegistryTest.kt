@@ -212,4 +212,11 @@ class ToolRegistryTest {
         assertTrue(!systemPrompt.contains("get_weather"))
         assertTrue(!systemPrompt.contains("generate_image"))
     }
+    @Test fun executionPolicyMatchesPromptCategories() {
+        val registry = ToolRegistry(productionTools)
+        assertEquals(setOf("get_weather", "web_search"), registry.allowedToolNames(RoutingCategory.LIVE_INFORMATION))
+        assertTrue(registry.allowedToolNames(RoutingCategory.DIRECT_CHAT).isEmpty())
+        assertEquals(setOf("mcp"), registry.allowedToolNames(RoutingCategory.MCP))
+    }
+
 }

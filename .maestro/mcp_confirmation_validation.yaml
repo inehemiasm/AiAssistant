@@ -18,3 +18,7 @@ name: MCP confirmation remains actionable
 - extendedWaitUntil:
     notVisible: "Confirm Action"
     timeout: 15000
+
+- extendedWaitUntil:
+    visible: "Action canceled. No pending action was executed."
+    timeout: 15000

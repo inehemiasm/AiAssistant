@@ -53,7 +53,9 @@ class LocationProvider @Inject constructor(
             }
         val known = listOf(LocationManager.NETWORK_PROVIDER, LocationManager.GPS_PROVIDER)
             .filter { it != LocationManager.GPS_PROVIDER || hasPermission(Manifest.permission.ACCESS_FINE_LOCATION) }
-            .mapNotNull { provider -> runCatching { manager?.getLastKnownLocation(provider) }.getOrNull() }
+            .mapNotNull { provider ->
+                try { manager?.getLastKnownLocation(provider) } catch (_: SecurityException) { null }
+            }
             .filter { it.isUsable(now) }.maxByOrNull { it.time }
         val retained = cache.read(now, allowPrecise = hasPermission(Manifest.permission.ACCESS_FINE_LOCATION))
         val fallback = listOfNotNull(known, retained).maxByOrNull { it.time }
@@ -96,6 +98,8 @@ class LocationProvider @Inject constructor(
             try {
                 manager?.requestLocationUpdates(provider, 0L, 0f, listener, context.mainLooper)
                 registered = true
+            } catch (_: SecurityException) {
+                // Permission can be revoked while waiting; no location is returned without access.
             } catch (_: Exception) {
                 // Another enabled provider may still return a usable fix.
             }

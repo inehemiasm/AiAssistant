@@ -18,9 +18,10 @@
     <string name="share_message">Share message</string>
     <string name="report_message">Report AI response</string>
     <string name="report_ai_response_title">Report AI Response</string>
-    <string name="report_ai_response_subtitle">Flag offensive, unsafe, or inaccurate AI-generated content for review. Reports are scrubbed of personal identifiers before submission.</string>
+    <string name="report_ai_response_subtitle">Report offensive, unsafe, or inaccurate AI content. The reported response and optional notes are sent for review after best-effort removal of personal identifiers. Avoid including sensitive information.</string>
     <string name="report_additional_details_hint">Additional details (optional)</string>
     <string name="report_submit">SUBMIT REPORT</string>
+    <string name="report_failed_toast">Could not confirm report submission. Please try again when connected.</string>
     <string name="report_submitted_toast">Thank you. Your report has been submitted for review.</string>
     <string name="read_message_aloud">Read aloud</string>
     <string name="stop_reading_aloud">Stop reading</string>
@@ -72,7 +73,7 @@
     <string name="system_info">SYSTEM INFO</string>
     <string name="safety_privacy">SAFETY &amp; PRIVACY</string>
     <string name="local_first_ai">Local-first AI</string>
-    <string name="local_first_ai_desc">Prompts, images, and generated files stay on this device unless you choose to share them.</string>
+    <string name="local_first_ai_desc">Core model inference runs locally. Web and weather tools, downloads, reports, sharing, and confirmed MCP calls send selected data to external services.</string>
     <string name="offline_processing">Offline processing</string>
     <string name="offline_processing_desc">Chat and vision inference run on installed local models. Network access is only used for model catalogs, downloads, and explicit web-backed tools.</string>
     <string name="release_content_controls">AI content safety &amp; reporting</string>
@@ -80,7 +81,7 @@
     <string name="user_controlled_sharing">User-controlled sharing</string>
     <string name="user_controlled_sharing_desc">Assistant responses are shared through the Android share sheet or flagged for review only when you explicitly choose to do so.</string>
     <string name="local_storage_privacy">Local storage</string>
-    <string name="local_storage_privacy_desc">Downloaded models and generated images are stored in app-controlled local storage. Deleting the app removes app-private data.</string>
+    <string name="local_storage_privacy_desc">Chats, documents, tasks, invoices, and models use app-private storage. Deleting a chat does not delete other data. Clearing app storage removes local data; shared files and submitted reports are separate.</string>
     <string name="version_label">Version</string>
     <string name="engine_label">Engine</string>
     <string name="protocol_label">Protocol</string>
@@ -98,10 +99,10 @@
     <string name="calendar_permission_granted">Calendar permission granted.</string>
     <string name="calendar_permission_denied">Calendar permission denied.</string>
 
-    <string name="location_permission_disclosure">Chevere AI requests Location access to check the local weather for your current city. Your coordinates are processed locally on this device and geocoded via open APIs.</string>
-    <string name="contacts_permission_disclosure">Chevere AI requests Contacts access to search for emails locally when you ask the assistant to compose messages. Your contacts data never leaves this device.</string>
+    <string name="location_permission_disclosure">Location access supplies coordinates to the weather provider to retrieve your forecast. Coordinates may be cached briefly on this device; they are not sent to our own servers by the weather feature.</string>
+    <string name="contacts_permission_disclosure">Contacts access searches names and email addresses locally. If you choose to draft, share, or send those details to another app or a confirmed remote tool, that destination receives them.</string>
     <string name="calendar_permission_disclosure">Chevere AI requests Calendar access to schedule and view your calendar events. This data is only used locally to fulfill your direct assistant commands.</string>
-    <string name="microphone_permission_disclosure">Chevere AI requests Microphone access to measure the ambient sound level for the local Sensor Radar. Your audio is analyzed locally in real-time and never recorded or sent.</string>
+    <string name="microphone_permission_disclosure">Microphone access measures sound locally or supports voice input. Voice input uses your Android speech provider and requests offline recognition, but the provider may use a network service. Review your speech provider settings before dictating sensitive information.</string>
     <string name="neural_cores">NEURAL CORES</string>
     <string name="chat_label">Chat</string>
     <string name="models_label">Models</string>
@@ -121,7 +122,7 @@
     <string name="onboarding_title">Private AI, powered by your device</string>
     <string name="onboarding_subtitle">Download a local model to start chatting. Chevere AI runs the core experience on-device, so setup is heavier than a cloud chatbot but gives you more local control.</string>
     <string name="onboarding_privacy_title">Local-first privacy</string>
-    <string name="onboarding_privacy_body">Chats, image attachments, and generated files stay in app storage unless you choose to share them.</string>
+    <string name="onboarding_privacy_body">Core AI processing runs locally. Optional web, weather, sharing, reports, and confirmed remote tools send selected information to other services.</string>
     <string name="onboarding_heavy_title">Local LLMs are large</string>
     <string name="onboarding_heavy_body">Models can take gigabytes of storage and may warm up your device during downloads, loading, or long responses.</string>
     <string name="onboarding_image_title">Chat and image models are separate</string>

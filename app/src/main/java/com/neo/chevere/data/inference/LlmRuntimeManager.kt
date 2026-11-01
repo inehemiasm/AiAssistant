@@ -8,6 +8,8 @@ import com.neo.chevere.core.Constants
 import com.neo.chevere.core.DispatcherProvider
 import com.neo.chevere.domain.InitializationStatus
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.take
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -119,6 +121,26 @@ class LlmRuntimeManager @Inject constructor(
             Timber.tag(TAG).w("Warmup skipped: ${e.message}")
         } finally {
             warmupConv.close()
+        }
+    }
+
+    /** Predicts UI follow-ups without changing the active chat conversation. */
+    suspend fun predictInIsolation(message: Message): Result<List<Message>> = withContext(dispatcherProvider.default) {
+        engineLock.withLock {
+            if (!isInitialized) return@withContext Result.failure(IllegalStateException("No model loaded"))
+            // LiteRT supports one native session. ConversationContextManager owns retained chat memory.
+            activeConversation?.close()
+            activeConversation = null
+            var prediction: ConversationWrapper? = null
+            try {
+                val conversation = engineWrapper.createConversation()
+                prediction = conversation
+                Result.success(conversation.sendMessageAsync(message).take(128).toList())
+            } finally {
+                try { prediction?.close() } finally {
+                    activeConversation = if (isInitialized) engineWrapper.createConversation() else null
+                }
+            }
         }
     }
 
