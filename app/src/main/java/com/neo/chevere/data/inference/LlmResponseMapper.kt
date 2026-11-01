@@ -12,7 +12,8 @@ import javax.inject.Singleton
 class LlmResponseMapper @Inject constructor() {
 
     /**
-     * Extracts text content from a LiteRT-LM Message response.
+     * Extracts answer content only. Auxiliary channels (including Spark's thought
+     * channel) must never become visible replies or agent tool instructions.
      */
     fun mapToString(message: Message, trim: Boolean = true): String {
         val contents = message.contents.contents

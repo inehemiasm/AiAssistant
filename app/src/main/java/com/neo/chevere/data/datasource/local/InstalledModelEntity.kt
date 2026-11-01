@@ -1,5 +1,6 @@
 package com.neo.chevere.data.datasource.local
 
+import com.neo.chevere.data.inference.ModelRuntimeProfile
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.neo.chevere.domain.InstallStatus
@@ -37,9 +38,11 @@ fun InstalledModelEntity.toDomain(): InstalledModel {
         source = source,
         format = format,
         runtime = runtime,
-        taskType = taskType,
+        taskType = if (ModelRuntimeProfile.isTextOnlyGpu(fileName)) ModelTaskType.CHAT else taskType,
         capabilities = capabilities.split(",").filter { it.isNotEmpty() }
-            .map { ModelCapability.valueOf(it) }.toSet(),
+            .map { ModelCapability.valueOf(it) }.toSet().let { decoded ->
+                if (ModelRuntimeProfile.isTextOnlyGpu(fileName)) decoded - ModelCapability.VISION else decoded
+            },
         installStatus = installStatus,
         sizeBytes = sizeBytes,
         checksum = checksum,

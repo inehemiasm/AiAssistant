@@ -59,13 +59,7 @@ class LlmRuntimeManager @Inject constructor(
                 if (!exists()) mkdirs()
             }
 
-            val backends = buildList {
-                if (enableVision) {
-                    add(Triple(Backend.GPU(), Backend.CPU(), "GPU + Vision"))
-                    add(Triple(Backend.CPU(), Backend.CPU(), "CPU + Vision"))
-                }
-                add(Triple(Backend.CPU(), null, "Text-Only"))
-            }
+            val backends = ModelRuntimeProfile.backends(modelPath, enableVision)
 
             var lastError: Throwable? = null
 
@@ -76,7 +70,7 @@ class LlmRuntimeManager @Inject constructor(
                         modelPath = modelPath,
                         backend = main,
                         visionBackend = vision,
-                        maxNumTokens = Constants.Inference.MAX_NUM_TOKENS,
+                        maxNumTokens = ModelRuntimeProfile.contextSize(modelPath),
                         cacheDir = neuralCache.absolutePath
                     )
 
@@ -84,12 +78,12 @@ class LlmRuntimeManager @Inject constructor(
 
                     _initStatus.value = InitializationStatus.Initializing("WARMING UP $label...")
                     performWarmup(vision != null)
+                    activeConversation = engineWrapper.createConversation()
                 }
 
                 if (result.isSuccess) {
                     Timber.tag(TAG).i("Successfully initialized with $label")
                     isVisionEnabled = vision != null
-                    activeConversation = engineWrapper.createConversation()
                     isInitialized = true
                     _initStatus.value = InitializationStatus.Ready
                     return@withContext Result.success(Unit)
@@ -102,9 +96,13 @@ class LlmRuntimeManager @Inject constructor(
                 neuralCache.mkdirs()
             }
 
-            val failureMessage = "Hardware incompatible or model corrupt."
+            val failureMessage = if (ModelRuntimeProfile.isTextOnlyGpu(modelPath)) {
+                "This text-only Gemma variant requires a compatible GPU. Try the standard Gemma 4 E2B model if GPU loading fails."
+            } else {
+                "Model loading failed. Check that this model variant supports your device and runtime, or try another model."
+            }
             _initStatus.value = InitializationStatus.Failure(failureMessage, lastError)
-            Result.failure(lastError ?: Exception(failureMessage))
+            Result.failure(IllegalStateException(failureMessage, lastError))
         }
     }
 

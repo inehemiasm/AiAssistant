@@ -34,14 +34,15 @@
   },
   {
     "id": "gemma-4-e2b-it-q4",
-    "displayName": "Gemma 4 E2B IT (Quantized)",
+    "displayName": "Gemma 4 E2B IT (Text-only GPU)",
     "source": "HUGGING_FACE",
     "repoId": "litert-community/gemma-4-E2B-it-litert-lm",
     "fileName": "gemma-4-E2B-it-web.litertlm",
     "downloadUrl": "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it-web.litertlm",
     "sizeBytes": 2008432640,
-    "supportsVision": true,
-    "license": "Apache-2.0"
+    "supportsVision": false,
+    "license": "Apache-2.0",
+    "description": "Text-only Web-optimized conversion. Requires a compatible GPU; no vision encoder or CPU fallback. Use standard Gemma 4 E2B for image understanding."
   },
   {
     "id": "qwen-2.5-coder-1.5b-it",
@@ -104,5 +105,18 @@
     "runtimeType": "ONNX Diffusion",
     "supportsVision": true,
     "license": "Model-specific community checkpoint license"
+  },
+  {
+    "id": "spark-x2.6-4b-int8",
+    "displayName": "Spark X2.6 4B (INT8 CPU)",
+    "source": "HUGGING_FACE",
+    "repoId": "litert-community/Spark-X2.6-4B",
+    "fileName": "Spark-X2.6-4B_int8.litertlm",
+    "downloadUrl": "https://huggingface.co/litert-community/Spark-X2.6-4B/resolve/f8da72659679424c286a526b77a39fb5f669dd72/Spark-X2.6-4B_int8.litertlm",
+    "sizeBytes": 4238081840,
+    "sha256": "3fae1eca71a67a03e597240e802c3ea17574a9f22499e38cfa9a7d76cebb7565",
+    "supportsVision": false,
+    "license": "Apache-2.0",
+    "description": "Experimental text-only model. 4.24 GB download; additional free RAM required. CPU INT8, 4096-token context, thinking disabled. Device performance varies."
   }
 ]
