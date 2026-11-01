@@ -6,7 +6,9 @@ import com.neo.chevere.BuildConfig
 import com.neo.chevere.core.PiiUtils
 import com.neo.chevere.data.telemetry.AppTelemetry
 import kotlinx.coroutines.tasks.await
-import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.TimeoutCancellationException
 import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -20,7 +22,7 @@ private const val MAX_DETAILS_LENGTH = 300
 /**
  * Handles in-app user reports of offensive, inaccurate, or inappropriate AI-generated responses.
  *
- * Satisfies Google Play's AI-Generated Content policy by persisting scrubbed reports to
+ * Supports in-app reporting by persisting scrubbed reports to
  * Cloud Firestore (`ai_content_reports`) and recording an anonymized telemetry signal.
  */
 @Singleton
@@ -56,11 +58,13 @@ class AiContentReportRepository @Inject constructor(
             "createdAt" to FieldValue.serverTimestamp()
         )
 
-        withTimeoutOrNull(FIRESTORE_TIMEOUT_MS) {
+        withTimeout(FIRESTORE_TIMEOUT_MS) {
             firestore.collection(REPORTS_COLLECTION)
                 .add(payload)
                 .await()
         }
         Timber.tag(TAG).d("AI content report submitted (reason=%s, model=%s)", safeReason, safeModel)
+    }.onFailure { error ->
+        if (error is CancellationException && error !is TimeoutCancellationException) throw error
     }
 }

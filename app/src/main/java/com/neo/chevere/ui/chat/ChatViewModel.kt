@@ -810,14 +810,16 @@ class ChatViewModel @Inject constructor(
 
         setState { copy(reportDialogMessageIndex = null) }
         viewModelScope.launch(dispatcherProvider.io) {
-            aiContentReportRepository.submitReport(
+            val result = aiContentReportRepository.submitReport(
                 messageText = message.text,
                 modelName = message.modelName ?: currentState.selectedModel.ifBlank { "unknown" },
                 reason = reason,
                 additionalDetails = details
             )
             sendEffect {
-                ChatEffect.ShowToast(application.getString(R.string.report_submitted_toast))
+                ChatEffect.ShowToast(application.getString(
+                    if (result.isSuccess) R.string.report_submitted_toast else R.string.report_failed_toast
+                ))
             }
         }
     }

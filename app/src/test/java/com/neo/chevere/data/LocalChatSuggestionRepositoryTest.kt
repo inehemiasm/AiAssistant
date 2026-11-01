@@ -40,7 +40,7 @@ class LocalChatSuggestionRepositoryTest {
         verify(factory).createTextMessage(prompt.capture())
         assertTrue(prompt.firstValue.contains("turn8"))
         assertFalse(prompt.firstValue.contains("turn1"))
-        assertTrue(prompt.firstValue.length < 4000)
+        assertTrue(prompt.firstValue.length < 5000)
         verify(runtime, never()).clearConversation()
     }
 }

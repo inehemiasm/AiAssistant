@@ -225,7 +225,8 @@ class FirebaseAppTelemetry @Inject constructor(
 
     override fun recordNonFatal(throwable: Throwable, context: String) {
         crashlytics.setCustomKey(TelemetryConstants.CrashKey.NON_FATAL_CONTEXT, context.safeValue())
-        crashlytics.recordException(throwable)
+        // Throwable messages and causes may contain user content or remote tool arguments.
+        crashlytics.recordException(IllegalStateException("${throwable.javaClass.simpleName} in ${context.safeValue()}"))
     }
 
     private fun logEvent(name: String, build: Bundle.() -> Unit) {

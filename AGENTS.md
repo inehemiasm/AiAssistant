@@ -226,3 +226,18 @@ Apply these rules to new features and code changed by a task. Existing violation
 - `data/chat/ChatCapabilities.kt` owns the current overview and model capability copy. Keep deterministic answers, direct chat, vision prompts, and agent instructions aligned with enabled features.
 - Describe Chevere as general-purpose: coding assistance spans languages/platforms. Image generation is unavailable in the current build; compatible vision models can analyze attachments. Include document search and confirmed remote MCP tools with their current limitations.
 - Regression tests: `ChatRequestRouterTest`; on-device flow: `.maestro/capabilities_validation.yaml`.
+
+## Release hardening
+
+- Release signing must use configured production credentials; never restore debug-key fallback. Verify the upload certificate against Play Console before uploading.
+- `AiSafetyPolicy.INSTRUCTION` supplies baseline guidance to chat/vision/agent/suggestion paths; it is not a validated moderation system. See `docs/release-review.md` for open gates.
+- Report timeouts must surface failure, and coroutine cancellation must propagate. Never log raw throwable messages, tool arguments, prompts, or paths to release telemetry.
+- Voice input requests offline recognition through Android, but provider behavior may involve network access. Keep permission, onboarding, settings and privacy disclosures accurate.
+- The open-source notices viewer is reached via Settings MVI effects using Google OSS Licenses. Generated notices do not replace model/conversion/asset/API license review.
+- Generate exact runtime coordinates using `:app:releaseDependencyInventory`. Run `scripts/build_license_inventory.py` for cached POM metadata and `scripts/check_native_alignment.py` against the actual APK/AAB. Keep unknown licensing explicit.
+- Partial translations remain lint warnings for the initial US release; stale privacy translations fall back to corrected English. Translation QA is still required.
+- Policy/terms drafts are not automatically deployed. Retention, publisher/contact information and external declarations require verified operational choices before production.
+
+### Production reporting gate
+
+The Standard `(default)` Firestore database is provisioned in `aiassistant-88f75` / `us-central1`. Current deployed rules deliberately deny client report writes until protected intake and operational retention/review controls are configured. Do not restore unauthenticated report writes. Schema validation alone is not anti-abuse protection. Report submission errors must be displayed truthfully. See `docs/release-review.md` and `docs/firestore-security-audit.json`.

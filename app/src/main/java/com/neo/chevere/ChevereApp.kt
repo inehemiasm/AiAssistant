@@ -103,15 +103,13 @@ class ChevereApp : Application(), Configuration.Provider {
                         Log.ASSERT -> "ASSERT"
                         else -> "UNKNOWN"
                     }
-                    crashlytics.log("$priorityStr/${tag ?: "Timber"}: $message")
-                    if (t != null) {
-                        crashlytics.recordException(t)
-                    } else {
-                        crashlytics.recordException(Exception(message))
-                    }
+                    // Release warnings/errors can include prompts, URLs, file paths or remote arguments.
+                    val category = t?.javaClass?.simpleName ?: "ApplicationWarning"
+                    crashlytics.log("$priorityStr/$category")
+                    crashlytics.recordException(IllegalStateException("$priorityStr/$category"))
                 } catch (e: Exception) {
                     // Fallback to standard Logcat if Firebase/Crashlytics is not initialized or fails
-                    Log.println(priority, tag, message)
+                    Log.println(priority, "Chevere", "Diagnostic reporting unavailable")
                 }
             }
         }

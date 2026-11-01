@@ -38,11 +38,15 @@ jobs:
           ENCODED_KEYSTORE: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
         run: echo $ENCODED_KEYSTORE | base64 --decode > release.jks
 
-      - name: Build and Upload Release to Firebase
+      - name: Validate, Build and Upload Release to Firebase
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/service-account.json
           RELEASE_STORE_FILE: ${{ github.workspace }}/release.jks
           RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
           RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
           RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
-        run: ./gradlew assembleRelease appDistributionUploadRelease
+        run: |
+          ./gradlew :app:lintRelease
+          ./gradlew :app:assembleRelease :app:bundleRelease
+          python3 scripts/check_native_alignment.py app/build/outputs/bundle/release/app-release.aab
+          ./gradlew appDistributionUploadRelease

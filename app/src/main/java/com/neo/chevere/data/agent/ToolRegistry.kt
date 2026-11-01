@@ -60,6 +60,8 @@ class ToolRegistry @Inject constructor(
         if (includedTools.isEmpty()) return ""
 
         return buildString {
+            append(com.neo.chevere.domain.AiSafetyPolicy.INSTRUCTION)
+            append("\n")
             append(com.neo.chevere.data.chat.ChatCapabilities.AGENT_CONTEXT)
             append("\n\nAgent protocol:\n")
             append("1. Treat the latest CURRENT USER REQUEST as the task to complete now.\n")

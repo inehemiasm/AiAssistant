@@ -29,7 +29,7 @@ class McpTool @Inject constructor() : AgentTool {
         val action = args["action"] ?: "list"
         if (action !in setOf("list", "call")) return ToolResult.Error("Use list or call.")
         return ToolResult.NeedsConfirmation(
-            if (action == "call") "Call MCP tool ${args["tool"]} on ${url.host} with arguments ${args["arguments"] ?: "{}"}?"
+            if (action == "call") "Send these arguments to ${url.host} and call ${args["tool"]}: ${args["arguments"] ?: "{}"}? The server receives this data and handles it under its own privacy policy."
             else "Connect to MCP server $url and discover its tools?"
         ) { exchange(endpoint, action, args) }
     }

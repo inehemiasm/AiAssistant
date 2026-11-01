@@ -60,7 +60,6 @@
     <string name="system_info">INFO DEL SISTEMA</string>
     <string name="safety_privacy">SEGURIDAD Y PRIVACIDAD</string>
     <string name="local_first_ai">IA local primero</string>
-    <string name="local_first_ai_desc">Los prompts, imagenes y archivos generados permanecen en este dispositivo salvo que decidas compartirlos.</string>
     <string name="offline_processing">Procesamiento sin conexion</string>
     <string name="offline_processing_desc">La inferencia de chat y la generacion de imagenes se ejecutan con modelos locales instalados. La red solo se usa para catalogos, descargas y herramientas web explicitas.</string>
     <string name="release_content_controls">Controles de contenido en release</string>
@@ -68,7 +67,6 @@
     <string name="user_controlled_sharing">Compartir bajo tu control</string>
     <string name="user_controlled_sharing_desc">Las respuestas del asistente solo se comparten mediante la hoja de compartir de Android cuando tocas compartir. Chevere AI no envia el chat a un endpoint de reportes.</string>
     <string name="local_storage_privacy">Almacenamiento local</string>
-    <string name="local_storage_privacy_desc">Los modelos descargados y las imagenes generadas se guardan en almacenamiento local controlado por la app. Al borrar la app se eliminan los datos privados de la app.</string>
     <string name="version_label">Version</string>
     <string name="engine_label">Motor</string>
     <string name="protocol_label">Protocolo</string>
@@ -95,7 +93,6 @@
     <string name="onboarding_title">IA privada, impulsada por tu dispositivo</string>
     <string name="onboarding_subtitle">Descarga un modelo local para empezar a chatear. Chevere AI ejecuta la experiencia principal en el dispositivo, asi que la configuracion es mas pesada que un chatbot en la nube, pero te da mas control local.</string>
     <string name="onboarding_privacy_title">Privacidad local primero</string>
-    <string name="onboarding_privacy_body">Los chats, adjuntos de imagen y archivos generados permanecen en el almacenamiento de la app salvo que decidas compartirlos.</string>
     <string name="onboarding_heavy_title">Los LLM locales son grandes</string>
     <string name="onboarding_heavy_body">Los modelos pueden ocupar gigabytes y calentar el dispositivo durante descargas, carga o respuestas largas.</string>
     <string name="onboarding_image_title">Chat e imagen usan modelos separados</string>

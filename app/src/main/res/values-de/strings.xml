@@ -60,7 +60,6 @@
     <string name="system_info">SYSTEMINFO</string>
     <string name="safety_privacy">SICHERHEIT UND DATENSCHUTZ</string>
     <string name="local_first_ai">Lokale KI zuerst</string>
-    <string name="local_first_ai_desc">Prompts, Bilder und generierte Dateien bleiben auf diesem Geraet, sofern du sie nicht teilst.</string>
     <string name="offline_processing">Offline-Verarbeitung</string>
     <string name="offline_processing_desc">Chat-Inferenz und Bilderzeugung laufen mit installierten lokalen Modellen. Netzwerkzugriff wird nur fuer Modellkataloge, Downloads und explizite Web-Tools genutzt.</string>
     <string name="release_content_controls">Inhaltskontrollen in Release-Builds</string>
@@ -68,7 +67,6 @@
     <string name="user_controlled_sharing">Teilen unter deiner Kontrolle</string>
     <string name="user_controlled_sharing_desc">Assistentenantworten werden nur ueber das Android-Teilen-Menue geteilt, wenn du auf Teilen tippst. Chevere AI sendet Chatinhalte nicht an einen Melde-Endpunkt.</string>
     <string name="local_storage_privacy">Lokaler Speicher</string>
-    <string name="local_storage_privacy_desc">Heruntergeladene Modelle und generierte Bilder werden im appgesteuerten lokalen Speicher abgelegt. Beim Loeschen der App werden private App-Daten entfernt.</string>
     <string name="version_label">Version</string>
     <string name="engine_label">Engine</string>
     <string name="protocol_label">Protokoll</string>
@@ -95,7 +93,6 @@
     <string name="onboarding_title">Private KI, direkt auf deinem Geraet</string>
     <string name="onboarding_subtitle">Lade ein lokales Modell herunter, um zu chatten. Chevere AI fuehrt die Kernfunktionen auf dem Geraet aus. Das Setup ist schwerer als bei einem Cloud-Chatbot, gibt dir aber mehr lokale Kontrolle.</string>
     <string name="onboarding_privacy_title">Lokaler Datenschutz zuerst</string>
-    <string name="onboarding_privacy_body">Chats, Bildanhaenge und generierte Dateien bleiben im App-Speicher, sofern du sie nicht teilst.</string>
     <string name="onboarding_heavy_title">Lokale LLMs sind gross</string>
     <string name="onboarding_heavy_body">Modelle koennen mehrere GB Speicher belegen und das Geraet beim Download, Laden oder bei langen Antworten aufwaermen.</string>
     <string name="onboarding_image_title">Chat und Bilder nutzen getrennte Modelle</string>

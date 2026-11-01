@@ -68,6 +68,7 @@ class SettingsViewModel @Inject constructor(
 
     override suspend fun handleIntent(intent: SettingsIntent) {
         when (intent) {
+            SettingsIntent.OpenLicenses -> sendEffect { SettingsEffect.OpenLicenses }
             is SettingsIntent.UpdateTheme -> {
                 preferenceManager.updateTheme(intent.isDark)
             }
