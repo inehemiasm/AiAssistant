@@ -16,7 +16,7 @@ External tools receive the data disclosed for their operation, including argumen
 
 ## Privacy, support and rights
 
-Incorporate the reviewed privacy policy and actual retention/deletion process here. Supply the publisher's real support/privacy contact and complaint procedure. Do not promise ownership of generated content, universal non-infringement, availability, or anonymity without a basis.
+Incorporate the reviewed privacy policy and actual retention/deletion process here. The owner-selected support/privacy contact is nehemias.miranda.work@gmail.com. Confirm delivery and define the complaint procedure before publication. Do not promise ownership of generated content, universal non-infringement, availability, or anonymity without a basis.
 
 ## Counsel decisions before publication
 

@@ -1,6 +1,6 @@
 # Data Safety working inventory — not a submitted declaration
 
-Initial intended distribution: United States. Publisher legal identity, verified contact email, audience/age group, report retention and Play Console settings remain unresolved. Reconcile this inventory against the final release and current Console questions before answering them.
+Initial intended distribution: United States. Owner-selected support/privacy contact: nehemias.miranda.work@gmail.com. Mailbox delivery has not been independently tested. Publisher legal identity, audience/age group, report retention and Play Console verification remain unresolved. Reconcile this inventory against the final release and current Console questions before answering them.
 
 | Feature | Data and destination | Control / review |
 |---|---|---|

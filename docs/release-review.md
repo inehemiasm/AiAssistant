@@ -75,4 +75,8 @@ The final minified release APK was installed on the disposable 16 KB emulator an
 - Fail-closed rules were tested with a local demo-project emulator and deployed. Catalog reads succeed; catalog writes, report reads/writes and unknown-path reads are denied. Reports intentionally remain unavailable until protected intake is implemented. This is a production blocker, not a completed reporting feature.
 - Minified signed release APK: installed/launched on the disposable 16 KB emulator; Settings/privacy/OSS-license Maestro flow passed. Generated release notices have 260 entries. Signed release AAB and release APK builds pass, as do alignment checks.
 - Reporting follow-up tests passed: the client cannot show a submission success toast after a failed repository result. Final lint count: 0 errors, 274 warnings, 2 hints.
-- Do not publish privacy/terms yet: verified publisher and working contact email remain missing, and the 90-day retention proposal is unanswered. No retention/deletion automation or Play Console settings were changed. No Play Store or hosting publication occurred.
+- Do not publish privacy/terms yet: verified publisher remains missing; the owner-selected contact email is recorded below, and the 90-day retention proposal is unanswered. No retention/deletion automation or Play Console settings were changed. No Play Store or hosting publication occurred.
+
+## Contact update
+
+Owner selected `nehemias.miranda.work@gmail.com` for app support and privacy requests. The privacy source and consumer-terms draft now use this address instead of the unverified `support@chevere.ai` placeholder. No verification email was sent and mailbox delivery is not independently tested. Play Console verification is pending according to the owner. Policy/terms remain unpublished; publisher identity, audience, retention/deletion, protected report intake and other production gates remain open.
