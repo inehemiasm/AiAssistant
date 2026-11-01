@@ -1,0 +1,23 @@
+appId: dev.neo.chevereai
+name: Three model turns fit the bounded conversation window
+---
+# Requires an installed active model and English app locale. Adds a test conversation.
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible: "Ask Chevere AI…"
+    timeout: 180000
+- repeat:
+    times: 3
+    commands:
+      - tapOn: "Ask Chevere AI…"
+      - inputText: "Explain photosynthesis and cellular respiration in about 150 words."
+      - tapOn: "Send"
+      - extendedWaitUntil:
+          visible: "Stop response"
+          timeout: 30000
+      - extendedWaitUntil:
+          notVisible: "Stop response"
+          timeout: 180000
+      - assertNotVisible: ".*(RESOURCE_EXHAUSTED|Input token ids are too long|[Cc]ontext window exceeded).*"
+- takeScreenshot: context_window_three_turns

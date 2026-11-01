@@ -128,7 +128,7 @@ Path: `app/src/main/java/com/neo/chevere/ui/`
 
 ## Model Management Rules
 
-- LiteRT-LM is 0.19.0. `ModelRuntimeProfile` configures the exact Spark X2.6 full INT8 filename for CPU text chat with 4096 context tokens, 1536 output tokens, and thinking disabled. Other models retain default settings. Do not merge thought channels into visible text or tool parsing. See `docs/spark-x2.6-testing.md`.
+- LiteRT-LM is 0.19.0. `ModelRuntimeProfile` configures the exact Spark X2.6 full INT8 filename for CPU text chat with 4096 context tokens, 1536 output tokens, and thinking disabled. Other models use a 4096-token total context and a separate 1024-token output limit. Engine `maxNumTokens` includes input and output; never use the output ceiling as the context capacity. Do not merge thought channels into visible text or tool parsing. See `docs/spark-x2.6-testing.md`.
 - `gemma-4-E2B-it-web.litertlm` is text-only and uses the GPU loading path. Never request its missing vision encoder or fall back to CPU for this artifact. Persistence mappings correct older vision capability labels without deleting the downloaded file. General models may try GPU text-only independently of vision support.
 
 - Active models cannot be deleted.

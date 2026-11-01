@@ -8,6 +8,19 @@ import org.junit.Test
 class ConversationContextManagerTest {
 
     @Test
+    fun persistentSummaryCannotBypassTheMemoryBudget() {
+        val manager = ConversationContextManager()
+        manager.recordExchange("first question", null, "first answer")
+        manager.persistentMemory = "x".repeat(20_000)
+
+        val prompt = manager.buildPrompt("current request")
+
+        assertTrue(prompt.contains("x".repeat(Constants.ContextWindow.MEMORY_CHAR_BUDGET)))
+        assertFalse(prompt.contains("x".repeat(Constants.ContextWindow.MEMORY_CHAR_BUDGET + 1)))
+        assertTrue(prompt.endsWith("current request"))
+    }
+
+    @Test
     fun buildPrompt_withoutHistory_returnsCurrentPromptOnly() {
         val manager = ConversationContextManager()
 

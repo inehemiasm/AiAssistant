@@ -100,13 +100,10 @@ object Constants {
     }
 
     object Inference {
-        /**
-         * Max new tokens the model may generate per turn.
-         * Capped at 1024 to keep responses fast and prevent runaway
-         * generation that would eat into the next turn's context budget.
-         * Raise to 2048 for larger models (7B+).
-         */
-        const val MAX_NUM_TOKENS = 1024
+        /** Total native KV-cache budget: input, templates, and generated output combined. */
+        const val MAX_CONTEXT_TOKENS = 4096
+        /** Separate response ceiling; this is not the engine's context capacity. */
+        const val MAX_OUTPUT_TOKENS = 1024
         const val MAX_NUM_IMAGES = 1
         const val NEURAL_CACHE_DIR = "neural_cache"
         const val MIN_MODEL_FILE_SIZE_BYTES = 1024 * 1024L // 1MB
