@@ -1,0 +1,61 @@
+appId: dev.neo.chevereai
+name: Spark activation and reply survive background prediction cancellation
+---
+- launchApp:
+    clearState: false
+    stopApp: false
+- extendedWaitUntil:
+    visible: "Library"
+    timeout: 180000
+- tapOn: "Library"
+- tapOn: "Models Library"
+- scrollUntilVisible:
+    element: "GEMMA 4 E2B IT (TEXT-ONLY GPU)"
+    direction: DOWN
+    timeout: 60000
+- tapOn: "GEMMA 4 E2B IT (TEXT-ONLY GPU)"
+- scrollUntilVisible:
+    element: "(ACTIVATE ENGINE|ENGINE ACTIVE)"
+    direction: DOWN
+    timeout: 180000
+- runFlow:
+    when:
+      visible: "ACTIVATE ENGINE"
+    commands:
+      - tapOn: "ACTIVATE ENGINE"
+- extendedWaitUntil:
+    visible: "ENGINE ACTIVE"
+    timeout: 180000
+- back
+- scrollUntilVisible:
+    element: "SPARK X2.6 4B (INT8 CPU)"
+    direction: DOWN
+    timeout: 60000
+- tapOn: "SPARK X2.6 4B (INT8 CPU)"
+- scrollUntilVisible:
+    element: "(ACTIVATE ENGINE|ENGINE ACTIVE)"
+    direction: DOWN
+    timeout: 180000
+- runFlow:
+    when:
+      visible: "ACTIVATE ENGINE"
+    commands:
+      - tapOn: "ACTIVATE ENGINE"
+- extendedWaitUntil:
+    visible: "ENGINE ACTIVE"
+    timeout: 180000
+- back
+- back
+- tapOn: "Library"
+- tapOn: "Chat History"
+- tapOn: "New Chat"
+- tapOn: "Ask Chevere AI…"
+- eraseText
+- inputText: "What is 2 + 2? Answer only with the number."
+- tapOn: "Send"
+- extendedWaitUntil:
+    visible: "4"
+    timeout: 180000
+- tapOn: "Ask Chevere AI…"
+- inputText: "Thanks"
+- eraseText

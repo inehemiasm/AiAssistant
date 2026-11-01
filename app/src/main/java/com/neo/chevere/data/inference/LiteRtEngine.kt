@@ -5,6 +5,7 @@ import com.neo.chevere.domain.InferenceResult
 import com.neo.chevere.domain.InitializationStatus
 import com.neo.chevere.domain.InstalledModel
 import com.neo.chevere.domain.LoadResult
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import javax.inject.Inject
@@ -30,6 +31,8 @@ class LiteRtEngine @Inject constructor(
             } else {
                 LoadResult.Failure(result.exceptionOrNull()?.message ?: "Unknown error")
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             LoadResult.Failure(e.message ?: "Exception during load", e)
         }
@@ -46,6 +49,8 @@ class LiteRtEngine @Inject constructor(
             } else {
                 InferenceResult.Failure(result.exceptionOrNull()?.message ?: "Inference failed")
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             InferenceResult.Failure(e.message ?: "Exception during generation", e)
         }
@@ -65,6 +70,8 @@ class LiteRtEngine @Inject constructor(
                     emit(InferenceResult.Failure(result.exceptionOrNull()?.message ?: "Inference failed"))
                 }
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             emit(InferenceResult.Failure(e.message ?: "Exception during generation", e))
         }

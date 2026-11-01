@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.CancellationException
 import timber.log.Timber
 import java.io.File
 import javax.inject.Inject
@@ -90,6 +91,10 @@ class LlmRuntimeManager @Inject constructor(
                 }
 
                 lastError = result.exceptionOrNull()
+                if (lastError is CancellationException) {
+                    engineWrapper.close()
+                    throw lastError
+                }
                 Timber.tag(TAG).e("$label failed: ${lastError?.message}")
                 engineWrapper.close()
                 neuralCache.deleteRecursively()
@@ -115,6 +120,8 @@ class LlmRuntimeManager @Inject constructor(
                 messageFactory.createTextMessage("warmup")
             }
             warmupConv.sendMessage(message)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Timber.tag(TAG).w("Warmup skipped: ${e.message}")
         } finally {
@@ -148,7 +155,13 @@ class LlmRuntimeManager @Inject constructor(
                 val conversation = activeConversation ?: return@withContext Result.failure(
                     IllegalStateException("No active conversation")
                 )
-                runCatching { conversation.sendMessage(message) }
+                try {
+                    Result.success(conversation.sendMessage(message))
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Result.failure(e)
+                }
             }
         }
 
@@ -162,6 +175,8 @@ class LlmRuntimeManager @Inject constructor(
                 conversation.sendMessageAsync(message).collect { chunk ->
                     emit(Result.success(chunk))
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 emit(Result.failure(e))
             }
@@ -175,8 +190,9 @@ class LlmRuntimeManager @Inject constructor(
         }
     }
 
-    fun close() {
-        closeCurrentResources()
+    /** Waits for in-flight prediction/inference cleanup before releasing native memory. */
+    suspend fun close() = withContext(dispatcherProvider.default) {
+        engineLock.withLock { closeCurrentResources() }
     }
 
     private fun closeCurrentResources() {
