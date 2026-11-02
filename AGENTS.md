@@ -87,7 +87,7 @@ Path: `app/src/main/java/com/neo/chevere/data/`
   - `InferenceManager`: LiteRT-LM model loading and chat inference.
   - `ImageGenerationManager` & `ImageGenerationEngineFactory`: Stubbed to return an informational error while `:image-generation` is decoupled from `:app`.
 - **Context management** (`data/context/`):
-  - `ConversationContextManager`: Rolling context memory compressor for constrained on-device windows.
+  - `ConversationContextManager`: Bounded excerpt memory for constrained on-device windows; no background LLM summarization. `PromptBudget` reserves output/template/image capacity and rejects oversized current requests without truncating them. LiteRT 0.19 offers post-turn measurements, not a public preflight tokenizer. See `docs/chat-reliability.md`.
 - **Data sources** (`data/datasource/`):
   - `CompositeModelCatalogDataSource`: Merges Hugging Face Hub discovery and Firestore catalogs.
 - **Registry & Storage** (`data/datasource/local/`):
@@ -214,8 +214,8 @@ Apply these rules to new features and code changed by a task. Existing violation
 
 ## Agent harness behavior
 
-- `AgentOrchestrator` enforces the same routed tool names used for discovery, preserves a bounded current-request/policy/observation prompt across steps, and allows multi-tool continuation within the five-step budget.
-- Cancel ends the pending run without another model pass. Confirmed callbacks have a timeout and propagate coroutine cancellation. Reaching the step budget reports an incomplete outcome rather than claiming success.
+- `AgentOrchestrator` enforces routed tool names, preserves the complete current request/policy while budgeting background observations, and allows multi-tool continuation within the five-step budget. Document requests retrieve deterministically once before an answer-only pass; no-match answers are local and explicit. Typed source evidence and terminal outcomes persist through `ChatMessageMetadataCodec`, retaining plain-text/A2UI history compatibility.
+- Cancel ends the pending run without another model pass. Confirmed callbacks have a timeout and propagate cancellation. Step-budget exhaustion and unresolved tool errors are incomplete; cancellation is distinct. A response-ready state does not independently verify external side effects. Pending confirmation disables new submissions. UI activity must not expose intermediate model reasoning as verified progress.
 - Regression coverage lives in `AgentOrchestratorTest`, `ToolRegistryTest`, and `ChatTaskActionTest`; `.maestro/mcp_confirmation_validation.yaml` checks actionable confirmation and cancellation.
 - Runs remain in memory. Durable checkpoints, complete typed argument schemas, cross-category planning, idempotency/retry policy, and independent completion verification are follow-up work.
 
@@ -248,3 +248,5 @@ Apply these rules to new features and code changed by a task. Existing violation
 ### Production reporting gate
 
 The Standard `(default)` Firestore database is provisioned in `aiassistant-88f75` / `us-central1`. Current deployed rules deliberately deny client report writes until protected intake and operational retention/review controls are configured. Do not restore unauthenticated report writes. Schema validation alone is not anti-abuse protection. Report submission errors must be displayed truthfully. See `docs/release-review.md` and `docs/firestore-security-audit.json`.
+
+- Current release gate declarations are in `docs/release-readiness.json`; `scripts/check_release_readiness.py --strict` fails while any gate is unresolved. Evidence CI validates the ledger, not Play approval. Audience is explicitly undecided. No reporting writes, publication, or signing-certificate match should be inferred from a passing local build.

@@ -40,7 +40,7 @@ sealed interface ToolResult {
      * Indicates the tool executed successfully.
      * @property data The output data from the tool.
      */
-    data class Success(val data: String) : ToolResult
+    data class Success(val data: String, val documentEvidence: com.neo.chevere.domain.DocumentEvidence? = null) : ToolResult
 
     /**
      * Indicates an error occurred during tool execution.

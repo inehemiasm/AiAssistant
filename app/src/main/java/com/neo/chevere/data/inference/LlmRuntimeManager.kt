@@ -42,6 +42,16 @@ class LlmRuntimeManager @Inject constructor(
     private var activeConversation: ConversationWrapper? = null
     private var isVisionEnabled = false
     private var isInitialized = false
+    private var loadedPath = ""
+
+    /** Admission estimate includes output, template, and optional image reserves. */
+    fun promptBudgetError(prompt: String, hasImage: Boolean): String? =
+        if (com.neo.chevere.data.context.PromptBudget.estimateTokens(prompt) >
+            com.neo.chevere.data.context.PromptBudget.inputLimit(loadedPath, hasImage)) {
+            context.getString(R.string.context_request_too_large)
+        } else null
+    @Volatile var lastUsage: com.neo.chevere.domain.InferenceUsage? = null
+        private set
 
     private val _initStatus =
         MutableStateFlow<InitializationStatus>(InitializationStatus.Uninitialized)
@@ -93,6 +103,7 @@ class LlmRuntimeManager @Inject constructor(
                     Timber.tag(TAG).i("Successfully initialized with $label")
                     isVisionEnabled = vision != null
                     isInitialized = true
+                    loadedPath = modelPath
                     _initStatus.value = InitializationStatus.Ready
                     return@withContext Result.success(Unit)
                 }
@@ -163,7 +174,10 @@ class LlmRuntimeManager @Inject constructor(
                     IllegalStateException(context.getString(R.string.ui_no_active_conversation))
                 )
                 try {
-                    Result.success(conversation.sendMessage(message))
+                    lastUsage = null
+                    val response = conversation.sendMessage(message)
+                    lastUsage = conversation.usage()
+                    Result.success(response)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -179,9 +193,11 @@ class LlmRuntimeManager @Inject constructor(
                 return@withLock
             }
             try {
+                lastUsage = null
                 conversation.sendMessageAsync(message).collect { chunk ->
                     emit(Result.success(chunk))
                 }
+                lastUsage = conversation.usage()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -208,6 +224,8 @@ class LlmRuntimeManager @Inject constructor(
         engineWrapper.close()
         isVisionEnabled = false
         isInitialized = false
+        loadedPath = ""
+        lastUsage = null
         _initStatus.value = InitializationStatus.Uninitialized
     }
 }

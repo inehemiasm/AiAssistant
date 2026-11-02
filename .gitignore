@@ -73,3 +73,6 @@ notes/
 
 # Kotlin compiler caches
 .kotlin/
+# Python validation cache
+__pycache__/
+*.pyc

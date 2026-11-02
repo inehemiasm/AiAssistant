@@ -1,0 +1,89 @@
+{
+  "reviewDate": "2026-11-01",
+  "artifacts": {
+    "releaseApk": {
+      "sha256": "3400bd451f15a42c6d756214b3299c88bc31d6367c78b7a46316944db54d8d23",
+      "sizeBytes": 62124077,
+      "elfAlignmentChecked": true,
+      "native64BitLibrariesChecked": 6,
+      "zip16kAlignmentChecked": true
+    },
+    "releaseAab": {
+      "sha256": "5a6c9b2a3acc748a7b40444e11805d3da2358a0535fdb76d2ddae73a3cc05551",
+      "sizeBytes": 34835571,
+      "elfAlignmentChecked": true,
+      "native64BitLibrariesChecked": 6
+    }
+  },
+  "tests": {
+    "tests": 234,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "pythonReleaseGateTests": 3,
+  "lint": {
+    "debug": {
+      "Warning": 164,
+      "Hint": 2
+    },
+    "release": {
+      "Warning": 164,
+      "Hint": 2
+    }
+  },
+  "dependencies": {
+    "components": 327,
+    "missingPomLicenseMetadata": [
+      "ChevereAI:app:unspecified",
+      "ChevereAI:shared:unspecified",
+      "ChevereAI:ui-designsystem:unspecified",
+      "androidx.compose.material:material-icons-core:1.7.8",
+      "androidx.compose.material:material-icons-extended:1.7.8",
+      "androidx.graphics:graphics-shapes:1.0.1",
+      "androidx.lifecycle:lifecycle-common:2.11.0",
+      "androidx.lifecycle:lifecycle-runtime-compose:2.11.0",
+      "androidx.lifecycle:lifecycle-runtime-ktx:2.11.0",
+      "androidx.lifecycle:lifecycle-runtime:2.11.0",
+      "androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0",
+      "androidx.lifecycle:lifecycle-viewmodel-savedstate:2.11.0",
+      "androidx.sqlite:sqlite-framework:2.6.2",
+      "androidx.sqlite:sqlite:2.6.2",
+      "androidx.window:window-core:1.5.0",
+      "com.google.guava:failureaccess:1.0.3",
+      "com.google.guava:guava:33.6.0-android",
+      "com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava",
+      "com.google.protobuf:protobuf-javalite:4.36.1",
+      "javax.inject:javax.inject:1",
+      "org.codehaus.mojo:animal-sniffer-annotations:1.27",
+      "org.slf4j:slf4j-api:2.0.19"
+    ]
+  },
+  "signingCertificateSha256": "c2000cd5ecbc1a4668f58bf737db0ca6719fb2d9e7e79b54fa9b628cb38c312e",
+  "playCertificateMatchVerified": false,
+  "notes": [
+    "Artifact checks do not establish legal clearance or Play approval.",
+    "Local model inference on the 16 KB emulator remains unverified.",
+    "Audience remains undecided. Protected reporting remains closed."
+  ],
+  "deviceValidation": {
+    "redMagic": {
+      "documentAnswerAndExcerpts": "passed",
+      "historyEvidenceRestore": "passed",
+      "noMatch": "passed",
+      "mcpCancellation": "passed",
+      "observedMeasuredUsage": {
+        "inputTokens": 377,
+        "outputTokens": 18
+      },
+      "temporaryFolderDisconnectedAndRemoved": true,
+      "originalSleepSettingRestored": true
+    },
+    "emulator": {
+      "pageSizeBytes": 16384,
+      "signedReleaseInstallLaunch": "passed",
+      "privacyAndLicensesFlow": "passed",
+      "modelInference": "not tested"
+    }
+  }
+}

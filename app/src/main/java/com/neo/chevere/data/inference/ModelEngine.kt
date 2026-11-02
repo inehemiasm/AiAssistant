@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.Flow
  * Interface defining the requirements for an AI inference engine.
  */
 interface ModelEngine {
+    val lastUsage: com.neo.chevere.domain.InferenceUsage? get() = null
     /**
      * A [Flow] of the initialization status of the engine.
      */

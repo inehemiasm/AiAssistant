@@ -111,6 +111,8 @@ import java.util.Locale
 @Composable
 fun MessageList(
     messages: List<ChatMessage>,
+    responseDetails: Map<Int, com.neo.chevere.ui.chat.ResponseDetailsUi> = emptyMap(),
+    onToggleSource: (Int, Int) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
     listState: LazyListState = rememberLazyListState(),
     streamingText: String = "",
@@ -135,6 +137,8 @@ fun MessageList(
         itemsIndexed(messages) { index, message ->
             FuturisticChatBubble(
                 message = message,
+                details = responseDetails[index] ?: com.neo.chevere.ui.chat.ResponseDetailsUi(),
+                onToggleSource = { onToggleSource(index, it) },
                 onToggleExplicitImageMask = { onToggleExplicitImageMask(index) },
                 onShareMessage = { onShareMessage(index) },
                 onReportMessage = { onReportMessage(index) },
@@ -186,6 +190,8 @@ fun MessageList(
 @Composable
 fun FuturisticChatBubble(
     message: ChatMessage,
+    details: com.neo.chevere.ui.chat.ResponseDetailsUi = com.neo.chevere.ui.chat.ResponseDetailsUi(),
+    onToggleSource: (Int) -> Unit = {},
     onToggleExplicitImageMask: () -> Unit = {},
     onShareMessage: () -> Unit = {},
     onReportMessage: () -> Unit = {},
@@ -279,7 +285,7 @@ fun FuturisticChatBubble(
                         MarkdownContent(
                             text = if (taskChecklist != null) {
                                 stringResource(R.string.a2ui_checklist_title) + "\n" + message.text.substringBefore('\n')
-                            } else message.text,
+                            } else message.text.ifBlank { stringResource(R.string.history_response_unavailable) },
                             textStyle = Typography.bodyMedium.copy(
                                 lineHeight = 22.sp,
                                 color = onBubbleColor
@@ -289,6 +295,8 @@ fun FuturisticChatBubble(
                             onPreviewHtmlFullScreen = onPreviewHtmlFullScreen
                         )
                     }
+
+                    if (!isUser) ResponseEvidenceCard(details, onToggleSource)
 
                     taskChecklist?.let { content ->
                         TaskChecklistSurface(
@@ -312,10 +320,10 @@ fun FuturisticChatBubble(
                                     val seconds = timeMs / 1000.0
                                     Badge(text = textResources.getString(R.string.duration_seconds_short, seconds))
                                     message.inputTokenCount?.let { inputTokens ->
-                                        Badge(text = textResources.getString(R.string.ui_in_1_s_tok, inputTokens))
+                                        Badge(text = textResources.getString(if (message.tokenCountKind == com.neo.chevere.domain.TokenCountKind.MEASURED) R.string.ui_in_1_s_tok else R.string.tokens_input_estimate, inputTokens))
                                     }
                                     message.outputTokenCount?.let { outputTokens ->
-                                        Badge(text = textResources.getString(R.string.ui_out_1_s_tok, outputTokens))
+                                        Badge(text = textResources.getString(if (message.tokenCountKind == com.neo.chevere.domain.TokenCountKind.MEASURED) R.string.ui_out_1_s_tok else R.string.tokens_output_estimate, outputTokens))
                                     }
                                 } ?: run {
                                     Badge(text = stringResource(R.string.hardware_accel))
@@ -543,7 +551,7 @@ fun EmbeddedAgentThoughts(
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        text = if (steps.isNotEmpty()) textResources.getQuantityString(R.plurals.agent_completed_steps, steps.size, steps.size) else statusText,
+                        text = statusText,
                         style = Typography.labelSmall.copy(fontSize = 9.sp),
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
                         maxLines = 1,
@@ -933,15 +941,6 @@ private fun StepItem(
                 color = MaterialTheme.colorScheme.primary
             )
 
-            if (step.thought != null) {
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = step.thought,
-                    style = Typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
-                )
-            }
-
             if (step.toolCall != null) {
                 Spacer(modifier = Modifier.height(6.dp))
                 Row(
@@ -1048,7 +1047,9 @@ private fun agentStatusText(agentState: AgentState): String {
     is AgentState.Planning -> textResources.getString(R.string.ui_planning_the_next_move)
     is AgentState.ExecutingTool -> textResources.getString(R.string.ui_using_1_s, agentState.toolName)
     is AgentState.WaitingForConfirmation -> textResources.getString(R.string.ui_waiting_for_confirmation)
-    is AgentState.Completed -> textResources.getQuantityString(R.plurals.agent_completed_steps, agentState.steps.size, agentState.steps.size)
+    is AgentState.Completed -> textResources.getString(R.string.agent_answered)
+    is AgentState.Incomplete -> textResources.getString(R.string.agent_incomplete)
+    is AgentState.Cancelled -> textResources.getString(R.string.agent_cancelled)
     is AgentState.Error -> textResources.getString(R.string.ui_stopped_with_an_error)
     AgentState.Idle -> textResources.getString(R.string.ui_idle)
 }
@@ -1060,7 +1061,6 @@ private fun latestAgentActivity(agentState: AgentState): String {
     val textResources = LocalResources.current
     val latest = agentState.steps.lastOrNull()
     return when {
-        latest?.thought?.isNotBlank() == true -> latest.thought
         latest?.toolCall != null -> textResources.getString(R.string.ui_let_me_call_1_s, latest.toolCall.toolName)
         agentState is AgentState.ExecutingTool -> textResources.getString(R.string.ui_let_me_call_1_s, agentState.toolName)
         agentState is AgentState.Planning -> textResources.getString(R.string.ui_i_am_deciding_which_local_tool_if_any_is_needed)

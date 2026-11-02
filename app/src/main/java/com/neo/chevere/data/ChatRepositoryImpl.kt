@@ -90,7 +90,8 @@ class ChatRepositoryImpl @Inject constructor(
     private val _modelActivationEvents = Channel<String>(Channel.BUFFERED)
     override val modelActivationEvents: Flow<String> = _modelActivationEvents.receiveAsFlow()
 
-    private var summarizationJob: Job? = null
+    private var responseUsage: com.neo.chevere.domain.InferenceUsage? = null
+    private var responseEvidence: com.neo.chevere.domain.DocumentEvidence? = null
 
     override val agentState: StateFlow<AgentState> = agentOrchestrator.agentState
 
@@ -155,7 +156,8 @@ class ChatRepositoryImpl @Inject constructor(
         sendRawMessage(prompt, imageUri).map { it.toDomainResponse() }
 
     private suspend fun sendRawMessage(prompt: String, imageUri: Uri?): Result<String> {
-        cancelSummarization()
+        responseUsage = null
+        responseEvidence = null
         _directPartialResponse.value = ""
         if (imageUri != null && !isVisionSupported()) {
             return Result.failure(
@@ -212,6 +214,8 @@ class ChatRepositoryImpl @Inject constructor(
             conversationContext = conversationContext,
             routingCategory = routingCategory
         )
+        responseUsage = agentOrchestrator.runUsage
+        responseEvidence = agentOrchestrator.documentEvidence
         result.onSuccess { response ->
             val memoryResponse =
                 if (response.startsWith(Constants.Agent.IMAGE_GENERATION_RESULT_PREFIX)) {
@@ -220,7 +224,7 @@ class ChatRepositoryImpl @Inject constructor(
                     AgentUiEnvelope.displayText(response)
                 }
             conversationContextManager.recordExchange(prompt, imageUri, memoryResponse)
-            triggerBackgroundSummarization()
+
         }
         return result
     }
@@ -230,12 +234,18 @@ class ChatRepositoryImpl @Inject constructor(
         val payload = AgentUiEnvelope.decode(this)
         return AssistantResponse(
             text = payload?.text ?: AgentUiEnvelope.displayText(this),
-            agentUiContent = payload?.checklist
+            agentUiContent = payload?.checklist,
+            documentEvidence = responseEvidence,
+            usage = responseUsage,
         )
     }
 
     private suspend fun generateDirectChatResponse(prompt: String, imageUri: Uri?): Result<String> {
-        val contextualPrompt = buildDirectChatPrompt(prompt, imageUri)
+        val budgeted = buildDirectChatPrompt(prompt, imageUri)
+        if (budgeted is com.neo.chevere.data.context.PromptBudget.Result.TooLarge) {
+            return Result.failure(IllegalArgumentException(context.getString(R.string.context_request_too_large)))
+        }
+        val contextualPrompt = (budgeted as com.neo.chevere.data.context.PromptBudget.Result.Fits).prompt
         var result: Result<String> = Result.failure(IllegalStateException("No output generated"))
         _directPartialResponse.value = ""
         val elapsedMs = measureTimeMillis {
@@ -257,20 +267,19 @@ class ChatRepositoryImpl @Inject constructor(
         logDebug(
             "Direct chat turn completed in ${elapsedMs}ms. promptChars=${prompt.length}, contextChars=${contextualPrompt.length}, hasImage=${imageUri != null}"
         )
+        responseUsage = inferenceManager.lastUsage
         result.onSuccess { text ->
             conversationContextManager.recordExchange(prompt, imageUri, text)
-            triggerBackgroundSummarization()
+
         }
         return result
     }
 
-    private fun buildDirectChatPrompt(prompt: String, imageUri: Uri?): String {
-        val contextualPrompt = conversationContextManager.buildPrompt(prompt, imageUri)
-        return if (imageUri != null) {
-            chatRequestRouter.buildVisionChatPrompt(contextualPrompt)
-        } else {
-            chatRequestRouter.buildDirectChatPrompt(contextualPrompt)
-        }
+    private fun buildDirectChatPrompt(prompt: String, imageUri: Uri?): com.neo.chevere.data.context.PromptBudget.Result {
+        val policy = if (imageUri != null) chatRequestRouter.buildVisionChatPrompt("") else chatRequestRouter.buildDirectChatPrompt("")
+        return com.neo.chevere.data.context.PromptBudget.compose(policy,
+            conversationContextManager.buildCurrentRequest(prompt, imageUri),
+            conversationContextManager.buildContextPrefix(), inferenceManager.currentModel?.filePath.orEmpty(), imageUri != null)
     }
 
     private fun logDebug(message: String) {
@@ -287,11 +296,19 @@ class ChatRepositoryImpl @Inject constructor(
     }
 
     override suspend fun confirmAction(): Result<AssistantResponse> {
-        return agentOrchestrator.confirmAction().map { it.toDomainResponse() }
+        return agentOrchestrator.confirmAction().map {
+            responseUsage = agentOrchestrator.runUsage
+            responseEvidence = agentOrchestrator.documentEvidence
+            it.toDomainResponse()
+        }
     }
 
     override suspend fun cancelAction(): Result<AssistantResponse> {
-        return agentOrchestrator.cancelAction().map { it.toDomainResponse() }
+        return agentOrchestrator.cancelAction().map {
+            responseUsage = agentOrchestrator.runUsage
+            responseEvidence = agentOrchestrator.documentEvidence
+            it.toDomainResponse()
+        }
     }
 
     override suspend fun clearConversation() {
@@ -588,49 +605,6 @@ class ChatRepositoryImpl @Inject constructor(
         return Constants.ImageGeneration.ONNX_REQUIRED_FILES.all { relativePath ->
             File(directory, relativePath).isFile ||
                     File(directory, relativePath.replace(".ort", ".onnx")).isFile
-        }
-    }
-
-    private fun cancelSummarization() {
-        summarizationJob?.cancel()
-        summarizationJob = null
-    }
-
-    private fun triggerBackgroundSummarization() {
-        cancelSummarization()
-
-        val transcript = conversationContextManager.getMemoryTurnsTranscript() ?: return
-        if (inferenceManager.currentModel == null) return
-
-        summarizationJob = CoroutineScope(dispatcherProvider.default).launch {
-            try {
-                // Wait for the system to be idle
-                delay(3000)
-
-                // Cap the transcript fed to the summarizer to avoid overloading the context
-                val cappedTranscript = transcript.take(3_000)
-                val prompt = "Summarize the key facts from this conversation in ≤50 words as bullet points. " +
-                        "No intro, no outro — bullets only.\n\n$cappedTranscript\n\nSummary:"
-
-                val request = InferenceRequest(prompt = prompt, imageUri = null)
-
-                inferenceManager.clearConversation()
-                val response = inferenceManager.generate(request)
-                if (response is InferenceResult.Success) {
-                    val summary = response.text.trim().take(800) // Hard-cap the stored memory
-                    if (summary.isNotEmpty()) {
-                        conversationContextManager.persistentMemory = summary
-                        Timber.tag(TAG).d("Background context summarization succeeded: $summary")
-                    }
-                }
-            } catch (e: CancellationException) {
-                Timber.tag(TAG).d("Background context summarization was cancelled.")
-            } catch (e: Exception) {
-                Timber.tag(TAG).e(e, "Background context summarization failed")
-            } finally {
-                // Always clear conversation afterwards to avoid polluting future chat turns
-                runCatching { inferenceManager.clearConversation() }
-            }
         }
     }
 

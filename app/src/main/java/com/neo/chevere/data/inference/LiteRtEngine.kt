@@ -17,6 +17,8 @@ class LiteRtEngine @Inject constructor(
     private val responseMapper: LlmResponseMapper,
     private val messageFactory: MultimodalMessageFactory
 ) : ModelEngine {
+    override var lastUsage: com.neo.chevere.domain.InferenceUsage? = null
+        private set
 
     override val initStatus: Flow<InitializationStatus> = runtimeManager.initStatus
 
@@ -39,11 +41,14 @@ class LiteRtEngine @Inject constructor(
     }
 
     override suspend fun generate(request: InferenceRequest): InferenceResult {
+        lastUsage = null
+        runtimeManager.promptBudgetError(request.prompt, request.imageUri != null)?.let { return InferenceResult.Failure(it) }
         return try {
             val message = messageFactory.createMessage(request.prompt, request.imageUri)
 
             val result = runtimeManager.sendMessage(message)
             if (result.isSuccess) {
+                lastUsage = runtimeManager.lastUsage
                 val response = result.getOrThrow()
                 InferenceResult.Success(responseMapper.mapToString(response))
             } else {
@@ -57,9 +62,15 @@ class LiteRtEngine @Inject constructor(
     }
 
     override fun generateStream(request: InferenceRequest): Flow<InferenceResult> = flow {
+        lastUsage = null
+        runtimeManager.promptBudgetError(request.prompt, request.imageUri != null)?.let {
+            emit(InferenceResult.Failure(it))
+            return@flow
+        }
         try {
             val message = messageFactory.createMessage(request.prompt, request.imageUri)
             var accumulatedText = ""
+            var failed = false
             runtimeManager.sendMessageAsync(message).collect { result ->
                 if (result.isSuccess) {
                     val response = result.getOrThrow()
@@ -67,9 +78,11 @@ class LiteRtEngine @Inject constructor(
                     accumulatedText += chunkText
                     emit(InferenceResult.Success(accumulatedText))
                 } else {
+                    failed = true
                     emit(InferenceResult.Failure(result.exceptionOrNull()?.message ?: "Inference failed"))
                 }
             }
+            if (!failed) lastUsage = runtimeManager.lastUsage
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {

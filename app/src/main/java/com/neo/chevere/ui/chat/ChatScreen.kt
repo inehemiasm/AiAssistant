@@ -579,9 +579,7 @@ fun ChatContent(
                     onMenuClick = {
                         scope.launch { drawerState.open() }
                     },
-                    isChatReady = state.localModels.any {
-                        it.isHealthy && it.taskType != ModelTaskType.IMAGE_GENERATION
-                    },
+                    isChatReady = state.isReady,
                     isImageReady = false
                 )
             },
@@ -610,12 +608,21 @@ fun ChatContent(
                 .padding(innerPadding)
                 .imePadding()
         ) {
+            com.neo.chevere.ui.chat.components.ModelStatusRow(state.modelStatus, onModelsClick) { recovery ->
+                when (recovery) {
+                    ModelRecovery.RELOAD -> viewModel.onIntent(ChatIntent.RetryModelLoad)
+                    ModelRecovery.RETRY_RESPONSE -> viewModel.onIntent(ChatIntent.RetryLastMessage)
+                    ModelRecovery.OPEN_MODELS -> onModelsClick()
+                }
+            }
             Box(modifier = Modifier.weight(1f)) {
                 if (showOnboarding) {
                     EmptyModelState(onModelsClick)
                 } else {
                     MessageList(
                         messages = state.messages,
+                        responseDetails = state.responseDetails,
+                        onToggleSource = { messageIndex, sourceIndex -> viewModel.onIntent(ChatIntent.ToggleDocumentExcerpt(messageIndex, sourceIndex)) },
                         taskChecklistData = state.taskChecklistData,
                         taskChecklists = state.taskChecklists,
                         onSetTaskCompleted = { surfaceId, taskId, completed ->
