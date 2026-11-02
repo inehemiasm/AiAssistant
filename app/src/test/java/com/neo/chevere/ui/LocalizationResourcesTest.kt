@@ -22,6 +22,15 @@ import com.neo.chevere.data.agent.actions.AndroidAppActionExecutor
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)
 class LocalizationResourcesTest {
+    @Test fun capabilityOverviewDoesNotAdvertiseTheDisabledInvoiceFeatureInAnyLocale() {
+        for (language in listOf("en", "es", "fr", "de")) {
+            val overview = localizedResources(language).getString(R.string.capability_overview).lowercase()
+            assertFalse(overview.contains("invoices"))
+            assertFalse(overview.contains("facturas"))
+            assertFalse(overview.contains("factures"))
+            assertFalse(overview.contains("rechnungen"))
+        }
+    }
     @Test fun supportedLocalesResolveNavigationAndCapabilityCopyWithoutEnglishFallback() {
         val expected = mapOf(
             "en" to "Models Library",

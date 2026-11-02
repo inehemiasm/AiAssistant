@@ -53,6 +53,13 @@ import org.mockito.kotlin.mock
 
 class ToolRegistryTest {
 
+    @Test fun noChatCategoryAllowsTheDisabledInvoiceTool() {
+        val registry = ToolRegistry(emptySet())
+        RoutingCategory.entries.forEach { category ->
+            assertTrue("Invoice writes must stay disabled for $category", "invoice_registry" !in registry.allowedToolNames(category))
+        }
+    }
+
     private lateinit var mockContext: Context
     private lateinit var mockHttpClient: HttpClient
     private lateinit var mockPreferenceManager: PreferenceManager

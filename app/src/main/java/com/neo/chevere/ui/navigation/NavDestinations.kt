@@ -5,7 +5,6 @@ import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
 import androidx.compose.material.icons.filled.ChatBubble
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Storage
-import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.neo.chevere.R
 import com.neo.chevere.data.telemetry.TelemetryConstants
@@ -29,6 +28,7 @@ sealed interface Route {
     data object Tasks : Route
 
     @Serializable
+    // Compatibility destination for saved navigation state; redirects to Chat.
     data object Invoices : Route
 
     @Serializable
@@ -55,12 +55,6 @@ enum class TopLevelDestination(
         Icons.AutoMirrored.Filled.FormatListBulleted,
         R.string.tasks_label,
         TelemetryConstants.Action.BOTTOM_NAV_TASKS
-    ),
-    INVOICES(
-        Route.Invoices,
-        Icons.Default.Receipt,
-        R.string.invoices_label,
-        TelemetryConstants.Action.BOTTOM_NAV_INVOICES
     ),
     MODELS(
         Route.ModelMarketplace,

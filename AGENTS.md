@@ -122,6 +122,7 @@ Path: `app/src/main/java/com/neo/chevere/ui/`
 - **Tasks Screen** (`ui/tasks/`):
   - Displays pending and completed tasks.
   - Supports adding tasks through an `AddTaskDialog`, toggling completion, and deletion. Integrated with `TaskRegistryTool` and inline chat A2UI checklists.
+- Invoice management is disabled: no navigation entry, registered agent tool, or invoice-specific chat route. Retained invoice screens/tool implementations and Room tables are dormant so existing data is preserved. The legacy serialized `Route.Invoices` redirects restored navigation to Chat. Do not advertise saving/importing invoices; ordinary text and image analysis remain available.
 - **Settings & Benchmark** (`ui/settings/`):
   - Settings Safety & Privacy content remains expandable and factual: local processing, release controls, user-controlled sharing & reporting, and local storage.
   - **Benchmark Screen**: Runs local inference speed tests. Measures engine warmup time, Time-To-First-Token (TTFT), generation throughput (TPS), and logs physical hardware metrics (CPU/GPU acceleration, available RAM).

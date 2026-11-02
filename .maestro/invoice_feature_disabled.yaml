@@ -1,0 +1,24 @@
+appId: dev.neo.chevereai
+name: Navigation and capabilities omit invoice management
+---
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible: "Ask Chevere AI…"
+    timeout: 180000
+- assertVisible: "Tasks"
+- assertVisible: "Models"
+- assertVisible: "Settings"
+- assertNotVisible: "Invoices"
+- tapOn: "Tasks"
+- assertVisible: "Add Task"
+- assertNotVisible: "Invoices"
+- tapOn: "Chat"
+- tapOn: "Ask Chevere AI…"
+- inputText: "What can you do?"
+- tapOn: "Send"
+- extendedWaitUntil:
+    visible: ".*across languages and platforms.*"
+    timeout: 20000
+- assertNotVisible: ".*scan or import invoices.*"
+- takeScreenshot: invoice_feature_disabled
