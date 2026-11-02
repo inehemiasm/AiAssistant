@@ -55,4 +55,13 @@ It opens the permission picker and cancels without granting access. Repository
 tests cover persisted metadata, scoped indexing, refresh deletion, retrieval and
 disconnect isolation; provider-reader tests cover nested files, UTF-8 and limits.
 
-Validation recorded for this change: focused unit tests and debug assembly passed; APK installation/launch and the picker smoke flow passed on ASUSAI2501C. Full on-device document retrieval and live MCP interoperability remain unverified.
+Validation: 221 debug unit tests, debug assembly, lint and translation coverage
+passed. The folder picker smoke flow passed on Red Magic NX709J. An isolated test
+folder verified two supported files (including nested Markdown), one skipped
+unsupported file, persisted read access and refresh after restart. A real `/docs`
+question answered the fixture's 73-day warranty period with Gemma 4 E2B. Deleting
+the nested fixture then refreshing reduced the indexed count to one; disconnect
+removed the source and its persisted grant. Test files were removed and the
+device's original sleep setting restored. This validates one local storage
+provider/model combination; cloud-provider behavior and live MCP interoperability
+remain unverified.

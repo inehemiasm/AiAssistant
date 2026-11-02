@@ -771,7 +771,7 @@
     <string name="folder_disconnect">Disconnect</string>
     <string name="folder_done">Done</string>
     <string name="folder_working">Updating document library…</string>
-    <string name="folder_indexed">Indexed: %1$d files. Skipped: %2$d unsupported or empty entries.</string>
+    <string name="folder_indexed">Files indexed: %1$d. Unsupported or empty entries skipped: %2$d.</string>
     <string name="folder_disconnected">Folder disconnected and its indexed text removed.</string>
     <string name="folder_index_failed">Could not refresh this folder. Its previous index is unchanged. Check access, UTF-8 text and folder limits, then try again. If access was revoked, select the folder again with Add folder. Cloud providers may need a connection or more time to load.</string>
     <string name="folder_disconnect_failed">Could not fully disconnect this folder. Try again.</string>
