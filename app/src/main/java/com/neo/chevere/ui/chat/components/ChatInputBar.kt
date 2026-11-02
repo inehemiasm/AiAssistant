@@ -92,6 +92,7 @@ fun ChatInputBar(
     onStop: () -> Unit,
     selectedImageUri: Uri?,
     onDocumentClick: () -> Unit = {},
+    onFoldersClick: () -> Unit = {},
     onGalleryClick: () -> Unit,
     onCameraClick: () -> Unit,
     onRemoveImage: () -> Unit,
@@ -219,7 +220,8 @@ fun ChatInputBar(
                         onShowAttachmentMenu = { showAttachmentMenu = true },
                         onDismissAttachmentMenu = { showAttachmentMenu = false },
                         onDocumentClick = onDocumentClick,
-            onGalleryClick = onGalleryClick,
+                        onFoldersClick = onFoldersClick,
+                        onGalleryClick = onGalleryClick,
                         onCameraClick = onCameraClick
                     )
                 }
@@ -289,6 +291,7 @@ private fun ComposerContent(
     onShowAttachmentMenu: () -> Unit,
     onDismissAttachmentMenu: () -> Unit,
     onDocumentClick: () -> Unit = {},
+    onFoldersClick: () -> Unit = {},
     onGalleryClick: () -> Unit,
     onCameraClick: () -> Unit
 ) {
@@ -299,6 +302,7 @@ private fun ComposerContent(
             onShowAttachmentMenu = onShowAttachmentMenu,
             onDismissAttachmentMenu = onDismissAttachmentMenu,
             onDocumentClick = onDocumentClick,
+            onFoldersClick = onFoldersClick,
             onGalleryClick = onGalleryClick,
             onCameraClick = onCameraClick
         )
@@ -348,6 +352,7 @@ private fun AttachmentButton(
     onShowAttachmentMenu: () -> Unit,
     onDismissAttachmentMenu: () -> Unit,
     onDocumentClick: () -> Unit = {},
+    onFoldersClick: () -> Unit = {},
     onGalleryClick: () -> Unit,
     onCameraClick: () -> Unit
 ) {
@@ -386,6 +391,10 @@ private fun AttachmentButton(
             tonalElevation = 8.dp,
             shadowElevation = 8.dp
         ) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.document_folders)) },
+                onClick = { onFoldersClick(); onDismissAttachmentMenu() }
+            )
             DropdownMenuItem(
                 text = { Text(textResources.getString(R.string.ui_import_document)) },
                 onClick = { onDocumentClick(); onDismissAttachmentMenu() }

@@ -311,6 +311,18 @@ fun ChatContent(
     ) { uri ->
         uri?.let { viewModel.onIntent(ChatIntent.ImportDocument(it.toString())) }
     }
+    val folderPickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+        uri?.let { viewModel.onIntent(ChatIntent.IndexDocumentFolder(it.toString())) }
+    }
+    (state.documentFolders as? DocumentFoldersState.Open)?.let { folders ->
+        com.neo.chevere.ui.chat.components.DocumentFoldersDialog(
+            state = folders,
+            onAdd = { folderPickerLauncher.launch(null) },
+            onRefresh = { viewModel.onIntent(ChatIntent.IndexDocumentFolder(it)) },
+            onDisconnect = { viewModel.onIntent(ChatIntent.DisconnectDocumentFolder(it)) },
+            onDismiss = { viewModel.onIntent(ChatIntent.CloseDocumentFolders) },
+        )
+    }
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
@@ -781,6 +793,7 @@ fun ChatContent(
                             viewModel.onIntent(ChatIntent.StopResponse)
                         },
                         onDocumentClick = { documentPickerLauncher.launch(arrayOf("text/plain", "text/markdown", "text/x-markdown")) },
+                        onFoldersClick = { viewModel.onIntent(ChatIntent.OpenDocumentFolders) },
                         onGalleryClick = {
                             hapticView.performChevereHaptic(ChevereHaptic.Selection)
                             imagePickerLauncher.launch("image/*")

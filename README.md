@@ -98,6 +98,11 @@ Want to test how fast local models run on your hardware?
 
 Import a UTF-8 `.txt` or `.md` file (up to 2 MB) through **Add attachment → Import document**, then ask:
 
+For a folder, use **Add attachment → Document folders → Add folder** and grant
+access in Android's picker. Supported files in subfolders are indexed too. Use
+**Refresh index** after changes, or **Disconnect** to remove that source's indexed
+copies and saved permission. Folder indexing is a snapshot, not a live watcher.
+
 ```text
 /docs What is the warranty policy in policy.md?
 ```

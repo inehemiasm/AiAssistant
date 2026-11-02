@@ -7,7 +7,7 @@
   ],
   "modules": {
     "app": {
-      "translatable_entries": 723,
+      "translatable_entries": 735,
       "locales": {
         "es": {
           "missing": 0,

@@ -78,14 +78,15 @@ class ChatViewModel @Inject constructor(
     private val taskRepository: TaskRepository,
     private val aiContentReportRepository: AiContentReportRepository,
     private val documentRepository: com.neo.chevere.domain.DocumentRepository,
-    private val suggestionRepository: com.neo.chevere.domain.ChatSuggestionRepository
+    private val suggestionRepository: com.neo.chevere.domain.ChatSuggestionRepository,
+    private val documentFolderRepository: com.neo.chevere.domain.DocumentFolderRepository,
 ) : BaseViewModel<ChatState, ChatIntent, ChatEffect>(application, ChatState()) {
 
     private val explicitImagePromptPolicy = ExplicitImagePromptPolicy()
 
     override fun shouldLogStateChange(oldState: ChatState, newState: ChatState): Boolean {
-        val cleanOld = oldState.copy(inputText = "", streamingText = "")
-        val cleanNew = newState.copy(inputText = "", streamingText = "")
+        val cleanOld = oldState.copy(inputText = "", streamingText = "", documentFolders = DocumentFoldersState.Closed)
+        val cleanNew = newState.copy(inputText = "", streamingText = "", documentFolders = DocumentFoldersState.Closed)
         return cleanOld != cleanNew
     }
     private val intentMutex = Mutex()
@@ -275,6 +276,28 @@ class ChatViewModel @Inject constructor(
 
                 ChatIntent.ClearConversation -> clearConversation()
                 is ChatIntent.UpdateInputText -> setState { copy(inputText = intent.text) }
+                ChatIntent.OpenDocumentFolders -> updateDocumentFolders()
+                ChatIntent.CloseDocumentFolders -> setState { copy(documentFolders = DocumentFoldersState.Closed) }
+                is ChatIntent.IndexDocumentFolder -> {
+                    setState { copy(documentFolders = DocumentFoldersState.Open(
+                        (documentFolders as? DocumentFoldersState.Open)?.folders.orEmpty(), FolderOperation.Working)) }
+                    val message = when (val result = documentFolderRepository.indexFolder(intent.reference)) {
+                        is com.neo.chevere.domain.FolderIndexResult.Indexed -> application.getString(R.string.folder_indexed, result.files, result.skipped)
+                        is com.neo.chevere.domain.FolderIndexResult.Failed -> result.reason
+                    }
+                    updateDocumentFolders(message)
+                }
+                is ChatIntent.DisconnectDocumentFolder -> {
+                    val folders = (currentState.documentFolders as? DocumentFoldersState.Open)?.folders.orEmpty()
+                    if (folders.any { it.reference == intent.reference }) {
+                        setState { copy(documentFolders = DocumentFoldersState.Open(folders, FolderOperation.Working)) }
+                        val message = when (val result = documentFolderRepository.disconnectFolder(intent.reference)) {
+                            com.neo.chevere.domain.FolderDisconnectResult.Disconnected -> application.getString(R.string.folder_disconnected)
+                            is com.neo.chevere.domain.FolderDisconnectResult.Failed -> result.reason
+                        }
+                        updateDocumentFolders(message)
+                    }
+                }
                 is ChatIntent.ImportDocument -> {
                     sendEffect { ChatEffect.ShowToast(getApplication<android.app.Application>().getString(R.string.ui_indexing_document)) }
                     when (val result = documentRepository.importDocument(intent.reference)) {
@@ -337,6 +360,17 @@ class ChatViewModel @Inject constructor(
                     }
                 }
             }
+        }
+    }
+
+    private suspend fun updateDocumentFolders(message: String? = null) {
+        try {
+            val folders = documentFolderRepository.getFolders().map { DocumentFolderUiModel(it.reference, it.name) }
+            setState { copy(documentFolders = DocumentFoldersState.Open(folders, message = message)) }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            setState { copy(documentFolders = DocumentFoldersState.Open(message = application.getString(R.string.folder_index_failed))) }
         }
     }
 

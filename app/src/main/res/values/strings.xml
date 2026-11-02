@@ -763,4 +763,16 @@
     <string name="slash_light_description">Open the ambient light meter screen</string>
     <string name="slash_proximity_title">Proximity Sensor</string>
     <string name="slash_proximity_description">Open the proximity sensor screen</string>
+    <string name="document_folders">Document folders</string>
+    <string name="folder_explanation">Choose a folder to save searchable copies of its UTF-8 .txt and .md files, including subfolders. Use /docs to search. Refresh after files change; updates are not automatic. Limits: 100 text files, 2 MB per file, 16 MB total, 1,000 entries and 8 subfolder levels. Disconnect removes this folder’s indexed text and its saved access permission; original files and chat history stay intact.</string>
+    <string name="folder_empty">No folders connected.</string>
+    <string name="folder_add">Add folder</string>
+    <string name="folder_refresh">Refresh index</string>
+    <string name="folder_disconnect">Disconnect</string>
+    <string name="folder_done">Done</string>
+    <string name="folder_working">Updating document library…</string>
+    <string name="folder_indexed">Indexed: %1$d files. Skipped: %2$d unsupported or empty entries.</string>
+    <string name="folder_disconnected">Folder disconnected and its indexed text removed.</string>
+    <string name="folder_index_failed">Could not refresh this folder. Its previous index is unchanged. Check access, UTF-8 text and folder limits, then try again. If access was revoked, select the folder again with Add folder. Cloud providers may need a connection or more time to load.</string>
+    <string name="folder_disconnect_failed">Could not fully disconnect this folder. Try again.</string>
 </resources>

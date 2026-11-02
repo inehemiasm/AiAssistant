@@ -733,4 +733,16 @@
     <string name="slash_light_description">Abrir el medidor de luz ambiental</string>
     <string name="slash_proximity_title">Sensor de proximidad</string>
     <string name="slash_proximity_description">Abrir el sensor de proximidad</string>
+    <string name="document_folders">Carpetas de documentos</string>
+    <string name="folder_explanation">Elige una carpeta para guardar copias de sus archivos UTF-8 .txt y .md, incluidas las subcarpetas. Usa /docs para buscar. Actualiza después de cambiar archivos; no se actualizan automáticamente. Límites: 100 archivos de texto, 2 MB por archivo, 16 MB en total, 1.000 elementos y 8 niveles de subcarpetas. Desconectar elimina el texto indexado de esta carpeta y su permiso guardado; conserva los archivos originales y el historial de chat.</string>
+    <string name="folder_empty">No hay carpetas conectadas.</string>
+    <string name="folder_add">Añadir carpeta</string>
+    <string name="folder_refresh">Actualizar índice</string>
+    <string name="folder_disconnect">Desconectar</string>
+    <string name="folder_done">Listo</string>
+    <string name="folder_working">Actualizando la biblioteca de documentos…</string>
+    <string name="folder_indexed">Archivos indexados: %1$d. Elementos vacíos o no compatibles omitidos: %2$d.</string>
+    <string name="folder_disconnected">Carpeta desconectada y texto indexado eliminado.</string>
+    <string name="folder_index_failed">No se pudo actualizar esta carpeta. Su índice anterior no ha cambiado. Comprueba el acceso, el texto UTF-8 y los límites e inténtalo de nuevo. Si se revocó el acceso, selecciona la carpeta de nuevo con Añadir carpeta. Los proveedores en la nube pueden necesitar conexión o más tiempo para cargar.</string>
+    <string name="folder_disconnect_failed">No se pudo desconectar esta carpeta por completo. Inténtalo de nuevo.</string>
 </resources>

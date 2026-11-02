@@ -733,4 +733,16 @@
     <string name="slash_light_description">Umgebungslichtmesser öffnen</string>
     <string name="slash_proximity_title">Näherungssensor</string>
     <string name="slash_proximity_description">Näherungssensor öffnen</string>
+    <string name="document_folders">Dokumentenordner</string>
+    <string name="folder_explanation">Wählen Sie einen Ordner, um durchsuchbare Kopien seiner UTF-8-Dateien mit .txt und .md einschließlich Unterordnern zu speichern. Suchen Sie mit /docs. Nach Dateiänderungen ist eine Aktualisierung nötig; sie erfolgt nicht automatisch. Grenzen: 100 Textdateien, 2 MB pro Datei, insgesamt 16 MB, 1.000 Einträge und 8 Unterordnerebenen. Trennen entfernt den indizierten Text dieses Ordners und seine gespeicherte Zugriffsberechtigung; Originaldateien und Chatverlauf bleiben erhalten.</string>
+    <string name="folder_empty">Keine Ordner verbunden.</string>
+    <string name="folder_add">Ordner hinzufügen</string>
+    <string name="folder_refresh">Index aktualisieren</string>
+    <string name="folder_disconnect">Trennen</string>
+    <string name="folder_done">Fertig</string>
+    <string name="folder_working">Dokumentenbibliothek wird aktualisiert…</string>
+    <string name="folder_indexed">Indizierte Dateien: %1$d. Übersprungene leere oder nicht unterstützte Einträge: %2$d.</string>
+    <string name="folder_disconnected">Ordner getrennt und sein indizierter Text entfernt.</string>
+    <string name="folder_index_failed">Dieser Ordner konnte nicht aktualisiert werden. Sein bisheriger Index bleibt erhalten. Prüfen Sie Zugriff, UTF-8-Text und Ordnergrenzen und versuchen Sie es erneut. Wählen Sie den Ordner bei entzogenem Zugriff über Ordner hinzufügen erneut aus. Cloudanbieter benötigen möglicherweise eine Verbindung oder mehr Ladezeit.</string>
+    <string name="folder_disconnect_failed">Dieser Ordner konnte nicht vollständig getrennt werden. Versuchen Sie es erneut.</string>
 </resources>

@@ -733,4 +733,16 @@
     <string name="slash_light_description">Ouvrir le luxmètre ambiant</string>
     <string name="slash_proximity_title">Capteur de proximité</string>
     <string name="slash_proximity_description">Ouvrir le capteur de proximité</string>
+    <string name="document_folders">Dossiers de documents</string>
+    <string name="folder_explanation">Choisissez un dossier pour conserver des copies consultables de ses fichiers UTF-8 .txt et .md, sous-dossiers inclus. Utilisez /docs pour rechercher. Actualisez après toute modification ; les mises à jour ne sont pas automatiques. Limites : 100 fichiers texte, 2 Mo par fichier, 16 Mo au total, 1 000 éléments et 8 niveaux de sous-dossiers. Déconnecter supprime le texte indexé de ce dossier et son autorisation enregistrée ; les fichiers originaux et les conversations sont conservés.</string>
+    <string name="folder_empty">Aucun dossier connecté.</string>
+    <string name="folder_add">Ajouter un dossier</string>
+    <string name="folder_refresh">Actualiser l’index</string>
+    <string name="folder_disconnect">Déconnecter</string>
+    <string name="folder_done">Terminé</string>
+    <string name="folder_working">Mise à jour de la bibliothèque de documents…</string>
+    <string name="folder_indexed">Fichiers indexés : %1$d. Éléments vides ou non pris en charge ignorés : %2$d.</string>
+    <string name="folder_disconnected">Dossier déconnecté et texte indexé supprimé.</string>
+    <string name="folder_index_failed">Impossible d’actualiser ce dossier. Son index précédent est conservé. Vérifiez l’accès, le texte UTF-8 et les limites, puis réessayez. Si l’accès a été révoqué, sélectionnez à nouveau le dossier avec Ajouter un dossier. Les fournisseurs cloud peuvent nécessiter une connexion ou plus de temps de chargement.</string>
+    <string name="folder_disconnect_failed">Impossible de déconnecter complètement ce dossier. Réessayez.</string>
 </resources>

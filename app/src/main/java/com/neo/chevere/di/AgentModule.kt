@@ -264,6 +264,10 @@ abstract class AgentModule {
         fun provideDocumentRepository(implementation: com.neo.chevere.data.LocalDocumentRepository): com.neo.chevere.domain.DocumentRepository = implementation
 
         @Provides
+        @Singleton
+        fun provideDocumentFolderRepository(implementation: com.neo.chevere.data.LocalDocumentFolderRepository): com.neo.chevere.domain.DocumentFolderRepository = implementation
+
+        @Provides
         @IntoSet
         fun provideMcpTool(@ApplicationContext context: Context): AgentTool = com.neo.chevere.data.agent.tools.McpTool(context)
 

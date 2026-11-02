@@ -10,6 +10,16 @@ import androidx.room.Query
  */
 @Dao
 interface DocumentChunkDao {
+    /** Replaces a folder snapshot without exposing partially refreshed search results. */
+    @androidx.room.Transaction
+    suspend fun replaceFolder(prefix: String, chunks: List<DocumentChunkEntity>) {
+        deleteFolder(prefix)
+        insertChunks(chunks)
+    }
+
+    @Query("DELETE FROM document_chunks WHERE substr(filePath, 1, length(:prefix)) = :prefix")
+    suspend fun deleteFolder(prefix: String)
+
     @androidx.room.Transaction
     suspend fun replaceDocument(reference: String, chunks: List<DocumentChunkEntity>) {
         deleteChunksForFile(reference)
