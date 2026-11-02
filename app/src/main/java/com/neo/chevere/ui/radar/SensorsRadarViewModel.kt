@@ -1,5 +1,6 @@
 package com.neo.chevere.ui.radar
 
+import com.neo.chevere.R
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
@@ -40,19 +41,19 @@ import kotlin.math.sqrt
  * Opening in a focused mode registers only the required hardware listener,
  * reducing CPU load and preventing device heating.
  */
-enum class SensorMode(val key: String, val shortLabel: String) {
+enum class SensorMode(val key: String, @androidx.annotation.StringRes val shortLabelRes: Int) {
     /** All sensors — full radar dashboard. */
-    ALL("all", "ALL"),
+    ALL("all", R.string.ui_all),
     /** Magnetometer only — stud finder / metal detector. */
-    STUD("stud", "STUD"),
+    STUD("stud", R.string.ui_stud),
     /** Sound level sensor (decibel meter). */
-    SOUND("sound", "SOUND"),
+    SOUND("sound", R.string.ui_sound),
     /** Accelerometer only — spirit level / bubble level. */
-    LEVEL("level", "LEVEL"),
+    LEVEL("level", R.string.ui_level_f481cc),
     /** Ambient light sensor only. */
-    LIGHT("light", "LIGHT"),
+    LIGHT("light", R.string.ui_light),
     /** Proximity sensor only. */
-    PROXIMITY("proximity", "PROXIMITY");
+    PROXIMITY("proximity", R.string.ui_proximity_795c24);
 
     companion object {
         fun from(key: String?) = entries.firstOrNull { it.key == key } ?: ALL
@@ -72,7 +73,7 @@ data class RadarUiState(
     val roll: Float = 0f,
     val audioEnabled: Boolean = false,
     val vibrationEnabled: Boolean = false,
-    val statusLabel: String = "INITIALIZING...",
+    val statusLabel: String = "",
     val soundDbSpl: Float = 0f,
     val soundHistory: List<Float> = emptyList(),
     val micPermissionGranted: Boolean = true
@@ -249,45 +250,45 @@ class SensorsRadarViewModel @Inject constructor(
      */
     private fun computeStatusLabel(state: RadarUiState): String = when (state.mode) {
         SensorMode.ALL -> when {
-            state.magneticCalibrated > 250f -> "TARGET ACQUIRED: CRITICAL FIELD"
-            state.magneticCalibrated > 100f -> "TARGET ACQUIRED: STRONG FIELD"
-            state.magneticCalibrated > 35f  -> "MAGNETIC ANOMALY DETECTED"
-            state.proximityNear             -> "PROXIMITY ALERT: OBJECT NEARBY"
-            state.soundDbSpl > 75f          -> "NOISE ALERT: LOUD ENVIRONMENT"
-            else                            -> "MULTI-SENSOR TELEMETRY ACTIVE"
+            state.magneticCalibrated > 250f -> context.getString(R.string.ui_target_acquired_critical_field)
+            state.magneticCalibrated > 100f -> context.getString(R.string.ui_target_acquired_strong_field)
+            state.magneticCalibrated > 35f  -> context.getString(R.string.ui_magnetic_anomaly_detected)
+            state.proximityNear             -> context.getString(R.string.ui_proximity_alert_object_nearby)
+            state.soundDbSpl > 75f          -> context.getString(R.string.ui_noise_alert_loud_environment)
+            else                            -> context.getString(R.string.ui_multi_sensor_telemetry_active)
         }
         SensorMode.STUD -> when {
-            state.magneticCalibrated > 250f -> "TARGET ACQUIRED: CRITICAL DETECT"
-            state.magneticCalibrated > 100f -> "TARGET ACQUIRED: STRONG FIELD"
-            state.magneticCalibrated > 35f  -> "TARGET ACQUIRED: WEAK DETECT"
-            state.magneticCalibrated > 10f  -> "SIGNAL DETECTED"
-            else                            -> "SCANNING FOR STUDS / METALS..."
+            state.magneticCalibrated > 250f -> context.getString(R.string.ui_target_acquired_critical_detect)
+            state.magneticCalibrated > 100f -> context.getString(R.string.ui_target_acquired_strong_field)
+            state.magneticCalibrated > 35f  -> context.getString(R.string.ui_target_acquired_weak_detect)
+            state.magneticCalibrated > 10f  -> context.getString(R.string.ui_signal_detected)
+            else                            -> context.getString(R.string.ui_scanning_for_studs_metals)
         }
         SensorMode.LEVEL -> {
             if (abs(state.pitch) < 2.0f && abs(state.roll) < 2.0f) {
-                "SURFACE LEVEL ✓"
+                context.getString(R.string.ui_surface_level)
             } else {
-                "SURFACE TILTED"
+                context.getString(R.string.ui_surface_tilted)
             }
         }
         SensorMode.LIGHT -> when {
-            state.lightLevel < 0f    -> "READING AMBIENT LIGHT..."
-            state.lightLevel < 10f   -> "ENVIRONMENT: DARK"
-            state.lightLevel < 200f  -> "ENVIRONMENT: DIM"
-            state.lightLevel < 1000f -> "ENVIRONMENT: NORMAL INDOOR"
-            else                     -> "ENVIRONMENT: BRIGHT"
+            state.lightLevel < 0f    -> context.getString(R.string.ui_reading_ambient_light)
+            state.lightLevel < 10f   -> context.getString(R.string.ui_environment_dark)
+            state.lightLevel < 200f  -> context.getString(R.string.ui_environment_dim)
+            state.lightLevel < 1000f -> context.getString(R.string.ui_environment_normal_indoor)
+            else                     -> context.getString(R.string.ui_environment_bright)
         }
         SensorMode.PROXIMITY -> {
-            if (state.proximityNear) "OBJECT DETECTED NEARBY" else "PATH CLEAR"
+            if (state.proximityNear) context.getString(R.string.ui_object_detected_nearby) else context.getString(R.string.ui_path_clear)
         }
         SensorMode.SOUND -> when {
-            !state.micPermissionGranted -> "MICROPHONE PERMISSION REQUIRED"
-            state.soundDbSpl < 30f      -> "VERY QUIET ENVIRONMENT"
-            state.soundDbSpl < 45f      -> "QUIET • LIBRARY LEVEL"
-            state.soundDbSpl < 60f      -> "MODERATE AMBIENT NOISE"
-            state.soundDbSpl < 75f      -> "LOUD ENVIRONMENT"
-            state.soundDbSpl < 90f      -> "VERY LOUD ENVIRONMENT"
-            else                        -> "EXTREME NOISE • HEARING RISK"
+            !state.micPermissionGranted -> context.getString(R.string.ui_microphone_permission_required)
+            state.soundDbSpl < 30f      -> context.getString(R.string.ui_very_quiet_environment)
+            state.soundDbSpl < 45f      -> context.getString(R.string.ui_quiet_library_level)
+            state.soundDbSpl < 60f      -> context.getString(R.string.ui_moderate_ambient_noise)
+            state.soundDbSpl < 75f      -> context.getString(R.string.ui_loud_environment)
+            state.soundDbSpl < 90f      -> context.getString(R.string.ui_very_loud_environment)
+            else                        -> context.getString(R.string.ui_extreme_noise_hearing_risk)
         }
     }
 
@@ -476,7 +477,7 @@ class SensorsRadarViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 if (activeMode == SensorMode.SOUND) {
-                    _uiState.update { it.copy(statusLabel = "SOUND PROBE ERROR: ${e.message}") }
+                    _uiState.update { it.copy(statusLabel = context.getString(R.string.ui_sound_probe_error_1_s, e.message)) }
                 }
             } finally {
                 runCatching { recorder.stop() }

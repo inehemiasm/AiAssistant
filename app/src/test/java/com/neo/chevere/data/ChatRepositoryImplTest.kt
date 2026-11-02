@@ -66,9 +66,8 @@ class ChatRepositoryImplTest {
 
     @Before
     fun setup() {
-        context = mock {
-            on { filesDir } doReturn File("build/test-files")
-        }
+        context = org.mockito.kotlin.spy(org.robolectric.RuntimeEnvironment.getApplication())
+        org.mockito.kotlin.doReturn(File("build/test-files")).whenever(context).filesDir
         inferenceManager = mock {
             on { initStatus } doReturn MutableStateFlow(com.neo.chevere.domain.InitializationStatus.Uninitialized)
         }

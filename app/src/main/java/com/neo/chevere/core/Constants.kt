@@ -78,28 +78,7 @@ object Constants {
     object Commands {
         val IMAGE_GENERATION = listOf("/image", "/img", "/imagine")
 
-        /** Full registry of slash commands surfaced in the autocomplete menu. */
-        val ALL: List<SlashCommand> = listOf(
-            SlashCommand("/sensors",  "Sensor Dashboard", "Open the full sensor radar screen"),
-            SlashCommand("/stud",     "Stud Finder",      "Open the stud / metal detector screen"),
-            SlashCommand("/level",    "Spirit Level",     "Open the spirit level screen"),
-            SlashCommand("/light",    "Light Meter",      "Open the ambient light meter screen"),
-            SlashCommand("/proximity","Proximity Sensor", "Open the proximity sensor screen")
-        )
     }
-
-    /**
-     * A single slash command shown in the autocomplete popup.
-     *
-     * @property command  The exact command string (e.g. "/image").
-     * @property label    Short human-readable name shown in bold.
-     * @property description  One-line description shown in the secondary text slot.
-     */
-    data class SlashCommand(
-        val command: String,
-        val label: String,
-        val description: String
-    )
 
     object UiStatus {
         const val PLANNING = "PLANNING..."
@@ -110,7 +89,7 @@ object Constants {
 
     object ContentPolicy {
         const val EXPLICIT_RELEASE_BLOCK_MESSAGE =
-            "Explicit image generation is only available in debug builds. This release version can help create non-explicit portraits, fashion shots, character designs, and artistic compositions."
+            "Image generation is not available in this build. Compatible vision models can analyze attached images."
     }
 
     object WebSearch {
@@ -121,13 +100,10 @@ object Constants {
     }
 
     object Inference {
-        /**
-         * Max new tokens the model may generate per turn.
-         * Capped at 1024 to keep responses fast and prevent runaway
-         * generation that would eat into the next turn's context budget.
-         * Raise to 2048 for larger models (7B+).
-         */
-        const val MAX_NUM_TOKENS = 1024
+        /** Total native KV-cache budget: input, templates, and generated output combined. */
+        const val MAX_CONTEXT_TOKENS = 4096
+        /** Separate response ceiling; this is not the engine's context capacity. */
+        const val MAX_OUTPUT_TOKENS = 1024
         const val MAX_NUM_IMAGES = 1
         const val NEURAL_CACHE_DIR = "neural_cache"
         const val MIN_MODEL_FILE_SIZE_BYTES = 1024 * 1024L // 1MB

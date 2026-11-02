@@ -1,5 +1,6 @@
 package com.neo.chevere.ui.invoices
 
+import com.neo.chevere.R
 import android.app.Application
 import androidx.lifecycle.viewModelScope
 import com.neo.chevere.core.BaseViewModel
@@ -29,7 +30,7 @@ class InvoicesViewModel @Inject constructor(
         when (intent) {
             is InvoicesIntent.AddInvoice -> {
                 if (intent.vendor.isBlank()) {
-                    sendEffect { InvoicesEffect.ShowToast("Vendor name cannot be empty") }
+                    sendEffect { InvoicesEffect.ShowToast(getApplication<android.app.Application>().getString(R.string.ui_vendor_name_cannot_be_empty)) }
                     return
                 }
                 val invoice = InvoiceEntity(

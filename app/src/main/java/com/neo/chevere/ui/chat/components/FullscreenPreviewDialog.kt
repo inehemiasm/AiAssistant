@@ -1,5 +1,7 @@
 package com.neo.chevere.ui.chat.components
 
+import androidx.compose.ui.platform.LocalResources
+import com.neo.chevere.R
 import android.annotation.SuppressLint
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -55,6 +57,7 @@ fun FullscreenImagePreviewDialog(
     imageUri: String,
     onDismiss: () -> Unit
 ) {
+    val textResources = LocalResources.current
     var scale by remember { mutableStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
 
@@ -106,7 +109,7 @@ fun FullscreenImagePreviewDialog(
             ) {
                 AsyncImage(
                     model = imageUri,
-                    contentDescription = "Fullscreen image preview",
+                    contentDescription = textResources.getString(R.string.ui_fullscreen_image_preview),
                     modifier = Modifier
                         .fillMaxSize()
                         .graphicsLayer(
@@ -133,7 +136,7 @@ fun FullscreenImagePreviewDialog(
                 IconButton(onClick = onDismiss, modifier = Modifier.size(44.dp)) {
                     Icon(
                         imageVector = Icons.Default.Close,
-                        contentDescription = "Close preview",
+                        contentDescription = textResources.getString(R.string.ui_close_preview),
                         tint = MaterialTheme.colorScheme.onSurface
                     )
                 }
@@ -149,6 +152,7 @@ fun FullscreenHtmlPreviewDialog(
     html: String,
     onDismiss: () -> Unit
 ) {
+    val textResources = LocalResources.current
     var webViewInstance by remember { mutableStateOf<WebView?>(null) }
     var currentHtml by remember { mutableStateOf("") }
 
@@ -169,7 +173,7 @@ fun FullscreenHtmlPreviewDialog(
                 TopAppBar(
                     title = {
                         Text(
-                            text = "HTML Sandbox",
+                            text = textResources.getString(R.string.ui_html_sandbox),
                             style = Typography.titleMedium,
                             color = MaterialTheme.colorScheme.onSurface
                         )
@@ -178,7 +182,7 @@ fun FullscreenHtmlPreviewDialog(
                         IconButton(onClick = onDismiss) {
                             Icon(
                                 imageVector = Icons.Default.Close,
-                                contentDescription = "Close sandbox",
+                                contentDescription = textResources.getString(R.string.ui_close_sandbox),
                                 tint = MaterialTheme.colorScheme.onSurface
                             )
                         }
@@ -187,7 +191,7 @@ fun FullscreenHtmlPreviewDialog(
                         IconButton(onClick = { webViewInstance?.reload() }) {
                             Icon(
                                 imageVector = Icons.Default.Refresh,
-                                contentDescription = "Reload page",
+                                contentDescription = textResources.getString(R.string.ui_reload_page),
                                 tint = MaterialTheme.colorScheme.onSurface
                             )
                         }

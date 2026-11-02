@@ -10,13 +10,15 @@ import org.junit.Test
 import org.mockito.kotlin.mock
 import java.util.UUID
 
+@org.junit.runner.RunWith(org.robolectric.RobolectricTestRunner::class)
+@org.robolectric.annotation.Config(sdk = [34], application = android.app.Application::class)
 class WorkManagerModelDownloadManagerTest {
 
     private lateinit var downloadManager: WorkManagerModelDownloadManager
 
     @Before
     fun setup() {
-        downloadManager = WorkManagerModelDownloadManager(mock(), mock())
+        downloadManager = WorkManagerModelDownloadManager(mock(), mock(), org.robolectric.RuntimeEnvironment.getApplication())
     }
 
     @Test

@@ -33,7 +33,7 @@ class DocumentRagTest {
     }
 
     @Test fun mcpRequiresSecureEndpointAndConfirmation() = runTest {
-        val tool = McpTool()
+        val tool = McpTool(org.robolectric.RuntimeEnvironment.getApplication())
         assertTrue(tool.execute(mapOf("endpoint" to "http://example.com/mcp")) is ToolResult.Error)
         assertTrue(tool.execute(mapOf("endpoint" to "https://example.com/mcp", "action" to "list")) is ToolResult.NeedsConfirmation)
     }

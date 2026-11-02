@@ -128,7 +128,7 @@ Path: `app/src/main/java/com/neo/chevere/ui/`
 
 ## Model Management Rules
 
-- LiteRT-LM is 0.19.0. `ModelRuntimeProfile` configures the exact Spark X2.6 full INT8 filename for CPU text chat with 4096 context tokens, 1536 output tokens, and thinking disabled. Other models retain default settings. Do not merge thought channels into visible text or tool parsing. See `docs/spark-x2.6-testing.md`.
+- LiteRT-LM is 0.19.0. `ModelRuntimeProfile` configures the exact Spark X2.6 full INT8 filename for CPU text chat with 4096 context tokens, 1536 output tokens, and thinking disabled. Other models use a 4096-token total context and a separate 1024-token output limit. Engine `maxNumTokens` includes input and output; never use the output ceiling as the context capacity. Do not merge thought channels into visible text or tool parsing. See `docs/spark-x2.6-testing.md`.
 - `gemma-4-E2B-it-web.litertlm` is text-only and uses the GPU loading path. Never request its missing vision encoder or fall back to CPU for this artifact. Persistence mappings correct older vision capability labels without deleting the downloaded file. General models may try GPU text-only independently of vision support.
 
 - Active models cannot be deleted.
@@ -146,6 +146,7 @@ Path: `app/src/main/java/com/neo/chevere/ui/`
 ## Document RAG and remote MCP
 
 - Document import uses `ChatIntent.ImportDocument` → domain `DocumentRepository` → `LocalDocumentRepository`. Accept user-selected content URIs for UTF-8 `.txt`/`.md` files up to 2 MB; persist chunks in Room with atomic replacement.
+- Folder access uses Android's `OpenDocumentTree` picker and domain `DocumentFolderRepository`. Persist read access only; provide explicit refresh and disconnect. `LocalDocumentFolderRepository` atomically replaces per-folder snapshots through `DocumentChunkDao`, with separate source prefixes so disconnect cannot remove individual imports or another folder. No filesystem watcher is implemented. Keep the bounded traversal and snapshot semantics documented in `docs/rag-mcp.md`.
 - `ChatRequestRouter` routes `/docs` and recognized document phrases to `DOCUMENTS`; `ToolRegistry` exposes `document_rag` and `read_local_file` for that category. Registering a tool with Hilt alone does not make it available in routed chat.
 - Retrieval is lexical TF-IDF, using Unicode tokens, 800-character chunks, 200-character overlap, and at most three excerpts. Filename mentions narrow retrieval. There are no semantic embeddings or PDF extraction; long-document summaries may cover only excerpts.
 - `/mcp` routes to the `mcp` bridge (`McpTool`). It supports HTTPS Streamable HTTP tool discovery/calls with confirmation, JSON/SSE responses, and 2025-03-26, 2025-06-18, or 2025-11-25 negotiation. Endpoint URLs are supplied per request. No OAuth/API-token configuration, saved connections, stdio, resources/prompts, or resumable streams are implemented.
@@ -239,7 +240,8 @@ Apply these rules to new features and code changed by a task. Existing violation
 - Voice input requests offline recognition through Android, but provider behavior may involve network access. Keep permission, onboarding, settings and privacy disclosures accurate.
 - The open-source notices viewer is reached via Settings MVI effects using Google OSS Licenses. Generated notices do not replace model/conversion/asset/API license review.
 - Generate exact runtime coordinates using `:app:releaseDependencyInventory`. Run `scripts/build_license_inventory.py` for cached POM metadata and `scripts/check_native_alignment.py` against the actual APK/AAB. Keep unknown licensing explicit.
-- Partial translations remain lint warnings for the initial US release; stale privacy translations fall back to corrected English. Translation QA is still required.
+- English, Spanish, French, and German are declared in `res/xml/locales_config.xml`. All app-owned UI copy belongs in localized resources; keep machine identifiers, tool schemas, model names, logs, and user/external content unchanged. Use plurals for counts and observable configuration for locale-sensitive UI formatting.
+- `python scripts/check_localization.py` checks resource coverage, duplicates, format arguments and literal UI copy in CI. `LocalizationResourcesTest` verifies actual Android locale selection. MissingTranslation lint remains a warning for the initial US release; the resource coverage check must pass. Translation and layout QA are still required.
 - Policy/terms drafts are not automatically deployed. Retention, publisher/contact information and external declarations require verified operational choices before production.
 
 ### Production reporting gate

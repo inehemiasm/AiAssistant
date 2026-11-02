@@ -1,5 +1,8 @@
 package com.neo.chevere.ui.chat
 
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalResources
+import com.neo.chevere.R
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -84,6 +87,7 @@ fun HistoryBottomSheet(
     onRenameSession: (Long, String) -> Unit,
     onNewConversation: () -> Unit
 ) {
+    val textResources = LocalResources.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
 
     ModalBottomSheet(
@@ -120,7 +124,7 @@ fun HistoryBottomSheet(
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        text = "CHAT HISTORY",
+                        text = textResources.getString(R.string.ui_chat_history_8e42ed),
                         style = Typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 2.sp
@@ -139,12 +143,12 @@ fun HistoryBottomSheet(
                 ) {
                     Icon(
                         Icons.Default.Add,
-                        contentDescription = "New chat",
+                        contentDescription = textResources.getString(R.string.ui_new_chat),
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(Modifier.width(6.dp))
                     Text(
-                        text = "New Chat",
+                        text = textResources.getString(R.string.ui_new_chat_364e70),
                         style = Typography.labelMedium.copy(fontWeight = FontWeight.Bold)
                     )
                 }
@@ -186,6 +190,7 @@ private fun HistorySessionRow(
     onDelete: () -> Unit,
     onRename: (String) -> Unit
 ) {
+    val textResources = LocalResources.current
     var showRenameDialog by remember { mutableStateOf(false) }
 
     val dismissState = rememberSwipeToDismissBoxState()
@@ -216,7 +221,7 @@ private fun HistorySessionRow(
             ) {
                 Icon(
                     imageVector = Icons.Default.Delete,
-                    contentDescription = "Delete session",
+                    contentDescription = textResources.getString(R.string.ui_delete_session),
                     tint = MaterialTheme.colorScheme.onErrorContainer,
                     modifier = Modifier.size(22.dp)
                 )
@@ -297,7 +302,7 @@ private fun HistorySessionRow(
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
                         )
                         Text(
-                            text = "${session.messageCount} msg${if (session.messageCount != 1) "s" else ""}",
+                            text = textResources.getQuantityString(R.plurals.history_message_count, session.messageCount, session.messageCount),
                             style = Typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                         )
@@ -328,7 +333,7 @@ private fun HistorySessionRow(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Edit,
-                        contentDescription = "Rename session",
+                        contentDescription = textResources.getString(R.string.ui_rename_session),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                         modifier = Modifier.size(18.dp)
                     )
@@ -357,13 +362,14 @@ private fun RenameSessionDialog(
     onDismiss: () -> Unit,
     onConfirm: (String) -> Unit
 ) {
+    val textResources = LocalResources.current
     var text by remember { mutableStateOf(currentTitle) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "Rename Conversation",
+                text = textResources.getString(R.string.ui_rename_conversation),
                 style = Typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                 color = MaterialTheme.colorScheme.primary
             )
@@ -372,7 +378,7 @@ private fun RenameSessionDialog(
             OutlinedTextField(
                 value = text,
                 onValueChange = { text = it },
-                label = { Text("Title") },
+                label = { Text(textResources.getString(R.string.ui_title)) },
                 singleLine = true,
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = MaterialTheme.colorScheme.primary,
@@ -390,7 +396,7 @@ private fun RenameSessionDialog(
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Text(
-                    "Save",
+                    textResources.getString(R.string.ui_save),
                     style = Typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.onPrimary
                 )
@@ -399,7 +405,7 @@ private fun RenameSessionDialog(
         dismissButton = {
             TextButton(onClick = onDismiss) {
                 Text(
-                    "Cancel",
+                    textResources.getString(R.string.ui_cancel),
                     style = Typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -414,6 +420,7 @@ private fun RenameSessionDialog(
 
 @Composable
 private fun HistoryEmptyState(modifier: Modifier = Modifier) {
+    val textResources = LocalResources.current
     Box(
         modifier = modifier.fillMaxWidth(),
         contentAlignment = Alignment.Center
@@ -438,12 +445,12 @@ private fun HistoryEmptyState(modifier: Modifier = Modifier) {
                 }
             }
             Text(
-                text = "No history yet",
+                text = textResources.getString(R.string.ui_no_history_yet),
                 style = Typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                 color = MaterialTheme.colorScheme.onSurface
             )
             Text(
-                text = "Your conversations will appear here after you send your first message.",
+                text = textResources.getString(R.string.ui_your_conversations_will_appear_here_after_you_send_your_first_me),
                 style = Typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
@@ -454,21 +461,24 @@ private fun HistoryEmptyState(modifier: Modifier = Modifier) {
 
 // ── Timestamp helper ──────────────────────────────────────────────────────────
 
+@Composable
 private fun Long.toRelativeLabel(): String {
+    val formatLocale = LocalConfiguration.current.locales[0]
+    val textResources = LocalResources.current
     val now = Calendar.getInstance()
     val target = Calendar.getInstance().apply { timeInMillis = this@toRelativeLabel }
 
     return when {
         now.get(Calendar.DATE) == target.get(Calendar.DATE) &&
-                now.get(Calendar.YEAR) == target.get(Calendar.YEAR) -> "Today"
+                now.get(Calendar.YEAR) == target.get(Calendar.YEAR) -> textResources.getString(R.string.ui_today)
 
         now.get(Calendar.DATE) - target.get(Calendar.DATE) == 1 &&
-                now.get(Calendar.YEAR) == target.get(Calendar.YEAR) -> "Yesterday"
+                now.get(Calendar.YEAR) == target.get(Calendar.YEAR) -> textResources.getString(R.string.ui_yesterday)
 
         now.get(Calendar.YEAR) == target.get(Calendar.YEAR) ->
-            SimpleDateFormat("MMM d", Locale.getDefault()).format(Date(this))
+            java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM, formatLocale).format(Date(this))
 
         else ->
-            SimpleDateFormat("MMM d, yyyy", Locale.getDefault()).format(Date(this))
+            java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM, formatLocale).format(Date(this))
     }
 }

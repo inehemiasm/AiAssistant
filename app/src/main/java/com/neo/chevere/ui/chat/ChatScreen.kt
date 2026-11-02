@@ -127,7 +127,7 @@ import com.neo.chevere.ui.common.ChevereHaptic
 import com.neo.chevere.ui.common.ErrorSnackbar
 import com.neo.chevere.ui.common.hapticForFeedbackMessage
 import com.neo.chevere.ui.common.performChevereHaptic
-import com.neo.chevere.ui.common.ObserveAsEvents 
+import com.neo.chevere.ui.common.ObserveAsEvents
 import com.neo.chevere.ui.designsystem.Typography
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -207,6 +207,7 @@ fun ChatContent(
     onSettingsClick: () -> Unit,
     onRadarClick: (mode: String) -> Unit
 ) {
+    val textResources = LocalResources.current
     val currentState by rememberUpdatedState(state)
     val currentOnIntent by rememberUpdatedState(onIntent)
     val viewModel = remember(effects) {
@@ -309,6 +310,18 @@ fun ChatContent(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri ->
         uri?.let { viewModel.onIntent(ChatIntent.ImportDocument(it.toString())) }
+    }
+    val folderPickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+        uri?.let { viewModel.onIntent(ChatIntent.IndexDocumentFolder(it.toString())) }
+    }
+    (state.documentFolders as? DocumentFoldersState.Open)?.let { folders ->
+        com.neo.chevere.ui.chat.components.DocumentFoldersDialog(
+            state = folders,
+            onAdd = { folderPickerLauncher.launch(null) },
+            onRefresh = { viewModel.onIntent(ChatIntent.IndexDocumentFolder(it)) },
+            onDisconnect = { viewModel.onIntent(ChatIntent.DisconnectDocumentFolder(it)) },
+            onDismiss = { viewModel.onIntent(ChatIntent.CloseDocumentFolders) },
+        )
     }
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -425,7 +438,7 @@ fun ChatContent(
             ).show()
             val lastMessage = currentState.messages.lastOrNull()
             val isAmbientSoundPermission = lastMessage != null && !lastMessage.isUser &&
-                lastMessage.text.contains("Microphone permission is required to measure the ambient sound level")
+                lastMessage.text.contains(textResources.getString(R.string.ui_microphone_permission_is_required_to_measure_the_ambient_sound_l))
             if (isAmbientSoundPermission) {
                 viewModel.onIntent(ChatIntent.RetryLastMessage)
             } else {
@@ -494,7 +507,7 @@ fun ChatContent(
                                 letterSpacing = 1.4.sp
                             )
                             Text(
-                                text = "PRIVATE CORE",
+                                text = textResources.getString(R.string.ui_private_core),
                                 style = Typography.labelSmall.copy(fontSize = 9.sp, fontWeight = FontWeight.Bold),
                                 color = MaterialTheme.colorScheme.primary,
                                 letterSpacing = 1.2.sp
@@ -506,7 +519,7 @@ fun ChatContent(
                     Spacer(modifier = Modifier.height(24.dp))
 
                     DrawerNavItem(
-                        label = "Models Library",
+                        label = textResources.getString(R.string.ui_models_library),
                         icon = Icons.Default.Storage,
                         onClick = {
                             scope.launch { drawerState.close() }
@@ -518,7 +531,7 @@ fun ChatContent(
                     Spacer(modifier = Modifier.height(12.dp))
 
                     DrawerNavItem(
-                        label = "Chat History",
+                        label = textResources.getString(R.string.ui_chat_history),
                         icon = Icons.Default.History,
                         onClick = {
                             scope.launch { drawerState.close() }
@@ -530,7 +543,7 @@ fun ChatContent(
                     Spacer(modifier = Modifier.height(12.dp))
 
                     DrawerNavItem(
-                        label = "System Settings",
+                        label = textResources.getString(R.string.ui_system_settings),
                         icon = Icons.Default.Person,
                         onClick = {
                             scope.launch { drawerState.close() }
@@ -545,7 +558,7 @@ fun ChatContent(
                     Spacer(modifier = Modifier.height(24.dp))
 
                     DrawerNavItem(
-                        label = "Clear Conversation",
+                        label = textResources.getString(R.string.ui_clear_conversation),
                         icon = Icons.Default.DeleteSweep,
                         tint = MaterialTheme.colorScheme.error,
                         enabled = state.isReady,
@@ -780,6 +793,7 @@ fun ChatContent(
                             viewModel.onIntent(ChatIntent.StopResponse)
                         },
                         onDocumentClick = { documentPickerLauncher.launch(arrayOf("text/plain", "text/markdown", "text/x-markdown")) },
+                        onFoldersClick = { viewModel.onIntent(ChatIntent.OpenDocumentFolders) },
                         onGalleryClick = {
                             hapticView.performChevereHaptic(ChevereHaptic.Selection)
                             imagePickerLauncher.launch("image/*")
@@ -1232,11 +1246,12 @@ private fun PermissionDisclosureDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    val textResources = LocalResources.current
     val title = when (permissionType) {
-        PermissionType.LOCATION -> "Location Access Required"
-        PermissionType.CONTACTS -> "Contacts Access Required"
-        PermissionType.CALENDAR -> "Calendar Access Required"
-        PermissionType.MICROPHONE -> "Microphone Access Required"
+        PermissionType.LOCATION -> textResources.getString(R.string.ui_location_access_required)
+        PermissionType.CONTACTS -> textResources.getString(R.string.ui_contacts_access_required)
+        PermissionType.CALENDAR -> textResources.getString(R.string.ui_calendar_access_required)
+        PermissionType.MICROPHONE -> textResources.getString(R.string.ui_microphone_access_required)
     }
 
     val description = when (permissionType) {
@@ -1282,14 +1297,14 @@ private fun PermissionDisclosureDialog(
             Button(
                 onClick = onConfirm
             ) {
-                Text("Continue", style = Typography.labelLarge)
+                Text(textResources.getString(R.string.ui_continue), style = Typography.labelLarge)
             }
         },
         dismissButton = {
             TextButton(
                 onClick = onDismiss
             ) {
-                Text("Not Now", style = Typography.labelLarge, color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f))
+                Text(textResources.getString(R.string.ui_not_now), style = Typography.labelLarge, color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f))
             }
         },
         shape = RoundedCornerShape(24.dp),

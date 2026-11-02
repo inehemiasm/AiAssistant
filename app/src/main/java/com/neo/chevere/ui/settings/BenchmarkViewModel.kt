@@ -1,5 +1,6 @@
 package com.neo.chevere.ui.settings
 
+import com.neo.chevere.R
 import android.app.ActivityManager
 import android.app.Application
 import android.content.Context
@@ -32,7 +33,7 @@ class BenchmarkViewModel @Inject constructor(
 
     private fun updateActiveModelName() {
         val model = chatRepository.activeModel ?: inferenceManager.currentModel
-        setState { copy(modelName = model?.displayName ?: "No Model Active") }
+        setState { copy(modelName = model?.displayName ?: getApplication<android.app.Application>().getString(R.string.ui_no_model_active)) }
     }
 
     override suspend fun handleIntent(intent: BenchmarkIntent) {
@@ -45,10 +46,10 @@ class BenchmarkViewModel @Inject constructor(
     private fun runBenchmark() {
         viewModelScope.launch {
             setState { copy(isRunning = true, errorMessage = null) }
-            
+
             // 1. Get active model
             var activeModel = chatRepository.activeModel ?: inferenceManager.currentModel
-            
+
             // 2. If no active model, try to find and load first healthy chat model
             if (activeModel == null) {
                 val healthyModels = chatRepository.getLocalModels()
@@ -60,19 +61,19 @@ class BenchmarkViewModel @Inject constructor(
                         activeModel = firstModel
                         updateActiveModelName()
                     } else {
-                        setState { 
+                        setState {
                             copy(
-                                isRunning = false, 
-                                errorMessage = "Failed to load candidate model: ${loadResult.exceptionOrNull()?.message}"
+                                isRunning = false,
+                                errorMessage = getApplication<android.app.Application>().getString(R.string.ui_failed_to_load_candidate_model_1_s, loadResult.exceptionOrNull()?.message)
                             )
                         }
                         return@launch
                     }
                 } else {
-                    setState { 
+                    setState {
                         copy(
-                            isRunning = false, 
-                            errorMessage = "No active or healthy chat models found. Please download a model first."
+                            isRunning = false,
+                            errorMessage = getApplication<android.app.Application>().getString(R.string.ui_no_active_or_healthy_chat_models_found_please_download_a_model_f)
                         )
                     }
                     return@launch
@@ -80,7 +81,7 @@ class BenchmarkViewModel @Inject constructor(
             }
 
             val model = activeModel
-            
+
             // Measure engine load/warmup latency (already loaded, so verification is fast, <1ms)
             val loadStart = System.currentTimeMillis()
             val loadResult = inferenceManager.loadModel(model)
@@ -90,7 +91,7 @@ class BenchmarkViewModel @Inject constructor(
                 setState {
                     copy(
                         isRunning = false,
-                        errorMessage = "Model engine failed to initialize: ${loadResult.message}"
+                        errorMessage = getApplication<android.app.Application>().getString(R.string.ui_model_engine_failed_to_initialize_1_s, loadResult.message)
                     )
                 }
                 return@launch
@@ -106,23 +107,23 @@ class BenchmarkViewModel @Inject constructor(
             val systemRamText = String.format("%.2f GB / %.2f GB", availMemGb, totalMemGb)
 
             val isGpuEnabled = model.capabilities.contains(ModelCapability.VISION)
-            val accelText = if (isGpuEnabled) "GPU (Vision backend)" else "CPU (Standard Text)"
+            val accelText = if (isGpuEnabled) getApplication<android.app.Application>().getString(R.string.ui_gpu_vision_backend) else getApplication<android.app.Application>().getString(R.string.ui_cpu_standard_text)
 
             // Send benchmark prompt
             val prompt = "A three-word response: AI is ready."
             val request = InferenceRequest(prompt)
-            
+
             val startTime = System.currentTimeMillis()
             var firstTokenTime = 0L
             var accumulatedText = ""
-            
+
             inferenceManager.generateStream(request)
                 .catch { e ->
-                    Timber.tag(TAG).e(e, "Benchmark generation failed")
+                    Timber.tag(TAG).e(e, getApplication<android.app.Application>().getString(R.string.ui_benchmark_generation_failed))
                     setState {
                         copy(
                             isRunning = false,
-                            errorMessage = "Generation error: ${e.localizedMessage}"
+                            errorMessage = getApplication<android.app.Application>().getString(R.string.ui_generation_error_1_s, e.localizedMessage)
                         )
                     }
                 }
@@ -148,7 +149,7 @@ class BenchmarkViewModel @Inject constructor(
                 setState {
                     copy(
                         isRunning = false,
-                        errorMessage = "Model returned empty response."
+                        errorMessage = getApplication<android.app.Application>().getString(R.string.ui_model_returned_empty_response)
                     )
                 }
                 return@launch
@@ -156,7 +157,7 @@ class BenchmarkViewModel @Inject constructor(
 
             val ttftMs = if (firstTokenTime > 0) firstTokenTime - startTime else endTime - startTime
             val totalTimeMs = endTime - startTime
-            
+
             setState {
                 copy(
                     isRunning = false,

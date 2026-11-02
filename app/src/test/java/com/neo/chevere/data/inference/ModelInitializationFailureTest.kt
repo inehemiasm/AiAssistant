@@ -13,12 +13,14 @@ import org.junit.rules.TemporaryFolder
 import org.mockito.kotlin.*
 import kotlin.coroutines.ContinuationInterceptor
 
+@org.junit.runner.RunWith(org.robolectric.RobolectricTestRunner::class)
+@org.robolectric.annotation.Config(sdk = [34], application = android.app.Application::class)
 class ModelInitializationFailureTest {
     @get:Rule val temporaryFolder = TemporaryFolder()
 
     @Test fun chatSessionCreationFailureReturnsActionableFailureAndClosesEngine() = runTest {
-        val context = mock<Context>()
-        whenever(context.cacheDir).thenReturn(temporaryFolder.root)
+        val context: Context = spy(org.robolectric.RuntimeEnvironment.getApplication())
+        doReturn(temporaryFolder.root).whenever(context).cacheDir
         val dispatchers = mock<DispatcherProvider>()
         whenever(dispatchers.default).thenReturn(coroutineContext[ContinuationInterceptor] as CoroutineDispatcher)
         val factory = mock<MultimodalMessageFactory>()

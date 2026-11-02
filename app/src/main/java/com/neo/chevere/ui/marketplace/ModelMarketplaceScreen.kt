@@ -1,5 +1,6 @@
 package com.neo.chevere.ui.marketplace
 
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -83,6 +84,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.mutableStateOf
 import androidx.core.content.ContextCompat
+import com.neo.chevere.ui.common.localizedLabel
 import com.neo.chevere.R
 import com.neo.chevere.domain.InitializationStatus
 import com.neo.chevere.domain.DownloadProgress
@@ -220,6 +222,7 @@ fun ModelMarketplaceContent(
             )
 
             Column(modifier = Modifier.fillMaxSize()) {
+                ModelGuidanceBanner(state.modelGuidance, viewModel::onIntent)
                 TabRow(
                     selectedTabIndex = selectedTab,
                     containerColor = Color.Transparent,
@@ -304,6 +307,7 @@ fun DiscoverModelsList(
     baseDir: String,
     onModelClick: (String) -> Unit
 ) {
+    val textResources = LocalResources.current
     if (state.catalogState is CatalogState.Loading) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
@@ -314,7 +318,7 @@ fun DiscoverModelsList(
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
             val groups = listOf(
-                "Chat and Vision Models" to state.chatRemoteModels
+                textResources.getString(R.string.ui_chat_and_vision_models) to state.chatRemoteModels
             ).filter { (_, models) -> models.isNotEmpty() }
 
             groups.forEach { (title, models) ->
@@ -354,6 +358,7 @@ fun InstalledModelsList(
     onIntent: (MarketplaceIntent) -> Unit,
     onModelClick: (String) -> Unit
 ) {
+    val textResources = LocalResources.current
     if (state.chatLocalModels.isEmpty()) {
         Box(
             Modifier
@@ -374,7 +379,7 @@ fun InstalledModelsList(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 if (state.chatLocalModels.isNotEmpty()) {
-                    item { ModelSectionHeader("Chat and Vision Models") }
+                    item { ModelSectionHeader(textResources.getString(R.string.ui_chat_and_vision_models)) }
                 }
 
                 items(state.chatLocalModels) { model ->
@@ -439,11 +444,11 @@ fun InstalledModelsList(
                                     color = MaterialTheme.colorScheme.onPrimary
                                 )
                                 Spacer(Modifier.width(8.dp))
-                                Text("Switching Engine...", style = Typography.labelLarge)
+                                Text(textResources.getString(R.string.ui_switching_engine), style = Typography.labelLarge)
                             } else {
                                 Icon(Icons.Default.Sync, null)
                                 Spacer(Modifier.width(8.dp))
-                                Text("Confirm Engine Switch", style = Typography.labelLarge)
+                                Text(textResources.getString(R.string.ui_confirm_engine_switch), style = Typography.labelLarge)
                             }
                         }
                     }
@@ -473,6 +478,7 @@ fun RemoteModelCard(
     onDownload: () -> Unit,
     onClick: () -> Unit
 ) {
+    val textResources = LocalResources.current
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -532,7 +538,7 @@ fun RemoteModelCard(
 
                             if (model.supportsVision) {
                                 Spacer(Modifier.width(16.dp))
-                                InfoItem(Icons.Default.Visibility, "Vision")
+                                InfoItem(Icons.Default.Visibility, textResources.getString(R.string.ui_vision))
                             }
                         }
 
@@ -594,6 +600,7 @@ fun LocalModelCard(
     onDelete: () -> Unit,
     onClick: () -> Unit
 ) {
+    val textResources = LocalResources.current
     val infiniteTransition = rememberInfiniteTransition(label = "warmup")
     val alpha by infiniteTransition.animateFloat(
         initialValue = 0.3f,
@@ -671,14 +678,14 @@ fun LocalModelCard(
 
                         val statusText = when (warmupStatus) {
                             is InitializationStatus.Initializing -> warmupStatus.message
-                            is InitializationStatus.Failure -> "FAILED: ${warmupStatus.message}"
-                            InitializationStatus.Ready -> "READY"
-                            InitializationStatus.Uninitialized -> "STARTING..."
+                            is InitializationStatus.Failure -> textResources.getString(R.string.ui_failed_1_s, warmupStatus.message)
+                            InitializationStatus.Ready -> textResources.getString(R.string.ui_ready)
+                            InitializationStatus.Uninitialized -> textResources.getString(R.string.ui_starting)
                             null -> {
                                 if (model.installStatus == InstallStatus.DOWNLOADING && downloadProgress != null) {
-                                    "DOWNLOADING ($downloadProgress%)"
+                                    textResources.getString(R.string.ui_downloading_1_s, downloadProgress)
                                 } else {
-                                    model.installStatus.name
+                                    model.installStatus.localizedLabel()
                                 }
                             }
                         }
@@ -704,7 +711,7 @@ fun LocalModelCard(
 
                         if (!model.isHealthy && !model.isTransitioning) {
                             Text(
-                                "Status: ${model.installStatus}",
+                                textResources.getString(R.string.ui_status_1_s, model.installStatus.localizedLabel()),
                                 style = Typography.labelSmall,
                                 color = MaterialTheme.colorScheme.error
                             )
@@ -739,7 +746,7 @@ fun LocalModelCard(
                 )
             } else if (showReadyBadge) {
                 Badge(
-                    text = "READY",
+                    text = textResources.getString(R.string.ui_ready),
                     containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
                     contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier
@@ -748,7 +755,7 @@ fun LocalModelCard(
                 )
             } else if (isPending && !isSwitching) {
                 Badge(
-                    text = "SELECTED",
+                    text = textResources.getString(R.string.ui_selected),
                     containerColor = MaterialTheme.colorScheme.secondary,
                     contentColor = MaterialTheme.colorScheme.onSecondary,
                     modifier = Modifier
@@ -810,7 +817,7 @@ fun InfoItem(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String
 }
 
 private fun formatFileSize(size: Long): String {
-    if (size <= 0) return "Unknown size"
+    if (size <= 0) return "—"
     val units = arrayOf("B", "KB", "MB", "GB", "TB")
     val digitGroups = (log10(size.toDouble()) / log10(1024.0)).toInt()
     return "%.1f %s".format(size / 1024.0.pow(digitGroups.toDouble()), units[digitGroups])
@@ -818,7 +825,8 @@ private fun formatFileSize(size: Long): String {
 
 @Composable
 fun RamCompatibilityBadge(model: ModelEntry, deviceRamGb: Double) {
-    val (compatibility, label) = model.getRamCompatibility(deviceRamGb)
+    val (compatibility, labelRes) = model.getRamCompatibility(deviceRamGb)
+    val label = stringResource(labelRes)
 
     val badgeColor = when (compatibility) {
         RamCompatibility.OPTIMAL -> Color(0xFF00E676)

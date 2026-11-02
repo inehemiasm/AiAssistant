@@ -1,5 +1,9 @@
 package com.neo.chevere.data.agent.tools
 
+import android.content.Context
+import com.neo.chevere.R
+import dagger.hilt.android.qualifiers.ApplicationContext
+
 import com.neo.chevere.data.agent.AgentTool
 import com.neo.chevere.data.agent.ToolResult
 import com.neo.chevere.data.agent.actions.AndroidAppActionExecutor
@@ -10,7 +14,8 @@ import javax.inject.Inject
  * Performs small device control actions after explicit user confirmation.
  */
 class DeviceControlTool @Inject constructor(
-    private val actionExecutor: AndroidAppActionExecutor
+    private val actionExecutor: AndroidAppActionExecutor,
+    @ApplicationContext private val context: Context
 ) : BaseAppActionTool(actionExecutor) {
     override val name: String = "control_device"
     override val description: String =
@@ -36,20 +41,20 @@ class DeviceControlTool @Inject constructor(
     private fun buildConfirmationMessage(request: DeviceControlRequest): String {
         return when (request.control.lowercase()) {
             "volume" -> if (request.action.equals("set", ignoreCase = true)) {
-                "Set media volume to ${request.value ?: "the requested level"}%?"
+                context.getString(R.string.ui_set_media_volume_to_1_s, request.value ?: context.getString(R.string.ui_the_requested_level))
             } else {
-                "Adjust media volume: ${request.action}?"
+                context.getString(R.string.ui_adjust_media_volume_1_s, request.action)
             }
             "music", "media" -> when (request.action.lowercase()) {
-                "play", "resume" -> "Resume music playback?"
-                "pause", "stop" -> "Pause music playback?"
-                "next", "skip" -> "Skip to the next song?"
-                "previous", "back" -> "Go back to the previous song?"
-                else -> "Control music playback: ${request.action}?"
+                "play", "resume" -> context.getString(R.string.ui_resume_music_playback)
+                "pause", "stop" -> context.getString(R.string.ui_pause_music_playback)
+                "next", "skip" -> context.getString(R.string.ui_skip_to_the_next_song)
+                "previous", "back" -> context.getString(R.string.ui_go_back_to_the_previous_song)
+                else -> context.getString(R.string.ui_control_music_playback_1_s, request.action)
             }
-            "brightness" -> "Open Display settings so you can adjust brightness?"
-            "do_not_disturb", "dnd" -> "Open Do Not Disturb settings?"
-            else -> "Run device control '${request.control}'?"
+            "brightness" -> context.getString(R.string.ui_open_display_settings_so_you_can_adjust_brightness)
+            "do_not_disturb", "dnd" -> context.getString(R.string.ui_open_do_not_disturb_settings)
+            else -> context.getString(R.string.ui_run_device_control_1_s, request.control)
         }
     }
 }

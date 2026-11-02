@@ -89,7 +89,7 @@ class ConversationContextManager @Inject constructor() {
     private fun buildMemorySection(memoryTurns: List<ConversationTurn>): String? {
         val memoryStr = persistentMemory
         if (memoryStr != null && memoryStr.isNotBlank()) {
-            return "${Constants.ContextWindow.MEMORY_HEADER}:\n$memoryStr"
+            return "${Constants.ContextWindow.MEMORY_HEADER}:\n${memoryStr.take(Constants.ContextWindow.MEMORY_CHAR_BUDGET)}"
         }
 
         if (memoryTurns.isEmpty()) return null

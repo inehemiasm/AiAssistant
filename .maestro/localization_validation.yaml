@@ -1,0 +1,43 @@
+appId: dev.neo.chevereai
+name: Localized navigation, models, tasks, invoices and privacy
+---
+- launchApp:
+    clearState: false
+    stopApp: false
+- extendedWaitUntil:
+    visible: "${LIBRARY}"
+    timeout: 180000
+- tapOn: "${LIBRARY}"
+- tapOn: "${MODELS_LIBRARY}"
+- assertVisible: "${GUIDANCE_TITLE}"
+- takeScreenshot: "models_${LANGUAGE}"
+- tapOn: "${LEARN_MORE}"
+- assertVisible: "${DONE}"
+- takeScreenshot: "model_details_${LANGUAGE}"
+- tapOn: "${DONE}"
+- back
+- tapOn: "${TASKS}"
+- tapOn: "${ADD_TASK}"
+- assertVisible: "${TASK_DIALOG}"
+- takeScreenshot: "task_dialog_${LANGUAGE}"
+- tapOn: "${CANCEL}"
+- tapOn: "${INVOICES}"
+- tapOn: "${ADD_INVOICE}"
+- assertVisible: "${VENDOR}"
+- takeScreenshot: "invoice_dialog_${LANGUAGE}"
+- tapOn: "${CANCEL}"
+- tapOn: "${CHAT}"
+- tapOn: "${LIBRARY}"
+- tapOn: "${SETTINGS}"
+- scrollUntilVisible:
+    element: "${PRIVACY}"
+    direction: DOWN
+    timeout: 20000
+- tapOn: "${PRIVACY}"
+- scrollUntilVisible:
+    element: "${LOCAL_FIRST}"
+    direction: DOWN
+    timeout: 20000
+- takeScreenshot: "privacy_${LANGUAGE}"
+- back
+- assertVisible: "${LIBRARY}"

@@ -1,0 +1,20 @@
+appId: dev.neo.chevereai
+name: Model selection guidance expands and dismisses above the catalog
+---
+- launchApp:
+    clearState: false
+    stopApp: false
+- extendedWaitUntil:
+    visible: "Library"
+    timeout: 180000
+- tapOn: "Library"
+- tapOn: "Models Library"
+- assertVisible: "Choose the right model"
+- assertVisible: ".*Standard Gemma 4 models are optimized for mobile.*"
+- tapOn: "Learn more"
+- assertVisible: ".*Accuracy differences depend on the task.*"
+- assertVisible: ".*current INT8 variant runs on CPU.*"
+- tapOn: "Got it"
+- tapOn: "Dismiss model guidance"
+- assertNotVisible: "Choose the right model"
+- assertVisible: "DISCOVER"

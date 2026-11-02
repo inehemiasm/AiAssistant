@@ -39,6 +39,7 @@ class ChatTaskActionTest {
     private val repository = mock<ChatRepository>()
     private val reportRepository = mock<com.neo.chevere.data.report.AiContentReportRepository>()
     private val suggestionRepository = mock<ChatSuggestionRepository>()
+    private val documentFolders = mock<DocumentFolderRepository>()
     private val initialization = MutableStateFlow<InitializationStatus>(InitializationStatus.Uninitialized)
     private val agentState = MutableStateFlow<AgentState>(AgentState.Idle)
     private lateinit var viewModel: ChatViewModel
@@ -67,11 +68,20 @@ class ChatTaskActionTest {
         }
         viewModel = ChatViewModel(RuntimeEnvironment.getApplication(), repository,
             mock<InitializeChatUseCase>(), mock<SendMessageUseCase>(), preferences,
-            dispatchers, mock<AppTelemetry>(), voice, history, taskRepository, reportRepository, mock(), suggestionRepository)
+            dispatchers, mock<AppTelemetry>(), voice, history, taskRepository, reportRepository, mock(), suggestionRepository, documentFolders)
         store.put("chat", viewModel)
         advanceUntilIdle()
         viewModel.onIntent(ChatIntent.LoadSession(5))
         advanceUntilIdle()
+    }
+
+    @Test fun folderRemovalRejectsReferencesOutsideTheDisplayedLibrary() = runTest(dispatcher) {
+        whenever(documentFolders.getFolders()).thenReturn(listOf(DocumentFolder("content://known", "Known")))
+        viewModel.onIntent(ChatIntent.OpenDocumentFolders)
+        advanceUntilIdle()
+        viewModel.onIntent(ChatIntent.DisconnectDocumentFolder("content://unknown"))
+        advanceUntilIdle()
+        verify(documentFolders, never()).disconnectFolder(any())
     }
 
     @Test fun suggestionsReflectConversationAndDisappearWhileDrafting() = runTest(dispatcher) {

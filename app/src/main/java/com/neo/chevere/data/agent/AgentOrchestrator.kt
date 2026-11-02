@@ -1,5 +1,9 @@
 package com.neo.chevere.data.agent
 
+import android.content.Context
+import com.neo.chevere.R
+import dagger.hilt.android.qualifiers.ApplicationContext
+
 import android.net.Uri
 import com.neo.chevere.core.Constants
 import com.neo.chevere.core.PiiUtils
@@ -33,7 +37,8 @@ private const val TAG = "AgentOrchestrator"
 class AgentOrchestrator @Inject constructor(
     private val inferenceManager: InferenceManager,
     private val toolRegistry: ToolRegistry,
-    private val parser: ToolCallParser
+    private val parser: ToolCallParser,
+    @ApplicationContext private val context: Context
 ) {
     private val _agentState = MutableStateFlow<AgentState>(AgentState.Idle)
     val agentState: StateFlow<AgentState> = _agentState.asStateFlow()
@@ -216,7 +221,7 @@ class AgentOrchestrator @Inject constructor(
                             Timber.tag(TAG).w("Tool '${toolCall.toolName}' not found.")
                             continueWithObservation("${Constants.Agent.TOOL_ERROR_PREFIX}Tool '${toolCall.toolName}' not found. Please proceed without it or inform the user.")
                             lastImageUri = null
-                            
+
                             val lastIndex = currentSteps.indexOfLast { it.toolCall == toolCall }
                             if (lastIndex != -1) {
                                 currentSteps[lastIndex] = currentSteps[lastIndex].copy(
@@ -271,8 +276,8 @@ class AgentOrchestrator @Inject constructor(
             }
 
             Timber.tag(TAG).w("Reached max tool calls (${Constants.Agent.MAX_TOOL_CALLS_PER_TURN}).")
-            val finalFallback = "Stopped after reaching the agent step limit. The full request may be incomplete." +
-                (lastToolSummary?.let { "\nLast tool result: ${it.take(1500)}" } ?: "")
+            val finalFallback = context.getString(R.string.ui_stopped_after_reaching_the_agent_step_limit_the_full_request_may) +
+                (lastToolSummary?.let { context.getString(R.string.ui_nlast_tool_result_1_s, it.take(1500)) } ?: "")
             _agentState.value = AgentState.Completed(currentSteps.toList())
             return Result.success(finalFallback)
 
@@ -350,7 +355,7 @@ class AgentOrchestrator @Inject constructor(
             )
             lastToolSummary!!
         } else trimmed.ifEmpty {
-            "I'm sorry, I encountered an issue generating a response."
+            context.getString(R.string.ui_i_m_sorry_i_encountered_an_issue_generating_a_response)
         }
     }
 
@@ -401,7 +406,7 @@ class AgentOrchestrator @Inject constructor(
                 Timber.tag(TAG).i("Tool ${tool.name} needs confirmation: ${toolResult.message}")
                 pendingConfirmation = toolResult.onConfirm
                 _agentState.value = AgentState.WaitingForConfirmation(tool.name, toolResult.message, currentSteps.toList())
-                Result.success("I need your confirmation to proceed with ${tool.name}: ${toolResult.message}")
+                Result.success(context.getString(R.string.ui_i_need_your_confirmation_to_proceed_with_1_s_2_s, tool.name, toolResult.message))
             }
         }
     }
@@ -416,11 +421,11 @@ class AgentOrchestrator @Inject constructor(
         val toolResult = try {
             withTimeout(Constants.Agent.TOOL_EXECUTION_TIMEOUT_MS) { onConfirm() }
         } catch (e: TimeoutCancellationException) {
-            ToolResult.Error("Confirmed action timed out. Its outcome is unknown; do not automatically repeat it.")
+            ToolResult.Error(context.getString(R.string.ui_confirmed_action_timed_out_its_outcome_is_unknown_do_not_automat))
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            ToolResult.Error("Action confirmation failed: ${e.message}")
+            ToolResult.Error(context.getString(R.string.ui_action_confirmation_failed_1_s, e.message))
         }
 
         val lastIndex = currentSteps.indexOfLast { it.result is ToolResult.NeedsConfirmation }
@@ -442,7 +447,7 @@ class AgentOrchestrator @Inject constructor(
             is ToolResult.NeedsConfirmation -> {
                 pendingConfirmation = toolResult.onConfirm
                 _agentState.value = AgentState.WaitingForConfirmation("nested", toolResult.message, currentSteps.toList())
-                return Result.success("Additional confirmation needed: ${toolResult.message}")
+                return Result.success(context.getString(R.string.ui_additional_confirmation_needed_1_s, toolResult.message))
             }
         }
 
@@ -453,7 +458,7 @@ class AgentOrchestrator @Inject constructor(
         pendingConfirmation = null
         _activePartialResponse.value = ""
         _agentState.value = AgentState.Completed(currentSteps.toList())
-        return Result.success("Action canceled. No pending action was executed.")
+        return Result.success(context.getString(R.string.ui_action_canceled_no_pending_action_was_executed))
     }
 
     /** Rebuilds bounded continuation context while keeping the task and policy explicit. */

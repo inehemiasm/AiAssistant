@@ -1,5 +1,6 @@
 package com.neo.chevere
 
+import com.neo.chevere.R
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -108,7 +109,7 @@ class MainActivity : FragmentActivity() {
                     // starts uninitialized and must be able to show the model download screen.
                     LaunchAnimatedApp(
                         isInitializing = chatState.runtimeState is RuntimeState.Initializing,
-                        statusMessage = chatState.loadingMessage ?: "INITIALIZING..."
+                        statusMessage = chatState.loadingMessage ?: getString(R.string.ui_initializing)
                     ) {
                         ChevereApp(
                             chatViewModel = chatViewModel,
@@ -144,9 +145,9 @@ class MainActivity : FragmentActivity() {
             })
 
         val promptInfo = BiometricPrompt.PromptInfo.Builder()
-            .setTitle("Unlock Chevere AI")
-            .setSubtitle("Authenticate to access your local workspace")
-            .setNegativeButtonText("Exit")
+            .setTitle(getString(R.string.ui_unlock_chevere_ai))
+            .setSubtitle(getString(R.string.ui_authenticate_to_access_your_local_workspace))
+            .setNegativeButtonText(getString(R.string.ui_exit))
             .build()
 
         biometricPrompt.authenticate(promptInfo)
@@ -159,6 +160,7 @@ private fun LockedScreen(
     onExit: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val textResources = androidx.compose.ui.platform.LocalResources.current
     Surface(
         modifier = modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
@@ -178,7 +180,7 @@ private fun LockedScreen(
             )
             Spacer(Modifier.height(24.dp))
             Text(
-                text = "SYSTEM SECURED",
+                text = textResources.getString(R.string.ui_system_secured),
                 style = Typography.headlineMedium.copy(
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 2.sp
@@ -187,7 +189,7 @@ private fun LockedScreen(
             )
             Spacer(Modifier.height(8.dp))
             Text(
-                text = "Chevere AI is locked for safety & privacy.",
+                text = textResources.getString(R.string.ui_chevere_ai_is_locked_for_safety_privacy),
                 style = Typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -197,7 +199,7 @@ private fun LockedScreen(
                 modifier = Modifier.fillMaxWidth(0.7f),
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Text("UNLOCK SYSTEM", style = Typography.labelLarge)
+                Text(textResources.getString(R.string.ui_unlock_system), style = Typography.labelLarge)
             }
             Spacer(Modifier.height(12.dp))
             TextButton(
@@ -205,7 +207,7 @@ private fun LockedScreen(
                 modifier = Modifier.fillMaxWidth(0.7f)
             ) {
                 Text(
-                    "EXIT",
+                    textResources.getString(R.string.ui_exit_bb1b38),
                     style = Typography.labelLarge,
                     color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
                 )

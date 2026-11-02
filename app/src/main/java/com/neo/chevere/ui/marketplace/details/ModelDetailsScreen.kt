@@ -1,5 +1,6 @@
 package com.neo.chevere.ui.marketplace.details
 
+import androidx.compose.ui.platform.LocalResources
 import android.os.StatFs
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -59,6 +60,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.neo.chevere.ui.common.localizedLabel
 import com.neo.chevere.R
 import com.neo.chevere.core.Constants
 import com.neo.chevere.domain.ModelEntry
@@ -93,6 +95,7 @@ fun ModelDetailsContent(
     onIntent: (ModelDetailsIntent) -> Unit,
     onBack: () -> Unit
 ) {
+    val textResources = LocalResources.current
     val viewModel = remember(state, effects, onIntent) {
         object {
             fun onIntent(intent: ModelDetailsIntent) {
@@ -129,7 +132,7 @@ fun ModelDetailsContent(
             TopAppBar(
                 title = {
                     Text(
-                        "MODEL DETAILS",
+                        textResources.getString(R.string.ui_model_details),
                         style = Typography.titleLarge,
                         letterSpacing = 2.sp
                     )
@@ -233,6 +236,7 @@ fun ModelDetailsContent(
 
 @Composable
 fun HeaderSection(state: ModelDetailsState) {
+    val textResources = LocalResources.current
     Column {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
@@ -243,7 +247,7 @@ fun HeaderSection(state: ModelDetailsState) {
             )
             Spacer(Modifier.width(12.dp))
             Text(
-                text = state.displayName.uppercase(),
+                text = state.displayName.ifBlank { textResources.getString(R.string.ui_unknown_model) }.uppercase(),
                 style = Typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
@@ -253,7 +257,7 @@ fun HeaderSection(state: ModelDetailsState) {
         Spacer(Modifier.height(8.dp))
 
         Text(
-            text = state.modelEntry?.description ?: "Local neural engine component.",
+            text = state.modelEntry?.description ?: textResources.getString(R.string.ui_local_neural_engine_component),
             style = Typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -262,7 +266,8 @@ fun HeaderSection(state: ModelDetailsState) {
 
 @Composable
 fun StatusSection(state: ModelDetailsState) {
-    SectionHeader("RUNTIME STATUS")
+    val textResources = LocalResources.current
+    SectionHeader(textResources.getString(R.string.ui_runtime_status))
 
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.5f),
@@ -271,15 +276,15 @@ fun StatusSection(state: ModelDetailsState) {
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             StatusRow(
-                label = "Install State",
-                value = state.installedModel?.installStatus?.name ?: "NOT INSTALLED",
+                label = textResources.getString(R.string.ui_install_state),
+                value = state.installedModel?.installStatus?.localizedLabel() ?: textResources.getString(R.string.ui_not_installed),
                 color = if (state.isInstalled) Color.Green else MaterialTheme.colorScheme.primary
             )
 
             if (state.isActive) {
                 StatusRow(
-                    label = "Engine Role",
-                    value = "ACTIVE ENGINE",
+                    label = textResources.getString(R.string.ui_engine_role),
+                    value = textResources.getString(R.string.ui_active_engine),
                     color = MaterialTheme.colorScheme.primary
                 )
             }
@@ -294,7 +299,7 @@ fun StatusSection(state: ModelDetailsState) {
                     )
                     Spacer(Modifier.width(12.dp))
                     Text(
-                        "Downloading: $progress%",
+                        textResources.getString(R.string.ui_downloading_1_s_f942e0, progress),
                         style = Typography.labelSmall,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -306,7 +311,8 @@ fun StatusSection(state: ModelDetailsState) {
 
 @Composable
 fun CompatibilitySection(state: ModelDetailsState) {
-    SectionHeader("HARDWARE COMPATIBILITY")
+    val textResources = LocalResources.current
+    SectionHeader(textResources.getString(R.string.ui_hardware_compatibility))
 
     val isCompatible =
         state.modelEntry?.runtimeType == "LiteRT" || state.installedModel?.runtime?.name == "LITERT"
@@ -319,22 +325,22 @@ fun CompatibilitySection(state: ModelDetailsState) {
         Column(modifier = Modifier.padding(16.dp)) {
             CompatibilityRow(
                 icon = Icons.Default.CheckCircle,
-                label = "Neural Engine",
-                value = "LiteRT Optimized",
+                label = textResources.getString(R.string.ui_neural_engine),
+                value = textResources.getString(R.string.ui_litert_optimized),
                 isOk = isCompatible
             )
             CompatibilityRow(
                 icon = Icons.Default.Visibility,
-                label = "Multimodal Support",
+                label = textResources.getString(R.string.ui_multimodal_support),
                 value = if (state.modelEntry?.supportsVision == true || state.installedModel?.capabilities?.contains(
                         com.neo.chevere.domain.ModelCapability.VISION
                     ) == true
-                ) "Vision Enabled" else "Text Only",
+                ) textResources.getString(R.string.ui_vision_enabled) else textResources.getString(R.string.ui_text_only),
                 isOk = true
             )
             CompatibilityRow(
                 icon = Icons.Default.Storage,
-                label = "Download Space",
+                label = textResources.getString(R.string.ui_download_space),
                 value = recommendedStorageText(state),
                 isOk = true
             )
@@ -344,25 +350,27 @@ fun CompatibilitySection(state: ModelDetailsState) {
 
 @Composable
 fun MetadataSection(state: ModelDetailsState) {
-    SectionHeader("TECHNICAL SPECIFICATIONS")
+    val textResources = LocalResources.current
+    SectionHeader(textResources.getString(R.string.ui_technical_specifications))
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        MetadataRow("Model ID", state.modelId)
+        MetadataRow(textResources.getString(R.string.ui_model_id), state.modelId)
         MetadataRow(
-            "Provider",
-            state.modelEntry?.provider ?: state.installedModel?.source?.name ?: "Local"
+            textResources.getString(R.string.ui_provider),
+            state.modelEntry?.provider ?: state.installedModel?.source?.name ?: textResources.getString(R.string.ui_local)
         )
-        MetadataRow("Format", state.installedModel?.format?.name ?: "LITERTLM")
+        MetadataRow(textResources.getString(R.string.ui_format), state.installedModel?.format?.name ?: "LITERTLM")
         MetadataRow(
-            "Size",
+            textResources.getString(R.string.ui_size),
             formatFileSize(state.installedModel?.sizeBytes ?: state.modelEntry?.sizeBytes ?: 0)
         )
-        state.modelEntry?.license?.let { MetadataRow("License", it) }
+        state.modelEntry?.license?.let { MetadataRow(textResources.getString(R.string.ui_license), it) }
     }
 }
 
 @Composable
 fun ActionSection(state: ModelDetailsState, onIntent: (ModelDetailsIntent) -> Unit) {
+    val textResources = LocalResources.current
     val isImageModel = state.installedModel?.let {
         it.taskType == com.neo.chevere.domain.ModelTaskType.IMAGE_GENERATION ||
                 com.neo.chevere.domain.ModelCapability.IMAGE_GEN in it.capabilities
@@ -371,7 +379,7 @@ fun ActionSection(state: ModelDetailsState, onIntent: (ModelDetailsIntent) -> Un
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         if (!state.isInstalled && !state.isActionInProgress) {
             PrimaryAction(
-                label = if (isImageModel) "DOWNLOAD IMAGE GENERATOR" else "DOWNLOAD ENGINE",
+                label = if (isImageModel) textResources.getString(R.string.ui_download_image_generator) else textResources.getString(R.string.ui_download_engine),
                 icon = Icons.Default.Download,
                 onClick = { onIntent(ModelDetailsIntent.Download) }
             )
@@ -379,7 +387,7 @@ fun ActionSection(state: ModelDetailsState, onIntent: (ModelDetailsIntent) -> Un
 
         if (state.downloadProgress != null) {
             SecondaryAction(
-                label = "CANCEL DOWNLOAD",
+                label = textResources.getString(R.string.ui_cancel_download),
                 icon = Icons.Default.Delete,
                 onClick = { onIntent(ModelDetailsIntent.CancelDownload) }
             )
@@ -387,13 +395,13 @@ fun ActionSection(state: ModelDetailsState, onIntent: (ModelDetailsIntent) -> Un
 
         if (state.isInstalled && !state.isActive && !state.isActionInProgress) {
             PrimaryAction(
-                label = if (isImageModel) "ACTIVATE IMAGE GENERATOR" else "ACTIVATE ENGINE",
+                label = if (isImageModel) textResources.getString(R.string.ui_activate_image_generator) else textResources.getString(R.string.ui_activate_engine),
                 icon = Icons.Default.Sync,
                 onClick = { onIntent(ModelDetailsIntent.ConfirmSwitch) }
             )
         } else if (state.isActive) {
             PrimaryAction(
-                label = if (isImageModel) "IMAGE GENERATOR ACTIVE" else "ENGINE ACTIVE",
+                label = if (isImageModel) textResources.getString(R.string.ui_image_generator_active) else textResources.getString(R.string.ui_engine_active),
                 icon = Icons.Default.CheckCircle,
                 onClick = { },
                 enabled = false
@@ -402,7 +410,7 @@ fun ActionSection(state: ModelDetailsState, onIntent: (ModelDetailsIntent) -> Un
 
         if (state.isInstalled && !state.isActive && !state.isActionInProgress) {
             SecondaryAction(
-                label = if (isImageModel) "DELETE IMAGE GENERATOR" else "DELETE COMPONENT",
+                label = if (isImageModel) textResources.getString(R.string.ui_delete_image_generator) else textResources.getString(R.string.ui_delete_component),
                 icon = Icons.Default.Delete,
                 onClick = { onIntent(ModelDetailsIntent.Delete) }
             )
@@ -427,6 +435,7 @@ private fun DownloadRequirementsDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    val textResources = LocalResources.current
     val modelSize = state.modelEntry?.sizeBytes ?: state.installedModel?.sizeBytes ?: 0L
     val requiredBytes =
         recommendedRequiredBytes(modelSize, state.modelEntry?.effectiveFileName.orEmpty())
@@ -435,24 +444,24 @@ private fun DownloadRequirementsDialog(
         state.modelEntry?.runtimeType?.contains(
             "ONNX",
             ignoreCase = true
-        ) == true -> "Image generation models are large and can take several minutes per image."
+        ) == true -> textResources.getString(R.string.ui_image_generation_models_are_large_and_can_take_several_minutes_p)
 
-        state.modelEntry?.supportsVision == true -> "Vision models need extra memory when processing images."
-        else -> "Chat models run locally and may be slow on older devices."
+        state.modelEntry?.supportsVision == true -> textResources.getString(R.string.ui_vision_models_need_extra_memory_when_processing_images)
+        else -> textResources.getString(R.string.ui_chat_models_run_locally_and_may_be_slow_on_older_devices)
     }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Download requirements") },
+        title = { Text(textResources.getString(R.string.ui_download_requirements)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Model size: ${formatFileSize(modelSize)}")
-                Text("Recommended free space: ${formatFileSize(requiredBytes)}")
-                Text("Available space: ${formatFileSize(availableBytes)}")
+                Text(textResources.getString(R.string.ui_model_size_1_s, formatFileSize(modelSize)))
+                Text(textResources.getString(R.string.ui_recommended_free_space_1_s, formatFileSize(requiredBytes)))
+                Text(textResources.getString(R.string.ui_available_space_1_s, formatFileSize(availableBytes)))
                 Text(modelKind)
                 if (!hasEnoughSpace) {
                     Text(
-                        "Free more storage before downloading this model.",
+                        textResources.getString(R.string.ui_free_more_storage_before_downloading_this_model),
                         color = MaterialTheme.colorScheme.error,
                         fontWeight = FontWeight.Bold
                     )
@@ -461,12 +470,12 @@ private fun DownloadRequirementsDialog(
         },
         confirmButton = {
             TextButton(onClick = onConfirm, enabled = hasEnoughSpace) {
-                Text("Download")
+                Text(textResources.getString(R.string.ui_download))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(textResources.getString(R.string.ui_cancel))
             }
         }
     )
@@ -587,25 +596,27 @@ fun SecondaryAction(label: String, icon: ImageVector, onClick: () -> Unit) {
 }
 
 private fun formatFileSize(size: Long): String {
-    if (size <= 0) return "Unknown size"
+    if (size <= 0) return "—"
     val units = arrayOf("B", "KB", "MB", "GB", "TB")
     val digitGroups = (log10(size.toDouble()) / log10(1024.0)).toInt()
     return "%.1f %s".format(size / 1024.0.pow(digitGroups.toDouble()), units[digitGroups])
 }
 
+@Composable
 private fun recommendedStorageText(state: ModelDetailsState): String {
+    val textResources = LocalResources.current
     val modelSize = state.modelEntry?.sizeBytes ?: state.installedModel?.sizeBytes ?: 0L
     return if (modelSize <= 0L) {
-        "Check device storage"
+        textResources.getString(R.string.ui_check_device_storage)
     } else {
-        "${
+        textResources.getString(R.string.ui_1_s_free_recommended,
             formatFileSize(
                 recommendedRequiredBytes(
                     modelSize,
                     state.modelEntry?.effectiveFileName.orEmpty()
                 )
             )
-        } free recommended"
+        )
     }
 }
 

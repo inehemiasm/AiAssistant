@@ -19,7 +19,7 @@ data class ModelDetailsState(
     val downloadProgress: Int? = null
 ) : UiState {
     val displayName: String
-        get() = installedModel?.displayName ?: modelEntry?.name ?: "Unknown Model"
+        get() = installedModel?.displayName ?: modelEntry?.name ?: ""
     val isInstalled: Boolean get() = installedModel?.isHealthy ?: false
 }
 

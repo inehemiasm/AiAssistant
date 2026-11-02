@@ -79,7 +79,12 @@ fun ReportAiContentDialog(
                             onClick = { selectedReason = reason }
                         )
                         Text(
-                            text = reason,
+                            text = stringResource(when (reason) {
+                                "Offensive or unsafe content" -> R.string.ui_offensive_or_unsafe_content
+                                "Harmful or inappropriate" -> R.string.ui_harmful_or_inappropriate
+                                "Inaccurate or hallucinated" -> R.string.ui_inaccurate_or_hallucinated
+                                else -> R.string.ui_other
+                            }),
                             style = Typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurface
                         )

@@ -1,0 +1,21 @@
+appId: dev.neo.chevereai
+name: Folder access explanation and permission picker
+---
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible: "Ask Chevere AI…"
+    timeout: 180000
+- tapOn: "Add attachment"
+- tapOn: "Document folders"
+- assertVisible: "Add folder"
+- takeScreenshot: document_folders
+- tapOn: "Add folder"
+- extendedWaitUntil:
+    visible: "USE THIS FOLDER|Use this folder"
+    timeout: 20000
+- takeScreenshot: folder_permission_picker
+- back
+- assertVisible: "Document folders"
+- tapOn: "Done"
+- assertVisible: "Ask Chevere AI…"

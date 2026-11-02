@@ -47,6 +47,7 @@ sealed interface ComposerActionButtonState {
  * The UI state for the Chat screen.
  */
 data class ChatState(
+    val documentFolders: DocumentFoldersState = DocumentFoldersState.Closed,
     val messages: List<ChatMessage> = emptyList(),
     val localModels: List<InstalledModel> = emptyList(),
     val selectedModel: String = "",
@@ -127,6 +128,10 @@ data class ChatState(
 }
 
 sealed class ChatIntent : UiIntent {
+    data object OpenDocumentFolders : ChatIntent()
+    data object CloseDocumentFolders : ChatIntent()
+    data class IndexDocumentFolder(val reference: String) : ChatIntent()
+    data class DisconnectDocumentFolder(val reference: String) : ChatIntent()
     data class Initialize(val modelPath: String) : ChatIntent()
     data class SendMessage(val text: String, val imageUri: Uri? = null) : ChatIntent()
     data class SwitchModel(val modelName: String, val baseDir: String) : ChatIntent()
@@ -170,6 +175,25 @@ sealed class ChatIntent : UiIntent {
     data object Resume : ChatIntent()
     /** A validated user interaction on a task in a currently displayed agent surface. */
     data class SetTaskCompleted(val surfaceId: String, val taskId: Int, val completed: Boolean) : ChatIntent()
+}
+
+/** Presentation-only models for folder management; provider types stay in the data layer. */
+data class DocumentFolderUiModel(val reference: String, val name: String)
+
+sealed interface FolderOperation {
+    data object Idle : FolderOperation
+    data object Working : FolderOperation
+}
+
+sealed interface DocumentFoldersState {
+    data object Closed : DocumentFoldersState
+    data class Open(
+        val folders: List<DocumentFolderUiModel> = emptyList(),
+        val operation: FolderOperation = FolderOperation.Idle,
+        val message: String? = null,
+    ) : DocumentFoldersState {
+        val canInteract: Boolean get() = operation == FolderOperation.Idle
+    }
 }
 
 sealed class ChatEffect : UiEffect {

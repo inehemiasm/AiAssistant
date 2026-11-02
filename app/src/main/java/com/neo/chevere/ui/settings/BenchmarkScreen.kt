@@ -1,5 +1,6 @@
 package com.neo.chevere.ui.settings
 
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -236,26 +237,27 @@ private fun ConsolePanel(
     errorMessage: String?,
     metrics: BenchmarkMetrics?
 ) {
+    val textResources = LocalResources.current
     val terminalLogs = remember(isRunning, errorMessage, metrics, modelName) {
         buildList {
             if (isRunning) {
-                add(">> INITIALIZING NEURAL BENCHMARK...")
-                add(">> CONNECTING ENGINE: ${modelName.uppercase()}...")
-                add(">> ACQUIRING SYSTEM MEMORY STATS...")
-                add(">> EXECUTING STANDARDIZED PROMPT...")
-                add(">> MEASURING TIME TO FIRST TOKEN (TTFT)...")
+                add(textResources.getString(R.string.ui_initializing_neural_benchmark))
+                add(textResources.getString(R.string.ui_connecting_engine_1_s, modelName.uppercase()))
+                add(textResources.getString(R.string.ui_acquiring_system_memory_stats))
+                add(textResources.getString(R.string.ui_executing_standardized_prompt))
+                add(textResources.getString(R.string.ui_measuring_time_to_first_token_ttft))
             } else if (errorMessage != null) {
-                add(">> ERROR: ${errorMessage.uppercase()}")
-                add(">> BENCHMARK RUN ABORTED.")
+                add(textResources.getString(R.string.ui_error_1_s, errorMessage.uppercase()))
+                add(textResources.getString(R.string.ui_benchmark_run_aborted))
             } else if (metrics != null) {
-                add(">> DIAGNOSTICS COMPLETED.")
-                add(">> HARDWARE: ${metrics.accelText.uppercase()}")
-                add(">> MEMORY INFO: ${metrics.systemRamText}")
-                add(">> TOKENS: IN ${metrics.inputTokenCount} / OUT ${metrics.outputTokenCount}")
-                add(">> EXECUTION COMPLETED IN ${metrics.totalTimeMs} MS.")
+                add(textResources.getString(R.string.ui_diagnostics_completed))
+                add(textResources.getString(R.string.ui_hardware_1_s, metrics.accelText.uppercase()))
+                add(textResources.getString(R.string.ui_memory_info_1_s, metrics.systemRamText))
+                add(textResources.getString(R.string.ui_tokens_in_1_s_out_2_s, metrics.inputTokenCount, metrics.outputTokenCount))
+                add(textResources.getString(R.string.ui_execution_completed_in_1_s_ms, metrics.totalTimeMs))
             } else {
-                add(">> NEURAL CONSOLE IDLE.")
-                add(">> SYSTEM READY FOR PERFORMANCE CALIBRATION.")
+                add(textResources.getString(R.string.ui_neural_console_idle))
+                add(textResources.getString(R.string.ui_system_ready_for_performance_calibration))
             }
         }
     }
@@ -324,6 +326,7 @@ private fun ConsolePanel(
 
 @Composable
 private fun MetricsTable(metrics: BenchmarkMetrics) {
+    val textResources = LocalResources.current
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.5f),
         shape = RoundedCornerShape(16.dp),
@@ -339,7 +342,7 @@ private fun MetricsTable(metrics: BenchmarkMetrics) {
                 .padding(18.dp)
         ) {
             Text(
-                text = "CALIBRATION READINGS",
+                text = textResources.getString(R.string.ui_calibration_readings),
                 style = Typography.labelSmall.copy(
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 2.sp,
@@ -356,13 +359,13 @@ private fun MetricsTable(metrics: BenchmarkMetrics) {
             )
             MetricRow(
                 label = stringResource(R.string.benchmark_input_tokens_label),
-                value = "${metrics.inputTokenCount} tokens",
+                value = textResources.getString(R.string.ui_1_s_tokens, metrics.inputTokenCount),
                 isMonospace = true,
                 isGlow = true
             )
             MetricRow(
                 label = stringResource(R.string.benchmark_output_tokens_label),
-                value = "${metrics.outputTokenCount} tokens",
+                value = textResources.getString(R.string.ui_1_s_tokens, metrics.outputTokenCount),
                 isMonospace = true,
                 isGlow = true
             )

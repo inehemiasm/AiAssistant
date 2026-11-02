@@ -10,11 +10,13 @@ import org.junit.Assert.*
 import org.junit.Test
 import org.mockito.kotlin.*
 
+@org.junit.runner.RunWith(org.robolectric.RobolectricTestRunner::class)
+@org.robolectric.annotation.Config(sdk = [34], application = android.app.Application::class)
 class TaskRegistryUiTest {
     @Test fun list_requestsChecklistWithRealTaskIds() = runTest {
         val dao = mock<TaskRepository>()
         whenever(dao.getTasks()).thenReturn(listOf(Task(7, "Call Alice", "Tomorrow", TaskStatus.PENDING, 123)))
-        val result = TaskRegistryTool(dao).execute(mapOf("action" to "list")) as ToolResult.Success
+        val result = TaskRegistryTool(dao, org.robolectric.RuntimeEnvironment.getApplication()).execute(mapOf("action" to "list")) as ToolResult.Success
         val payload = requireNotNull(AgentUiEnvelope.decode(result.data))
         assertEquals(listOf(7), payload.checklist.taskIds)
         assertTrue(payload.text.contains("Call Alice"))
@@ -23,7 +25,7 @@ class TaskRegistryUiTest {
     @Test fun emptyList_stillHasRenderableSurface() = runTest {
         val dao = mock<TaskRepository>()
         whenever(dao.getTasks()).thenReturn(emptyList())
-        val result = TaskRegistryTool(dao).execute(mapOf("action" to "list")) as ToolResult.Success
+        val result = TaskRegistryTool(dao, org.robolectric.RuntimeEnvironment.getApplication()).execute(mapOf("action" to "list")) as ToolResult.Success
         assertTrue(requireNotNull(AgentUiEnvelope.decode(result.data)).checklist.taskIds.isEmpty())
     }
 }

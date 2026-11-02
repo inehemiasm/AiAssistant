@@ -1,5 +1,6 @@
 package com.neo.chevere.ui.models
 
+import com.neo.chevere.R
 import android.app.Application
 import androidx.lifecycle.viewModelScope
 import com.neo.chevere.core.BaseViewModel
@@ -117,11 +118,11 @@ class ModelsViewModel @Inject constructor(
                         copy(
                             switchState = ModelSwitchState.Error(
                                 modelName,
-                                e.message ?: "Unknown error"
+                                e.message ?: getApplication<android.app.Application>().getString(R.string.ui_unknown_error)
                             )
                         )
                     }
-                    sendEffect { ModelsEffect.ShowToast("Switch failed: ${e.message}") }
+                    sendEffect { ModelsEffect.ShowToast(getApplication<android.app.Application>().getString(R.string.ui_switch_failed_1_s, e.message)) }
                 }
         }
     }
@@ -133,7 +134,7 @@ class ModelsViewModel @Inject constructor(
                 setState { copy(remoteModels = models, catalogState = CatalogState.Idle) }
             }
             .onFailure { e ->
-                setState { copy(catalogState = CatalogState.Error(e.message ?: "Fetch failed")) }
+                setState { copy(catalogState = CatalogState.Error(e.message ?: getApplication<android.app.Application>().getString(R.string.ui_fetch_failed))) }
             }
     }
 

@@ -1,5 +1,9 @@
 package com.neo.chevere.data.agent.tools
 
+import android.content.Context
+import com.neo.chevere.R
+import dagger.hilt.android.qualifiers.ApplicationContext
+
 import com.neo.chevere.data.agent.AgentTool
 import com.neo.chevere.data.agent.ToolResult
 import kotlinx.coroutines.Dispatchers
@@ -15,7 +19,7 @@ import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 /** Minimal remote MCP client: negotiates a session, discovers tools, and confirms remote calls. */
-class McpTool @Inject constructor() : AgentTool {
+class McpTool @Inject constructor(@ApplicationContext private val context: Context) : AgentTool {
     override val name = "mcp"
     override val description = "Connect to a user-specified HTTPS MCP server. List tools first, then call a discovered tool."
     override val inputSchema = "action: list or call; endpoint: HTTPS MCP URL; tool: name for call; arguments: JSON object for call"
@@ -23,14 +27,14 @@ class McpTool @Inject constructor() : AgentTool {
         .callTimeout(30, TimeUnit.SECONDS).build()
 
     override suspend fun execute(args: Map<String, String>): ToolResult {
-        val endpoint = args["endpoint"] ?: return ToolResult.Error("Provide an HTTPS MCP endpoint.")
-        val url = try { endpoint.toHttpUrl() } catch (_: Exception) { return ToolResult.Error("Invalid MCP URL.") }
-        if (!url.isHttps || url.username.isNotEmpty() || url.password.isNotEmpty()) return ToolResult.Error("Use HTTPS without credentials in the URL.")
+        val endpoint = args["endpoint"] ?: return ToolResult.Error(context.getString(R.string.ui_provide_an_https_mcp_endpoint))
+        val url = try { endpoint.toHttpUrl() } catch (_: Exception) { return ToolResult.Error(context.getString(R.string.ui_invalid_mcp_url)) }
+        if (!url.isHttps || url.username.isNotEmpty() || url.password.isNotEmpty()) return ToolResult.Error(context.getString(R.string.ui_use_https_without_credentials_in_the_url))
         val action = args["action"] ?: "list"
         if (action !in setOf("list", "call")) return ToolResult.Error("Use list or call.")
         return ToolResult.NeedsConfirmation(
-            if (action == "call") "Send these arguments to ${url.host} and call ${args["tool"]}: ${args["arguments"] ?: "{}"}? The server receives this data and handles it under its own privacy policy."
-            else "Connect to MCP server $url and discover its tools?"
+            if (action == "call") context.getString(R.string.ui_send_these_arguments_to_1_s_and_call_2_s_3_s_the_server_receives, url.host, args["tool"], args["arguments"] ?: "{}")
+            else context.getString(R.string.ui_connect_to_mcp_server_1_s_and_discover_its_tools, url)
         ) { exchange(endpoint, action, args) }
     }
 

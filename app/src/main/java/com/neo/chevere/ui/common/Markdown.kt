@@ -1,5 +1,7 @@
 package com.neo.chevere.ui.common
 
+import androidx.compose.ui.platform.LocalResources
+import com.neo.chevere.R
 import android.annotation.SuppressLint
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -252,6 +254,7 @@ private fun CodeBlock(
     scrollState: ScrollState = rememberScrollState(),
     onPreviewHtmlFullScreen: ((String) -> Unit)? = null
 ) {
+    val textResources = LocalResources.current
     val isHtmlPreviewable = block.language?.lowercase(Locale.US)?.trim() in listOf("html", "xml", "svg")
     var activeTab by remember { mutableStateOf(CodeBlockTab.CODE) }
 
@@ -296,7 +299,7 @@ private fun CodeBlock(
                             modifier = Modifier.height(28.dp)
                         ) {
                             Text(
-                                text = "CODE",
+                                text = textResources.getString(R.string.ui_code),
                                 style = Typography.labelSmall.copy(
                                     fontWeight = FontWeight.Bold,
                                     color = if (activeTab == CodeBlockTab.CODE) activeColor else inactiveColor
@@ -310,7 +313,7 @@ private fun CodeBlock(
                             modifier = Modifier.height(28.dp)
                         ) {
                             Text(
-                                text = "PREVIEW",
+                                text = textResources.getString(R.string.ui_preview),
                                 style = Typography.labelSmall.copy(
                                     fontWeight = FontWeight.Bold,
                                     color = if (activeTab == CodeBlockTab.PREVIEW) activeColor else inactiveColor
@@ -328,7 +331,7 @@ private fun CodeBlock(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Fullscreen,
-                                    contentDescription = "Preview fullscreen",
+                                    contentDescription = textResources.getString(R.string.ui_preview_fullscreen),
                                     tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(20.dp)
                                 )

@@ -1,5 +1,6 @@
 package com.neo.chevere.ui.marketplace
 
+import com.neo.chevere.R
 import com.neo.chevere.domain.InstalledModel
 import com.neo.chevere.domain.ModelCapability
 import com.neo.chevere.domain.ModelEntry
@@ -38,17 +39,17 @@ internal enum class RamCompatibility {
     RISK
 }
 
-internal fun ModelEntry.getRamCompatibility(deviceRamGb: Double): Pair<RamCompatibility, String> {
-    if (deviceRamGb <= 0.0) return Pair(RamCompatibility.COMPATIBLE, "RAM Check N/A")
-    if (sizeBytes <= 0) return Pair(RamCompatibility.COMPATIBLE, "Compatible")
+internal fun ModelEntry.getRamCompatibility(deviceRamGb: Double): Pair<RamCompatibility, Int> {
+    if (deviceRamGb <= 0.0) return Pair(RamCompatibility.COMPATIBLE, R.string.ui_ram_check_n_a)
+    if (sizeBytes <= 0) return Pair(RamCompatibility.COMPATIBLE, R.string.ui_compatible)
 
     // For image generation / diffusion models
     if (isImageGenerationModel) {
         return when {
-            deviceRamGb >= 12.0 -> Pair(RamCompatibility.OPTIMAL, "Optimal (12GB+ RAM)")
-            deviceRamGb >= 8.0 -> Pair(RamCompatibility.COMPATIBLE, "Compatible (8GB+ RAM)")
-            deviceRamGb >= 6.0 -> Pair(RamCompatibility.WARNING, "Tight RAM (8GB+ Rec.)")
-            else -> Pair(RamCompatibility.RISK, "High OOM Risk (8GB+ Rec.)")
+            deviceRamGb >= 12.0 -> Pair(RamCompatibility.OPTIMAL, R.string.ui_optimal_12gb_ram)
+            deviceRamGb >= 8.0 -> Pair(RamCompatibility.COMPATIBLE, R.string.ui_compatible_8gb_ram)
+            deviceRamGb >= 6.0 -> Pair(RamCompatibility.WARNING, R.string.ui_tight_ram_8gb_rec)
+            else -> Pair(RamCompatibility.RISK, R.string.ui_high_oom_risk_8gb_rec)
         }
     }
 
@@ -70,9 +71,9 @@ internal fun ModelEntry.getRamCompatibility(deviceRamGb: Double): Pair<RamCompat
     }
 
     return when {
-        deviceRamGb >= recommendedRam -> Pair(RamCompatibility.OPTIMAL, "Optimal RAM")
-        deviceRamGb >= minRequiredRam -> Pair(RamCompatibility.COMPATIBLE, "Compatible")
-        deviceRamGb >= (minRequiredRam - 2.0) -> Pair(RamCompatibility.WARNING, "Tight RAM")
-        else -> Pair(RamCompatibility.RISK, "High OOM Risk")
+        deviceRamGb >= recommendedRam -> Pair(RamCompatibility.OPTIMAL, R.string.ui_optimal_ram)
+        deviceRamGb >= minRequiredRam -> Pair(RamCompatibility.COMPATIBLE, R.string.ui_compatible)
+        deviceRamGb >= (minRequiredRam - 2.0) -> Pair(RamCompatibility.WARNING, R.string.ui_tight_ram)
+        else -> Pair(RamCompatibility.RISK, R.string.ui_high_oom_risk)
     }
 }

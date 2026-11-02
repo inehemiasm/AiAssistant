@@ -18,6 +18,8 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 
 @OptIn(ExperimentalCoroutinesApi::class)
+@org.junit.runner.RunWith(org.robolectric.RobolectricTestRunner::class)
+@org.robolectric.annotation.Config(sdk = [34], application = android.app.Application::class)
 class AgentOrchestratorTest {
 
     private lateinit var mockInferenceManager: InferenceManager
@@ -32,7 +34,7 @@ class AgentOrchestratorTest {
     fun setup() {
         mockInferenceManager = mock()
         mockToolRegistry = mock()
-        orchestrator = AgentOrchestrator(mockInferenceManager, mockToolRegistry, parser)
+        orchestrator = AgentOrchestrator(mockInferenceManager, mockToolRegistry, parser, org.robolectric.RuntimeEnvironment.getApplication())
 
         mockWeatherTool = mock {
             on { name } doReturn "get_weather"

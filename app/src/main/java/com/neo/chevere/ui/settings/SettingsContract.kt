@@ -18,8 +18,8 @@ data class SettingsState(
     val defaultImageNegativePrompt: String = "",
     val downloadOnWifiOnly: Boolean = true,
     val appVersion: String = "1.0.0-STABLE",
-    val engineInfo: String = "Gemma 4 Edge",
-    val protocolInfo: String = "On-Device Inference"
+    val engineInfo: String = "LiteRT-LM",
+    val protocolInfo: String = ""
 ) : UiState
 
 sealed class SettingsIntent : UiIntent {

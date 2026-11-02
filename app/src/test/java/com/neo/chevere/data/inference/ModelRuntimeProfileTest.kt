@@ -1,6 +1,5 @@
 package com.neo.chevere.data.inference
 
-import com.neo.chevere.core.Constants
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -27,9 +26,13 @@ class ModelRuntimeProfileTest {
         assertNull(config.channels)
     }
 
-    @Test fun otherModelsKeepExistingDefaults() {
-        val path = "/models/gemma.litertlm"
-        assertEquals(Constants.Inference.MAX_NUM_TOKENS, ModelRuntimeProfile.contextSize(path))
-        assertTrue(ModelRuntimeProfile.conversationConfig(path).extraContext.isEmpty())
+    @Test fun generalModelsReserveContextBeyondTheResponseLimit() {
+        for (path in listOf("/models/gemma.litertlm", "/models/gemma-4-E2B-it-web.litertlm", "/models/qwen.litertlm")) {
+            assertEquals(4096, ModelRuntimeProfile.contextSize(path))
+            val config = ModelRuntimeProfile.conversationConfig(path)
+            assertEquals(1024, config.maxOutputToken)
+            assertTrue(ModelRuntimeProfile.contextSize(path) > config.maxOutputToken!!)
+            assertTrue(config.extraContext.isEmpty())
+        }
     }
 }

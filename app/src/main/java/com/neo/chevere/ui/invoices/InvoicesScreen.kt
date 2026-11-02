@@ -1,5 +1,6 @@
 package com.neo.chevere.ui.invoices
 
+import androidx.compose.ui.platform.LocalResources
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -105,6 +106,7 @@ fun InvoicesContent(
     effects: kotlinx.coroutines.flow.Flow<InvoicesEffect>,
     onIntent: (InvoicesIntent) -> Unit
 ) {
+    val textResources = LocalResources.current
     val context = LocalContext.current
     val hapticView = LocalView.current
     var showAddDialog by remember { mutableStateOf(false) }
@@ -161,7 +163,7 @@ fun InvoicesContent(
                 shape = CircleShape,
                 modifier = Modifier.padding(bottom = 16.dp, end = 8.dp)
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Add Invoice", modifier = Modifier.size(24.dp))
+                Icon(Icons.Default.Add, contentDescription = textResources.getString(R.string.ui_add_invoice), modifier = Modifier.size(24.dp))
             }
         },
         containerColor = Color.Transparent
@@ -182,7 +184,7 @@ fun InvoicesContent(
                     OutlinedTextField(
                         value = searchQuery,
                         onValueChange = { searchQuery = it },
-                        placeholder = { Text("Search by Vendor...") },
+                        placeholder = { Text(textResources.getString(R.string.ui_search_by_vendor)) },
                         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = MaterialTheme.colorScheme.primary,
@@ -204,7 +206,7 @@ fun InvoicesContent(
                                 hapticView.performChevereHaptic(ChevereHaptic.Selection)
                                 selectedStatusFilter = null
                             },
-                            label = { Text("ALL") },
+                            label = { Text(textResources.getString(R.string.ui_all)) },
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
                                 selectedLabelColor = MaterialTheme.colorScheme.primary
@@ -218,7 +220,7 @@ fun InvoicesContent(
                                     hapticView.performChevereHaptic(ChevereHaptic.Selection)
                                     selectedStatusFilter = status
                                 },
-                                label = { Text(status.name) },
+                                label = { Text(status.localizedLabel()) },
                                 colors = FilterChipDefaults.filterChipColors(
                                     selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
                                     selectedLabelColor = MaterialTheme.colorScheme.primary
@@ -296,6 +298,7 @@ private fun InvoiceRowItem(
     onDelete: () -> Unit,
     onPreviewImage: (String) -> Unit
 ) {
+    val textResources = LocalResources.current
     val hapticView = LocalView.current
     var showMenu by remember { mutableStateOf(false) }
 
@@ -337,7 +340,7 @@ private fun InvoiceRowItem(
                 if (!invoice.imageUri.isNullOrBlank() && !isImageError) {
                     AsyncImage(
                         model = invoice.imageUri,
-                        contentDescription = "Invoice scan thumbnail",
+                        contentDescription = textResources.getString(R.string.ui_invoice_scan_thumbnail),
                         contentScale = ContentScale.Crop,
                         onState = { state ->
                             if (state is coil.compose.AsyncImagePainter.State.Error) {
@@ -416,7 +419,7 @@ private fun InvoiceRowItem(
                         }
                     ) {
                         Text(
-                            text = invoice.status.name,
+                            text = invoice.status.localizedLabel(),
                             style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                             color = statusColor,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
@@ -448,7 +451,7 @@ private fun InvoiceRowItem(
         ) {
             InvoiceStatus.entries.forEach { status ->
                 DropdownMenuItem(
-                    text = { Text("Mark as ${status.name}") },
+                    text = { Text(textResources.getString(R.string.ui_mark_as_1_s, status.localizedLabel())) },
                     onClick = {
                         onUpdateStatus(status)
                         showMenu = false
@@ -456,7 +459,7 @@ private fun InvoiceRowItem(
                 )
             }
             DropdownMenuItem(
-                text = { Text("Delete Invoice", color = MaterialTheme.colorScheme.error) },
+                text = { Text(textResources.getString(R.string.ui_delete_invoice), color = MaterialTheme.colorScheme.error) },
                 onClick = {
                     onDelete()
                     showMenu = false
@@ -471,7 +474,9 @@ private fun InvoiceRowItem(
  * Prioritizes items/summary, then appends invoice number and date.
  * Falls back to a currency+amount summary if no other details exist.
  */
+@Composable
 private fun buildInvoiceDescription(invoice: InvoiceEntity): String {
+    val textResources = LocalResources.current
     val parts = mutableListOf<String>()
 
     if (!invoice.items.isNullOrBlank()) {
@@ -479,7 +484,7 @@ private fun buildInvoiceDescription(invoice: InvoiceEntity): String {
     }
 
     if (!invoice.invoiceNumber.isNullOrBlank()) {
-        parts += "Inv #${invoice.invoiceNumber}"
+        parts += textResources.getString(R.string.ui_inv_1_s, invoice.invoiceNumber)
     }
 
     if (!invoice.date.isNullOrBlank()) {
@@ -489,7 +494,7 @@ private fun buildInvoiceDescription(invoice: InvoiceEntity): String {
     if (parts.isEmpty()) {
         // Fallback: show the amount as a brief description
         val amount = invoice.totalAmount?.let { "%,.2f".format(it) } ?: "0.00"
-        return "${invoice.currency} $amount invoice"
+        return textResources.getString(R.string.ui_1_s_2_s_invoice, invoice.currency, amount)
     }
 
     return parts.joinToString(" · ")
@@ -538,6 +543,7 @@ private fun AddInvoiceDialog(
     onDismiss: () -> Unit,
     onConfirm: (String, Double, String, String?, String?, String?) -> Unit
 ) {
+    val textResources = LocalResources.current
     var vendor by remember { mutableStateOf("") }
     var amountStr by remember { mutableStateOf("") }
     var currency by remember { mutableStateOf("USD") }
@@ -624,7 +630,7 @@ private fun AddInvoiceDialog(
                     value = date,
                     onValueChange = { date = it },
                     label = { Text(stringResource(R.string.invoice_date_hint)) },
-                    placeholder = { Text("YYYY-MM-DD") },
+                    placeholder = { Text(textResources.getString(R.string.ui_yyyy_mm_dd)) },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = MaterialTheme.colorScheme.primary,
                         unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
@@ -678,3 +684,11 @@ private fun AddInvoiceDialog(
         modifier = Modifier.padding(16.dp)
     )
 }
+
+/** Presentation labels do not change persisted invoice status values. */
+@Composable
+private fun InvoiceStatus.localizedLabel(): String = stringResource(when (this) {
+    InvoiceStatus.PAID -> R.string.ui_paid
+    InvoiceStatus.PENDING -> R.string.ui_pending
+    InvoiceStatus.OVERDUE -> R.string.ui_overdue
+})

@@ -1,5 +1,6 @@
 package com.neo.chevere.ui.chat.components
 
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
 
@@ -73,7 +74,6 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.neo.chevere.R
 import com.neo.chevere.core.Constants
-import com.neo.chevere.core.Constants.SlashCommand
 import com.neo.chevere.ui.designsystem.Typography
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.PaddingValues
@@ -92,6 +92,7 @@ fun ChatInputBar(
     onStop: () -> Unit,
     selectedImageUri: Uri?,
     onDocumentClick: () -> Unit = {},
+    onFoldersClick: () -> Unit = {},
     onGalleryClick: () -> Unit,
     onCameraClick: () -> Unit,
     onRemoveImage: () -> Unit,
@@ -110,7 +111,7 @@ fun ChatInputBar(
         derivedStateOf {
             if (!text.startsWith("/")) return@derivedStateOf emptyList()
             val query = text.trim().lowercase()
-            Constants.Commands.ALL.filter { it.command.startsWith(query) }
+            chatSlashCommands.filter { it.command.startsWith(query) }
         }
     }
 
@@ -219,7 +220,8 @@ fun ChatInputBar(
                         onShowAttachmentMenu = { showAttachmentMenu = true },
                         onDismissAttachmentMenu = { showAttachmentMenu = false },
                         onDocumentClick = onDocumentClick,
-            onGalleryClick = onGalleryClick,
+                        onFoldersClick = onFoldersClick,
+                        onGalleryClick = onGalleryClick,
                         onCameraClick = onCameraClick
                     )
                 }
@@ -289,6 +291,7 @@ private fun ComposerContent(
     onShowAttachmentMenu: () -> Unit,
     onDismissAttachmentMenu: () -> Unit,
     onDocumentClick: () -> Unit = {},
+    onFoldersClick: () -> Unit = {},
     onGalleryClick: () -> Unit,
     onCameraClick: () -> Unit
 ) {
@@ -299,6 +302,7 @@ private fun ComposerContent(
             onShowAttachmentMenu = onShowAttachmentMenu,
             onDismissAttachmentMenu = onDismissAttachmentMenu,
             onDocumentClick = onDocumentClick,
+            onFoldersClick = onFoldersClick,
             onGalleryClick = onGalleryClick,
             onCameraClick = onCameraClick
         )
@@ -348,9 +352,11 @@ private fun AttachmentButton(
     onShowAttachmentMenu: () -> Unit,
     onDismissAttachmentMenu: () -> Unit,
     onDocumentClick: () -> Unit = {},
+    onFoldersClick: () -> Unit = {},
     onGalleryClick: () -> Unit,
     onCameraClick: () -> Unit
 ) {
+    val textResources = LocalResources.current
     Box {
         IconButton(
             onClick = onShowAttachmentMenu,
@@ -386,7 +392,11 @@ private fun AttachmentButton(
             shadowElevation = 8.dp
         ) {
             DropdownMenuItem(
-                text = { Text("Import document") },
+                text = { Text(stringResource(R.string.document_folders)) },
+                onClick = { onFoldersClick(); onDismissAttachmentMenu() }
+            )
+            DropdownMenuItem(
+                text = { Text(textResources.getString(R.string.ui_import_document)) },
                 onClick = { onDocumentClick(); onDismissAttachmentMenu() }
             )
             DropdownMenuItem(
@@ -590,12 +600,12 @@ private fun SlashCommandRow(
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = command.label,
+                text = stringResource(command.labelRes),
                 style = Typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
                 color = MaterialTheme.colorScheme.onSurface
             )
             Text(
-                text = command.description,
+                text = stringResource(command.descriptionRes),
                 style = Typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f)
             )
@@ -609,6 +619,7 @@ private fun SuggestionChip(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val textResources = LocalResources.current
     Surface(
         color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f),
         contentColor = MaterialTheme.colorScheme.primary,
@@ -624,7 +635,7 @@ private fun SuggestionChip(
                 ambientColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
                 spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
             )
-            .semantics { contentDescription = "Suggested next message: $suggestion" }
+            .semantics { contentDescription = textResources.getString(R.string.ui_suggested_next_message_1_s, suggestion) }
             .clickable(onClick = onClick)
     ) {
         Text(

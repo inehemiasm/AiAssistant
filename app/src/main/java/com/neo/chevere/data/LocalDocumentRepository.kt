@@ -1,5 +1,6 @@
 package com.neo.chevere.data
 
+import com.neo.chevere.R
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
@@ -21,12 +22,12 @@ class LocalDocumentRepository @Inject constructor(
     override suspend fun importDocument(reference: String): DocumentImportResult = withContext(Dispatchers.IO) {
         try {
             val uri = Uri.parse(reference)
-            require(uri.scheme == "content") { "Select a document using the document picker." }
+            require(uri.scheme == "content") { context.getString(R.string.ui_select_a_document_using_the_document_picker) }
             val resolver = context.contentResolver
             val name = resolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use {
                 if (it.moveToFirst()) it.getString(0) else null
             } ?: "document.txt"
-            require(name.endsWith(".txt", true) || name.endsWith(".md", true)) { "Choose a .txt or .md document." }
+            require(name.endsWith(".txt", true) || name.endsWith(".md", true)) { context.getString(R.string.ui_choose_a_txt_or_md_document) }
             val bytes = resolver.openInputStream(uri)?.use { input ->
                 val output = java.io.ByteArrayOutputStream()
                 val buffer = ByteArray(8192)
@@ -36,10 +37,10 @@ class LocalDocumentRepository @Inject constructor(
                     output.write(buffer, 0, count)
                 }
                 output.toByteArray() }
-                ?: error("Unable to open document.")
-            require(bytes.size <= 2 * 1024 * 1024) { "Choose a document smaller than 2 MB." }
+                ?: error(context.getString(R.string.ui_unable_to_open_document))
+            require(bytes.size <= 2 * 1024 * 1024) { context.getString(R.string.ui_choose_a_document_smaller_than_2_mb) }
             val text = bytes.toString(Charsets.UTF_8)
-            require(text.isNotBlank() && '\u0000' !in text) { "Document contains no readable text." }
+            require(text.isNotBlank() && '\u0000' !in text) { context.getString(R.string.ui_document_contains_no_readable_text) }
             val chunks = text.windowed(800, 600, partialWindows = true).mapIndexed { index, chunk ->
                 DocumentChunkEntity(filePath = reference, fileName = name, chunkIndex = index, text = chunk)
             }
@@ -48,7 +49,7 @@ class LocalDocumentRepository @Inject constructor(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            DocumentImportResult.Failed(e.message ?: "Document import failed.")
+            DocumentImportResult.Failed(e.message ?: context.getString(R.string.ui_document_import_failed))
         }
     }
 }

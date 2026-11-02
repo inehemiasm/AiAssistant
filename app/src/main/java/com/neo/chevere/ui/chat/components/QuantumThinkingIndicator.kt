@@ -1,5 +1,6 @@
 package com.neo.chevere.ui.chat.components
 
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateFloat
@@ -56,6 +57,7 @@ fun QuantumThinkingIndicator(
     statusMessage: String? = null,
     onCancel: (() -> Unit)? = null
 ) {
+    val textResources = LocalResources.current
     AnimatedVisibility(
         visible = visible,
         enter = fadeIn() + expandVertically(),
@@ -113,7 +115,7 @@ fun QuantumThinkingIndicator(
                 IconButton(onClick = onCancel, modifier = Modifier.size(32.dp)) {
                     Icon(
                         imageVector = Icons.Default.Close,
-                        contentDescription = "Cancel",
+                        contentDescription = textResources.getString(R.string.ui_cancel),
                         tint = primaryColor.copy(alpha = alpha),
                         modifier = Modifier.size(18.dp)
                     )

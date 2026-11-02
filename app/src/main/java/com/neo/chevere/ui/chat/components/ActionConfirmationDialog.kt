@@ -1,5 +1,7 @@
 package com.neo.chevere.ui.chat.components
 
+import androidx.compose.ui.platform.LocalResources
+import com.neo.chevere.R
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
@@ -12,18 +14,19 @@ fun ActionConfirmationDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    val textResources = LocalResources.current
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Confirm Action") },
+        title = { Text(textResources.getString(R.string.ui_confirm_action)) },
         text = { Text(message) },
         confirmButton = {
             Button(onClick = onConfirm) {
-                Text("Confirm")
+                Text(textResources.getString(R.string.ui_confirm))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(textResources.getString(R.string.ui_cancel))
             }
         }
     )

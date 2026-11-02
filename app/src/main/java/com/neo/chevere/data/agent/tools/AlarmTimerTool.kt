@@ -1,5 +1,9 @@
 package com.neo.chevere.data.agent.tools
 
+import android.content.Context
+import com.neo.chevere.R
+import dagger.hilt.android.qualifiers.ApplicationContext
+
 import com.neo.chevere.data.agent.ToolResult
 import com.neo.chevere.data.agent.actions.AndroidAppActionExecutor
 import com.neo.chevere.data.agent.actions.SetAlarmRequest
@@ -11,7 +15,8 @@ import javax.inject.Inject
  * Manages device alarms and timers after user confirmation.
  */
 class AlarmTimerTool @Inject constructor(
-    private val actionExecutor: AndroidAppActionExecutor
+    private val actionExecutor: AndroidAppActionExecutor,
+    @ApplicationContext private val context: Context
 ) : BaseAppActionTool(actionExecutor) {
 
     override val name: String = "manage_alarms_timers"
@@ -28,19 +33,19 @@ class AlarmTimerTool @Inject constructor(
                 val hour = args["hour"]?.toIntOrNull() ?: return ToolResult.Error("Missing or invalid 'hour' parameter (0-23)")
                 val minutes = args["minutes"]?.toIntOrNull() ?: return ToolResult.Error("Missing or invalid 'minutes' parameter (0-59)")
                 val message = args["message"]?.trim()
-                
+
                 val request = SetAlarmRequest(hour, minutes, message)
-                ToolResult.NeedsConfirmation("Set alarm for ${"%02d".format(hour)}:${"%02d".format(minutes)}${if (!message.isNullOrBlank()) " labeled '$message'" else ""}?") {
+                ToolResult.NeedsConfirmation(context.getString(R.string.ui_set_alarm_for_1_s_2_s, "%02d:%02d".format(hour, minutes), message?.takeIf { it.isNotBlank() }?.let { " " + context.getString(R.string.ui_labeled_1_s, it) }.orEmpty())) {
                     handleActionResult(actionExecutor.execute(request))
                 }
             }
             "set_timer" -> {
                 val lengthSeconds = args["length"]?.toIntOrNull() ?: return ToolResult.Error("Missing or invalid 'length' (seconds) parameter")
                 val message = args["message"]?.trim()
-                
+
                 val request = SetTimerRequest(lengthSeconds, message)
                 val durationText = formatDuration(lengthSeconds)
-                ToolResult.NeedsConfirmation("Start a timer for $durationText${if (!message.isNullOrBlank()) " labeled '$message'" else ""}?") {
+                ToolResult.NeedsConfirmation(context.getString(R.string.ui_start_a_timer_for_1_s_2_s, durationText, if (!message.isNullOrBlank()) " " + context.getString(R.string.ui_labeled_1_s, message) else "")) {
                     handleActionResult(actionExecutor.execute(request))
                 }
             }
@@ -53,9 +58,9 @@ class AlarmTimerTool @Inject constructor(
 
     private fun formatDuration(seconds: Int): String {
         return when {
-            seconds < 60 -> "$seconds seconds"
-            seconds % 60 == 0 -> "${seconds / 60} minute(s)"
-            else -> "${seconds / 60} minute(s) and ${seconds % 60} second(s)"
+            seconds < 60 -> context.resources.getQuantityString(R.plurals.duration_seconds, seconds, seconds)
+            seconds % 60 == 0 -> context.resources.getQuantityString(R.plurals.duration_minutes, seconds / 60, seconds / 60)
+            else -> context.getString(R.string.ui_1_s_and_2_s, context.resources.getQuantityString(R.plurals.duration_minutes, seconds / 60, seconds / 60), context.resources.getQuantityString(R.plurals.duration_seconds, seconds % 60, seconds % 60))
         }
     }
 }
