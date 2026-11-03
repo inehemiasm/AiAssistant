@@ -315,7 +315,7 @@ fun CompatibilitySection(state: ModelDetailsState) {
     SectionHeader(textResources.getString(R.string.ui_hardware_compatibility))
 
     val isCompatible =
-        state.modelEntry?.runtimeType == "LiteRT" || state.installedModel?.runtime?.name == "LITERT"
+        state.isMiniCpm || state.modelEntry?.runtimeType == "LiteRT" || state.installedModel?.runtime?.name == "LITERT"
 
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.5f),
@@ -326,7 +326,7 @@ fun CompatibilitySection(state: ModelDetailsState) {
             CompatibilityRow(
                 icon = Icons.Default.CheckCircle,
                 label = textResources.getString(R.string.ui_neural_engine),
-                value = textResources.getString(R.string.ui_litert_optimized),
+                value = textResources.getString(if (state.isMiniCpm) R.string.ui_minicpm_runtime else R.string.ui_litert_optimized),
                 isOk = isCompatible
             )
             CompatibilityRow(
@@ -359,7 +359,7 @@ fun MetadataSection(state: ModelDetailsState) {
             textResources.getString(R.string.ui_provider),
             state.modelEntry?.provider ?: state.installedModel?.source?.name ?: textResources.getString(R.string.ui_local)
         )
-        MetadataRow(textResources.getString(R.string.ui_format), state.installedModel?.format?.name ?: "LITERTLM")
+        MetadataRow(textResources.getString(R.string.ui_format), state.formatLabel)
         MetadataRow(
             textResources.getString(R.string.ui_size),
             formatFileSize(state.installedModel?.sizeBytes ?: state.modelEntry?.sizeBytes ?: 0)

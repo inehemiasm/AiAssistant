@@ -1,0 +1,48 @@
+appId: dev.neo.chevereai
+name: Downloaded MiniCPM activates and answers in Chevere
+---
+- launchApp:
+    clearState: false
+    stopApp: false
+- tapOn: "Models"
+- runFlow:
+    when:
+      visible: "MODEL DETAILS"
+    commands:
+      - back
+- scrollUntilVisible:
+    element: "MINICPM-V 4.7 35B-A3B.*"
+    direction: DOWN
+    timeout: 60000
+- tapOn: "MINICPM-V 4.7 35B-A3B.*"
+- scrollUntilVisible:
+    element: "(ACTIVATE ENGINE|ENGINE ACTIVE)"
+    direction: DOWN
+    timeout: 30000
+- runFlow:
+    when:
+      visible: "ACTIVATE ENGINE"
+    commands:
+      - tapOn: "ACTIVATE ENGINE"
+- extendedWaitUntil:
+    visible: "ENGINE ACTIVE"
+    timeout: 300000
+- tapOn: "Chat"
+- extendedWaitUntil:
+    visible: "Ready.*Mini.*"
+    timeout: 300000
+- tapOn: "Library"
+- tapOn: "Chat History"
+- tapOn: "New Chat"
+- assertNotVisible: "4"
+- tapOn: "Ask Chevere AI…"
+- inputText: "What is 2 + 2? Answer only with the number."
+- tapOn: "Send"
+- extendedWaitUntil:
+    visible: "4"
+    timeout: 300000
+- extendedWaitUntil:
+    visible: "Ready.*Mini.*"
+    timeout: 300000
+- assertNotVisible: ".*MiniCPM inference failed.*"
+- takeScreenshot: minicpm_text_answer

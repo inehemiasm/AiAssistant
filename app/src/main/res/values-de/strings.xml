@@ -764,4 +764,9 @@
     <string name="tokens_input_estimate">EINGABE ~%1$d TOK</string>
     <string name="tokens_output_estimate">AUSGABE ~%1$d TOK</string>
     <string name="document_search_failed">Die Dokumentensuche ist fehlgeschlagen. Aktualisieren Sie den Dokumentenordner oder versuchen Sie es erneut.</string>
+    <string name="ui_minicpm_description">Experimentelle CPU-Laufzeit mit aus dem Speicher geladenen Experten. Etwa 16,6 GB Download; 12 GB RAM und schneller interner Speicher empfohlen. Text und ein Bild, 4096 Token Kontext, Denken deaktiviert. Android-Geschwindigkeit ist ungeprüft; iPhone-Messwerte sagen nichts über dieses Gerät aus.</string>
+    <string name="ui_minicpm_load_failed">MiniCPM konnte nicht geladen werden. Prüfe das vollständige Paket und den verfügbaren Speicher (mindestens 3 GB frei). Schließe andere Apps oder wähle ein kleineres Modell.</string>
+    <string name="ui_minicpm_generation_failed">MiniCPM-Generierung fehlgeschlagen. Versuche eine kürzere Anfrage oder lade das Modell neu.</string>
+    <string name="ui_minicpm_storage_required">Dieses Paket benötigt etwa 17 GB internen Speicher und zusätzlich 512 MB freien Platz.</string>
+    <string name="ui_minicpm_runtime">Experimentelles llama.cpp auf CPU</string>
 </resources>

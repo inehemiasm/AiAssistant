@@ -72,7 +72,8 @@ class ModelDownloadWorker @AssistedInject constructor(
             return@withContext Result.failure(workDataOf(Constants.Download.OUTPUT_ERROR to applicationContext.getString(R.string.ui_missing_metadata)))
         }
 
-        if (!modelName.endsWith(Constants.ModelFiles.LITERTLM_EXTENSION) &&
+        if (modelName != com.neo.chevere.data.inference.minicpm.MiniCpmBundle.ID &&
+            !modelName.endsWith(Constants.ModelFiles.LITERTLM_EXTENSION) &&
             !modelName.endsWith(Constants.ModelFiles.BIN_EXTENSION) &&
             !modelName.endsWith(Constants.ModelFiles.ZIP_EXTENSION)
         ) {
@@ -92,6 +93,14 @@ class ModelDownloadWorker @AssistedInject constructor(
             // Mark as downloading in registry
             installedModelRegistry.updateInstallStatus(modelId, InstallStatus.DOWNLOADING)
 
+            if (modelName == com.neo.chevere.data.inference.minicpm.MiniCpmBundle.ID) {
+                require(modelId == modelName)
+                downloadMiniCpmBundle(modelId, modelName)
+                installedModelRegistry.updateInstallStatus(modelId, InstallStatus.INSTALLED)
+                setProgress(workDataOf(Constants.Download.PROGRESS to 100))
+                telemetry.logModelDownloadFinished(modelId, true, System.currentTimeMillis() - startedAtMs, "repository")
+                return@withContext Result.success()
+            }
             if (repositoryFiles.isNotEmpty()) {
                 val targetDir = File(applicationContext.filesDir, modelId)
                 val tempDir = File(
@@ -304,6 +313,50 @@ class ModelDownloadWorker @AssistedInject constructor(
                 entry = zip.nextEntry
             }
         }
+    }
+
+    private suspend fun downloadMiniCpmBundle(modelId: String, modelName: String) {
+        val bundle = com.neo.chevere.data.inference.minicpm.MiniCpmBundle
+        val manifest = bundle.manifest(applicationContext)
+        val target = File(applicationContext.filesDir, modelId)
+        if (bundle.isComplete(target, manifest)) return
+        // Retain verified and partial files between network retries; never delete a healthy install.
+        require(!target.exists())
+        val temp = File(applicationContext.filesDir, modelId + Constants.ModelFiles.TEMP_DIRECTORY_EXTENSION)
+        temp.mkdirs()
+        val remaining = manifest.files.sumOf { entry ->
+            (entry.sizeBytes - File(temp, entry.path).length()).coerceAtLeast(0L)
+        }
+        if (temp.usableSpace < remaining + 512L * 1024 * 1024) {
+            throw IOException(applicationContext.getString(R.string.ui_minicpm_storage_required))
+        }
+        var completed = 0L
+        val total = manifest.files.sumOf { it.sizeBytes }
+        manifest.files.forEach { entry ->
+            kotlin.coroutines.coroutineContext.ensureActive()
+            val file = File(temp, entry.path).canonicalFile
+            require(file.path.startsWith(temp.canonicalPath + File.separator))
+            file.parentFile?.mkdirs()
+            if (file.length() > entry.sizeBytes) file.delete()
+            if (!file.isFile || file.length() != entry.sizeBytes) {
+                val url = remoteModelDataSource.getDownloadUrl(entry.url)
+                remoteModelDataSource.downloadToFile(url, file, file.length()).collect { progress ->
+                    kotlin.coroutines.coroutineContext.ensureActive()
+                    if (progress is DownloadStatus.Progress) {
+                        val bytes = completed + entry.sizeBytes * progress.percent / 100
+                        emitDownloadProgress(DownloadStatus.Progress((bytes * 100 / total).toInt().coerceIn(0, 99)), modelName)
+                    }
+                }
+            }
+            if (file.length() != entry.sizeBytes || !calculateSha256(file).equals(entry.sha256, true)) {
+                file.delete()
+                throw IOException(applicationContext.getString(R.string.ui_checksum_mismatch))
+            }
+            completed += entry.sizeBytes
+        }
+        installedModelRegistry.updateInstallStatus(modelId, InstallStatus.VERIFYING)
+        check(bundle.isComplete(temp, manifest))
+        check(temp.renameTo(target))
     }
 
     private suspend fun downloadRepositoryBundle(

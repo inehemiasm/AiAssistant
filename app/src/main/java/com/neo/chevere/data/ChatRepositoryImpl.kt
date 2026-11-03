@@ -433,7 +433,14 @@ class ChatRepositoryImpl @Inject constructor(
         val modelRoot: File
 
         val onnxRoot = findOnnxDiffusionRoot(file)
-        if (onnxRoot != null) {
+        if (file.name == com.neo.chevere.data.inference.minicpm.MiniCpmBundle.ID &&
+            com.neo.chevere.data.inference.minicpm.MiniCpmBundle.isComplete(file, com.neo.chevere.data.inference.minicpm.MiniCpmBundle.manifest(context))) {
+            modelRoot = file
+            format = ModelFormat.GGUF_BUNDLE
+            runtime = ModelRuntime.LLAMA_CPP
+            taskType = ModelTaskType.VISION_CHAT
+            capabilities = setOf(ModelCapability.TEXT, ModelCapability.VISION)
+        } else if (onnxRoot != null) {
             modelRoot = onnxRoot
             format = ModelFormat.ONNX_DIFFUSION_BUNDLE
             runtime = ModelRuntime.ONNX_DIFFUSION
@@ -467,7 +474,7 @@ class ChatRepositoryImpl @Inject constructor(
 
         return InstalledModel(
             id = file.name, // Use the name of the file/dir in the root filesDir as ID
-            displayName = file.nameWithoutExtension.replace("_", " ")
+            displayName = (if (file.isDirectory) file.name else file.nameWithoutExtension).replace("_", " ")
                 .replace("-", " ")
                 .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() },
             filePath = modelRoot.absolutePath, // Use the actual model root for inference
@@ -490,6 +497,10 @@ class ChatRepositoryImpl @Inject constructor(
 
     private fun ModelEntry.toPendingInstalledModel(id: String, filePath: String): InstalledModel {
         val (format, runtime, taskType, capabilities) = when {
+            effectiveFileName == com.neo.chevere.data.inference.minicpm.MiniCpmBundle.ID -> Tuple4(
+                ModelFormat.GGUF_BUNDLE, ModelRuntime.LLAMA_CPP, ModelTaskType.VISION_CHAT,
+                setOf(ModelCapability.TEXT, ModelCapability.VISION)
+            )
             isImageGenerationModel ||
             effectiveFileName.endsWith(
                 Constants.ModelFiles.ZIP_EXTENSION,

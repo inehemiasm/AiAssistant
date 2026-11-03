@@ -1,0 +1,25 @@
+appId: dev.neo.chevereai
+name: MiniCPM experimental catalog and runtime requirements
+---
+- launchApp:
+    clearState: false
+    stopApp: false
+- tapOn: "Models"
+- runFlow:
+    when:
+      visible: "MODEL DETAILS"
+    commands:
+      - back
+- scrollUntilVisible:
+    element: "MINICPM-V 4.7 35B-A3B.*"
+    direction: DOWN
+    timeout: 60000
+- tapOn: "MINICPM-V 4.7 35B-A3B.*"
+- assertVisible: ".*16.6 GB.*"
+- scrollUntilVisible:
+    element: "Experimental llama.cpp CPU"
+    direction: DOWN
+    timeout: 20000
+- assertVisible: "Experimental llama.cpp CPU"
+- assertVisible: "GGUF_BUNDLE"
+- takeScreenshot: minicpm_requirements

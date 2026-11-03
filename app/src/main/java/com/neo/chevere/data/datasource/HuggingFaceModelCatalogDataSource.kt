@@ -63,6 +63,7 @@ class HuggingFaceModelCatalogDataSource @Inject constructor(
                     name = dto.displayName,
                     url = dto.downloadUrl,
                     description = when (dto.fileName) {
+                        com.neo.chevere.data.inference.minicpm.MiniCpmBundle.ID -> context.getString(R.string.ui_minicpm_description)
                         "Spark-X2.6-4B_int8.litertlm" -> context.getString(R.string.ui_experimental_text_only_model_4_24_gb_download_additional_free_ra)
                         "gemma-4-E2B-it-web.litertlm" -> context.getString(R.string.ui_text_only_web_optimized_conversion_requires_a_compatible_gpu_no_)
                         else -> dto.description

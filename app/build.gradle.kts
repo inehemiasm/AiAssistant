@@ -22,10 +22,13 @@ ksp {
 android {
     namespace = "com.neo.chevere"
     compileSdk = 37
+    ndkVersion = "27.0.12077973"
 
     defaultConfig {
         applicationId = "dev.neo.chevereai"
         minSdk = 28
+        ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
+        externalNativeBuild { cmake { arguments += listOf("-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON"); targets += "chevere_minicpm" } }
         targetSdk = 37
         versionCode = 1
         versionName = "1.0"
@@ -38,6 +41,10 @@ android {
             ?: ""
         buildConfigField("String", "SERPER_API_KEY", "\"$serperApiKey\"")
         buildConfigField("String", "WEB_SEARCH_PROXY_URL", "\"$webSearchProxyUrl\"")
+    }
+
+    externalNativeBuild {
+        cmake { path = file("src/main/cpp/CMakeLists.txt"); version = "3.22.1" }
     }
 
     signingConfigs {

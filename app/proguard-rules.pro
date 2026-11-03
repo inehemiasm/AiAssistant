@@ -56,3 +56,6 @@
 -dontwarn org.slf4j.impl.StaticLoggerBinder
 -dontwarn autovalue.shaded.**
 -dontwarn com.google.auto.value.processor.**
+
+# JNI entry point names must remain stable.
+-keep class com.neo.chevere.data.inference.minicpm.MiniCpmNative { *; }
