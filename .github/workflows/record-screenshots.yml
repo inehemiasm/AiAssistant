@@ -1,20 +1,19 @@
 name: Record Screenshots
 
 on:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
-  workflow_dispatch: # Allows manual trigger
+  workflow_dispatch: # Record intentionally; avoid Gradle builds on every PR/merge.
 
 permissions:
   contents: write # Needed to push screenshots back to repository
 
+concurrency:
+  group: record-screenshots-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   record-screenshots:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
       - name: Checkout code
@@ -44,7 +43,6 @@ jobs:
         run: ./gradlew recordRoborazziDebug --no-daemon
 
       - name: Commit and Push changes
-        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"

@@ -222,3 +222,9 @@ image-generation/
 ## License
 
 This project is licensed under custom terms. It is free to clone, modify, and run for personal, private, and educational use, but distribution or publishing (including to the Google Play Store or other marketplaces) is strictly prohibited. See [LICENSE](LICENSE) for full details.
+
+### CI budget
+
+Pull requests run one lightweight Python job for localization and release-ledger checks. Superseded runs are cancelled and evidence artifacts expire after seven days. These checks do not compile or test Android code. Run the relevant Gradle checks locally before merging.
+
+Screenshot recording and Firebase App Distribution are manual workflows in GitHub Actions. Run screenshot recording on the intended branch; it commits updated screenshots there. Run distribution when a tester build is needed; it still validates release lint and native alignment before uploading. Neither expensive workflow runs automatically on merge. Maestro stays local/on-device.

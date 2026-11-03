@@ -1,4 +1,4 @@
-name: Release readiness evidence
+name: Lightweight PR checks
 on:
   pull_request:
   workflow_dispatch:
@@ -7,13 +7,20 @@ on:
         description: Fail if any Play release gate is still unresolved
         type: boolean
         default: false
+concurrency:
+  group: lightweight-checks-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   evidence:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
       contents: read
     steps:
       - uses: actions/checkout@v4
+      - name: Check localization coverage and format arguments
+        run: python3 scripts/check_localization.py
       - name: Test release gate validation
         run: python3 -m unittest discover -s scripts/tests -p test_release_readiness.py
       - name: Validate evidence ledger
@@ -22,6 +29,7 @@ jobs:
         with:
           name: release-readiness
           path: release-readiness-report.json
+          retention-days: 7
       - name: Enforce Play release gates when explicitly requested
         if: ${{ inputs.require_play_ready == true }}
         run: python3 scripts/check_release_readiness.py --strict
