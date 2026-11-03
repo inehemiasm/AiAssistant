@@ -184,11 +184,11 @@
     <string name="ui_show_explicit_image">Afficher l’image explicite</string>
     <string name="ui_hide_explicit_image">Masquer l’image explicite</string>
     <string name="ui_explicit_image">IMAGE EXPLICITE</string>
-    <string name="ui_agent_thoughts">Raisonnement de l’agent</string>
+    <string name="ui_agent_thoughts">Activité</string>
     <string name="ui_collapse_thoughts">Réduire le raisonnement</string>
     <string name="ui_expand_thoughts">Développer le raisonnement</string>
     <string name="ui_no_recorded_steps">Aucune étape enregistrée.</string>
-    <string name="ui_agent_thought_process">Processus de raisonnement de l’agent</string>
+    <string name="ui_agent_thought_process">Activité</string>
     <string name="ui_collapse_thought_process">Réduire le processus de raisonnement</string>
     <string name="ui_expand_thought_process">Développer le processus de raisonnement</string>
     <string name="ui_completed">Terminé</string>
@@ -745,4 +745,23 @@
     <string name="folder_disconnected">Dossier déconnecté et texte indexé supprimé.</string>
     <string name="folder_index_failed">Impossible d’actualiser ce dossier. Son index précédent est conservé. Vérifiez l’accès, le texte UTF-8 et les limites, puis réessayez. Si l’accès a été révoqué, sélectionnez à nouveau le dossier avec Ajouter un dossier. Les fournisseurs cloud peuvent nécessiter une connexion ou plus de temps de chargement.</string>
     <string name="folder_disconnect_failed">Impossible de déconnecter complètement ce dossier. Réessayez.</string>
+    <string name="context_request_too_large">Cette demande dépasse la fenêtre de contexte du modèle actuel. Raccourcissez le message ou recherchez dans les documents importés avec /docs. Les images jointes utilisent aussi du contexte.</string>
+    <string name="sources_title">Extraits retrouvés</string>
+    <string name="sources_disclaimer">Vérifiez la réponse à l’aide de ces extraits. Leur récupération ne garantit pas une réponse correcte.</string>
+    <string name="sources_empty">Aucun document correspondant</string>
+    <string name="sources_no_match_response">Je n’ai trouvé aucun texte pertinent dans les documents indexés. Essayez d’autres mots-clés, précisez le fichier ou importez/actualisez le dossier de documents.</string>
+    <string name="source_excerpt_label">%1$s · Extrait %2$d</string>
+    <string name="agent_answered">Réponse prête · vérifiez les résultats</string>
+    <string name="agent_incomplete">Incomplet · certaines étapes restent à vérifier</string>
+    <string name="agent_cancelled">Annulé · des actions précédentes peuvent déjà être terminées</string>
+    <string name="model_status_choose">Choisir un modèle</string>
+    <string name="model_status_downloading">Téléchargement de %1$s · %2$d%%</string>
+    <string name="model_status_loading">Chargement du modèle · %1$s</string>
+    <string name="model_status_ready">Prêt · %1$s</string>
+    <string name="model_status_generating">Génération de la réponse…</string>
+    <string name="model_status_retry">Réessayer</string>
+    <string name="history_response_unavailable">Cette réponse enregistrée n’a pas pu être restaurée.</string>
+    <string name="tokens_input_estimate">ENTRÉE ~%1$d TOK</string>
+    <string name="tokens_output_estimate">SORTIE ~%1$d TOK</string>
+    <string name="document_search_failed">La recherche de documents a échoué. Actualisez le dossier de documents ou réessayez.</string>
 </resources>

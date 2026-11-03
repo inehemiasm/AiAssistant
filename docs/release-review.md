@@ -1,6 +1,35 @@
-# Release review — October 31, 2026
+# Release review — November 1, 2026
 
 This is an evidence ledger, not a compliance certificate or legal opinion. Do not publish while the gates below remain unresolved.
+
+## Current reliability/release review
+
+The current declaration ledger is [release-readiness.json](release-readiness.json).
+Historical validation below is not current release clearance. The owner plans to
+publish personally and explicitly kept the audience undecided. Exact verified
+legal name, Play verification and report operations still require confirmation.
+The selected contact address remains `nehemias.miranda.work@gmail.com`.
+
+- Read-only CLI verification confirmed Standard `(default)` / `us-central1` in
+  `aiassistant-88f75`. Report intake remains closed; no backend writes, deletion
+  schedule, billing change, policy publication or Play upload was performed.
+- Current source targets API 37; the referenced phone/tablet submission requirement
+  is API 36+. Verify Console eligibility at submission time.
+- Refreshed release dependency inventory: 327 components, 22 without local POM
+  license metadata. Every applicable LICENSE/NOTICE and model/conversion/asset
+  right still requires review; the inventory is not clearance.
+- Signed/minified release artifacts and alignment evidence are recorded alongside
+  current tests. The public local signing certificate fingerprint is
+  `c2000cd5ecbc1a4668f58bf737db0ca6719fb2d9e7e79b54fa9b628cb38c312e`;
+  comparison with the Play upload certificate remains unverified.
+- Run `python scripts/check_release_readiness.py --strict` before an intended Play
+  release. It intentionally fails for unresolved gates. Default evidence CI only
+  validates declaration completeness, not safety/legal/Console approval.
+
+See [chat reliability](chat-reliability.md) for context budgeting, measured usage,
+source evidence and agent status. Full safety evaluation, protected report intake,
+reviewer/retention/deletion operations, verified public policies/Data Safety,
+rights review, pre-launch reports and the remaining device matrix stay open.
 
 ## Implemented controls
 

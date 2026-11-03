@@ -36,6 +36,7 @@ class InferenceManager @Inject constructor(
      * The currently active inference engine, or `null` if no model is loaded.
      */
     val currentEngine: ModelEngine? get() = _currentEngine.value
+    val lastUsage: com.neo.chevere.domain.InferenceUsage? get() = currentEngine?.lastUsage
 
     /**
      * A [Flow] emitting the initialization status of the current engine.

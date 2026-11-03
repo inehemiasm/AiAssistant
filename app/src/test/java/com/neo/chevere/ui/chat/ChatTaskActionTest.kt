@@ -47,6 +47,7 @@ class ChatTaskActionTest {
     @Before fun setup() = runTest(dispatcher) {
         Dispatchers.setMain(dispatcher)
         whenever(repository.agentState).thenReturn(agentState)
+        whenever(repository.allDownloadsProgress).thenReturn(flowOf(emptyMap()))
         whenever(repository.activePartialResponse).thenReturn(emptyFlow())
         whenever(repository.getInitStatus()).thenReturn(initialization)
         whenever(repository.getLocalModels()).thenReturn(emptyList())

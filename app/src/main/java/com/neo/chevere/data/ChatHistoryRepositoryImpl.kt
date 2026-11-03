@@ -76,9 +76,11 @@ class ChatHistoryRepositoryImpl @Inject constructor(
         modelName = modelName
     )
 
-    private fun ConversationMessageEntity.toDomain() = ChatMessage(
-        text = if (isUser) text else AgentUiEnvelope.displayText(text),
-        agentUiContent = if (isUser) null else AgentUiEnvelope.decode(text)?.checklist,
+    private fun ConversationMessageEntity.toDomain(): ChatMessage {
+        val stored = if (isUser) ChatMessageMetadataCodec.Content(text) else ChatMessageMetadataCodec.decodeOrPlain(text)
+        return ChatMessage(
+        text = if (isUser) text else AgentUiEnvelope.displayText(stored.body),
+        agentUiContent = if (isUser) null else AgentUiEnvelope.decode(stored.body)?.checklist,
         isUser = isUser,
         imageUri = imageUri,
         modelName = modelName,
@@ -87,17 +89,21 @@ class ChatHistoryRepositoryImpl @Inject constructor(
         outputTokenCount = outputTokenCount,
         isExplicitImage = isExplicitImage,
         // Restored messages are never masked — user already saw them
+        documentEvidence = stored.evidence,
+        agentOutcome = stored.outcome,
+        tokenCountKind = stored.counts,
         isImageMasked = false
     )
+    }
 
     private fun ChatMessage.toEntity(sessionId: Long) = ConversationMessageEntity(
         sessionId = sessionId,
-        text = when (val content = agentUiContent) {
+        text = ChatMessageMetadataCodec.encode(ChatMessageMetadataCodec.Content(body = when (val content = agentUiContent) {
             is AgentUiContent.TaskChecklist -> AgentUiEnvelope.encode(
                 AgentUiEnvelope.Payload(text = text, checklist = content)
             )
             null -> text
-        },
+        }, evidence = documentEvidence, outcome = agentOutcome, counts = tokenCountKind)),
         isUser = isUser,
         imageUri = imageUri,
         modelName = modelName,

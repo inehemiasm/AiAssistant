@@ -21,7 +21,7 @@ object Constants {
          * ~6K chars ≈ 1,500 tokens.
          */
         const val MAX_PROMPT_CHAR_BUDGET = 6_000
-        const val TOOL_DESCRIPTION_CHAR_LIMIT = 420
+        const val TOOL_DESCRIPTION_CHAR_LIMIT = 120
         const val TOOL_SCHEMA_CHAR_LIMIT = 220
         const val IMAGE_GENERATION_TOOL_NAME = "generate_image"
         const val TOOL_CALL_PREFIX = "[TOOL_CALL:"

@@ -47,6 +47,8 @@ sealed interface ComposerActionButtonState {
  * The UI state for the Chat screen.
  */
 data class ChatState(
+    val downloadStatus: DownloadStatusUi = DownloadStatusUi.None,
+    val expandedEvidence: Set<Pair<Int, Int>> = emptySet(),
     val documentFolders: DocumentFoldersState = DocumentFoldersState.Closed,
     val messages: List<ChatMessage> = emptyList(),
     val localModels: List<InstalledModel> = emptyList(),
@@ -70,6 +72,22 @@ data class ChatState(
     /** Index of the assistant message currently being reported via ReportAiContentDialog, or null. */
     val reportDialogMessageIndex: Int? = null
 ) : UiState {
+    val responseDetails: Map<Int, ResponseDetailsUi> get() = messages.mapIndexed { index, message ->
+        index to message.toDetailsUi(expandedEvidence.filter { it.first == index }.map { it.second }.toSet())
+    }.toMap()
+
+    val modelStatus: ChatModelStatus get() = when {
+        runtimeState is RuntimeState.Initializing -> ChatModelStatus.Loading(runtimeState.message)
+        runtimeState is RuntimeState.Error -> ChatModelStatus.Failed(runtimeState.message, ModelRecovery.RELOAD)
+        isWaitingForConfirmation -> ChatModelStatus.AwaitingConfirmation
+        sendState is SendState.Error -> ChatModelStatus.Failed(sendState.message, ModelRecovery.RETRY_RESPONSE)
+        isAiBusy -> ChatModelStatus.Generating
+        runtimeState is RuntimeState.Ready -> ChatModelStatus.Ready(
+            localModels.firstOrNull { it.id == selectedModel || it.fileName == selectedModel }?.displayName ?: selectedModel)
+        downloadStatus is DownloadStatusUi.Active -> ChatModelStatus.Downloading(downloadStatus.name, downloadStatus.percent)
+        downloadStatus is DownloadStatusUi.Failed -> ChatModelStatus.Failed(downloadStatus.reason, ModelRecovery.OPEN_MODELS)
+        else -> ChatModelStatus.NeedsModel
+    }
     /** Maps structured domain message content to renderer-facing presentation metadata. */
     val taskChecklists: Map<Int, TaskChecklistUiModel>
         get() = messages.mapIndexedNotNull { index, message ->
@@ -93,6 +111,7 @@ data class ChatState(
 
     val composerActionButtonState: ComposerActionButtonState
         get() = when {
+            isWaitingForConfirmation -> ComposerActionButtonState.Disabled
             isAiBusy -> ComposerActionButtonState.Stop
             isReady && !isLoading && (inputText.isNotBlank() || selectedImageUri != null) -> ComposerActionButtonState.Send
             else -> ComposerActionButtonState.Disabled
@@ -128,6 +147,8 @@ data class ChatState(
 }
 
 sealed class ChatIntent : UiIntent {
+    data class ToggleDocumentExcerpt(val messageIndex: Int, val excerptIndex: Int) : ChatIntent()
+    data object RetryModelLoad : ChatIntent()
     data object OpenDocumentFolders : ChatIntent()
     data object CloseDocumentFolders : ChatIntent()
     data class IndexDocumentFolder(val reference: String) : ChatIntent()

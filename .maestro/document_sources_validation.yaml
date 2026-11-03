@@ -1,0 +1,41 @@
+appId: dev.neo.chevereai
+name: Retrieved excerpts survive history restore and no-match is explicit
+---
+# Precondition: index policy.txt containing the Amber Otter fixture documented in docs/chat-reliability.md.
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible: "Ready.*"
+    timeout: 180000
+- tapOn: "Ask Chevere AI…"
+- inputText: "/docs What is the amber otter warranty period?"
+- tapOn: "Send"
+- extendedWaitUntil:
+    visible: ".*41.*days.*"
+    timeout: 120000
+- assertVisible: "Retrieved excerpts"
+- assertNotVisible: ".*step limit.*"
+- assertNotVisible: "Incomplete.*"
+- tapOn: "policy.txt · Excerpt 1"
+- assertVisible: ".*Reliability fixture: Amber Otter.*"
+- takeScreenshot: retrieved_excerpts
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible: "Ready.*"
+    timeout: 180000
+- tapOn: "Library"
+- tapOn: "Chat History"
+- tapOn:
+    text: "/docs What is the amber otter warranty period?"
+    index: 0
+- assertVisible: "Retrieved excerpts"
+- tapOn: "policy.txt · Excerpt 1"
+- assertVisible: ".*Reliability fixture: Amber Otter.*"
+- tapOn: "Ask Chevere AI…"
+- inputText: "/docs zqxvblorpyt"
+- tapOn: "Send"
+- extendedWaitUntil:
+    visible: "No matching documents"
+    timeout: 120000
+- takeScreenshot: no_matching_documents

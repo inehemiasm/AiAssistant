@@ -28,6 +28,8 @@ interface LlmEngineWrapper {
  * Wrapper around LiteRT-LM Conversation to facilitate testing.
  */
 interface ConversationWrapper {
+    /** Actual last-turn counts when the SDK provides benchmark data. */
+    fun usage(): com.neo.chevere.domain.InferenceUsage? = null
     suspend fun sendMessage(message: Message): Message
     fun sendMessageAsync(message: Message): Flow<Message>
     fun close()
@@ -39,6 +41,9 @@ class RealLlmEngineWrapper @Inject constructor() : LlmEngineWrapper {
     private var conversationConfig = ConversationConfig()
 
     override fun initialize(config: EngineConfig) {
+        @OptIn(com.google.ai.edge.litertlm.ExperimentalApi::class)
+        fun enableCounts() { com.google.ai.edge.litertlm.ExperimentalFlags.enableBenchmark = true }
+        enableCounts()
         conversationConfig = ModelRuntimeProfile.conversationConfig(config.modelPath)
         engine = Engine(config).apply { initialize() }
     }
@@ -56,6 +61,13 @@ class RealLlmEngineWrapper @Inject constructor() : LlmEngineWrapper {
 }
 
 class RealConversationWrapper(private val conversation: Conversation) : ConversationWrapper {
+    @OptIn(com.google.ai.edge.litertlm.ExperimentalApi::class)
+    override fun usage(): com.neo.chevere.domain.InferenceUsage? = runCatching {
+        conversation.getBenchmarkInfo().let {
+            require(it.lastPrefillTokenCount > 0 && it.lastDecodeTokenCount >= 0)
+            com.neo.chevere.domain.InferenceUsage(it.lastPrefillTokenCount, it.lastDecodeTokenCount)
+        }
+    }.getOrNull()
     override suspend fun sendMessage(message: Message): Message {
         return conversation.sendMessage(message)
     }

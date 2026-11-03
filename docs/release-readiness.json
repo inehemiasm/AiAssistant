@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "reviewDate": "2026-11-01",
+  "intendedTerritories": [
+    "US"
+  ],
+  "publisherType": "individual",
+  "supportEmail": "nehemias.miranda.work@gmail.com",
+  "gates": [
+    {
+      "id": "publisher_identity",
+      "status": "blocked",
+      "evidence": "Owner intends to publish personally; exact verified legal name still needs confirmation."
+    },
+    {
+      "id": "target_audience",
+      "status": "blocked",
+      "evidence": "Owner explicitly chose to keep the intended audience undecided on 2026-11-01. No adults-only claim has been adopted."
+    },
+    {
+      "id": "play_console",
+      "status": "blocked",
+      "evidence": "Owner last reported verification pending. Console completion, content rating, audience and service declarations are not verified."
+    },
+    {
+      "id": "privacy_publication",
+      "status": "blocked",
+      "evidence": "Policy and terms remain drafts. Publisher/audience and operational reporting choices must match the deployed public pages."
+    },
+    {
+      "id": "protected_reporting",
+      "status": "blocked",
+      "evidence": "Standard (default) Firestore in aiassistant-88f75/us-central1 verified read-only. Client report writes stay denied; protected intake, abuse controls and delivery are not verified."
+    },
+    {
+      "id": "report_operations",
+      "status": "blocked",
+      "evidence": "Report reviewer, retention duration and verified deletion operations are not chosen or deployed."
+    },
+    {
+      "id": "data_safety",
+      "status": "blocked",
+      "evidence": "Play Data Safety declarations and actual SDK/network collection review require verification, including Analytics, Crashlytics, voice providers and optional tools."
+    },
+    {
+      "id": "license_review",
+      "status": "blocked",
+      "evidence": "Fresh release inventory: 327 components, 22 without local POM license metadata. Exact dependency/model/conversion/asset LICENSE and NOTICE review is still required; metadata is not legal clearance."
+    },
+    {
+      "id": "safety_evaluation",
+      "status": "blocked",
+      "evidence": "Model-specific multilingual safety and prompt-injection evaluations with benign counterexamples remain required. Prompt instructions are not validated moderation."
+    },
+    {
+      "id": "release_signing",
+      "status": "blocked",
+      "evidence": "Signed release APK verified locally. SHA-256 certificate fingerprint c2000cd5ecbc1a4668f58bf737db0ca6719fb2d9e7e79b54fa9b628cb38c312e. Play upload-certificate comparison remains unverified."
+    },
+    {
+      "id": "release_artifact",
+      "status": "blocked",
+      "evidence": "Signed/minified APK and AAB built; six 64-bit native libraries per artifact pass ELF alignment, and release APK passes zipalign -P 16. Checks repeated on final executable changes; Play pre-launch review remains unverified."
+    },
+    {
+      "id": "device_matrix",
+      "status": "blocked",
+      "evidence": "Connected-device checks cover selected scenarios. Fresh install, interruptions, low RAM/storage, and current-model inference on a 16 KB device still require a disposable test environment."
+    },
+    {
+      "id": "target_api",
+      "status": "verified",
+      "evidence": "app/build.gradle.kts targets API 37; current phone/tablet Play requirement is API 36 or higher. Recheck Console before submission."
+    }
+  ],
+  "references": [
+    "https://developer.android.com/google/play/requirements/target-sdk",
+    "https://support.google.com/googleplay/android-developer/answer/13985936",
+    "https://support.google.com/googleplay/android-developer/answer/10144311",
+    "https://developer.android.com/guide/practices/page-sizes"
+  ]
+}

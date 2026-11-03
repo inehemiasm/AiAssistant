@@ -34,7 +34,7 @@ every document into the model: `/docs` still retrieves at most three excerpts.
 
 ## Runtime prompt and grounding
 
-This file is developer documentation, not a prompt automatically sent to the local LLM. `ChatRequestRouter` selects document routing; `ToolRegistry` supplies the tool descriptions and grounding instructions. The model calls `document_rag`, receives retrieved excerpts as a tool observation, and generates an answer. It receives at most three chunks, so a long-document summary may omit sections. Filename mentions restrict the candidate chunks to matching documents.
+This file is developer documentation, not a prompt automatically sent to the local LLM. `ChatRequestRouter` selects document routing; `ToolRegistry` supplies the tool descriptions and grounding instructions. For document-routed requests, the controller calls `document_rag` once and supplies retrieved excerpts to an answer-only model pass. No matches produce a localized local response. Retrieved excerpts are expandable and survive history restoration; they are not independently verified citations. It receives at most three chunks, so a long-document summary may omit sections. Filename mentions restrict the candidate chunks to matching documents.
 
 ## Remote MCP tools
 
