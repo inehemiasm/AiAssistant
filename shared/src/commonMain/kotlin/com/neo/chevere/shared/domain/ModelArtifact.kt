@@ -31,6 +31,7 @@ sealed interface ModelLocation {
 }
 
 enum class ModelRuntime {
+    LLAMA_CPP,
     LITERT_LM,
     ONNX_RUNTIME,
     UNKNOWN

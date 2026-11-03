@@ -174,6 +174,7 @@ private fun String.toFailureCode(): RuntimeFailureCode =
     }
 
 private fun AndroidModelRuntime.toSharedRuntime(): ModelRuntime = when (this) {
+    AndroidModelRuntime.LLAMA_CPP -> ModelRuntime.LLAMA_CPP
     AndroidModelRuntime.LITERT -> ModelRuntime.LITERT_LM
     AndroidModelRuntime.ONNX_DIFFUSION -> ModelRuntime.ONNX_RUNTIME
     AndroidModelRuntime.IMAGE_GENERATOR,
@@ -181,6 +182,7 @@ private fun AndroidModelRuntime.toSharedRuntime(): ModelRuntime = when (this) {
 }
 
 private fun AndroidModelFormat.toSharedFormat(): ModelFormat = when (this) {
+    AndroidModelFormat.GGUF_BUNDLE -> ModelFormat.BUNDLE
     AndroidModelFormat.LITERTLM -> ModelFormat.LITERT_LM
     AndroidModelFormat.ONNX_DIFFUSION_BUNDLE,
     AndroidModelFormat.IMAGE_GENERATOR_BUNDLE -> ModelFormat.BUNDLE

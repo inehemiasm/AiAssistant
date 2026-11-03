@@ -21,6 +21,7 @@ class ImageGenerationEngineFactory @Inject constructor() {
             ModelRuntime.ONNX_DIFFUSION,
             ModelRuntime.IMAGE_GENERATOR,
             ModelRuntime.LITERT,
+            ModelRuntime.LLAMA_CPP,
             ModelRuntime.UNKNOWN -> null
         }
     }

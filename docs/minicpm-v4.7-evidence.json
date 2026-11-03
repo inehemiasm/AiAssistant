@@ -1,0 +1,58 @@
+{
+  "reviewDate": "2026-11-02",
+  "experimental": true,
+  "nativeCommit": "e0eca9d8f57ac8f5a5ad6191a8007b93436c1e71",
+  "modelRevision": "7a7ab2ac8f045d53574ead3324b97e709d0e318b",
+  "device": "Red Magic NX709J, 16 GB RAM",
+  "bundleFiles": 43,
+  "bundleSizeBytes": 16623585508,
+  "inAppDownload": "passed; each file size and SHA-256 verified before atomic install",
+  "nativeDeviceSmoke": {
+    "result": "passed",
+    "tests": 1,
+    "seconds": 194.084,
+    "checks": [
+      "oversized formatted input rejected",
+      "cancel and session reuse",
+      "arithmetic answer contains 4",
+      "solid-red image answer contains red"
+    ]
+  },
+  "unitTests": {
+    "tests": 239,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "catalogUi": "passed; experimental description, CPU runtime and GGUF_BUNDLE identity",
+  "chatUi": "passed; activated model, fresh chat, exact visible answer 4, ready state restored",
+  "releaseApk": {
+    "sha256": "effccc774a7659cc65d09d727c83718b9529108b99a21c7e852fe09d3bcaa8ae",
+    "native64BitLibrariesChecked": 8,
+    "elfAlignment": "passed",
+    "zip16kAlignment": "passed",
+    "sizeBytes": 71853967
+  },
+  "limitations": [
+    "CPU only; no DSpark, GPU/NPU, audio or video",
+    "Only the curated LES bundle is supported",
+    "Sustained speed, thermals and 16 KB model inference not verified",
+    "No Play readiness or model safety clearance implied",
+    "Cancellation smoke cancels between prefill and decode; interruption during prefill/image encoding remains unverified"
+  ],
+  "activationSecondsObserved": 2.073,
+  "chatSample": {
+    "inputTokens": 339,
+    "outputTokens": 1,
+    "responseSeconds": 45.91,
+    "nativePrefillSeconds": 45.455,
+    "answer": "4",
+    "note": "Single cold/first-chat observation, not a throughput benchmark"
+  },
+  "crossEngineSwitch": "passed: MiniCPM to Gemma initialized successfully; Gemma ready state and return to MiniCPM ready state verified in UI",
+  "deviceCleanup": {
+    "originalStayAwakeSetting": 0,
+    "restored": true,
+    "temporaryScreenshotRemoved": true
+  }
+}

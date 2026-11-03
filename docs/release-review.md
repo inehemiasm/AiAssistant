@@ -109,3 +109,7 @@ The final minified release APK was installed on the disposable 16 KB emulator an
 ## Contact update
 
 Owner selected `nehemias.miranda.work@gmail.com` for app support and privacy requests. The privacy source and consumer-terms draft now use this address instead of the unverified `support@chevere.ai` placeholder. No verification email was sent and mailbox delivery is not independently tested. Play Console verification is pending according to the owner. Policy/terms remain unpublished; publisher identity, audience, retention/deletion, protected report intake and other production gates remain open.
+
+### November 2 MiniCPM experiment
+
+The experimental MiniCPM engine adds pinned native source and a separately downloaded model/expert/vision bundle. November 1 artifact hashes in release-evidence.json describe the earlier build. See docs/minicpm-v4.7-testing.md for the runtime, license, hardware and validation limits. Existing reporting, audience, identity, safety and Play gates remain open; no production release is authorized by a successful model smoke test.

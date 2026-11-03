@@ -794,4 +794,9 @@
     <string name="tokens_input_estimate">IN ~%1$d TOK</string>
     <string name="tokens_output_estimate">OUT ~%1$d TOK</string>
     <string name="document_search_failed">Document search failed. Refresh the document folder or try again.</string>
+    <string name="ui_minicpm_description">Experimental CPU runtime with streamed experts. About 16.6 GB download; 12 GB RAM and fast internal storage recommended. Text and single-image input, 4096-token context, thinking disabled. Android speed is unverified; iPhone benchmarks do not predict this device.</string>
+    <string name="ui_minicpm_load_failed">MiniCPM could not load. Check the complete bundle and available memory (at least 3 GB free). Close other apps or choose a smaller model.</string>
+    <string name="ui_minicpm_generation_failed">MiniCPM inference failed. Try a shorter request or reload the model.</string>
+    <string name="ui_minicpm_storage_required">This bundle needs about 17 GB of internal storage plus 512 MB free headroom.</string>
+    <string name="ui_minicpm_runtime">Experimental llama.cpp CPU</string>
 </resources>

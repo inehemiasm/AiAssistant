@@ -106,8 +106,8 @@ class BenchmarkViewModel @Inject constructor(
             val totalMemGb = memoryInfo.totalMem / (1024.0 * 1024.0 * 1024.0)
             val systemRamText = String.format("%.2f GB / %.2f GB", availMemGb, totalMemGb)
 
-            val isGpuEnabled = model.capabilities.contains(ModelCapability.VISION)
-            val accelText = if (isGpuEnabled) getApplication<android.app.Application>().getString(R.string.ui_gpu_vision_backend) else getApplication<android.app.Application>().getString(R.string.ui_cpu_standard_text)
+            val isGpuEnabled = model.runtime == com.neo.chevere.domain.ModelRuntime.LITERT && model.capabilities.contains(ModelCapability.VISION)
+            val accelText = if (model.runtime == com.neo.chevere.domain.ModelRuntime.LLAMA_CPP) getApplication<android.app.Application>().getString(R.string.ui_minicpm_runtime) else if (isGpuEnabled) getApplication<android.app.Application>().getString(R.string.ui_gpu_vision_backend) else getApplication<android.app.Application>().getString(R.string.ui_cpu_standard_text)
 
             // Send benchmark prompt
             val prompt = "A three-word response: AI is ready."
@@ -164,8 +164,8 @@ class BenchmarkViewModel @Inject constructor(
                     result = BenchmarkMetrics(
                         loadTimeMs = loadTimeMs,
                         ttftMs = ttftMs,
-                        inputTokenCount = estimateTokenCount(prompt),
-                        outputTokenCount = estimateTokenCount(accumulatedText),
+                        inputTokenCount = inferenceManager.lastUsage?.inputTokens ?: estimateTokenCount(prompt),
+                        outputTokenCount = inferenceManager.lastUsage?.outputTokens ?: estimateTokenCount(accumulatedText),
                         totalTimeMs = totalTimeMs,
                         systemRamText = systemRamText,
                         accelText = accelText

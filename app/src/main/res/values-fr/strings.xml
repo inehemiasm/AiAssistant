@@ -764,4 +764,9 @@
     <string name="tokens_input_estimate">ENTRÉE ~%1$d TOK</string>
     <string name="tokens_output_estimate">SORTIE ~%1$d TOK</string>
     <string name="document_search_failed">La recherche de documents a échoué. Actualisez le dossier de documents ou réessayez.</string>
+    <string name="ui_minicpm_description">Exécution CPU expérimentale avec experts chargés depuis le stockage. Téléchargement de 16,6 Go environ ; 12 Go de RAM et un stockage interne rapide recommandés. Texte et une image, contexte de 4096 tokens, raisonnement désactivé. La vitesse Android reste à vérifier ; les mesures iPhone ne prédisent pas celle de cet appareil.</string>
+    <string name="ui_minicpm_load_failed">Impossible de charger MiniCPM. Vérifiez le paquet complet et la mémoire disponible (au moins 3 Go libres). Fermez les autres applications ou choisissez un modèle plus petit.</string>
+    <string name="ui_minicpm_generation_failed">Échec de la génération MiniCPM. Essayez une demande plus courte ou rechargez le modèle.</string>
+    <string name="ui_minicpm_storage_required">Ce paquet nécessite environ 17 Go de stockage interne et 512 Mo de marge libre.</string>
+    <string name="ui_minicpm_runtime">llama.cpp CPU expérimental</string>
 </resources>

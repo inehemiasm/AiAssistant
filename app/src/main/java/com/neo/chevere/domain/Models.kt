@@ -49,6 +49,7 @@ enum class ModelSource {
  * Defines the supported runtimes for executing models.
  */
 enum class ModelRuntime {
+    LLAMA_CPP,
     LITERT,
     IMAGE_GENERATOR,
     ONNX_DIFFUSION,
@@ -59,6 +60,7 @@ enum class ModelRuntime {
  * Defines the supported model file formats.
  */
 enum class ModelFormat {
+    GGUF_BUNDLE,
     LITERTLM,
     IMAGE_GENERATOR_BUNDLE,
     ONNX_DIFFUSION_BUNDLE,
