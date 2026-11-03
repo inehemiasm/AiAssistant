@@ -118,5 +118,17 @@
     "supportsVision": false,
     "license": "Apache-2.0",
     "description": "Experimental text-only model. 4.24 GB download; additional free RAM required. CPU INT8, 4096-token context, thinking disabled. Device performance varies."
+  },
+  {
+    "id": "MiniCPM-V-4.7-35B-A3B-LES",
+    "displayName": "MiniCPM-V 4.7 35B-A3B (experimental LES CPU)",
+    "source": "Hugging Face",
+    "repoId": "tc-mb/MiniCPM-V-Apps-gguf",
+    "fileName": "MiniCPM-V-4.7-35B-A3B-LES",
+    "downloadUrl": "https://huggingface.co/tc-mb/MiniCPM-V-Apps-gguf/resolve/7a7ab2ac8f045d53574ead3324b97e709d0e318b/MiniCPM-V-4.7-35B-A3B/experts/manifest.json",
+    "sizeBytes": 16623585508,
+    "runtimeType": "llama.cpp",
+    "supportsVision": true,
+    "license": "Apache-2.0"
   }
 ]

@@ -5,6 +5,9 @@ import com.neo.chevere.domain.InferenceResult
 import com.neo.chevere.domain.InitializationStatus
 import com.neo.chevere.domain.InstalledModel
 import com.neo.chevere.domain.LoadResult
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -70,6 +73,10 @@ class InferenceManager @Inject constructor(
 
         val result = try {
             engine.load(model)
+        } catch (e: CancellationException) {
+            withContext(NonCancellable) { engine.unload() }
+            _currentEngine.value = null
+            throw e
         } catch (e: Exception) {
             LoadResult.Failure("Exception during engine load: ${e.message}", e)
         }
@@ -77,6 +84,7 @@ class InferenceManager @Inject constructor(
         if (result is LoadResult.Success) {
             _currentModel = model
         } else {
+            withContext(NonCancellable) { engine.unload() }
             _currentEngine.value = null
         }
         return result

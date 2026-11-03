@@ -1,0 +1,62 @@
+appId: dev.neo.chevereai
+name: MiniCPM and LiteRT can switch without sharing native sessions
+---
+- launchApp:
+    clearState: false
+    stopApp: false
+- tapOn: "Models"
+- runFlow:
+    when:
+      visible: "MODEL DETAILS"
+    commands:
+      - back
+- scrollUntilVisible:
+    element: "GEMMA 4 E2B IT"
+    direction: DOWN
+    timeout: 60000
+- tapOn: "GEMMA 4 E2B IT"
+- scrollUntilVisible:
+    element: "(ACTIVATE ENGINE|ENGINE ACTIVE)"
+    direction: DOWN
+    timeout: 30000
+- runFlow:
+    when:
+      visible: "ACTIVATE ENGINE"
+    commands:
+      - tapOn: "ACTIVATE ENGINE"
+- scrollUntilVisible:
+    element: "ENGINE ACTIVE"
+    direction: DOWN
+    timeout: 180000
+- tapOn: "Chat"
+- extendedWaitUntil:
+    visible: "Ready.*Gemma.*"
+    timeout: 180000
+- tapOn: "Models"
+- runFlow:
+    when:
+      visible: "MODEL DETAILS"
+    commands:
+      - back
+- scrollUntilVisible:
+    element: "MINICPM-V 4.7 35B-A3B.*"
+    direction: DOWN
+    timeout: 60000
+- tapOn: "MINICPM-V 4.7 35B-A3B.*"
+- scrollUntilVisible:
+    element: "(ACTIVATE ENGINE|ENGINE ACTIVE)"
+    direction: DOWN
+    timeout: 30000
+- runFlow:
+    when:
+      visible: "ACTIVATE ENGINE"
+    commands:
+      - tapOn: "ACTIVATE ENGINE"
+- scrollUntilVisible:
+    element: "ENGINE ACTIVE"
+    direction: DOWN
+    timeout: 180000
+- tapOn: "Chat"
+- extendedWaitUntil:
+    visible: "Ready.*Mini.*"
+    timeout: 180000

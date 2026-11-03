@@ -18,6 +18,8 @@ data class ModelDetailsState(
     val error: String? = null,
     val downloadProgress: Int? = null
 ) : UiState {
+    val isMiniCpm: Boolean get() = modelEntry?.runtimeType == "llama.cpp" || installedModel?.runtime == com.neo.chevere.domain.ModelRuntime.LLAMA_CPP
+    val formatLabel: String get() = installedModel?.format?.name ?: if (isMiniCpm) "GGUF_BUNDLE" else "LITERTLM"
     val displayName: String
         get() = installedModel?.displayName ?: modelEntry?.name ?: ""
     val isInstalled: Boolean get() = installedModel?.isHealthy ?: false

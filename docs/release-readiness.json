@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "reviewDate": "2026-11-01",
+  "reviewDate": "2026-11-02",
   "intendedTerritories": [
     "US"
   ],
@@ -45,7 +45,7 @@
     {
       "id": "license_review",
       "status": "blocked",
-      "evidence": "Fresh release inventory: 327 components, 22 without local POM license metadata. Exact dependency/model/conversion/asset LICENSE and NOTICE review is still required; metadata is not legal clearance."
+      "evidence": "Fresh release inventory: 327 components, 22 without local POM license metadata. Exact dependency/model/conversion/asset LICENSE and NOTICE review is still required; metadata is not legal clearance. Experimental MiniCPM adds a pinned MIT native fork, image decoder and Apache-2.0 model bundle; native/transitive notices and conversion provenance remain part of this open review."
     },
     {
       "id": "safety_evaluation",
@@ -60,7 +60,7 @@
     {
       "id": "release_artifact",
       "status": "blocked",
-      "evidence": "Signed/minified APK and AAB built; six 64-bit native libraries per artifact pass ELF alignment, and release APK passes zipalign -P 16. Checks repeated on final executable changes; Play pre-launch review remains unverified."
+      "evidence": "Historical November 1 artifacts and hashes remain in release-evidence.json. MiniCPM changes native code: current APK alignment and device results must be checked separately; AAB/pre-launch review and Play approval remain unverified."
     },
     {
       "id": "device_matrix",

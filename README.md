@@ -219,6 +219,10 @@ image-generation/
 
 ---
 
+## Experimental MiniCPM runtime
+
+Chevere can test the MiniCPM-V 4.7 35B-A3B expert-streaming bundle using a separate CPU engine. Initialize the pinned native source with `git submodule update --init --depth 1` before building. The roughly 16.6 GB download, supported inputs, hardware requirements and validation limits are documented in [MiniCPM testing](docs/minicpm-v4.7-testing.md).
+
 ## License
 
 This project is licensed under custom terms. It is free to clone, modify, and run for personal, private, and educational use, but distribution or publishing (including to the Google Play Store or other marketplaces) is strictly prohibited. See [LICENSE](LICENSE) for full details.

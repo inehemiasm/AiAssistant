@@ -1,0 +1,6 @@
+MiniCPM-V 4.7 35B-A3B
+Model by OpenBMB: https://huggingface.co/openbmb/MiniCPM-V-4.7-35B-A3B
+Mobile LES conversion: https://huggingface.co/tc-mb/MiniCPM-V-Apps-gguf
+Pinned conversion revision: 7a7ab2ac8f045d53574ead3324b97e709d0e318b
+Model card declares Apache-2.0. Weights are downloaded separately and not bundled in this APK.
+Native runtime uses a separate MIT license; see minicpm-runtime-LICENSE.txt.
