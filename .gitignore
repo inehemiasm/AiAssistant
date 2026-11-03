@@ -76,3 +76,7 @@ notes/
 # Python validation cache
 __pycache__/
 *.pyc
+
+# Short-lived Google OIDC credential files and local publishing credentials
+gha-creds-*.json
+play-credentials*.json

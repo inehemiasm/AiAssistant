@@ -1,0 +1,117 @@
+name: Play internal testing
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Build an AAB, upload an internal draft, or release to internal testers
+        type: choice
+        options: [build_only, upload_draft, release_internal]
+        default: build_only
+
+permissions:
+  contents: read
+
+concurrency:
+  group: play-internal
+  cancel-in-progress: false
+
+jobs:
+  internal:
+    # Build-only can validate a branch. Publishing is restricted to reviewed main.
+    if: inputs.mode == 'build_only' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+      RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+      RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - name: Validate configuration and prepare signing files
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          MODE: ${{ inputs.mode }}
+          WIF_PROVIDER: ${{ vars.PLAY_WIF_PROVIDER }}
+          PLAY_SERVICE_ACCOUNT: ${{ vars.PLAY_SERVICE_ACCOUNT }}
+          EXPECTED_CERT: ${{ vars.PLAY_UPLOAD_CERT_SHA256 }}
+        run: |
+          python3 - <<'PY'
+          import base64, os, sys
+          sys.path.insert(0, 'scripts')
+          from publish_play_internal import fingerprint
+          if os.environ['MODE'] not in ('build_only', 'upload_draft', 'release_internal'):
+              raise SystemExit('Unknown publishing mode')
+          from pathlib import Path
+          for key in ('GOOGLE_SERVICES_JSON', 'RELEASE_KEYSTORE_BASE64', 'RELEASE_STORE_PASSWORD', 'RELEASE_KEY_ALIAS', 'RELEASE_KEY_PASSWORD'):
+              if not os.environ.get(key):
+                  raise SystemExit('Missing repository secret: ' + key)
+          if os.environ['MODE'] != 'build_only':
+              for key in ('WIF_PROVIDER', 'PLAY_SERVICE_ACCOUNT', 'EXPECTED_CERT'):
+                  if not os.environ.get(key):
+                      raise SystemExit('Missing Play repository variable: ' + key)
+              fingerprint(os.environ['EXPECTED_CERT'])
+          for key, target in [('GOOGLE_SERVICES_JSON', Path('app/google-services.json')), ('RELEASE_KEYSTORE_BASE64', Path(os.environ['RUNNER_TEMP']) / 'play-upload.jks')]:
+              target.write_bytes(base64.b64decode(''.join(os.environ[key].split()), validate=True))
+              target.chmod(0o600)
+          with open(os.environ['GITHUB_ENV'], 'a') as output:
+              output.write('RELEASE_STORE_FILE=' + str(Path(os.environ['RUNNER_TEMP']) / 'play-upload.jks') + '\n')
+          PY
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+          cache: gradle
+      - name: Generate build version
+        id: version
+        run: python3 scripts/release_version.py --github-output "$GITHUB_OUTPUT" --output release-version.json
+      - name: Validate and build signed AAB
+        env:
+          PLAY_VERSION_CODE: ${{ steps.version.outputs.version_code }}
+        run: |
+          python3 -m unittest discover -s scripts/tests -p 'test_*.py'
+          python3 scripts/check_localization.py
+          chmod +x gradlew
+          ./gradlew :app:lintRelease :app:bundleRelease -PplayVersionCode="$PLAY_VERSION_CODE" --no-daemon
+          python3 scripts/check_native_alignment.py app/build/outputs/bundle/release/app-release.aab
+      - name: Keep the AAB for initial Console setup or inspection
+        uses: actions/upload-artifact@v4
+        with:
+          name: play-internal-${{ steps.version.outputs.version_name }}-${{ steps.version.outputs.version_code }}
+          retention-days: 3
+          path: |
+            app/build/outputs/bundle/release/app-release.aab
+            release-version.json
+          if-no-files-found: error
+      - name: Authenticate to Google with short-lived credentials
+        if: inputs.mode != 'build_only'
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ vars.PLAY_WIF_PROVIDER }}
+          service_account: ${{ vars.PLAY_SERVICE_ACCOUNT }}
+      - name: Set up supported Python for the publisher
+        if: inputs.mode != 'build_only'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Upload only to internal testing
+        if: inputs.mode != 'build_only'
+        env:
+          MODE: ${{ inputs.mode }}
+          PLAY_VERSION_CODE: ${{ steps.version.outputs.version_code }}
+          PLAY_VERSION_NAME: ${{ steps.version.outputs.version_name }}
+          EXPECTED_CERT: ${{ vars.PLAY_UPLOAD_CERT_SHA256 }}
+        run: |
+          python3 -m pip install -r scripts/requirements-play.txt
+          status=draft
+          if [ "$MODE" = release_internal ]; then status=completed; fi
+          python3 scripts/publish_play_internal.py --aab app/build/outputs/bundle/release/app-release.aab --version-code "$PLAY_VERSION_CODE" --version-name "$PLAY_VERSION_NAME" --expected-certificate "$EXPECTED_CERT" --status "$status"
+      - name: Remove temporary signing files
+        if: always()
+        run: rm -f "$RUNNER_TEMP/play-upload.jks" app/google-services.json

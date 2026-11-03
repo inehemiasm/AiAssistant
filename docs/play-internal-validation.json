@@ -1,0 +1,23 @@
+{
+  "reviewDate": "2026-11-02",
+  "versionName": "0.1.0",
+  "versionCode": 26448010,
+  "packageName": "dev.neo.chevereai",
+  "aabSha256": "490d2ea18f8eb4f418846bb3cfd7db5d7f85c327aa3c442bffd0d1e3fbc67afc",
+  "aabSizeBytes": 63854789,
+  "manifestIdentityVerified": true,
+  "signatureVerifiedAgainstExistingLocalKey": true,
+  "playConsoleCertificateComparisonVerified": false,
+  "native64BitLibrariesAlignmentChecked": 8,
+  "releaseLintErrors": 0,
+  "pythonTests": 13,
+  "officialSdkRequestShape": "validated offline; no API calls executed",
+  "playUploadPerformed": false,
+  "githubHostedWorkflowRun": "not yet exercised",
+  "pendingSetup": [
+    "Create Play app and initial AAB release in Console",
+    "Configure app-scoped publishing service account and GitHub OIDC trust",
+    "Set repository publishing variables and verify upload certificate",
+    "Configure internal testers and required Console declarations"
+  ]
+}

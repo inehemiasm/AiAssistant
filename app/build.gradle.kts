@@ -1,4 +1,5 @@
 import com.google.firebase.appdistribution.gradle.firebaseAppDistribution
+import java.util.Properties
 plugins {
     alias(libs.plugins.android.application)
     id("com.google.android.gms.oss-licenses-plugin")
@@ -19,6 +20,20 @@ ksp {
     arg("room.schemaLocation", "${projectDir}/schemas")
 }
 
+// Visible semantic version is reviewed in one file; CI supplies the separate Play build code.
+val appVersionParts = Properties().apply {
+    rootProject.file("version.properties").inputStream().use { load(it) }
+}
+val appVersionName = listOf("major", "minor", "patch").joinToString(".") { key ->
+    val part = appVersionParts.getProperty(key) ?: error("Missing version component: $key")
+    require(part.matches(Regex("0|[1-9][0-9]*"))) { "Invalid version component: $key" }
+    part
+}
+val appVersionCode = providers.gradleProperty("playVersionCode").map { value ->
+    value.toIntOrNull()?.also { require(it in 1..2_100_000_000) { "Play version code is out of range" } }
+        ?: error("playVersionCode must be a positive integer")
+}.getOrElse(1)
+
 android {
     namespace = "com.neo.chevere"
     compileSdk = 37
@@ -30,8 +45,8 @@ android {
         ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
         externalNativeBuild { cmake { arguments += listOf("-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON"); targets += "chevere_minicpm" } }
         targetSdk = 37
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = appVersionCode
+        versionName = appVersionName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

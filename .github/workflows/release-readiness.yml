@@ -21,8 +21,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Check localization coverage and format arguments
         run: python3 scripts/check_localization.py
-      - name: Test release gate validation
-        run: python3 -m unittest discover -s scripts/tests -p test_release_readiness.py
+      - name: Test release and publishing guards
+        run: python3 -m unittest discover -s scripts/tests -p "test_*.py"
       - name: Validate evidence ledger
         run: python3 scripts/check_release_readiness.py --output release-readiness-report.json
       - uses: actions/upload-artifact@v4
