@@ -49,6 +49,7 @@ import com.neo.chevere.R
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -100,6 +101,18 @@ class ChatViewModel @Inject constructor(
     init {
         // 1. Observe global initialization status from the repository
         observeInitStatus()
+        viewModelScope.launch {
+            repository.allDownloadsProgress.collectLatest { downloads ->
+                val active = downloads.entries.firstOrNull { it.value is com.neo.chevere.domain.DownloadProgress.Progress }
+                val failed = downloads.entries.firstOrNull { it.value is com.neo.chevere.domain.DownloadProgress.Error }
+                val status = when {
+                    active != null -> DownloadStatusUi.Active(active.key, (active.value as com.neo.chevere.domain.DownloadProgress.Progress).percent.coerceIn(0, 100))
+                    failed != null -> DownloadStatusUi.Failed(failed.key, (failed.value as com.neo.chevere.domain.DownloadProgress.Error).message)
+                    else -> DownloadStatusUi.None
+                }
+                setState { copy(downloadStatus = status) }
+            }
+        }
 
         // 2. Observe agent state for tool executions
         observeAgentStatus()
@@ -276,6 +289,18 @@ class ChatViewModel @Inject constructor(
 
                 ChatIntent.ClearConversation -> clearConversation()
                 is ChatIntent.UpdateInputText -> setState { copy(inputText = intent.text) }
+                is ChatIntent.ToggleDocumentExcerpt -> {
+                    val evidence = currentState.messages.getOrNull(intent.messageIndex)?.documentEvidence as? com.neo.chevere.domain.DocumentEvidence.Matches
+                    if (evidence?.excerpts?.getOrNull(intent.excerptIndex) != null) {
+                        val key = intent.messageIndex to intent.excerptIndex
+                        setState { copy(expandedEvidence = if (key in expandedEvidence) expandedEvidence - key else expandedEvidence + key) }
+                    }
+                }
+                ChatIntent.RetryModelLoad -> {
+                    val selected = repository.getLocalModels().firstOrNull { it.id == currentState.selectedModel || it.fileName == currentState.selectedModel }
+                    if (selected != null) initModel(selected.filePath)
+                    else setState { copy(runtimeState = RuntimeState.Uninitialized, selectedModel = "") }
+                }
                 ChatIntent.OpenDocumentFolders -> updateDocumentFolders()
                 ChatIntent.CloseDocumentFolders -> setState { copy(documentFolders = DocumentFoldersState.Closed) }
                 is ChatIntent.IndexDocumentFolder -> {
@@ -372,6 +397,14 @@ class ChatViewModel @Inject constructor(
         } catch (_: Exception) {
             setState { copy(documentFolders = DocumentFoldersState.Open(message = application.getString(R.string.folder_index_failed))) }
         }
+    }
+
+    private fun AgentState.toOutcome(): com.neo.chevere.domain.AgentOutcome? = when (this) {
+        is AgentState.Completed -> com.neo.chevere.domain.AgentOutcome.ANSWERED
+        is AgentState.Incomplete -> com.neo.chevere.domain.AgentOutcome.INCOMPLETE
+        is AgentState.Cancelled -> com.neo.chevere.domain.AgentOutcome.CANCELLED
+        is AgentState.Error -> com.neo.chevere.domain.AgentOutcome.FAILED
+        else -> null
     }
 
     private fun cancelActiveWorkSilently() {
@@ -530,6 +563,7 @@ class ChatViewModel @Inject constructor(
     }
 
     private suspend fun sendMessage(text: String, imageUri: Uri?) {
+        if (currentState.isWaitingForConfirmation) return
         sendEffect { ChatEffect.HideKeyboard }
         val promptText = text.ifBlank {
             if (imageUri != null) getApplication<android.app.Application>().getString(R.string.suggestion_describe_image) else text
@@ -757,14 +791,17 @@ class ChatViewModel @Inject constructor(
     private suspend fun stopActiveResponse() {
         val hadActiveWork = responseJob?.isActive == true || imageGenerationJob?.isActive == true
         telemetry.logStopRequested(hadActiveWork)
-        responseJob?.cancel()
+        responseJob?.cancelAndJoin()
         responseJob = null
         imageGenerationJob?.cancel()
         imageGenerationJob = null
         repository.resetAgentState()
         setState { copy(sendState = SendState.Idle) }
         if (hadActiveWork) {
-            appendAssistantMessage(getApplication<android.app.Application>().getString(R.string.ui_response_stopped), modelName = "CHEVERE AI")
+            val message = ChatMessage(application.getString(R.string.ui_response_stopped), isUser = false,
+                modelName = "CHEVERE AI", agentOutcome = com.neo.chevere.domain.AgentOutcome.CANCELLED)
+            setState { copy(messages = messages + message, streamingText = "") }
+            persistMessage(message)
         }
     }
 
@@ -935,7 +972,7 @@ class ChatViewModel @Inject constructor(
 
         val response = result
             ?.onSuccess {
-                telemetry.logChatTurnFinished(hasImage, success = true, durationMs = time)
+                telemetry.logChatTurnFinished(hasImage, success = currentAgentState is AgentState.Completed || currentAgentState is AgentState.Idle, durationMs = time)
             }
             ?.onFailure { e ->
                 telemetry.logChatTurnFinished(
@@ -968,12 +1005,14 @@ class ChatViewModel @Inject constructor(
                     text = errorMsg,
                     isUser = false,
                     inferenceTimeMs = time,
-                    inputTokenCount = estimateTokenCount(inputText),
-                    outputTokenCount = estimateTokenCount(errorMsg),
+                    inputTokenCount = null,
+                    outputTokenCount = null,
                     modelName = "CHEVERE AI",
-                    agentState = currentAgentState.takeIf { it !is AgentState.Idle }
+                    agentState = currentAgentState.takeIf { it !is AgentState.Idle },
+                    agentOutcome = currentAgentState.toOutcome() ?: com.neo.chevere.domain.AgentOutcome.FAILED,
                 )
-                setState { copy(messages = messages + aiMsg, sendState = SendState.Idle) }
+                setState { copy(messages = messages + aiMsg, sendState = SendState.Error(errorMsg)) }
+                persistMessage(aiMsg)
                 sendEffect { ChatEffect.ScrollToBottom }
                 return
             }
@@ -990,8 +1029,11 @@ class ChatViewModel @Inject constructor(
             agentUiContent = response.agentUiContent,
             isUser = false,
             inferenceTimeMs = time,
-            inputTokenCount = estimateTokenCount(inputText),
-            outputTokenCount = estimateTokenCount(imagePayload?.caption ?: responseText),
+            inputTokenCount = response.usage?.inputTokens,
+            outputTokenCount = response.usage?.outputTokens,
+            tokenCountKind = com.neo.chevere.domain.TokenCountKind.MEASURED,
+            documentEvidence = response.documentEvidence,
+            agentOutcome = currentAgentState.toOutcome(),
             imageUri = imagePayload?.imageUri,
             modelName = currentState.selectedModel.replace(
                 Constants.ModelFiles.LITERTLM_EXTENSION,

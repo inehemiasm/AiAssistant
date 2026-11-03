@@ -30,6 +30,8 @@ internal object ModelRuntimeProfile {
     fun contextSize(path: String): Int =
         if (isSpark(path)) 4096 else Constants.Inference.MAX_CONTEXT_TOKENS
 
+    fun outputLimit(path: String): Int = if (isSpark(path)) 1536 else Constants.Inference.MAX_OUTPUT_TOKENS
+
     fun conversationConfig(path: String): ConversationConfig =
         if (isSpark(path)) ConversationConfig(
             automaticToolCalling = false,

@@ -123,7 +123,7 @@ class LocalDocumentRagTool @Inject constructor(
         val namedChunks = indexedChunks.filter { query.contains(it.fileName, ignoreCase = true) }
         val chunks = namedChunks.ifEmpty { indexedChunks }
         if (chunks.isEmpty()) {
-            return ToolResult.Success("No documents are indexed. Please index a document folder first using: action='index' folderPath='...'")
+            return ToolResult.Success("No documents are indexed. Connect a folder or import a document using the app picker.", com.neo.chevere.domain.DocumentEvidence.NoMatches)
         }
 
         val queryTokens = tokenize(query)
@@ -149,7 +149,7 @@ class LocalDocumentRagTool @Inject constructor(
         }
         val queryMagnitude = sqrt(queryVector.values.sumOf { it * it })
         if (queryMagnitude == 0.0) {
-            return ToolResult.Success("No matches found for query: '$query'.")
+            return ToolResult.Success("No matches found for query: '$query'.", com.neo.chevere.domain.DocumentEvidence.NoMatches)
         }
 
         data class SearchMatch(val chunk: DocumentChunkEntity, val similarity: Double)
@@ -203,13 +203,15 @@ class LocalDocumentRagTool @Inject constructor(
         }
 
         return if (sortedMatches.isEmpty()) {
-            ToolResult.Success("No matches found for query: '$query' in the local index.")
+            ToolResult.Success("No matches found for query: '$query' in the local index.", com.neo.chevere.domain.DocumentEvidence.NoMatches)
         } else {
             val resultsText = sortedMatches.joinToString("\n\n") { match ->
                 val scorePercent = "%.1f%%".format(Locale.US, match.similarity * 100.0)
-                "[Score: $scorePercent] Source: ${match.chunk.fileName} (${match.chunk.filePath})\nSnippet: \"${match.chunk.text.trim()}\""
+                "[Score: $scorePercent] Source: ${match.chunk.fileName} (excerpt ${match.chunk.chunkIndex + 1})\nSnippet: \"${match.chunk.text.trim()}\""
             }
-            ToolResult.Success("Top matching document chunks:\n\n$resultsText")
+            ToolResult.Success("Top matching document chunks:\n\n$resultsText", com.neo.chevere.domain.DocumentEvidence.Matches(
+                sortedMatches.map { com.neo.chevere.domain.DocumentExcerpt(it.chunk.fileName.take(256), it.chunk.chunkIndex, it.chunk.text.take(800)) }
+            ))
         }
     }
 

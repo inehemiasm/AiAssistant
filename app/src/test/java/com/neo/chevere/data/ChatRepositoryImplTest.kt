@@ -245,7 +245,7 @@ class ChatRepositoryImplTest {
     }
 
     @Test
-    fun sendMessage_triggersBackgroundSummarizationWhenHistoryExceedsRecentWindow() = runTest(testDispatcher) {
+    fun sendMessage_doesNotRunAnExtraBackgroundInferenceForMemory() = runTest(testDispatcher) {
         val mockModel = InstalledModel(
             id = "gemma",
             displayName = "Gemma",
@@ -276,7 +276,8 @@ class ChatRepositoryImplTest {
         testScheduler.advanceTimeBy(3500)
         testScheduler.runCurrent()
 
-        assertEquals("This is the summarized text.", conversationContextManager.persistentMemory)
+        verify(inferenceManager, never()).generate(any())
+        assertTrue(result.isSuccess)
     }
 
     @Test

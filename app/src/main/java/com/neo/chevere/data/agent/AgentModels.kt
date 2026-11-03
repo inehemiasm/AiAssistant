@@ -31,8 +31,12 @@ sealed interface AgentState {
         override val steps: List<AgentStep> = emptyList()
     ) : AgentState
 
-    /** The agent has completed its task successfully. */
+    /** The model returned a final answer; this does not independently verify external effects. */
     data class Completed(override val steps: List<AgentStep> = emptyList()) : AgentState
+
+    /** Explicit terminal states prevent cancellation and step exhaustion appearing as success. */
+    data class Incomplete(override val steps: List<AgentStep> = emptyList()) : AgentState
+    data class Cancelled(override val steps: List<AgentStep> = emptyList()) : AgentState
 
     /** 
      * The agent encountered an error during its reasoning or execution loop.

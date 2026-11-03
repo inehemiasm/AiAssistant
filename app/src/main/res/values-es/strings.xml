@@ -184,11 +184,11 @@
     <string name="ui_show_explicit_image">Mostrar imagen explícita</string>
     <string name="ui_hide_explicit_image">Ocultar imagen explícita</string>
     <string name="ui_explicit_image">IMAGEN EXPLÍCITA</string>
-    <string name="ui_agent_thoughts">Razonamiento del agente</string>
+    <string name="ui_agent_thoughts">Actividad</string>
     <string name="ui_collapse_thoughts">Contraer razonamiento</string>
     <string name="ui_expand_thoughts">Ampliar razonamiento</string>
     <string name="ui_no_recorded_steps">No hay pasos registrados.</string>
-    <string name="ui_agent_thought_process">Proceso de razonamiento del agente</string>
+    <string name="ui_agent_thought_process">Actividad</string>
     <string name="ui_collapse_thought_process">Contraer proceso de razonamiento</string>
     <string name="ui_expand_thought_process">Ampliar proceso de razonamiento</string>
     <string name="ui_completed">Completado</string>
@@ -426,7 +426,7 @@
     <string name="start_voice_input">Iniciar dictado</string>
     <string name="stop_voice_input">Detener dictado</string>
     <string name="local_first_ai_desc">La inferencia del modelo se ejecuta localmente. Las herramientas web y meteorológicas, las descargas, las denuncias, el uso compartido y las llamadas MCP confirmadas envían datos seleccionados a servicios externos.</string>
-    <string name="local_storage_privacy_desc">Los chats, documentos, tareas, facturas y modelos se guardan en el almacenamiento privado de la app. Borrar un chat no elimina otros datos. Borrar el almacenamiento de la app elimina los datos locales; los archivos compartidos y las denuncias enviadas son independientes.</string>
+    <string name="local_storage_privacy_desc">Los chats, documentos, tareas y modelos se guardan en el almacenamiento privado de la app. Borrar un chat no elimina otros datos. Borrar el almacenamiento de la app elimina los datos locales; los archivos compartidos y las denuncias enviadas son independientes.</string>
     <string name="camera_permission_required">Se necesita permiso de cámara para tomar fotos.</string>
     <string name="location_permission_granted">Permiso de ubicación concedido.</string>
     <string name="location_permission_denied">Permiso de ubicación denegado.</string>
@@ -575,7 +575,7 @@
     </plurals>
     <string name="add_task_button">AÑADIR</string>
     <string name="capability_image">La generación de imágenes no está disponible en está versión. Con un modelo de visión compatible, puedo describir imágenes adjuntas y ayudarte a extraer su texto.</string>
-    <string name="capability_overview">Puedo responder preguntas, ayudarte a escribir, explicar y depurar código en distintos lenguajes y plataformas, resumir, traducir, generar ideas y planificar tareas. Puedo buscar en documentos de texto y Markdown importados con /docs, analizar imágenes adjuntas con un modelo de visión compatible, buscar en la web, consultar el tiempo, gestionar tareas e importar facturas y recibos. Puedo consultar sensores del dispositivo cuando estén disponibles y autorizados y abrir pantallas de radar, detector de montantes o metales, nivel, luz, proximidad y sonido. También puedo copiar o compartir texto, abrir enlaces, mapas y apps, redactar correos, crear eventos del calendario y consultar los modelos locales. Con /mcp y un servidor HTTPS puedo descubrir y ejecutar herramientas remotas con tu confirmación; todavía no se admiten servidores que exijan inicio de sesión o tokens de API. La generación de imágenes no está disponible en está versión. Con un modelo de visión compatible, puedo describir imágenes adjuntas y extraer texto.</string>
+    <string name="capability_overview">Puedo responder preguntas, ayudarte a escribir, explicar y depurar código en distintos lenguajes y plataformas, resumir, traducir, generar ideas y planificar tareas. Puedo buscar en documentos de texto y Markdown importados con /docs, analizar imágenes adjuntas con un modelo de visión compatible, buscar en la web, consultar el tiempo y gestionar tareas. Puedo consultar sensores del dispositivo cuando estén disponibles y autorizados y abrir pantallas de radar, detector de montantes o metales, nivel, luz, proximidad y sonido. También puedo copiar o compartir texto, abrir enlaces, mapas y apps, redactar correos, crear eventos del calendario y consultar los modelos locales. Con /mcp y un servidor HTTPS puedo descubrir y ejecutar herramientas remotas con tu confirmación; todavía no se admiten servidores que exijan inicio de sesión o tokens de API. La generación de imágenes no está disponible en está versión. Con un modelo de visión compatible, puedo describir imágenes adjuntas y extraer texto.</string>
     <string name="capability_sensors">Sí. Puedo consultar sensores del dispositivo: luz ambiental, presión, batería y temperaturas, movimiento del acelerómetro, giroscopio, brújula, proximidad, postura, nivelación, campo magnético y sonido ambiental mediante el micrófono, con los permisos correspondientes. También puedo abrir pantallas de sensores: /sensors para el panel completo, /stud para detectar montantes o metales, /level para el nivel de burbuja, /light para medir luz y /proximity para proximidad.</string>
     <string name="notification_downloading_model">Descargando %1$s</string>
     <string name="notification_download_progress">Progreso: %1$d%%</string>
@@ -745,4 +745,23 @@
     <string name="folder_disconnected">Carpeta desconectada y texto indexado eliminado.</string>
     <string name="folder_index_failed">No se pudo actualizar esta carpeta. Su índice anterior no ha cambiado. Comprueba el acceso, el texto UTF-8 y los límites e inténtalo de nuevo. Si se revocó el acceso, selecciona la carpeta de nuevo con Añadir carpeta. Los proveedores en la nube pueden necesitar conexión o más tiempo para cargar.</string>
     <string name="folder_disconnect_failed">No se pudo desconectar esta carpeta por completo. Inténtalo de nuevo.</string>
+    <string name="context_request_too_large">Esta solicitud es demasiado grande para el contexto del modelo actual. Acorta el mensaje o busca en los documentos importados con /docs. Las imágenes adjuntas también necesitan espacio de contexto.</string>
+    <string name="sources_title">Fragmentos recuperados</string>
+    <string name="sources_disclaimer">Comprueba la respuesta con estos fragmentos. Recuperarlos no garantiza que la respuesta sea correcta.</string>
+    <string name="sources_empty">No hay documentos coincidentes</string>
+    <string name="sources_no_match_response">No encontré texto relevante en los documentos indexados. Prueba otras palabras clave, indica el archivo o importa/actualiza la carpeta de documentos.</string>
+    <string name="source_excerpt_label">%1$s · Fragmento %2$d</string>
+    <string name="agent_answered">Respuesta lista · revisa los resultados</string>
+    <string name="agent_incomplete">Incompleto · hay pasos que revisar</string>
+    <string name="agent_cancelled">Cancelado · las acciones anteriores pueden haberse completado</string>
+    <string name="model_status_choose">Elegir un modelo</string>
+    <string name="model_status_downloading">Descargando %1$s · %2$d%%</string>
+    <string name="model_status_loading">Cargando modelo · %1$s</string>
+    <string name="model_status_ready">Listo · %1$s</string>
+    <string name="model_status_generating">Generando respuesta…</string>
+    <string name="model_status_retry">Volver a intentar</string>
+    <string name="history_response_unavailable">No se pudo restaurar esta respuesta guardada.</string>
+    <string name="tokens_input_estimate">ENTRADA ~%1$d TOK</string>
+    <string name="tokens_output_estimate">SALIDA ~%1$d TOK</string>
+    <string name="document_search_failed">La búsqueda de documentos falló. Actualiza la carpeta de documentos o inténtalo de nuevo.</string>
 </resources>

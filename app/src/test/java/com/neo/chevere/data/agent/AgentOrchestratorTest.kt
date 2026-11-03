@@ -21,6 +21,33 @@ import org.mockito.kotlin.whenever
 @org.junit.runner.RunWith(org.robolectric.RobolectricTestRunner::class)
 @org.robolectric.annotation.Config(sdk = [34], application = android.app.Application::class)
 class AgentOrchestratorTest {
+    @Test fun documentRouteRetrievesOnceAndUsesAnAnswerOnlyModelPass() = runTest {
+        val evidence = com.neo.chevere.domain.DocumentEvidence.Matches(listOf(com.neo.chevere.domain.DocumentExcerpt("policy.txt", 0, "Warranty: 41 days")))
+        val tool = mock<AgentTool> { on { name } doReturn "document_rag" }
+        whenever(tool.execute(any())).doReturn(ToolResult.Success("Source: policy.txt. Warranty: 41 days", evidence))
+        whenever(mockToolRegistry.getTool("document_rag")).doReturn(tool)
+        whenever(mockInferenceManager.generateStream(any())).doAnswer { invocation ->
+            val prompt = (invocation.arguments[0] as InferenceRequest).prompt
+            assertTrue(prompt.contains("Do not request or call any tools"))
+            assertTrue(prompt.contains("Warranty: 41 days"))
+            flowOf(InferenceResult.Success("41 days"))
+        }
+        assertEquals("41 days", orchestrator.processUserRequest("/docs warranty", routingCategory = com.neo.chevere.data.chat.RoutingCategory.DOCUMENTS).getOrNull())
+        org.mockito.kotlin.verify(tool, org.mockito.kotlin.times(1)).execute(any())
+        org.mockito.kotlin.verify(mockInferenceManager, org.mockito.kotlin.times(1)).generateStream(any())
+        assertTrue(orchestrator.agentState.value is AgentState.Completed)
+    }
+    @Test fun noMatchingDocumentsProducesAnExplicitOutcomeWithoutInventingAnAnswer() = runTest {
+        val evidence = com.neo.chevere.domain.DocumentEvidence.NoMatches
+        val documentTool = mock<AgentTool> { on { name } doReturn "document_rag" }
+        whenever(documentTool.execute(any())).doReturn(ToolResult.Success("No matches", evidence))
+        whenever(mockToolRegistry.getTool("document_rag")).doReturn(documentTool)
+        whenever(mockInferenceManager.generateStream(any())).doReturn(flowOf(InferenceResult.Success("[TOOL_CALL: document_rag, action=search, query=quasar]")))
+        val result = orchestrator.processUserRequest("Search my documents for quasar")
+        assertTrue(result.isSuccess)
+        assertEquals(evidence, orchestrator.documentEvidence)
+        org.mockito.kotlin.verify(mockInferenceManager, org.mockito.kotlin.times(1)).generateStream(any())
+    }
 
     private lateinit var mockInferenceManager: InferenceManager
     private lateinit var mockToolRegistry: ToolRegistry
@@ -59,7 +86,7 @@ class AgentOrchestratorTest {
         whenever(mockWeatherTool.execute(any())).doReturn(ToolResult.Success("Sunny " + "x".repeat(20000)))
         whenever(mockInferenceManager.generateStream(any())).doAnswer { invocation ->
             val prompt = (invocation.arguments[0] as InferenceRequest).prompt
-            assertTrue(prompt.length <= Constants.Agent.MAX_PROMPT_CHAR_BUDGET)
+            assertTrue(com.neo.chevere.data.context.PromptBudget.estimateTokens(prompt) <= com.neo.chevere.data.context.PromptBudget.inputLimit("", false))
             assertTrue(prompt.contains(goal))
             assertTrue(prompt.contains("Mock System Prompt"))
             pass++
@@ -191,6 +218,7 @@ class AgentOrchestratorTest {
         assertTrue(result.isSuccess)
         // Fallback summary is used when loop ends
         assertTrue(result.getOrThrow().contains("full request may be incomplete"))
+        assertTrue(orchestrator.agentState.value is AgentState.Incomplete)
     }
 
     @Test
@@ -198,8 +226,8 @@ class AgentOrchestratorTest {
         val longContext = "older context ".repeat(2_000)
         whenever(mockInferenceManager.generateStream(any())).doAnswer { invocation ->
             val request = invocation.arguments[0] as InferenceRequest
-            assertTrue(request.prompt.length <= Constants.Agent.MAX_PROMPT_CHAR_BUDGET)
-            assertTrue(request.prompt.contains(Constants.Agent.SYSTEM_PROMPT_PREFIX))
+            assertTrue(com.neo.chevere.data.context.PromptBudget.estimateTokens(request.prompt) <= com.neo.chevere.data.context.PromptBudget.inputLimit("", false))
+            assertTrue(request.prompt.contains("Mock System Prompt"))
             assertTrue(request.prompt.contains("How is the weather today?"))
             flowOf(InferenceResult.Success("It looks sunny."))
         }

@@ -2,6 +2,13 @@
 
 This is a drafting aid, not an effective agreement. Do not publish until the actual publisher, contact address, territories, audience, applicable law, and counsel-reviewed consumer protections are established. Source-code LICENSE does not replace consumer terms.
 
+Current owner choices: individual publisher intended, initial US distribution,
+and nehemias.miranda.work@gmail.com as the support/privacy contact. Exact verified
+legal name and mailbox delivery remain unverified. The owner explicitly kept
+the intended age audience undecided; no adults-only eligibility has been adopted.
+Protected reporting, reviewer access and retention/deletion operations remain
+unresolved. See `release-readiness.json` before converting this draft into terms.
+
 ## Service and limitations
 
 Chevere AI provides local AI assistance and optional device, search, weather, document, and remote-tool features. Availability depends on the selected model, hardware, permissions, network, and external services. Generated content can be incorrect or unsafe. Users should verify consequential outputs and should not rely on generated responses as professional medical, legal, financial, or emergency advice. Sensor readings are estimates, not certified safety measurements.

@@ -16,7 +16,6 @@ import com.neo.chevere.ui.radar.SensorsRadarScreen
 import com.neo.chevere.ui.settings.BenchmarkScreen
 import com.neo.chevere.ui.settings.SettingsScreen
 import com.neo.chevere.ui.tasks.TasksScreen
-import com.neo.chevere.ui.invoices.InvoicesScreen
 
 @Composable
 fun ChevereNavHost(
@@ -66,7 +65,12 @@ fun ChevereNavHost(
         }
 
         composable<Route.Invoices> {
-            InvoicesScreen()
+            androidx.compose.runtime.LaunchedEffect(Unit) {
+                navController.navigate(Route.Chat) {
+                    popUpTo<Route.Invoices> { inclusive = true }
+                    launchSingleTop = true
+                }
+            }
         }
 
         composable<Route.Benchmark> {

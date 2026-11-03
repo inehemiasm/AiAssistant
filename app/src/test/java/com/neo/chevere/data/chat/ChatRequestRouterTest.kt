@@ -10,6 +10,14 @@ import org.junit.Test
 class ChatRequestRouterTest {
     private val router = ChatRequestRouter()
 
+    @Test fun invoiceQuestionsUseOrdinaryChatWithoutSavingTools() {
+        for (prompt in listOf("What is an invoice?", "Import this receipt", "Create an invoice based on this image")) {
+            assertEquals(RoutingCategory.DIRECT_CHAT, router.classifyRequest(prompt))
+        }
+        assertFalse(router.buildVisionChatPrompt("Describe this receipt").contains("invoice_registry"))
+        assertFalse(router.capabilityResponseFor("What can you do?")!!.contains("import invoices"))
+    }
+
     @Test fun documentAndMcpRequestsReachAgent() {
         for (prompt in listOf("/docs What is the refund policy?", "Search my documents for warranty", "Busca en mis documentos")) {
             assertEquals(RoutingCategory.DOCUMENTS, router.classifyRequest(prompt))

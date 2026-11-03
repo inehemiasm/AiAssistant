@@ -184,11 +184,11 @@
     <string name="ui_show_explicit_image">Explizites Bild anzeigen</string>
     <string name="ui_hide_explicit_image">Explizites Bild ausblenden</string>
     <string name="ui_explicit_image">EXPLIZITES BILD</string>
-    <string name="ui_agent_thoughts">Agentengedanken</string>
+    <string name="ui_agent_thoughts">Aktivität</string>
     <string name="ui_collapse_thoughts">Gedanken einklappen</string>
     <string name="ui_expand_thoughts">Gedanken ausklappen</string>
     <string name="ui_no_recorded_steps">Keine Schritte aufgezeichnet.</string>
-    <string name="ui_agent_thought_process">Denkprozess des Agenten</string>
+    <string name="ui_agent_thought_process">Aktivität</string>
     <string name="ui_collapse_thought_process">Denkprozess einklappen</string>
     <string name="ui_expand_thought_process">Denkprozess ausklappen</string>
     <string name="ui_completed">Abgeschlossen</string>
@@ -426,7 +426,7 @@
     <string name="start_voice_input">Spracheingabe starten</string>
     <string name="stop_voice_input">Spracheingabe beenden</string>
     <string name="local_first_ai_desc">Die Modellinferenz läuft lokal. Web- und Wetterwerkzeuge, Downloads, Meldungen, Teilen und bestätigte MCP-Aufrufe senden ausgewählte Daten an externe Dienste.</string>
-    <string name="local_storage_privacy_desc">Chats, Dokumente, Aufgaben, Rechnungen und Modelle nutzen den privaten App-Speicher. Das Löschen eines Chats löscht keine anderen Daten. Das Leeren des App-Speichers entfernt lokale Daten; geteilte Dateien und gesendete Meldungen sind davon getrennt.</string>
+    <string name="local_storage_privacy_desc">Chats, Dokumente, Aufgaben und Modelle nutzen den privaten App-Speicher. Das Löschen eines Chats löscht keine anderen Daten. Das Leeren des App-Speichers entfernt lokale Daten; geteilte Dateien und gesendete Meldungen sind davon getrennt.</string>
     <string name="camera_permission_required">Zum Fotografieren ist eine Kameraberechtigung erforderlich.</string>
     <string name="location_permission_granted">Standortberechtigung erteilt.</string>
     <string name="location_permission_denied">Standortberechtigung verweigert.</string>
@@ -575,7 +575,7 @@
     </plurals>
     <string name="add_task_button">HINZUFÜGEN</string>
     <string name="capability_image">Bildgenerierung ist in dieser Version nicht verfügbar. Mit einem kompatiblen Bildanalysemodell kann ich angehängte Bilder beschreiben und beim Extrahieren von Text helfen.</string>
-    <string name="capability_overview">Ich kann Fragen beantworten, beim Schreiben helfen, Code verschiedener Sprachen und Plattformen erklären und debuggen, zusammenfassen, übersetzen, Ideen sammeln und Aufgaben planen. Mit /docs kann ich importierte Text- und Markdown-Dokumente durchsuchen, mit einem kompatiblen Bildanalysemodell Anhänge analysieren, im Web suchen, das Wetter abrufen, Aufgaben verwalten sowie Rechnungen und Belege importieren. Ich kann verfügbare und erlaubte Gerätesensoren auslesen und Ansichten für Radar, Balken- oder Metalldetektor, Wasserwaage, Licht, Nähe und Schall öffnen. Außerdem kann ich Text kopieren oder teilen, Links, Karten und Apps öffnen, E-Mails entwerfen, Kalendertermine erstellen und lokale Modellinformationen abrufen. Mit /mcp und einem HTTPS-Server kann ich entfernte Werkzeuge nach Ihrer Bestätigung erkennen und aufrufen; Server mit Anmeldung oder API-Token werden noch nicht unterstützt. Bildgenerierung ist in dieser Version nicht verfügbar; kompatible Bildanalysemodelle können Anhänge beschreiben und Text daraus extrahieren.</string>
+    <string name="capability_overview">Ich kann Fragen beantworten, beim Schreiben helfen, Code verschiedener Sprachen und Plattformen erklären und debuggen, zusammenfassen, übersetzen, Ideen sammeln und Aufgaben planen. Mit /docs kann ich importierte Text- und Markdown-Dokumente durchsuchen, mit einem kompatiblen Bildanalysemodell Anhänge analysieren, im Web suchen, das Wetter abrufen und Aufgaben verwalten. Ich kann verfügbare und erlaubte Gerätesensoren auslesen und Ansichten für Radar, Balken- oder Metalldetektor, Wasserwaage, Licht, Nähe und Schall öffnen. Außerdem kann ich Text kopieren oder teilen, Links, Karten und Apps öffnen, E-Mails entwerfen, Kalendertermine erstellen und lokale Modellinformationen abrufen. Mit /mcp und einem HTTPS-Server kann ich entfernte Werkzeuge nach Ihrer Bestätigung erkennen und aufrufen; Server mit Anmeldung oder API-Token werden noch nicht unterstützt. Bildgenerierung ist in dieser Version nicht verfügbar; kompatible Bildanalysemodelle können Anhänge beschreiben und Text daraus extrahieren.</string>
     <string name="capability_sensors">Ja. Ich kann Sensoren für Umgebungslicht, Druck, Akku und Temperaturen, Bewegung, Gyroskop, Kompass, Nähe, Haltung, Ebenheit, Magnetfeld und Umgebungsschall per Mikrofon auslesen, sofern verfügbar und erlaubt. Außerdem kann ich /sensors für die Übersicht, /stud für Balken oder Metalle, /level für die Wasserwaage, /light für Licht und /proximity für Nähe öffnen.</string>
     <string name="notification_downloading_model">%1$s wird heruntergeladen</string>
     <string name="notification_download_progress">Fortschritt: %1$d%%</string>
@@ -745,4 +745,23 @@
     <string name="folder_disconnected">Ordner getrennt und sein indizierter Text entfernt.</string>
     <string name="folder_index_failed">Dieser Ordner konnte nicht aktualisiert werden. Sein bisheriger Index bleibt erhalten. Prüfen Sie Zugriff, UTF-8-Text und Ordnergrenzen und versuchen Sie es erneut. Wählen Sie den Ordner bei entzogenem Zugriff über Ordner hinzufügen erneut aus. Cloudanbieter benötigen möglicherweise eine Verbindung oder mehr Ladezeit.</string>
     <string name="folder_disconnect_failed">Dieser Ordner konnte nicht vollständig getrennt werden. Versuchen Sie es erneut.</string>
+    <string name="context_request_too_large">Diese Anfrage ist zu groß für das Kontextfenster des aktuellen Modells. Kürzen Sie die Nachricht oder durchsuchen Sie importierte Dokumente mit /docs. Auch angehängte Bilder benötigen Kontextplatz.</string>
+    <string name="sources_title">Abgerufene Auszüge</string>
+    <string name="sources_disclaimer">Prüfen Sie die Antwort anhand dieser Auszüge. Der Abruf garantiert keine korrekte Antwort.</string>
+    <string name="sources_empty">Keine passenden Dokumente</string>
+    <string name="sources_no_match_response">In den indizierten Dokumenten wurde kein passender Text gefunden. Versuchen Sie andere Suchbegriffe, nennen Sie die Datei oder importieren/aktualisieren Sie Ihren Dokumentenordner.</string>
+    <string name="source_excerpt_label">%1$s · Auszug %2$d</string>
+    <string name="agent_answered">Antwort bereit · Ergebnisse prüfen</string>
+    <string name="agent_incomplete">Unvollständig · einige Schritte prüfen</string>
+    <string name="agent_cancelled">Abgebrochen · frühere Aktionen können bereits abgeschlossen sein</string>
+    <string name="model_status_choose">Modell auswählen</string>
+    <string name="model_status_downloading">%1$s wird heruntergeladen · %2$d%%</string>
+    <string name="model_status_loading">Modell wird geladen · %1$s</string>
+    <string name="model_status_ready">Bereit · %1$s</string>
+    <string name="model_status_generating">Antwort wird erstellt…</string>
+    <string name="model_status_retry">Erneut versuchen</string>
+    <string name="history_response_unavailable">Diese gespeicherte Antwort konnte nicht wiederhergestellt werden.</string>
+    <string name="tokens_input_estimate">EINGABE ~%1$d TOK</string>
+    <string name="tokens_output_estimate">AUSGABE ~%1$d TOK</string>
+    <string name="document_search_failed">Die Dokumentensuche ist fehlgeschlagen. Aktualisieren Sie den Dokumentenordner oder versuchen Sie es erneut.</string>
 </resources>

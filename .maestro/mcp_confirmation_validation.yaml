@@ -22,3 +22,5 @@ name: MCP confirmation remains actionable
 - extendedWaitUntil:
     visible: "Action canceled. No pending action was executed."
     timeout: 15000
+- assertVisible: "Cancelled.*"
+- assertNotVisible: ".*steps completed.*"

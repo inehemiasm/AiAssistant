@@ -6,7 +6,7 @@ language for this app independently of the system language. Earlier versions
 use the device configuration and fall back to English for unsupported languages.
 
 The audit covers app-authored navigation, dialogs, accessibility descriptions,
-model guidance and catalog descriptions, tasks and invoices, history and counts,
+model guidance and catalog descriptions, tasks, history and counts,
 sensor screens, diagnostics, permission and privacy disclosures, voice errors,
 document import, download notifications and failures, runtime initialization,
 deterministic capability answers, and action/MCP confirmations. Slash-command
@@ -54,7 +54,7 @@ python scripts/validate_localization_device.py --serial <device-serial>
 ```
 
 This runs `.maestro/localization_validation.yaml` for all four languages through
-Models, task and invoice dialogs, and privacy settings. Screenshots and results
+Models, task dialogs, and privacy settings. Screenshots and results
 are saved under ignored `notes/localization-device/`. Original per-app language
 and plugged-in sleep settings are restored in `finally`; the original values
 are also saved there for recovery after an interrupted process. No app data is

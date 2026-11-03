@@ -119,6 +119,12 @@ Replace the example endpoint with your server. Confirm the connection, then requ
 
 See [RAG/MCP usage and limitations](docs/rag-mcp.md) for supported behavior and validation coverage.
 
+Chat now shows engine status and recovery actions, retrieved document excerpts,
+and distinct incomplete/cancelled agent outcomes. See [chat reliability](docs/chat-reliability.md)
+for context-budget estimates, measured usage, history compatibility and device flows.
+The [release evidence ledger](docs/release-readiness.json) tracks unresolved Play
+release gates; passing builds and evidence CI do not mean the app is ready to publish.
+
 ## Tech Stack
 
 - **Language**: Kotlin (Android + Kotlin Multiplatform `:shared` core)

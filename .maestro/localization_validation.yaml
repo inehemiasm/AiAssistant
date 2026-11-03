@@ -1,5 +1,5 @@
 appId: dev.neo.chevereai
-name: Localized navigation, models, tasks, invoices and privacy
+name: Localized navigation, models, tasks and privacy
 ---
 - launchApp:
     clearState: false
@@ -20,11 +20,6 @@ name: Localized navigation, models, tasks, invoices and privacy
 - tapOn: "${ADD_TASK}"
 - assertVisible: "${TASK_DIALOG}"
 - takeScreenshot: "task_dialog_${LANGUAGE}"
-- tapOn: "${CANCEL}"
-- tapOn: "${INVOICES}"
-- tapOn: "${ADD_INVOICE}"
-- assertVisible: "${VENDOR}"
-- takeScreenshot: "invoice_dialog_${LANGUAGE}"
 - tapOn: "${CANCEL}"
 - tapOn: "${CHAT}"
 - tapOn: "${LIBRARY}"

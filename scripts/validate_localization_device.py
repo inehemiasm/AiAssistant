@@ -18,8 +18,8 @@ KEYS = {
     "LIBRARY": "menu_library", "MODELS_LIBRARY": "ui_models_library",
     "GUIDANCE_TITLE": "model_guidance_title", "LEARN_MORE": "model_guidance_learn_more",
     "DONE": "model_guidance_done", "TASKS": "tasks_label", "ADD_TASK": "ui_add_task",
-    "TASK_DIALOG": "add_task_title", "CANCEL": "cancel_button", "INVOICES": "invoices_label",
-    "ADD_INVOICE": "ui_add_invoice", "VENDOR": "invoice_vendor_hint", "CHAT": "chat_label",
+    "TASK_DIALOG": "add_task_title", "CANCEL": "cancel_button",
+    "CHAT": "chat_label",
     "SETTINGS": "ui_system_settings", "PRIVACY": "safety_privacy", "LOCAL_FIRST": "local_first_ai",
 }
 

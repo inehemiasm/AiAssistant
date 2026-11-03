@@ -35,8 +35,6 @@ import com.neo.chevere.data.agent.tools.SelectModelTool
 import com.neo.chevere.data.agent.tools.ShareTextTool
 import com.neo.chevere.data.agent.tools.SummarizeTextTool
 import com.neo.chevere.data.agent.tools.TaskRegistryTool
-import com.neo.chevere.data.agent.tools.InvoiceRegistryTool
-import com.neo.chevere.data.datasource.local.InvoiceDao
 import com.neo.chevere.data.datasource.local.ConversationHistoryDao
 import com.neo.chevere.data.agent.tools.WeatherTool
 import com.neo.chevere.data.agent.tools.WebSearchTool
@@ -249,13 +247,6 @@ abstract class AgentModule {
             taskRepository: TaskRepository,
             @ApplicationContext context: Context
         ): AgentTool = TaskRegistryTool(taskRepository, context)
-
-        @Provides
-        @IntoSet
-        fun provideInvoiceRegistryTool(
-            invoiceDao: InvoiceDao,
-            conversationHistoryDao: ConversationHistoryDao
-        ): AgentTool = InvoiceRegistryTool(invoiceDao, conversationHistoryDao)
 
         @Provides
         fun provideChatSuggestionRepository(implementation: com.neo.chevere.data.LocalChatSuggestionRepository): com.neo.chevere.domain.ChatSuggestionRepository = implementation

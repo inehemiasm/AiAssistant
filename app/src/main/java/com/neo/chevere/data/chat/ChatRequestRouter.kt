@@ -13,7 +13,6 @@ enum class RoutingCategory {
     DEVICE_ACTION,
     MODEL_MANAGEMENT,
     TASK_REGISTRY,
-    INVOICE_MANAGEMENT,
     SENSORS,
     DOCUMENTS,
     MCP,
@@ -48,9 +47,6 @@ class ChatRequestRouter @Inject constructor() {
         return when {
             normalized.startsWith("/mcp") || Regex("""\bmcp\b""").containsMatchIn(normalized) -> RoutingCategory.MCP
             normalized.startsWith("/docs") || listOf("my documents", "my files", "indexed documents", "document search", "mis documentos", "document_rag").any { it in normalized } -> RoutingCategory.DOCUMENTS
-            // Invoice must be checked before image generation, because prompts like
-            // "create an invoice based off this image" contain image-gen keywords.
-            looksLikeInvoiceRequest(normalized) -> RoutingCategory.INVOICE_MANAGEMENT
             looksLikeImageGenerationRequest(normalized) -> RoutingCategory.IMAGE_GENERATION
             looksLikeSensorsRequest(normalized) -> RoutingCategory.SENSORS
             looksLikeLiveInformationRequest(normalized) -> RoutingCategory.LIVE_INFORMATION
@@ -200,6 +196,9 @@ class ChatRequestRouter @Inject constructor() {
         }
         if (hasSpecificImageVerb) return true
 
+        // An invoice based on an image is a document request, not image generation.
+        if (looksLikeInvoiceRequest(text)) return false
+
         val hasImageNoun = ChatRoutingLexicon.imageRequestNouns.any { it in text }
         val hasCreateVerb = ChatRoutingLexicon.imageRequestVerbs.any { it in text }
         if (hasImageNoun && hasCreateVerb) return true
@@ -254,7 +253,7 @@ class ChatRequestRouter @Inject constructor() {
         const val DIRECT_CHAT_CAPABILITY_CONTEXT =
             ChatCapabilities.MODEL_CONTEXT
         const val VISION_CHAT_CAPABILITY_CONTEXT =
-            "You are Chevere AI, a general-purpose assistant. The current user message includes an attached image. Answer by analyzing or describing that attached image and the user's question. Do not generate, create, edit, or replace an image from an attachment. If the user asks for image generation while an image is attached, explain that image generation is not available in this build; you can analyze the attached image with a compatible vision model. If the user asks to import or scan an invoice/receipt from the attached image, you have the capability to extract the vendor, amount, date, items, and payment status from the image, and you MUST call the invoice_registry tool with action=import to save it locally. To determine payment status: if the image has a visible PAID stamp, watermark, or label, or if the balance due or amount owed is zero, set status=paid. If the invoice shows overdue or past due, set status=overdue. Otherwise default to status=pending."
+            "You are Chevere AI, a general-purpose assistant. The current user message includes an attached image. Answer by analyzing or describing that attached image and the user's question. Do not generate, create, edit, or replace an image from an attachment. If the user asks for image generation while an image is attached, explain that image generation is not available in this build; you can analyze the attached image with a compatible vision model."
         const val CAPABILITY_OVERVIEW_RESPONSE =
             ChatCapabilities.OVERVIEW
         const val IMAGE_CAPABILITY_RESPONSE =

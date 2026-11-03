@@ -1,0 +1,27 @@
+name: Release readiness evidence
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      require_play_ready:
+        description: Fail if any Play release gate is still unresolved
+        type: boolean
+        default: false
+jobs:
+  evidence:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test release gate validation
+        run: python3 -m unittest discover -s scripts/tests -p test_release_readiness.py
+      - name: Validate evidence ledger
+        run: python3 scripts/check_release_readiness.py --output release-readiness-report.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-readiness
+          path: release-readiness-report.json
+      - name: Enforce Play release gates when explicitly requested
+        if: ${{ inputs.require_play_ready == true }}
+        run: python3 scripts/check_release_readiness.py --strict

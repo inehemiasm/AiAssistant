@@ -55,14 +55,21 @@ class ConversationContextManager @Inject constructor() {
     fun recordExchange(userPrompt: String, imageUri: Uri?, assistantResponse: String) {
         turns += ConversationTurn(
             role = Constants.ContextWindow.USER_ROLE,
-            content = userPrompt,
+            content = userPrompt.take(Constants.ContextWindow.TURN_CHAR_LIMIT),
             hasImage = imageUri != null
         )
         turns += ConversationTurn(
             role = Constants.ContextWindow.ASSISTANT_ROLE,
-            content = assistantResponse,
+            content = assistantResponse.take(Constants.ContextWindow.ASSISTANT_TURN_CHAR_LIMIT),
             hasImage = false
         )
+        // Bound retained storage as well as rendered prompts; no extra model pass is needed.
+        while (turns.size > 12) {
+            val dropped = turns.removeAt(0)
+            persistentMemory = (persistentMemory.orEmpty() + "\n- ${dropped.role}: ${dropped.compactContent()}")
+                .takeLast(Constants.ContextWindow.MEMORY_CHAR_BUDGET)
+        }
+
     }
 
     /**
@@ -87,16 +94,12 @@ class ConversationContextManager @Inject constructor() {
     }
 
     private fun buildMemorySection(memoryTurns: List<ConversationTurn>): String? {
-        val memoryStr = persistentMemory
-        if (memoryStr != null && memoryStr.isNotBlank()) {
-            return "${Constants.ContextWindow.MEMORY_HEADER}:\n${memoryStr.take(Constants.ContextWindow.MEMORY_CHAR_BUDGET)}"
-        }
+        val memoryStr = persistentMemory.orEmpty().take(Constants.ContextWindow.MEMORY_CHAR_BUDGET)
+        if (memoryTurns.isEmpty() && memoryStr.isBlank()) return null
 
-        if (memoryTurns.isEmpty()) return null
-
-        val bullets = memoryTurns
+        val bullets = (memoryStr + "\n" + memoryTurns
             .map { turn -> "- ${turn.role}: ${turn.compactContent()}" }
-            .joinToString("\n")
+            .joinToString("\n"))
             .takeLast(Constants.ContextWindow.MEMORY_CHAR_BUDGET)
             .trim()
 
