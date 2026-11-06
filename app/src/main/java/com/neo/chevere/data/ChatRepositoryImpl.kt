@@ -474,9 +474,12 @@ class ChatRepositoryImpl @Inject constructor(
 
         return InstalledModel(
             id = file.name, // Use the name of the file/dir in the root filesDir as ID
-            displayName = (if (file.isDirectory) file.name else file.nameWithoutExtension).replace("_", " ")
-                .replace("-", " ")
-                .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() },
+            displayName = existing?.displayName?.takeIf { it.isNotBlank() }
+                ?: (if (file.isDirectory) file.name else file.nameWithoutExtension)
+                    .removeSuffix("-web")
+                    .replace("_", " ")
+                    .replace("-", " ")
+                    .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() },
             filePath = modelRoot.absolutePath, // Use the actual model root for inference
             fileName = file.name,
             source = existing?.source ?: ModelSource.LOCAL,
