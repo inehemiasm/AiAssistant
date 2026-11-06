@@ -12,6 +12,7 @@ name: Capabilities match the current build
 - extendedWaitUntil:
     visible: ".*across languages and platforms.*"
     timeout: 20000
+- assertNotVisible: ".*search the web.*"
 - assertVisible: ".*Image generation is not available in this build.*"
 - tapOn: "Ask Chevere AI…"
 - inputText: "Can you generate images?"

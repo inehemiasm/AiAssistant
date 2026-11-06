@@ -52,4 +52,31 @@ class LocalDocumentRepository @Inject constructor(
             DocumentImportResult.Failed(e.message ?: context.getString(R.string.ui_document_import_failed))
         }
     }
+
+    override suspend fun saveTextDocument(name: String, content: String): DocumentImportResult = withContext(Dispatchers.IO) {
+        try {
+            val cleanName = name.trim().ifBlank { "voice-note.md" }
+            require(cleanName.endsWith(".txt", true) || cleanName.endsWith(".md", true)) {
+                context.getString(R.string.ui_choose_a_txt_or_md_document)
+            }
+            val text = content.trim()
+            require(text.isNotBlank() && '\u0000' !in text) {
+                context.getString(R.string.ui_document_contains_no_readable_text)
+            }
+            val bytes = text.toByteArray(Charsets.UTF_8)
+            require(bytes.size <= 2 * 1024 * 1024) {
+                context.getString(R.string.ui_choose_a_document_smaller_than_2_mb)
+            }
+            val reference = "voice-memo://$cleanName"
+            val chunks = text.windowed(800, 600, partialWindows = true).mapIndexed { index, chunk ->
+                DocumentChunkEntity(filePath = reference, fileName = cleanName, chunkIndex = index, text = chunk)
+            }
+            dao.replaceDocument(reference, chunks)
+            DocumentImportResult.Imported(cleanName, chunks.size)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            DocumentImportResult.Failed(e.message ?: context.getString(R.string.ui_document_import_failed))
+        }
+    }
 }

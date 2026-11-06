@@ -7,6 +7,7 @@ import androidx.work.Configuration
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.neo.chevere.data.inference.ImageGenerationManager
 import com.neo.chevere.data.inference.InferenceManager
+import com.neo.chevere.data.security.AppCheckInitializer
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -41,6 +42,7 @@ class ChevereApp : Application(), Configuration.Provider {
             Timber.plant(ReleaseTree())
         }
 
+        AppCheckInitializer.initialize(this)
         registerBackgroundLifecycleTracker()
     }
 

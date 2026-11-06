@@ -58,7 +58,7 @@
     <string name="safety_privacy">SEGURIDAD Y PRIVACIDAD</string>
     <string name="local_first_ai">IA principalmente local</string>
     <string name="offline_processing">Procesamiento sin conexión</string>
-    <string name="offline_processing_desc">La inferencia de chat y visión se ejecuta con modelos locales instalados. Las funciones de red opcionales incluyen catálogos, descargas, herramientas web y meteorológicas, denuncias, compartir y herramientas remotas confirmadas.</string>
+    <string name="offline_processing_desc">La inferencia de chat y visión se ejecuta con modelos locales instalados. Las funciones de red opcionales incluyen catálogos, descargas, herramientas meteorológicas, denuncias, compartir y herramientas remotas confirmadas.</string>
     <string name="release_content_controls">Seguridad del contenido de IA y denuncias</string>
     <string name="release_content_controls_desc">Puedes denunciar respuestas ofensivas, peligrosas o incorrectas. Se intenta eliminar los identificadores personales antes del envío, sin garantizarlo. No incluyas información sensible.</string>
     <string name="user_controlled_sharing">Compartir bajo tu control</string>
@@ -425,7 +425,7 @@
     <string name="stop_reading_aloud">Detener lectura</string>
     <string name="start_voice_input">Iniciar dictado</string>
     <string name="stop_voice_input">Detener dictado</string>
-    <string name="local_first_ai_desc">La inferencia del modelo se ejecuta localmente. Las herramientas web y meteorológicas, las descargas, las denuncias, el uso compartido y las llamadas MCP confirmadas envían datos seleccionados a servicios externos.</string>
+    <string name="local_first_ai_desc">La inferencia del modelo se ejecuta localmente. Las herramientas meteorológicas, las descargas, las denuncias, el uso compartido y las llamadas MCP confirmadas envían datos seleccionados a servicios externos.</string>
     <string name="local_storage_privacy_desc">Los chats, documentos, tareas y modelos se guardan en el almacenamiento privado de la app. Borrar un chat no elimina otros datos. Borrar el almacenamiento de la app elimina los datos locales; los archivos compartidos y las denuncias enviadas son independientes.</string>
     <string name="camera_permission_required">Se necesita permiso de cámara para tomar fotos.</string>
     <string name="location_permission_granted">Permiso de ubicación concedido.</string>
@@ -440,7 +440,7 @@
     <string name="contacts_permission_disclosure">El acceso a los contactos busca nombres y correos localmente. Si eliges redactar, compartir o enviar esos datos a otra app o herramienta remota confirmada, ese destino los recibe.</string>
     <string name="calendar_permission_disclosure">El acceso al calendario lee datos locales de eventos. Crear eventos abre tu app de calendario, que puede sincronizarlos según sus ajustes de cuenta y red.</string>
     <string name="microphone_permission_disclosure">El micrófono permite medir sonido localmente o dictar. El dictado utiliza el proveedor de voz de Android y solicita reconocimiento sin conexión, pero el proveedor puede usar un servicio de red. Revisa sus ajustes antes de dictar información sensible.</string>
-    <string name="onboarding_privacy_body">El procesamiento de IA se realiza localmente. Las funciones opcionales de web, tiempo, compartir, denuncias y herramientas remotas confirmadas envían información seleccionada a otros servicios.</string>
+    <string name="onboarding_privacy_body">El procesamiento de IA se realiza localmente. Las funciones opcionales de tiempo, compartir, denuncias y herramientas remotas confirmadas envían información seleccionada a otros servicios.</string>
     <string name="confirm_proceed">¿Seguro que quieres continuar?</string>
     <string name="download_image_model_title">¿Descargar modelo de imágenes?</string>
     <string name="download_image_model_body">Chevere AI necesita un modelo local de generación de imágenes para crear imágenes en este dispositivo.</string>
@@ -575,7 +575,7 @@
     </plurals>
     <string name="add_task_button">AÑADIR</string>
     <string name="capability_image">La generación de imágenes no está disponible en está versión. Con un modelo de visión compatible, puedo describir imágenes adjuntas y ayudarte a extraer su texto.</string>
-    <string name="capability_overview">Puedo responder preguntas, ayudarte a escribir, explicar y depurar código en distintos lenguajes y plataformas, resumir, traducir, generar ideas y planificar tareas. Puedo buscar en documentos de texto y Markdown importados con /docs, analizar imágenes adjuntas con un modelo de visión compatible, buscar en la web, consultar el tiempo y gestionar tareas. Puedo consultar sensores del dispositivo cuando estén disponibles y autorizados y abrir pantallas de radar, detector de montantes o metales, nivel, luz, proximidad y sonido. También puedo copiar o compartir texto, abrir enlaces, mapas y apps, redactar correos, crear eventos del calendario y consultar los modelos locales. Con /mcp y un servidor HTTPS puedo descubrir y ejecutar herramientas remotas con tu confirmación; todavía no se admiten servidores que exijan inicio de sesión o tokens de API. La generación de imágenes no está disponible en está versión. Con un modelo de visión compatible, puedo describir imágenes adjuntas y extraer texto.</string>
+    <string name="capability_overview">Puedo responder preguntas, ayudarte a escribir, explicar y depurar código en distintos lenguajes y plataformas, resumir, traducir, generar ideas y planificar tareas. Puedo buscar en documentos de texto y Markdown importados con /docs, analizar imágenes adjuntas con un modelo de visión compatible, consultar el tiempo y gestionar tareas. Puedo consultar sensores del dispositivo cuando estén disponibles y autorizados y abrir pantallas de radar, detector de montantes o metales, nivel, luz, proximidad y sonido. También puedo copiar o compartir texto, abrir enlaces, mapas y apps, redactar correos, crear eventos del calendario y consultar los modelos locales. Con /mcp y un servidor HTTPS puedo descubrir y ejecutar herramientas remotas con tu confirmación; todavía no se admiten servidores que exijan inicio de sesión o tokens de API. La generación de imágenes no está disponible en está versión. Con un modelo de visión compatible, puedo describir imágenes adjuntas y extraer texto.</string>
     <string name="capability_sensors">Sí. Puedo consultar sensores del dispositivo: luz ambiental, presión, batería y temperaturas, movimiento del acelerómetro, giroscopio, brújula, proximidad, postura, nivelación, campo magnético y sonido ambiental mediante el micrófono, con los permisos correspondientes. También puedo abrir pantallas de sensores: /sensors para el panel completo, /stud para detectar montantes o metales, /level para el nivel de burbuja, /light para medir luz y /proximity para proximidad.</string>
     <string name="notification_downloading_model">Descargando %1$s</string>
     <string name="notification_download_progress">Progreso: %1$d%%</string>
@@ -769,4 +769,14 @@
     <string name="ui_minicpm_generation_failed">Falló la inferencia de MiniCPM. Prueba una solicitud más corta o vuelve a cargar el modelo.</string>
     <string name="ui_minicpm_storage_required">Este paquete necesita unos 17 GB de almacenamiento interno y 512 MB adicionales libres.</string>
     <string name="ui_minicpm_runtime">llama.cpp CPU experimental</string>
+    <string name="slash_voice_title">Nota de voz</string>
+    <string name="slash_voice_description">Grabar una nota de voz sin conexión con transcripción en vivo</string>
+    <string name="voice_input_button">Grabar nota de voz</string>
+    <string name="voice_listening_status">Escuchando</string>
+    <string name="voice_cancel">Cancelar grabación de voz</string>
+    <string name="voice_done">Finalizar grabación de voz</string>
+    <string name="voice_memo_summarize">Resumir nota</string>
+    <string name="voice_memo_extract_tasks">Extraer tareas</string>
+    <string name="voice_memo_save_docs">Guardar en /docs</string>
+    <string name="voice_memo_saved_toast">Guardado %1$s en documentos locales (%2$d fragmentos)</string>
 </resources>

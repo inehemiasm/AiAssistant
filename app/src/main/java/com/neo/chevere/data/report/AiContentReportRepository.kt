@@ -1,15 +1,17 @@
 package com.neo.chevere.data.report
 
+import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.neo.chevere.BuildConfig
 import com.neo.chevere.core.PiiUtils
 import com.neo.chevere.data.telemetry.AppTelemetry
-import kotlinx.coroutines.tasks.await
-import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withTimeout
 import timber.log.Timber
+import java.util.Date
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -18,12 +20,15 @@ private const val REPORTS_COLLECTION = "ai_content_reports"
 private const val FIRESTORE_TIMEOUT_MS = 4_000L
 private const val MAX_MESSAGE_SNIPPET_LENGTH = 500
 private const val MAX_DETAILS_LENGTH = 300
+private const val REPORT_RETENTION_DAYS = 90L
+private const val MILLIS_PER_DAY = 24L * 60L * 60L * 1000L
 
 /**
  * Handles in-app user reports of offensive, inaccurate, or inappropriate AI-generated responses.
  *
  * Supports in-app reporting by persisting scrubbed reports to
- * Cloud Firestore (`ai_content_reports`) and recording an anonymized telemetry signal.
+ * Cloud Firestore (`ai_content_reports`) with a 90-day TTL expiration (`expiresAt`)
+ * and recording an anonymized telemetry signal.
  */
 @Singleton
 class AiContentReportRepository @Inject constructor(
@@ -46,6 +51,7 @@ class AiContentReportRepository @Inject constructor(
         val safeModel = PiiUtils.scrub(modelName ?: "unknown").take(80)
         val safeSnippet = PiiUtils.scrub(messageText).take(MAX_MESSAGE_SNIPPET_LENGTH)
         val safeDetails = PiiUtils.scrub(additionalDetails).take(MAX_DETAILS_LENGTH)
+        val expiresAt = Timestamp(Date(System.currentTimeMillis() + REPORT_RETENTION_DAYS * MILLIS_PER_DAY))
 
         telemetry.logAiContentReported(reason = safeReason, modelId = safeModel)
 
@@ -55,7 +61,8 @@ class AiContentReportRepository @Inject constructor(
             "messageSnippet" to safeSnippet,
             "details" to safeDetails,
             "appVersion" to BuildConfig.VERSION_NAME,
-            "createdAt" to FieldValue.serverTimestamp()
+            "createdAt" to FieldValue.serverTimestamp(),
+            "expiresAt" to expiresAt
         )
 
         withTimeout(FIRESTORE_TIMEOUT_MS) {

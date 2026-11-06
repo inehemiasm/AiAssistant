@@ -44,6 +44,29 @@ sealed interface ComposerActionButtonState {
 }
 
 /**
+ * Explicit MVI state for the Whisper-style continuous voice listener and post-recording memo bar.
+ */
+sealed interface VoiceRecordingState {
+    data object Idle : VoiceRecordingState
+    data class Listening(
+        val amplitude: Float = 0.1f,
+        val elapsedSeconds: Int = 0
+    ) : VoiceRecordingState
+    data class Recorded(
+        val transcript: String
+    ) : VoiceRecordingState
+}
+
+/**
+ * One-tap post-recording actions available after finishing a voice memo.
+ */
+enum class VoiceMemoAction {
+    SUMMARIZE,
+    EXTRACT_TASKS,
+    SAVE_TO_DOCS
+}
+
+/**
  * The UI state for the Chat screen.
  */
 data class ChatState(
@@ -63,6 +86,8 @@ data class ChatState(
     val streamingText: String = "",
     /** True while the microphone is actively recording for speech-to-text. */
     val isListening: Boolean = false,
+    /** Explicit state for the continuous voice listener and post-recording memo actions. */
+    val voiceRecordingState: VoiceRecordingState = VoiceRecordingState.Idle,
     /** The ID of the currently active persisted session, or null for a brand-new unsaved session. */
     val currentSessionId: Long? = null,
     /** History sessions shown in the history bottom sheet. */
@@ -179,10 +204,14 @@ sealed class ChatIntent : UiIntent {
     data object RetryLastMessage : ChatIntent()
     /** Start offline speech-to-text recording. */
     data object StartVoiceInput : ChatIntent()
-    /** Stop the active speech-to-text recording session. */
+    /** Stop the active speech-to-text recording session and commit the transcript. */
     data object StopVoiceInput : ChatIntent()
+    /** Cancel the active speech-to-text recording session and discard any buffered text. */
+    data object CancelVoiceInput : ChatIntent()
     /** Deliver a completed STT transcript back to the input field. */
     data class VoiceInputResult(val text: String) : ChatIntent()
+    /** Execute a one-tap post-recording action on the captured voice memo. */
+    data class RunVoiceMemoAction(val action: VoiceMemoAction) : ChatIntent()
     // ── Chat History ─────────────────────────────────────────────────────────
     /** Starts a fresh, unsaved conversation (the current session is kept in history). */
     data object NewConversation : ChatIntent()

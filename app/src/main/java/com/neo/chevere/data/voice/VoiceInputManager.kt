@@ -1,12 +1,12 @@
 package com.neo.chevere.data.voice
 
-import com.neo.chevere.R
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
+import com.neo.chevere.R
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -19,26 +19,26 @@ private const val TAG = "VoiceInputManager"
 
 /** Results emitted by [VoiceInputManager.results]. */
 sealed class VoiceResult {
-    /** Partial (in-progress) transcription update; text may still change. */
+    /** Partial (in-progress) transcription update across continuous segments; text may still change. */
     data class Partial(val text: String) : VoiceResult()
     /** Final transcription; recording is done and this text is committed. */
     data class Final(val text: String) : VoiceResult()
+    /** Normalized microphone RMS level in `0f..1f` for driving reactive UI waveform bars. */
+    data class Amplitude(val normalized: Float) : VoiceResult()
+    /** User explicitly cancelled the recording session without keeping the transcript. */
+    data object Cancelled : VoiceResult()
     /** An error occurred during speech recognition. */
     data class Error(val message: String) : VoiceResult()
 }
 
 /**
- * A thin wrapper around Android's [SpeechRecognizer] that surfaces voice-input results as a
- * [Flow] of [VoiceResult] events.
+ * Continuous offline-first voice listener built on Android's [SpeechRecognizer] that supports
+ * Whisper-style multi-sentence voice notes across pauses, live RMS waveform telemetry, and
+ * explicit Done/Cancel controls.
  *
- * Uses [RecognizerIntent.EXTRA_PREFER_OFFLINE] so recognition runs fully on-device when a
- * language pack is installed. The system degrades gracefully to network recognition when no
- * offline pack is available, rather than failing hard.
- *
- * The [results] channel is a [Channel.UNLIMITED] broadcast so that collectors can process events
- * without back-pressure blocking the [RecognitionListener] callbacks (which arrive on the main
- * thread). A new [SpeechRecognizer] instance is created per [startListening] call so that the
- * recognizer state machine is always fresh, avoiding subtle restart bugs.
+ * Uses [RecognizerIntent.EXTRA_PREFER_OFFLINE] so recognition runs locally when an offline
+ * model pack is installed, and automatically chains recognition segments while [isSessionActive]
+ * remains true so natural pauses do not prematurely terminate a long voice note.
  */
 @Singleton
 class VoiceInputManager @Inject constructor(
@@ -50,55 +50,158 @@ class VoiceInputManager @Inject constructor(
     val results: Flow<VoiceResult> = _results.receiveAsFlow()
 
     private var recognizer: SpeechRecognizer? = null
+    private var isSessionActive: Boolean = false
+    private val committedSegments = mutableListOf<String>()
+    private var latestSegmentPartial: String = ""
 
     /**
-     * Starts a new recognition session.
+     * Starts a new continuous voice listening session.
      *
      * Must be called from the **main thread** (Android SpeechRecognizer requirement).
      */
     fun startListening() {
         stopAndDestroyRecognizer()
+        committedSegments.clear()
+        latestSegmentPartial = ""
+
         if (!SpeechRecognizer.isRecognitionAvailable(context)) {
-            _results.trySend(VoiceResult.Error(context.getString(R.string.ui_speech_recognition_is_not_available_on_this_device)))
+            isSessionActive = false
+            _results.trySend(
+                VoiceResult.Error(
+                    context.getString(R.string.ui_speech_recognition_is_not_available_on_this_device)
+                )
+            )
             return
         }
+
+        isSessionActive = true
+        startRecognizerSegment()
+    }
+
+    /**
+     * Finishes the active recognition session and commits all accumulated speech segments
+     * as a [VoiceResult.Final] event.
+     *
+     * Must be called from the **main thread**.
+     */
+    fun stopListening() {
+        val wasActive = isSessionActive
+        isSessionActive = false
+        try {
+            recognizer?.stopListening()
+        } catch (_: Exception) {
+        }
+        stopAndDestroyRecognizer()
+        if (wasActive) {
+            val finalTranscript = buildFullTranscript(latestSegmentPartial)
+            committedSegments.clear()
+            latestSegmentPartial = ""
+            _results.trySend(VoiceResult.Final(finalTranscript))
+        }
+    }
+
+    /**
+     * Cancels the active recognition session immediately and discards any buffered text.
+     *
+     * Must be called from the **main thread**.
+     */
+    fun cancelListening() {
+        isSessionActive = false
+        committedSegments.clear()
+        latestSegmentPartial = ""
+        try {
+            recognizer?.cancel()
+        } catch (_: Exception) {
+        }
+        stopAndDestroyRecognizer()
+        _results.trySend(VoiceResult.Cancelled)
+    }
+
+    private fun startRecognizerSegment() {
+        if (!isSessionActive) return
+        stopAndDestroyRecognizer()
 
         recognizer = SpeechRecognizer.createSpeechRecognizer(context).also { sr ->
             sr.setRecognitionListener(object : RecognitionListener {
                 override fun onReadyForSpeech(params: Bundle?) {
-                    Timber.tag(TAG).d("Ready for speech")
+                    Timber.tag(TAG).d("Ready for speech segment")
                 }
 
                 override fun onBeginningOfSpeech() {
-                    Timber.tag(TAG).d("Speech started")
+                    Timber.tag(TAG).d("Speech segment started")
                 }
 
-                override fun onRmsChanged(rmsdB: Float) = Unit
+                override fun onRmsChanged(rmsdB: Float) {
+                    if (!isSessionActive) return
+                    // Typical SpeechRecognizer rmsdB ranges from -2f to +10f
+                    val normalized = ((rmsdB + 2f) / 12f).coerceIn(0.05f, 1.0f)
+                    _results.trySend(VoiceResult.Amplitude(normalized))
+                }
+
                 override fun onBufferReceived(buffer: ByteArray?) = Unit
+
                 override fun onEndOfSpeech() {
-                    Timber.tag(TAG).d("Speech ended")
+                    Timber.tag(TAG).d("Speech segment ended")
                 }
 
                 override fun onError(error: Int) {
-                    val message = speechErrorToMessage(error)
-                    Timber.tag(TAG).w("Recognition error $error: $message")
-                    _results.trySend(VoiceResult.Error(message))
+                    if (!isSessionActive) return
+
+                    // During continuous Whisper-style memo recording, a pause between sentences
+                    // triggers ERROR_NO_MATCH or ERROR_SPEECH_TIMEOUT. Keep the session alive
+                    // and start the next segment seamlessly.
+                    if (error == SpeechRecognizer.ERROR_NO_MATCH ||
+                        error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT
+                    ) {
+                        Timber.tag(TAG).d("Pause detected ($error); continuing listening session")
+                        startRecognizerSegment()
+                        return
+                    }
+
+                    isSessionActive = false
+                    val existing = buildFullTranscript(latestSegmentPartial)
+                    if (existing.isNotBlank()) {
+                        committedSegments.clear()
+                        latestSegmentPartial = ""
+                        _results.trySend(VoiceResult.Final(existing))
+                    } else {
+                        val message = speechErrorToMessage(error)
+                        Timber.tag(TAG).w("Recognition error $error: $message")
+                        _results.trySend(VoiceResult.Error(message))
+                    }
                 }
 
                 override fun onResults(results: Bundle?) {
-                    val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                    val best = matches?.firstOrNull().orEmpty()
-                    Timber.tag(TAG).d("Final result: \"$best\"")
-                    _results.trySend(VoiceResult.Final(best))
+                    val segment = results
+                        ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                        ?.firstOrNull()
+                        ?.trim()
+                        .orEmpty()
+
+                    if (segment.isNotBlank()) {
+                        committedSegments.add(segment)
+                    }
+                    latestSegmentPartial = ""
+                    val full = buildFullTranscript("")
+                    if (full.isNotBlank()) {
+                        _results.trySend(VoiceResult.Partial(full))
+                    }
+
+                    if (isSessionActive) {
+                        startRecognizerSegment()
+                    }
                 }
 
                 override fun onPartialResults(partialResults: Bundle?) {
+                    if (!isSessionActive) return
                     val partial = partialResults
                         ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                         ?.firstOrNull()
+                        ?.trim()
                         .orEmpty()
                     if (partial.isNotBlank()) {
-                        _results.trySend(VoiceResult.Partial(partial))
+                        latestSegmentPartial = partial
+                        _results.trySend(VoiceResult.Partial(buildFullTranscript(partial)))
                     }
                 }
 
@@ -113,23 +216,31 @@ class VoiceInputManager @Inject constructor(
                 putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
                 putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
                 putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+                putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 2500L)
+                putExtra(
+                    RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS,
+                    2000L
+                )
             }
             sr.startListening(intent)
         }
     }
 
-    /**
-     * Stops the active recognition session early.
-     *
-     * Must be called from the **main thread**.
-     */
-    fun stopListening() {
-        recognizer?.stopListening()
-        stopAndDestroyRecognizer()
+    private fun buildFullTranscript(currentPartial: String): String {
+        val base = committedSegments.joinToString(" ").trim()
+        val tail = currentPartial.trim()
+        return when {
+            base.isEmpty() -> tail
+            tail.isEmpty() -> base
+            else -> "$base $tail"
+        }
     }
 
     private fun stopAndDestroyRecognizer() {
-        recognizer?.destroy()
+        try {
+            recognizer?.destroy()
+        } catch (_: Exception) {
+        }
         recognizer = null
     }
 

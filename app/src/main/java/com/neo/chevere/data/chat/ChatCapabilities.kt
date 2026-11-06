@@ -4,7 +4,7 @@ package com.neo.chevere.data.chat
 internal object ChatCapabilities {
     const val IMAGE_UNAVAILABLE = "Image generation is not available in this build. With a compatible vision model, I can describe attached images and help extract text from them."
     const val OVERVIEW = "I can answer questions, help with writing, explain and debug code across languages and platforms, summarize, translate, brainstorm, and help plan tasks. " +
-        "In this app I can search imported text and Markdown documents with /docs, analyze attached images with a compatible vision model, search the web, check weather, and manage tasks. " +
+        "In this app I can search imported text and Markdown documents with /docs, analyze attached images with a compatible vision model, check weather, and manage tasks. " +
         "I can read live device sensor readings when supported and permitted, and open sensor screens for radar, stud finder or metal detector, spirit level, light, proximity, and sound. " +
         "I can also copy or share text, open links, maps and installed apps, draft email, create calendar events, and check local model information. " +
         "With /mcp and an HTTPS server endpoint, I can discover and call remote tools with your confirmation; servers requiring sign-in or API tokens are not supported yet. " +

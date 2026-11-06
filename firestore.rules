@@ -1,29 +1,106 @@
 rules_version = '2';
 
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: models
+// Document ID: {modelId}
+// Fields:
+//   - name: string (required) - model display name
+//   - fileName: string (required) - artifact filename
+//   - downloadUrl: string (required) - HTTPS model download URL
+//   - sizeBytes: number (required) - artifact byte size
+//   - sha256: string (optional) - integrity checksum
+//   - runtime: string (required) - model runtime identifier
+//   - format: string (required) - model file format
+//   - taskTypes: list (optional) - supported task types
+//   - capabilities: list (optional) - supported capabilities
+// Access: Public read-only catalog; all client writes denied.
+//
+// Collection: ai_content_reports
+// Document ID: {reportId} (auto-generated)
+// Fields:
+//   - reason: string (required, 1..80 chars, immutable) - report category/reason
+//   - modelName: string (required, 1..80 chars, immutable) - active model identifier
+//   - messageSnippet: string (required, 1..500 chars, immutable) - PII-scrubbed response excerpt
+//   - details: string (required, 0..300 chars, immutable) - optional user notes (empty string allowed)
+//   - appVersion: string (required, 1..64 chars, immutable) - client semantic version
+//   - createdAt: timestamp (required, equals request.time, immutable) - server creation timestamp
+//   - expiresAt: timestamp (required, 89..91 days after request.time, immutable) - 90-day TTL expiration
+// Access: Create-only with strict schema/size/timestamp validation (paired with Firebase App Check Play Integrity);
+//         all client reads, updates, and deletes denied.
+//
+// ===============================================================
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // -------------------------------------------------------------------------
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function hasOnlyAllowedFields(data, allowedFields) {
+      return data.keys().hasOnly(allowedFields);
+    }
+
+    function hasRequiredFields(data, requiredFields) {
+      return data.keys().hasAll(requiredFields);
+    }
+
+    function validStringLength(data, field, minLen, maxLen) {
+      return data[field] is string
+        && data[field].size() >= minLen
+        && data[field].size() <= maxLen;
+    }
+
+    function isValidReportExpiration(data) {
+      return data.expiresAt is timestamp
+        && data.expiresAt >= request.time + duration.value(89, 'd')
+        && data.expiresAt <= request.time + duration.value(91, 'd');
+    }
+
+    function isValidAiContentReport(data) {
+      let allowed = [
+        'reason',
+        'modelName',
+        'messageSnippet',
+        'details',
+        'appVersion',
+        'createdAt',
+        'expiresAt'
+      ];
+      return hasOnlyAllowedFields(data, allowed)
+        && hasRequiredFields(data, allowed)
+        && validStringLength(data, 'reason', 1, 80)
+        && validStringLength(data, 'modelName', 1, 80)
+        && validStringLength(data, 'messageSnippet', 1, 500)
+        && validStringLength(data, 'details', 0, 300)
+        && validStringLength(data, 'appVersion', 1, 64)
+        && data.createdAt is timestamp
+        && data.createdAt == request.time
+        && isValidReportExpiration(data);
+    }
+
+    // ===============================================================
     // Public Model Catalog (read-only for clients)
-    // -------------------------------------------------------------------------
+    // ===============================================================
     match /models/{modelId} {
-      allow get, list: if true;
+      allow read: if true;
       allow create, update, delete: if false;
     }
 
-    // -------------------------------------------------------------------------
-    // AI-Generated Content Reports (create-only with strict schema validation)
-    // -------------------------------------------------------------------------
+    // ===============================================================
+    // AI-Generated Content Reports (create-only with strict validation)
+    // ===============================================================
     match /ai_content_reports/{reportId} {
-      // Public intake stays closed until verified app/server intake is deployed.
-      // Schema validation alone does not authenticate or rate-limit a sender.
-      allow create: if false;
-      allow get, list, update, delete: if false;
+      allow create: if isValidAiContentReport(request.resource.data);
+      allow read, update, delete: if false;
     }
 
-    // -------------------------------------------------------------------------
+    // ===============================================================
     // Default Deny
-    // -------------------------------------------------------------------------
+    // ===============================================================
     match /{document=**} {
       allow read, write: if false;
     }

@@ -37,8 +37,6 @@ import com.neo.chevere.data.agent.tools.SummarizeTextTool
 import com.neo.chevere.data.agent.tools.TaskRegistryTool
 import com.neo.chevere.data.datasource.local.ConversationHistoryDao
 import com.neo.chevere.data.agent.tools.WeatherTool
-import com.neo.chevere.data.agent.tools.WebSearchTool
-import com.neo.chevere.data.datasource.local.SearchCacheDao
 import com.neo.chevere.domain.TaskRepository
 import com.neo.chevere.data.inference.ImageGenerationManager
 import com.neo.chevere.domain.InstalledModelRegistry
@@ -67,16 +65,6 @@ abstract class AgentModule {
         @IntoSet
         fun provideSummarizeTextTool(): AgentTool {
             return SummarizeTextTool()
-        }
-
-        @Provides
-        @IntoSet
-        fun provideWebSearchTool(
-            @ApplicationContext context: Context,
-            httpClient: HttpClient,
-            searchCacheDao: SearchCacheDao
-        ): AgentTool {
-            return WebSearchTool(context, httpClient, searchCacheDao)
         }
 
         @Provides

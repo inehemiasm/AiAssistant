@@ -8,6 +8,13 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ChatRequestRouterTest {
+    @Test fun webSearchRequestsDoNotRouteToOnlineTools() {
+        val router = ChatRequestRouter()
+        listOf("search the web for Kotlin releases", "latest news", "look up current stock prices").forEach {
+            assertEquals(RoutingCategory.DIRECT_CHAT, router.classifyRequest(it))
+        }
+    }
+
     private val router = ChatRequestRouter()
 
     @Test fun invoiceQuestionsUseOrdinaryChatWithoutSavingTools() {

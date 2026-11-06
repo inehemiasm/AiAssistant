@@ -136,7 +136,7 @@ class ScreenshotTest {
     }
 
     @Test
-    fun captureChatScreen_withWebSearchToolRunning() {
+    fun captureChatScreen_withWeatherToolRunning() {
         composeTestRule.setContent {
             HighTechAiTheme(darkTheme = true) {
                 ChatContent(

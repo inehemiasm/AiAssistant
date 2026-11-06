@@ -92,13 +92,6 @@ object Constants {
             "Image generation is not available in this build. Compatible vision models can analyze attached images."
     }
 
-    object WebSearch {
-        const val SERPER_API_URL = "https://google.serper.dev/search"
-        const val CACHE_EXPIRATION_MS = 3600_000L * 24 // 24 hours
-        const val MAX_CACHE_SIZE = 50
-        const val DEFAULT_HTTP_PROTOCOL = "https://"
-    }
-
     object Inference {
         /** Total native KV-cache budget: input, templates, and generated output combined. */
         const val MAX_CONTEXT_TOKENS = 4096

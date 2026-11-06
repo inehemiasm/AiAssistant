@@ -1,12 +1,9 @@
 package com.neo.chevere.ui.chat.components
 
-import androidx.compose.ui.platform.LocalResources
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.contentDescription
-
 import android.net.Uri
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -16,18 +13,24 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -35,9 +38,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddPhotoAlternate
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.Summarize
 import androidx.compose.material3.ContainedLoadingIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -49,7 +57,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
-import com.neo.chevere.ui.chat.ComposerActionButtonState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -63,8 +70,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -74,15 +85,16 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.neo.chevere.R
 import com.neo.chevere.core.Constants
+import com.neo.chevere.ui.chat.ComposerActionButtonState
+import com.neo.chevere.ui.chat.VoiceMemoAction
+import com.neo.chevere.ui.chat.VoiceRecordingState
 import com.neo.chevere.ui.designsystem.Typography
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import java.util.Locale
+import kotlin.math.sin
 
 /**
- * Bottom chat composer with attachment actions, text entry, busy status, and stop/send control.
+ * Bottom chat composer with attachment actions, text entry, Whisper-style continuous voice
+ * listener, post-recording voice memo actions, busy status, and stop/send control.
  */
 @Composable
 fun ChatInputBar(
@@ -101,10 +113,16 @@ fun ChatInputBar(
     busyMessage: String = Constants.UiStatus.THINKING,
     suggestions: List<String> = emptyList(),
     onSuggestionClick: (String) -> Unit = {},
+    voiceRecordingState: VoiceRecordingState = VoiceRecordingState.Idle,
+    onStartVoiceClick: () -> Unit = {},
+    onStopVoiceClick: () -> Unit = {},
+    onCancelVoiceClick: () -> Unit = {},
+    onVoiceMemoActionClick: (VoiceMemoAction) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var showAttachmentMenu by remember { mutableStateOf(false) }
     val isBusy = buttonState is ComposerActionButtonState.Stop
+    val isListening = voiceRecordingState is VoiceRecordingState.Listening
 
     // Slash command autocomplete: filter whenever text starts with '/'
     val slashSuggestions: List<SlashCommand> by remember(text) {
@@ -127,7 +145,33 @@ fun ChatInputBar(
             )
         }
 
-        if (suggestions.isNotEmpty() && !isBusy && slashSuggestions.isEmpty()) {
+        // Active Whisper-style continuous voice listening banner with reactive waveform
+        AnimatedVisibility(
+            visible = voiceRecordingState is VoiceRecordingState.Listening && !isBusy,
+            enter = expandVertically(expandFrom = Alignment.Bottom) + fadeIn(tween(160)),
+            exit = shrinkVertically(shrinkTowards = Alignment.Bottom) + fadeOut(tween(120))
+        ) {
+            val listeningState = voiceRecordingState as? VoiceRecordingState.Listening
+                ?: VoiceRecordingState.Listening()
+            VoiceRecordingBanner(
+                state = listeningState,
+                onCancel = onCancelVoiceClick,
+                onDone = onStopVoiceClick
+            )
+        }
+
+        // Post-recording Whisper Memo quick actions (Summarize, Extract Tasks, Save to /docs)
+        AnimatedVisibility(
+            visible = voiceRecordingState is VoiceRecordingState.Recorded && text.isNotBlank() && !isBusy,
+            enter = expandVertically(expandFrom = Alignment.Bottom) + fadeIn(tween(160)),
+            exit = shrinkVertically(shrinkTowards = Alignment.Bottom) + fadeOut(tween(120))
+        ) {
+            VoiceMemoActionRow(
+                onActionClick = onVoiceMemoActionClick
+            )
+        }
+
+        if (suggestions.isNotEmpty() && !isBusy && slashSuggestions.isEmpty() && voiceRecordingState is VoiceRecordingState.Idle) {
             LazyRow(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -146,15 +190,19 @@ fun ChatInputBar(
 
         // Slash command autocomplete popup (appears above the input bar)
         AnimatedVisibility(
-            visible = slashSuggestions.isNotEmpty() && !isBusy,
+            visible = slashSuggestions.isNotEmpty() && !isBusy && !isListening,
             enter = expandVertically(expandFrom = Alignment.Bottom) + fadeIn(tween(160)),
             exit = shrinkVertically(shrinkTowards = Alignment.Bottom) + fadeOut(tween(120))
         ) {
             SlashCommandMenu(
                 commands = slashSuggestions,
                 onSelect = { command ->
-                    // Fill with command + space so the user can type a prompt directly
-                    onTextChange("$command ")
+                    if (command == "/voice") {
+                        onTextChange("")
+                        onStartVoiceClick()
+                    } else {
+                        onTextChange("$command ")
+                    }
                 }
             )
         }
@@ -181,8 +229,9 @@ fun ChatInputBar(
                 )
                 .border(
                     BorderStroke(
-                        1.dp,
-                        if (enabled) MaterialTheme.colorScheme.primary.copy(alpha = 0.22f)
+                        if (isListening) 1.5.dp else 1.dp,
+                        if (isListening) MaterialTheme.colorScheme.primary
+                        else if (enabled) MaterialTheme.colorScheme.primary.copy(alpha = 0.22f)
                         else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
                     ),
                     inputShape
@@ -194,11 +243,7 @@ fun ChatInputBar(
                 targetState = isBusy,
                 transitionSpec = {
                     fadeIn(animationSpec = tween(160)).togetherWith(
-                        fadeOut(
-                            animationSpec = tween(
-                                120
-                            )
-                        )
+                        fadeOut(animationSpec = tween(120))
                     )
                 },
                 label = "InputContent",
@@ -216,6 +261,10 @@ fun ChatInputBar(
                         text = text,
                         onTextChange = onTextChange,
                         enabled = enabled,
+                        isListening = isListening,
+                        onVoiceButtonClick = {
+                            if (isListening) onStopVoiceClick() else onStartVoiceClick()
+                        },
                         showAttachmentMenu = showAttachmentMenu,
                         onShowAttachmentMenu = { showAttachmentMenu = true },
                         onDismissAttachmentMenu = { showAttachmentMenu = false },
@@ -231,6 +280,207 @@ fun ChatInputBar(
                 state = buttonState,
                 onSend = onSend,
                 onStop = onStop
+            )
+        }
+    }
+}
+
+@Composable
+private fun VoiceRecordingBanner(
+    state: VoiceRecordingState.Listening,
+    onCancel: () -> Unit,
+    onDone: () -> Unit
+) {
+    val minutes = state.elapsedSeconds / 60
+    val seconds = state.elapsedSeconds % 60
+    val formattedTime = String.format(Locale.US, "%02d:%02d", minutes, seconds)
+
+    Surface(
+        shape = RoundedCornerShape(22.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.96f),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.45f)),
+        shadowElevation = 8.dp,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 10.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Cancel recording button
+            IconButton(
+                onClick = onCancel,
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.35f))
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = stringResource(R.string.voice_cancel),
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+
+            Spacer(Modifier.width(10.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .background(MaterialTheme.colorScheme.primary, CircleShape)
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = stringResource(R.string.voice_listening_status),
+                        style = Typography.labelSmall.copy(
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.sp
+                        ),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(Modifier.weight(1f))
+                    Text(
+                        text = formattedTime,
+                        style = Typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
+                Spacer(Modifier.height(6.dp))
+
+                VoiceWaveformBars(
+                    amplitude = state.amplitude,
+                    tick = state.elapsedSeconds
+                )
+            }
+
+            Spacer(Modifier.width(10.dp))
+
+            // Done / Commit recording button
+            IconButton(
+                onClick = onDone,
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = stringResource(R.string.voice_done),
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun VoiceWaveformBars(
+    amplitude: Float,
+    tick: Int
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(22.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        val barCount = 16
+        for (i in 0 until barCount) {
+            val waveOffset = ((sin((i * 0.7f) + (tick * 1.3f)) + 1f) * 0.5f).toFloat()
+            val targetFraction = (amplitude * (0.45f + 0.55f * waveOffset)).coerceIn(0.15f, 1f)
+            val animatedFraction by animateFloatAsState(
+                targetValue = targetFraction,
+                animationSpec = tween(durationMillis = 120),
+                label = "WaveformBar$i"
+            )
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .height((22f * animatedFraction).dp)
+                    .clip(RoundedCornerShape(3.dp))
+                    .background(
+                        MaterialTheme.colorScheme.primary.copy(
+                            alpha = (0.45f + 0.55f * animatedFraction).coerceIn(0.4f, 1f)
+                        )
+                    )
+            )
+        }
+    }
+}
+
+@Composable
+private fun VoiceMemoActionRow(
+    onActionClick: (VoiceMemoAction) -> Unit
+) {
+    LazyRow(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 10.dp, start = 4.dp, end = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        contentPadding = PaddingValues(horizontal = 4.dp)
+    ) {
+        item {
+            VoiceMemoActionChip(
+                icon = Icons.Default.Summarize,
+                label = stringResource(R.string.voice_memo_summarize),
+                onClick = { onActionClick(VoiceMemoAction.SUMMARIZE) }
+            )
+        }
+        item {
+            VoiceMemoActionChip(
+                icon = Icons.Default.Checklist,
+                label = stringResource(R.string.voice_memo_extract_tasks),
+                onClick = { onActionClick(VoiceMemoAction.EXTRACT_TASKS) }
+            )
+        }
+        item {
+            VoiceMemoActionChip(
+                icon = Icons.Default.Description,
+                label = stringResource(R.string.voice_memo_save_docs),
+                onClick = { onActionClick(VoiceMemoAction.SAVE_TO_DOCS) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun VoiceMemoActionChip(
+    icon: ImageVector,
+    label: String,
+    onClick: () -> Unit
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f),
+        contentColor = MaterialTheme.colorScheme.primary,
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)),
+        modifier = Modifier.clickable(onClick = onClick)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(16.dp)
+            )
+            Spacer(Modifier.width(6.dp))
+            Text(
+                text = label,
+                style = Typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                color = MaterialTheme.colorScheme.onSurface
             )
         }
     }
@@ -287,6 +537,8 @@ private fun ComposerContent(
     text: String,
     onTextChange: (String) -> Unit,
     enabled: Boolean,
+    isListening: Boolean,
+    onVoiceButtonClick: () -> Unit,
     showAttachmentMenu: Boolean,
     onShowAttachmentMenu: () -> Unit,
     onDismissAttachmentMenu: () -> Unit,
@@ -315,8 +567,14 @@ private fun ComposerContent(
                 .padding(vertical = 2.dp),
             placeholder = {
                 Text(
-                    stringResource(R.string.input_placeholder),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f),
+                    stringResource(
+                        if (isListening) R.string.voice_listening_status else R.string.input_placeholder
+                    ),
+                    color = if (isListening) {
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f)
+                    },
                     style = Typography.bodyMedium
                 )
             },
@@ -340,10 +598,34 @@ private fun ComposerContent(
                 imeAction = ImeAction.Default
             )
         )
+
+        IconButton(
+            onClick = onVoiceButtonClick,
+            enabled = enabled || isListening,
+            modifier = Modifier
+                .padding(end = 4.dp, bottom = 2.dp)
+                .size(44.dp)
+                .clip(CircleShape)
+                .background(
+                    if (isListening) MaterialTheme.colorScheme.primary.copy(alpha = 0.22f)
+                    else Color.Transparent
+                )
+        ) {
+            Icon(
+                imageVector = if (isListening) Icons.Default.Check else Icons.Default.Mic,
+                contentDescription = stringResource(
+                    if (isListening) R.string.voice_done else R.string.voice_input_button
+                ),
+                tint = if (isListening) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                },
+                modifier = Modifier.size(22.dp)
+            )
+        }
     }
 }
-
-
 
 @Composable
 private fun AttachmentButton(
@@ -580,7 +862,6 @@ private fun SlashCommandRow(
             .padding(horizontal = 14.dp, vertical = 11.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Command badge
         Surface(
             color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
             shape = RoundedCornerShape(8.dp)

@@ -58,7 +58,7 @@
     <string name="safety_privacy">SICHERHEIT UND DATENSCHUTZ</string>
     <string name="local_first_ai">KI mit Vorrang für lokale Verarbeitung</string>
     <string name="offline_processing">Offline-Verarbeitung</string>
-    <string name="offline_processing_desc">Chat- und Bildanalyseinferenz laufen mit installierten lokalen Modellen. Optionale Netzwerkfunktionen umfassen Kataloge, Downloads, Web- und Wetterwerkzeuge, Meldungen, Teilen und bestätigte entfernte Werkzeuge.</string>
+    <string name="offline_processing_desc">Chat- und Bildanalyseinferenz laufen mit installierten lokalen Modellen. Optionale Netzwerkfunktionen umfassen Kataloge, Downloads, Wetterwerkzeuge, Meldungen, Teilen und bestätigte entfernte Werkzeuge.</string>
     <string name="release_content_controls">KI-Inhaltssicherheit und Meldungen</string>
     <string name="release_content_controls_desc">Sie können anstößige, unsichere oder falsche KI-Antworten melden. Persönliche Kennungen werden vor dem Senden bestmöglich entfernt; dies ist nicht garantiert. Geben Sie keine sensiblen Informationen an.</string>
     <string name="user_controlled_sharing">Teilen unter deiner Kontrolle</string>
@@ -425,7 +425,7 @@
     <string name="stop_reading_aloud">Vorlesen beenden</string>
     <string name="start_voice_input">Spracheingabe starten</string>
     <string name="stop_voice_input">Spracheingabe beenden</string>
-    <string name="local_first_ai_desc">Die Modellinferenz läuft lokal. Web- und Wetterwerkzeuge, Downloads, Meldungen, Teilen und bestätigte MCP-Aufrufe senden ausgewählte Daten an externe Dienste.</string>
+    <string name="local_first_ai_desc">Die Modellinferenz läuft lokal. Wetterwerkzeuge, Downloads, Meldungen, Teilen und bestätigte MCP-Aufrufe senden ausgewählte Daten an externe Dienste.</string>
     <string name="local_storage_privacy_desc">Chats, Dokumente, Aufgaben und Modelle nutzen den privaten App-Speicher. Das Löschen eines Chats löscht keine anderen Daten. Das Leeren des App-Speichers entfernt lokale Daten; geteilte Dateien und gesendete Meldungen sind davon getrennt.</string>
     <string name="camera_permission_required">Zum Fotografieren ist eine Kameraberechtigung erforderlich.</string>
     <string name="location_permission_granted">Standortberechtigung erteilt.</string>
@@ -440,7 +440,7 @@
     <string name="contacts_permission_disclosure">Der Kontaktzugriff durchsucht Namen und E-Mail-Adressen lokal. Wenn Sie diese Angaben in einem Entwurf verwenden, teilen oder an eine andere App oder ein bestätigtes entferntes Werkzeug senden, erhält das Ziel diese Daten.</string>
     <string name="calendar_permission_disclosure">Der Kalenderzugriff liest lokale Termindaten. Zum Erstellen von Terminen wird Ihre Kalender-App geöffnet. Diese kann Termine gemäß ihren eigenen Konto- und Netzwerkeinstellungen synchronisieren.</string>
     <string name="microphone_permission_disclosure">Der Mikrofonzugriff dient zur lokalen Schallmessung oder Spracheingabe. Die Spracheingabe nutzt Ihren Android-Sprachanbieter und fordert Offline-Erkennung an; der Anbieter kann jedoch einen Netzwerkdienst verwenden. Prüfen Sie dessen Einstellungen, bevor Sie sensible Angaben diktieren.</string>
-    <string name="onboarding_privacy_body">Die KI-Verarbeitung läuft lokal. Optionale Web-, Wetter-, Teilen- und Meldefunktionen sowie bestätigte entfernte Werkzeuge senden ausgewählte Informationen an andere Dienste.</string>
+    <string name="onboarding_privacy_body">Die KI-Verarbeitung läuft lokal. Optionale Wetter-, Teilen- und Meldefunktionen sowie bestätigte entfernte Werkzeuge senden ausgewählte Informationen an andere Dienste.</string>
     <string name="confirm_proceed">Möchten Sie wirklich fortfahren?</string>
     <string name="download_image_model_title">Bildmodell herunterladen?</string>
     <string name="download_image_model_body">Chevere AI benötigt ein lokales Bildgenerierungsmodell, um auf diesem Gerät Bilder zu erstellen.</string>
@@ -575,7 +575,7 @@
     </plurals>
     <string name="add_task_button">HINZUFÜGEN</string>
     <string name="capability_image">Bildgenerierung ist in dieser Version nicht verfügbar. Mit einem kompatiblen Bildanalysemodell kann ich angehängte Bilder beschreiben und beim Extrahieren von Text helfen.</string>
-    <string name="capability_overview">Ich kann Fragen beantworten, beim Schreiben helfen, Code verschiedener Sprachen und Plattformen erklären und debuggen, zusammenfassen, übersetzen, Ideen sammeln und Aufgaben planen. Mit /docs kann ich importierte Text- und Markdown-Dokumente durchsuchen, mit einem kompatiblen Bildanalysemodell Anhänge analysieren, im Web suchen, das Wetter abrufen und Aufgaben verwalten. Ich kann verfügbare und erlaubte Gerätesensoren auslesen und Ansichten für Radar, Balken- oder Metalldetektor, Wasserwaage, Licht, Nähe und Schall öffnen. Außerdem kann ich Text kopieren oder teilen, Links, Karten und Apps öffnen, E-Mails entwerfen, Kalendertermine erstellen und lokale Modellinformationen abrufen. Mit /mcp und einem HTTPS-Server kann ich entfernte Werkzeuge nach Ihrer Bestätigung erkennen und aufrufen; Server mit Anmeldung oder API-Token werden noch nicht unterstützt. Bildgenerierung ist in dieser Version nicht verfügbar; kompatible Bildanalysemodelle können Anhänge beschreiben und Text daraus extrahieren.</string>
+    <string name="capability_overview">Ich kann Fragen beantworten, beim Schreiben helfen, Code verschiedener Sprachen und Plattformen erklären und debuggen, zusammenfassen, übersetzen, Ideen sammeln und Aufgaben planen. Mit /docs kann ich importierte Text- und Markdown-Dokumente durchsuchen, mit einem kompatiblen Bildanalysemodell Anhänge analysieren, das Wetter abrufen und Aufgaben verwalten. Ich kann verfügbare und erlaubte Gerätesensoren auslesen und Ansichten für Radar, Balken- oder Metalldetektor, Wasserwaage, Licht, Nähe und Schall öffnen. Außerdem kann ich Text kopieren oder teilen, Links, Karten und Apps öffnen, E-Mails entwerfen, Kalendertermine erstellen und lokale Modellinformationen abrufen. Mit /mcp und einem HTTPS-Server kann ich entfernte Werkzeuge nach Ihrer Bestätigung erkennen und aufrufen; Server mit Anmeldung oder API-Token werden noch nicht unterstützt. Bildgenerierung ist in dieser Version nicht verfügbar; kompatible Bildanalysemodelle können Anhänge beschreiben und Text daraus extrahieren.</string>
     <string name="capability_sensors">Ja. Ich kann Sensoren für Umgebungslicht, Druck, Akku und Temperaturen, Bewegung, Gyroskop, Kompass, Nähe, Haltung, Ebenheit, Magnetfeld und Umgebungsschall per Mikrofon auslesen, sofern verfügbar und erlaubt. Außerdem kann ich /sensors für die Übersicht, /stud für Balken oder Metalle, /level für die Wasserwaage, /light für Licht und /proximity für Nähe öffnen.</string>
     <string name="notification_downloading_model">%1$s wird heruntergeladen</string>
     <string name="notification_download_progress">Fortschritt: %1$d%%</string>
@@ -769,4 +769,14 @@
     <string name="ui_minicpm_generation_failed">MiniCPM-Generierung fehlgeschlagen. Versuche eine kürzere Anfrage oder lade das Modell neu.</string>
     <string name="ui_minicpm_storage_required">Dieses Paket benötigt etwa 17 GB internen Speicher und zusätzlich 512 MB freien Platz.</string>
     <string name="ui_minicpm_runtime">Experimentelles llama.cpp auf CPU</string>
+    <string name="slash_voice_title">Sprachnotiz</string>
+    <string name="slash_voice_description">Offline-Sprachnotiz mit Live-Transkription aufnehmen</string>
+    <string name="voice_input_button">Sprachnotiz aufnehmen</string>
+    <string name="voice_listening_status">Hört zu</string>
+    <string name="voice_cancel">Sprachaufnahme abbrechen</string>
+    <string name="voice_done">Sprachaufnahme beenden</string>
+    <string name="voice_memo_summarize">Notiz zusammenfassen</string>
+    <string name="voice_memo_extract_tasks">Aufgaben extrahieren</string>
+    <string name="voice_memo_save_docs">In /docs speichern</string>
+    <string name="voice_memo_saved_toast">%1$s in lokalen Dokumenten gespeichert (%2$d Abschnitte)</string>
 </resources>

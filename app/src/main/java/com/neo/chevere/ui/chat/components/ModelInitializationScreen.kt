@@ -43,11 +43,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.neo.chevere.R
-import com.neo.chevere.ui.designsystem.AstroBrightCyan
 import com.neo.chevere.ui.designsystem.AstroDeepBlue
 import com.neo.chevere.ui.designsystem.AstroPeach
 import com.neo.chevere.ui.designsystem.AstroRobotWhite
-import com.neo.chevere.ui.designsystem.AstroSoftCyan
 import com.neo.chevere.ui.designsystem.Typography
 
 @Composable
@@ -58,23 +56,23 @@ fun ModelInitializationScreen(
     val infiniteTransition = rememberInfiniteTransition(label = "loading")
     val isDark = isSystemInDarkTheme()
 
-    // Theme-aware Background Brush
+    // Theme-aware Background Brush matching the C-Robot gradient identity
     val backgroundBrush = if (isDark) {
         Brush.verticalGradient(
             colors = listOf(
-                AstroDeepBlue,
-                AstroBrightCyan,
-                Color(0xFF002F6C), // Deep blue variant
-                Color(0xFF00193D)  // Near black blue
+                Color(0xFF060B1E),
+                Color(0xFF0C1F4F),
+                Color(0xFF005C8A),
+                Color(0xFF060B1E)
             )
         )
     } else {
         Brush.verticalGradient(
             colors = listOf(
-                AstroSoftCyan,
-                AstroPeach,
-                Color.White,
-                AstroSoftCyan
+                Color(0xFFE0F7FA),
+                Color(0xFFBAE6FD),
+                Color(0xFFE0E7FF),
+                Color(0xFFF0F9FF)
             )
         )
     }
@@ -142,7 +140,7 @@ fun ModelInitializationScreen(
                     targetValue = 1.5f,
                     animationSpec = infiniteRepeatable(
                         animation = tween(1500, easing = FastOutSlowInEasing),
-                        repeatMode = RepeatMode.Restart
+                    repeatMode = RepeatMode.Restart
                     ),
                     label = "progress"
                 )

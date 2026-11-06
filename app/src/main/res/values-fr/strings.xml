@@ -58,7 +58,7 @@
     <string name="safety_privacy">SÉCURITÉ ET CONFIDENTIALITÉ</string>
     <string name="local_first_ai">IA privilégiant le traitement local</string>
     <string name="offline_processing">Traitement hors ligne</string>
-    <string name="offline_processing_desc">L’inférence de discussion et de vision utilise les modèles locaux installés. Les fonctions réseau facultatives comprennent les catalogues, téléchargements, outils web et météo, signalements, partage et outils distants confirmés.</string>
+    <string name="offline_processing_desc">L’inférence de discussion et de vision utilise les modèles locaux installés. Les fonctions réseau facultatives comprennent les catalogues, téléchargements, outils météo, signalements, partage et outils distants confirmés.</string>
     <string name="release_content_controls">Sécurité du contenu d’IA et signalements</string>
     <string name="release_content_controls_desc">Vous pouvez signaler les réponses offensantes, dangereuses ou inexactes. Les identifiants personnels font l’objet d’une tentative de suppression avant l’envoi, sans garantie. N’incluez pas d’informations sensibles.</string>
     <string name="user_controlled_sharing">Partage contrôlé par vous</string>
@@ -425,7 +425,7 @@
     <string name="stop_reading_aloud">Arrêter la lecture</string>
     <string name="start_voice_input">Démarrer la saisie vocale</string>
     <string name="stop_voice_input">Arrêter la saisie vocale</string>
-    <string name="local_first_ai_desc">L’inférence du modèle s’exécute localement. Les outils web et météo, les téléchargements, les signalements, le partage et les appels MCP confirmés transmettent certaines données à des services externes.</string>
+    <string name="local_first_ai_desc">L’inférence du modèle s’exécute localement. Les outils météo, les téléchargements, les signalements, le partage et les appels MCP confirmés transmettent certaines données à des services externes.</string>
     <string name="local_storage_privacy_desc">Les discussions, documents, tâches et modèles utilisent le stockage privé de l’application. Supprimer une discussion n’efface pas les autres données. Effacer le stockage supprime les données locales ; les fichiers partagés et les signalements envoyés sont distincts.</string>
     <string name="camera_permission_required">L’accès à l’appareil photo est nécessaire pour prendre des photos.</string>
     <string name="location_permission_granted">Localisation autorisée.</string>
@@ -440,7 +440,7 @@
     <string name="contacts_permission_disclosure">L’accès aux contacts recherche les noms et adresses e-mail localement. Si vous choisissez de les utiliser dans un brouillon, de les partager ou de les envoyer à une autre application ou à un outil distant confirmé, ce destinataire les reçoit.</string>
     <string name="calendar_permission_disclosure">L’accès au calendrier lit les événements locaux. La création d’événements ouvre votre application de calendrier, qui peut les synchroniser selon ses propres paramètres de compte et de réseau.</string>
     <string name="microphone_permission_disclosure">Le microphone permet de mesurer le bruit localement ou de dicter. La dictée utilise le service vocal Android et demande une reconnaissance hors connexion, mais ce service peut utiliser le réseau. Vérifiez ses paramètres avant de dicter des informations sensibles.</string>
-    <string name="onboarding_privacy_body">Le traitement d’IA s’effectue localement. Les fonctions facultatives de web, météo, partage, signalement et les outils distants confirmés transmettent certaines informations à d’autres services.</string>
+    <string name="onboarding_privacy_body">Le traitement d’IA s’effectue localement. Les fonctions facultatives de météo, partage, signalement et les outils distants confirmés transmettent certaines informations à d’autres services.</string>
     <string name="confirm_proceed">Voulez-vous vraiment continuer ?</string>
     <string name="download_image_model_title">Télécharger un modèle d’images ?</string>
     <string name="download_image_model_body">Chevere AI a besoin d’un modèle local de génération d’images pour créer des images sur cet appareil.</string>
@@ -575,7 +575,7 @@
     </plurals>
     <string name="add_task_button">AJOUTER</string>
     <string name="capability_image">La génération d’images n’est pas disponible dans cette version. Avec un modèle de vision compatible, je peux décrire les images jointes et vous aider à en extraire le texte.</string>
-    <string name="capability_overview">Je peux répondre aux questions, aider à rédiger, expliquer et déboguer du code dans différents langages et plateformes, résumer, traduire, proposer des idées et planifier des tâches. Je peux rechercher dans les documents texte et Markdown importés avec /docs, analyser les images jointes avec un modèle de vision compatible, rechercher sur le web, consulter la météo et gérer les tâches. Je peux lire les capteurs disponibles et autorisés et ouvrir les écrans radar, détecteur de montants ou de métaux, niveau, lumière, proximité et son. Je peux aussi copier ou partager du texte, ouvrir des liens, cartes et applications, rédiger des e-mails, créer des événements et consulter les modèles locaux. Avec /mcp et un serveur HTTPS, je peux découvrir et appeler des outils distants avec votre confirmation ; les serveurs exigeant une connexion ou un jeton d’API ne sont pas encore pris en charge. La génération d’images est indisponible dans cette version ; les modèles de vision compatibles peuvent décrire les images jointes et en extraire le texte.</string>
+    <string name="capability_overview">Je peux répondre aux questions, aider à rédiger, expliquer et déboguer du code dans différents langages et plateformes, résumer, traduire, proposer des idées et planifier des tâches. Je peux rechercher dans les documents texte et Markdown importés avec /docs, analyser les images jointes avec un modèle de vision compatible, consulter la météo et gérer les tâches. Je peux lire les capteurs disponibles et autorisés et ouvrir les écrans radar, détecteur de montants ou de métaux, niveau, lumière, proximité et son. Je peux aussi copier ou partager du texte, ouvrir des liens, cartes et applications, rédiger des e-mails, créer des événements et consulter les modèles locaux. Avec /mcp et un serveur HTTPS, je peux découvrir et appeler des outils distants avec votre confirmation ; les serveurs exigeant une connexion ou un jeton d’API ne sont pas encore pris en charge. La génération d’images est indisponible dans cette version ; les modèles de vision compatibles peuvent décrire les images jointes et en extraire le texte.</string>
     <string name="capability_sensors">Oui. Je peux lire les capteurs de lumière, pression, batterie et température, mouvement, gyroscope, boussole, proximité, posture, niveau, champ magnétique et bruit ambiant au microphone, avec les autorisations nécessaires. Je peux aussi ouvrir /sensors pour le tableau de bord, /stud pour détecter montants ou métaux, /level pour le niveau à bulle, /light pour la lumière et /proximity pour la proximité.</string>
     <string name="notification_downloading_model">Téléchargement de %1$s</string>
     <string name="notification_download_progress">Progression : %1$d%%</string>
@@ -769,4 +769,14 @@
     <string name="ui_minicpm_generation_failed">Échec de la génération MiniCPM. Essayez une demande plus courte ou rechargez le modèle.</string>
     <string name="ui_minicpm_storage_required">Ce paquet nécessite environ 17 Go de stockage interne et 512 Mo de marge libre.</string>
     <string name="ui_minicpm_runtime">llama.cpp CPU expérimental</string>
+    <string name="slash_voice_title">Note vocale</string>
+    <string name="slash_voice_description">Enregistrer une note vocale hors ligne avec transcription en direct</string>
+    <string name="voice_input_button">Enregistrer une note vocale</string>
+    <string name="voice_listening_status">Écoute en cours</string>
+    <string name="voice_cancel">Annuler l’enregistrement vocal</string>
+    <string name="voice_done">Terminer l’enregistrement vocal</string>
+    <string name="voice_memo_summarize">Résumer la note</string>
+    <string name="voice_memo_extract_tasks">Extraire les tâches</string>
+    <string name="voice_memo_save_docs">Enregistrer dans /docs</string>
+    <string name="voice_memo_saved_toast">%1$s enregistré dans les documents locaux (%2$d extraits)</string>
 </resources>

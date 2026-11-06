@@ -78,7 +78,7 @@ Privacy is a core feature. Chat and image generation should run locally when mod
 
 ### Implementation Difference
 - **Gallery**: Often showcases hybrid models.
-- **Chevere AI**: Prioritizes local chat and local image generation. Network-backed features are explicit: model discovery/downloads, web search, weather, and any tool that opens external services.
+- **Chevere AI**: Prioritizes local chat and local image generation. Network-backed features are explicit: model discovery/downloads, weather, and any tool that opens external services.
 
 ---
 

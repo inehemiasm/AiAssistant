@@ -62,7 +62,6 @@ Path: `app/src/main/java/com/neo/chevere/data/`
   - `AgentOrchestrator`: Reason-Act-Observe loop.
   - `ToolRegistry`: Hilt-provided set of `AgentTool` implementations.
   - **Available Agent Tools:**
-    - `WebSearchTool` (`web_search`): Online web search using `BuildConfig.WEB_SEARCH_PROXY_URL` when configured, `BuildConfig.SERPER_API_KEY` in debug builds, and key-less DuckDuckGo Instant Answer fallback in release builds.
     - `WeatherTool` (`get_weather`): Local and global weather info.
     - `SearchContactsTool` (`search_contacts`): Resolves local device contact emails by name.
     - `TaskRegistryTool` (`task_registry`): Manages the local to-do checklist database (create, list, update, delete) and emits A2UI task checklist envelopes.

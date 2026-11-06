@@ -43,7 +43,7 @@ The project is built for experimenting with capable on-device assistants: small 
 
 - **Local LLM Chat**: Chat with local LiteRT-LM models such as Gemma.
 - **Multimodal Vision**: Attach camera or gallery images for vision-capable models.
-- **Natural Language Agent**: Run an agent reasoning loop (Reason-Act-Observe) that can search the web, check weather, summarize text, manage tasks (with interactive A2UI checklists in chat), draft emails, open apps, copy/share text, and use Android intents.
+- **Natural Language Agent**: Run an agent reasoning loop (Reason-Act-Observe) that can check weather, summarize text, manage tasks (with interactive A2UI checklists in chat), draft emails, open apps, copy/share text, and use Android intents.
 - **Hardware Sensors**: Read ambient light, atmospheric pressure, battery level/thermals, CPU temperatures, compass heading, accelerometer, gyroscope, posture, flatness, magnetic field strength, and ambient sound level (dB SPL).
 - **Visual Radar Dashboard**: Launch real-time visual tools: stud finder/metal detector, spirit level (bubble level), light meter, and proximity detector.
 - **Model Marketplace**: Discover, download, verify (SHA-256), and extract models atomically.

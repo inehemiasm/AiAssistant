@@ -72,12 +72,12 @@
 <body>
     <div class="container">
         <h1>Privacy Policy</h1>
-        <p class="effective-date">Effective Date: October 31, 2026</p>
+        <p class="effective-date">Effective Date: November 2, 2026</p>
 
-        <p>Chevere AI ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, and safeguard your information when you use our mobile application.</p>
+        <p>Nehemias Miranda, operating Chevere AI ("Chevere AI," "we," "our," or "us"), is committed to protecting your privacy. This Privacy Policy explains how we collect, use, and safeguard your information when you use our mobile application.</p>
 
         <div class="highlight">
-            <p><strong>Local processing and optional network features:</strong> Core model inference runs on your device. Network features—including web search, weather, model downloads, sharing, and confirmed remote MCP tools—send the information needed for those requests to the relevant service. Submitting a content report also sends the selected report data.</p>
+            <p><strong>Local processing and optional network features:</strong> Core model inference runs on your device. Network features—including weather, model downloads, sharing, and confirmed remote MCP tools—send the information needed for those requests to the relevant service. Submitting a content report also sends the selected report data.</p>
         </div>
 
         <h2>1. Local-First Philosophy</h2>
@@ -91,19 +91,19 @@
         <h2>2. Information We Collect</h2>
         <p>While the core experience is offline, we use certain third-party services for app stability, safety, and model discovery:</p>
         
-        <h3>A. Telemetry and Analytics (Firebase)</h3>
-        <p>We use Firebase Analytics and Crashlytics to monitor app performance and identify bugs. This may include:</p>
+        <h3>A. Telemetry, Diagnostics, and App Attestation (Firebase &amp; Play Integrity)</h3>
+        <p>We use Firebase Analytics, Firebase Crashlytics, and Firebase App Check (with Google Play Integrity) to monitor app performance, identify bugs, and protect backend services against abuse. This may include:</p>
         <ul>
-            <li>Device information (model, OS version).</li>
+            <li>Device information (model, OS version) and Play Integrity app/device attestation tokens.</li>
             <li>App usage statistics and model initialization metrics.</li>
-            <li>Crash logs and non-fatal error stack traces.</li>
+            <li>Crash logs and categorized non-fatal error signals.</li>
             <li>App installation identifiers (pseudonymous, not guaranteed anonymous).</li>
         </ul>
 
         <h3>B. Remote Model Catalog &amp; AI Content Reports (Firebase Firestore)</h3>
         <ul>
             <li><strong>Model Catalog:</strong> We use Firebase Firestore and Hugging Face Hub to fetch the catalog of downloadable AI models.</li>
-            <li><strong>User-Initiated AI Content Reports:</strong> You can flag/report any AI response using the in-app report button. When you submit a report, the selected reason, optional notes, active model identifier, and PII-scrubbed excerpts of the reported response are transmitted to our moderation database to improve safety filters.</li>
+            <li><strong>User-Initiated AI Content Reports:</strong> You can flag/report any AI response using the in-app report button. When you submit a report, the selected reason, optional notes, active model identifier, app version, creation timestamp, 90-day expiration timestamp, and PII-scrubbed excerpts of the reported response are transmitted to our moderation database to improve safety filters. Submitted reports are retained for up to 90 days and scheduled for automatic expiration thereafter.</li>
         </ul>
 
         <h2>3. Permissions</h2>
@@ -111,7 +111,7 @@
         <ul>
             <li><strong>Camera:</strong> Used only when you choose to take a photo to attach to a chat message.</li>
             <li><strong>Microphone:</strong> Used only when you activate voice input (speech-to-text) or ask the assistant to measure ambient room noise levels (dB SPL). Ambient noise measurement processes microphone samples locally. Voice input uses the configured Android speech-recognition provider and requests offline recognition, but that preference does not guarantee offline operation; the provider may transmit audio according to its settings and privacy policy. Avoid dictating sensitive information unless you understand those settings.</li>
-            <li><strong>Internet:</strong> Used to download AI models, perform optional web/weather queries, and send app usage and diagnostic telemetry.</li>
+            <li><strong>Internet:</strong> Used to download AI models, perform optional weather queries, and send app usage and diagnostic telemetry.</li>
             <li><strong>Notifications &amp; Foreground Service:</strong> Used to show progress and ensure multi-gigabyte AI model downloads complete reliably if you switch apps.</li>
             <li><strong>Contacts:</strong> Used locally by the Contacts Tool to look up email addresses by name when you ask the assistant to draft an email. Contact lookup is local. If you choose to draft, share, or send contact information to another app or a confirmed remote tool, that destination receives it.</li>
             <li><strong>Location:</strong> Used locally by the Weather Tool to retrieve forecasts for your area. Coordinates are sent directly to the weather provider and are never stored on our servers.</li>
@@ -119,17 +119,22 @@
         </ul>
 
         <h3>Optional external tools and sharing</h3>
-        <p>Web queries are sent to the configured search service; weather requests may send coordinates or a place name. Model discovery/downloads contact Firebase and Hugging Face or the selected model host. Remote MCP operations send the endpoint and tool arguments shown in the confirmation flow to the selected server, which can receive personal information included in those arguments. Sharing and email/calendar actions pass selected data to other applications. Those providers have their own privacy and retention practices. Avoid including sensitive data in external requests unless necessary.</p>
+        <p>Weather requests may send coordinates or a place name. Model discovery/downloads contact Firebase and Hugging Face or the selected model host. Remote MCP operations send the endpoint and tool arguments shown in the confirmation flow to the selected server, which can receive personal information included in those arguments. Sharing and email/calendar actions pass selected data to other applications. Those providers have their own privacy and retention practices. Avoid including sensitive data in external requests unless necessary.</p>
         <h3>Imported documents and local predictions</h3>
         <p>Imported text/Markdown documents are copied into a private local search index. Connecting a folder saves Android access permission to that folder and its subfolders and creates a local searchable snapshot of supported files. Updates require an explicit refresh. Disconnecting removes that source's indexed copies and saved access permission; original files and existing chat messages are separate. Cloud document providers may use a network connection to supply selected files. Chat suggestions are predicted locally from recent messages. These features do not automatically upload your document library.</p>
-        <h2>4. Data Security &amp; Retention</h2>
-        <p>Data stored on your device is protected by the Android operating system's sandbox and optional biometric lock. Deleting a chat session removes that saved conversation; it does not delete models, tasks, invoices, or indexed documents. Clearing app storage or uninstalling removes app-private data, subject to Android backup/restore behavior; shared or exported files and data already sent to other services are separate. App backup rules currently include shared preferences only, excluding databases and model files.</p>
 
-        <h2>5. Changes to This Policy</h2>
+        <h2>4. Data Security &amp; Retention</h2>
+        <p>Data stored on your device is protected by the Android operating system's sandbox and optional biometric lock. Deleting a chat session removes that saved conversation; it does not delete models, tasks, invoices, or indexed documents. Clearing app storage or uninstalling removes app-private data, subject to Android backup/restore behavior; shared or exported files and data already sent to other services are separate. App backup rules currently include shared preferences only, excluding databases and model files. User-submitted AI content reports are retained in Firebase Firestore for up to 90 days for safety review and are tagged with a 90-day expiration timestamp for automatic deletion.</p>
+
+        <h2>5. Eligibility &amp; Children's Privacy</h2>
+        <p>Chevere AI is intended for adults aged 18 and older and is not directed to children under 18. We do not knowingly collect personal information from children. If you believe a child has submitted personal information through a content report or support request, please contact us so we can delete it.</p>
+
+        <h2>6. Changes to This Policy</h2>
         <p>We may update our Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page.</p>
 
-        <h2>6. Contact Us</h2>
-        <p>If you have any questions about this Privacy Policy, please contact us at <a href="mailto:nehemias.miranda.work@gmail.com">nehemias.miranda.work@gmail.com</a>.</p>
+        <h2>7. Contact Us</h2>
+        <p>Publisher: Nehemias Miranda (Chevere AI)<br>
+        If you have any questions about this Privacy Policy or wish to submit a privacy request, please contact us at <a href="mailto:nehemias.miranda.work@gmail.com">nehemias.miranda.work@gmail.com</a>.</p>
     </div>
 </body>
 </html>
