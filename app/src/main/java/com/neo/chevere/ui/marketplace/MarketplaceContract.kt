@@ -56,11 +56,23 @@ data class MarketplaceState(
     val chatRemoteModels: List<ModelEntry>
         get() = remoteModels.filter { it.activationCategory() == ModelActivationCategory.CHAT }
 
+    val textVisionRemoteModels: List<ModelEntry>
+        get() = chatRemoteModels.filterNot { it.isAudioModel }
+
+    val audioRemoteModels: List<ModelEntry>
+        get() = chatRemoteModels.filter { it.isAudioModel }
+
     val imageRemoteModels: List<ModelEntry>
         get() = remoteModels.filter { it.activationCategory() == ModelActivationCategory.IMAGE_GENERATION }
 
     val chatLocalModels: List<InstalledModel>
         get() = localModels.filter { it.activationCategory() == ModelActivationCategory.CHAT }
+
+    val textVisionLocalModels: List<InstalledModel>
+        get() = chatLocalModels.filterNot { it.isAudioCapable() }
+
+    val audioLocalModels: List<InstalledModel>
+        get() = chatLocalModels.filter { it.isAudioCapable() }
 
     val imageLocalModels: List<InstalledModel>
         get() = localModels.filter { it.activationCategory() == ModelActivationCategory.IMAGE_GENERATION }

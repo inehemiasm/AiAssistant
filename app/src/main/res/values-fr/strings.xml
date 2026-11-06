@@ -779,4 +779,8 @@
     <string name="voice_memo_extract_tasks">Extraire les tâches</string>
     <string name="voice_memo_save_docs">Enregistrer dans /docs</string>
     <string name="voice_memo_saved_toast">%1$s enregistré dans les documents locaux (%2$d extraits)</string>
+    <string name="ui_audio_and_voice_models">Modèles audio et vocaux</string>
+    <string name="ui_audio_voice">Voix et audio</string>
+    <string name="ui_audio_models_recommendation_title">Recommandé pour la saisie et les notes vocales</string>
+    <string name="ui_audio_models_recommendation_body">Si vous souhaitez utiliser votre voix pour dicter des notes, résumer des enregistrements ou extraire des tâches, nous vous recommandons de télécharger un modèle audio et vocal ci-dessous.</string>
 </resources>

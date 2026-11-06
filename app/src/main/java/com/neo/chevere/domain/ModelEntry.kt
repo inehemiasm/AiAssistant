@@ -14,6 +14,7 @@ import com.neo.chevere.core.Constants
  * @property sha256 Optional SHA-256 hash for file verification.
  * @property fileName The name of the file on disk.
  * @property supportsVision Whether the model supports vision tasks.
+ * @property supportsAudio Whether the model is optimized for audio, speech, and voice workflows.
  * @property license Optional license information (e.g., "Apache 2.0").
  * @property repositoryFiles Optional direct file URLs for directory-style model bundles.
  * Each item may be either a direct URL or `url|relative/path/in/model`.
@@ -28,6 +29,7 @@ data class ModelEntry(
     val sha256: String? = null,
     val fileName: String? = null,
     val supportsVision: Boolean = false,
+    val supportsAudio: Boolean = false,
     val license: String? = null,
     val repositoryFiles: List<String> = emptyList()
 ) {
@@ -44,6 +46,20 @@ data class ModelEntry(
                     "stable diffusion" in nameLower ||
                     "image generation" in nameLower ||
                     "diffusion" in nameLower
+        }
+
+    /**
+     * Heuristic to determine if this is an audio / voice-capable model.
+     */
+    val isAudioModel: Boolean
+        get() {
+            if (supportsAudio) return true
+            val nameLower = "${name} ${fileName.orEmpty()}".lowercase()
+            return "audio" in nameLower ||
+                    "whisper" in nameLower ||
+                    "omni" in nameLower ||
+                    "speech" in nameLower ||
+                    "parakeet" in nameLower
         }
 
     /**

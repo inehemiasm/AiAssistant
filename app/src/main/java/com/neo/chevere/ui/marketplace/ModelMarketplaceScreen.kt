@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.FileDownloadDone
 import androidx.compose.material.icons.filled.Memory
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Sync
@@ -318,11 +319,27 @@ fun DiscoverModelsList(
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
             val groups = listOf(
-                textResources.getString(R.string.ui_chat_and_vision_models) to state.chatRemoteModels
-            ).filter { (_, models) -> models.isNotEmpty() }
+                Triple(
+                    textResources.getString(R.string.ui_audio_and_voice_models),
+                    state.audioRemoteModels,
+                    true
+                ),
+                Triple(
+                    textResources.getString(R.string.ui_chat_and_vision_models),
+                    state.textVisionRemoteModels,
+                    false
+                )
+            ).filter { (_, models, _) -> models.isNotEmpty() }
 
-            groups.forEach { (title, models) ->
-                item { ModelSectionHeader(title) }
+            groups.forEach { (title, models, isAudioSection) ->
+                item {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        ModelSectionHeader(title)
+                        if (isAudioSection) {
+                            AudioModelRecommendationCard()
+                        }
+                    }
+                }
 
                 items(models) { model ->
                     val installedVersion = state.localModels.find {
@@ -378,11 +395,30 @@ fun InstalledModelsList(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                if (state.chatLocalModels.isNotEmpty()) {
-                    item { ModelSectionHeader(textResources.getString(R.string.ui_chat_and_vision_models)) }
-                }
+                val installedGroups = listOf(
+                    Triple(
+                        textResources.getString(R.string.ui_audio_and_voice_models),
+                        state.audioLocalModels,
+                        true
+                    ),
+                    Triple(
+                        textResources.getString(R.string.ui_chat_and_vision_models),
+                        state.textVisionLocalModels,
+                        false
+                    )
+                ).filter { (_, models, _) -> models.isNotEmpty() }
 
-                items(state.chatLocalModels) { model ->
+                installedGroups.forEach { (title, groupModels, isAudioSection) ->
+                    item {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            ModelSectionHeader(title)
+                            if (isAudioSection) {
+                                AudioModelRecommendationCard()
+                            }
+                        }
+                    }
+
+                    items(groupModels) { model ->
                     val isActive = state.activeModelId == model.id
                     val isPending = state.pendingModelId == model.id
                     val isSwitching =
@@ -403,6 +439,7 @@ fun InstalledModelsList(
                         onDelete = { onIntent(MarketplaceIntent.DeleteModel(model.id)) },
                         onClick = { onModelClick(model.id) }
                     )
+                    }
                 }
             }
 
@@ -466,6 +503,45 @@ private fun ModelSectionHeader(title: String) {
         color = MaterialTheme.colorScheme.primary,
         modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp)
     )
+}
+
+@Composable
+private fun AudioModelRecommendationCard() {
+    val textResources = LocalResources.current
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.28f)),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.18f)
+        )
+    ) {
+        Row(
+            modifier = Modifier.padding(14.dp),
+            verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Mic,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp)
+            )
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = textResources.getString(R.string.ui_audio_models_recommendation_title),
+                    style = Typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = textResources.getString(R.string.ui_audio_models_recommendation_body),
+                    style = Typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
 }
 
 @Composable
@@ -539,6 +615,11 @@ fun RemoteModelCard(
                             if (model.supportsVision) {
                                 Spacer(Modifier.width(16.dp))
                                 InfoItem(Icons.Default.Visibility, textResources.getString(R.string.ui_vision))
+                            }
+
+                            if (model.isAudioModel) {
+                                Spacer(Modifier.width(16.dp))
+                                InfoItem(Icons.Default.Mic, textResources.getString(R.string.ui_audio_voice))
                             }
                         }
 

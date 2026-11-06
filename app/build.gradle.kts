@@ -32,7 +32,7 @@ val appVersionName = listOf("major", "minor", "patch").joinToString(".") { key -
 val appVersionCode = providers.gradleProperty("playVersionCode").map { value ->
     value.toIntOrNull()?.also { require(it in 1..2_100_000_000) { "Play version code is out of range" } }
         ?: error("playVersionCode must be a positive integer")
-}.getOrElse(1)
+}.getOrElse(((System.currentTimeMillis() / 1000L) - 1767225600L).toInt().coerceIn(1, 2_100_000_000))
 
 android {
     namespace = "com.neo.chevere"

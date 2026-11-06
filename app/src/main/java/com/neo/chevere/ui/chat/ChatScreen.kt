@@ -580,7 +580,18 @@ fun ChatContent(
                         scope.launch { drawerState.open() }
                     },
                     isChatReady = state.isReady,
-                    isImageReady = false
+                    isImageReady = false,
+                    modelStatus = state.modelStatus,
+                    onModelStatusClick = {
+                        when (val status = state.modelStatus) {
+                            is ChatModelStatus.Failed -> when (status.recovery) {
+                                ModelRecovery.RELOAD -> viewModel.onIntent(ChatIntent.RetryModelLoad)
+                                ModelRecovery.RETRY_RESPONSE -> viewModel.onIntent(ChatIntent.RetryLastMessage)
+                                ModelRecovery.OPEN_MODELS -> onModelsClick()
+                            }
+                            else -> onModelsClick()
+                        }
+                    }
                 )
             },
         snackbarHost = {

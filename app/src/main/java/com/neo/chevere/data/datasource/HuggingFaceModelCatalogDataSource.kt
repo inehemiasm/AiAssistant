@@ -26,6 +26,7 @@ private data class HFModelDto(
     val fileName: String,
     val downloadUrl: String,
     val supportsVision: Boolean = false,
+    val supportsAudio: Boolean = false,
     val sizeBytes: Long = 0,
     val runtimeType: String = "LiteRT",
     val sha256: String? = null,
@@ -74,6 +75,7 @@ class HuggingFaceModelCatalogDataSource @Inject constructor(
                     sha256 = dto.sha256,
                     fileName = dto.fileName,
                     supportsVision = dto.supportsVision,
+                    supportsAudio = dto.supportsAudio,
                     license = dto.license,
                     repositoryFiles = dto.repositoryFiles
                 )
@@ -116,6 +118,12 @@ class HuggingFaceModelCatalogDataSource @Inject constructor(
                     val license =
                         hubModel.tags.find { it.startsWith("license:") }?.removePrefix("license:")
 
+                    val modelIdLower = hubModel.id.lowercase()
+                    val isAudio = hubModel.tags.any {
+                        it.contains("audio", ignoreCase = true) ||
+                                it.contains("speech", ignoreCase = true)
+                    } || "audio" in modelIdLower || "omni" in modelIdLower
+
                     ModelEntry(
                         name = hubModel.id.split("/").last(),
                         url = "https://huggingface.co/${hubModel.id}/resolve/main/$targetFile",
@@ -129,6 +137,7 @@ class HuggingFaceModelCatalogDataSource @Inject constructor(
                                 ignoreCase = true
                             )
                         },
+                        supportsAudio = isAudio,
                         license = license,
                         runtimeType = if (targetFile.endsWith(Constants.ModelFiles.LITERTLM_EXTENSION)) "LiteRT" else "TFLite/Other"
                     )
