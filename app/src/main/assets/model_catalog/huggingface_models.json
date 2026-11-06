@@ -56,6 +56,32 @@
     "license": "Apache-2.0"
   },
   {
+    "id": "lfm3-audio-2b-litert",
+    "displayName": "LFM3 Audio 2B (Voice & Speech)",
+    "source": "HUGGING_FACE",
+    "repoId": "litert-community/LFM3-Audio-2B-LiteRT",
+    "fileName": "lfm3-audio-2b_int4_b128_c2048_h30.litertlm",
+    "downloadUrl": "https://huggingface.co/litert-community/LFM3-Audio-2B-LiteRT/resolve/main/lfm3-audio-2b_int4_b128_c2048_h30.litertlm",
+    "sizeBytes": 1531232624,
+    "supportsVision": false,
+    "supportsAudio": true,
+    "license": "LFM Open License 1.0",
+    "description": "Recommended for voice input, live speech transcription, summarizing voice notes, and extracting tasks."
+  },
+  {
+    "id": "lfm3-omni-2b-litert",
+    "displayName": "LFM3 Omni 2B (Audio + Chat)",
+    "source": "HUGGING_FACE",
+    "repoId": "litert-community/LFM3-Omni-2B-LiteRT",
+    "fileName": "LFM3-Omni-2B_int8.litertlm",
+    "downloadUrl": "https://huggingface.co/litert-community/LFM3-Omni-2B-LiteRT/resolve/main/LFM3-Omni-2B_int8.litertlm",
+    "sizeBytes": 3226750192,
+    "supportsVision": false,
+    "supportsAudio": true,
+    "license": "LFM Open License 1.0",
+    "description": "Full INT8 omni-model for conversational audio, speech analysis, and voice memo workflows."
+  },
+  {
     "id": "dreamshaper-hyper-onnx",
     "displayName": "DreamShaper Hyper-SD ONNX",
     "source": "HUGGING_FACE",

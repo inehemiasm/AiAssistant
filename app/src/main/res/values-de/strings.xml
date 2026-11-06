@@ -779,4 +779,8 @@
     <string name="voice_memo_extract_tasks">Aufgaben extrahieren</string>
     <string name="voice_memo_save_docs">In /docs speichern</string>
     <string name="voice_memo_saved_toast">%1$s in lokalen Dokumenten gespeichert (%2$d Abschnitte)</string>
+    <string name="ui_audio_and_voice_models">Audio- und Sprachmodelle</string>
+    <string name="ui_audio_voice">Sprache &amp; Audio</string>
+    <string name="ui_audio_models_recommendation_title">Empfohlen für Spracheingabe &amp; Sprachnotizen</string>
+    <string name="ui_audio_models_recommendation_body">Wenn Sie Ihre Stimme zum Diktieren von Notizen, Zusammenfassen von Aufnahmen oder Extrahieren von Aufgaben nutzen möchten, empfehlen wir das Herunterladen eines Audio- und Sprachmodells unten.</string>
 </resources>

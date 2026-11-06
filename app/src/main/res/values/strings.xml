@@ -809,4 +809,8 @@
     <string name="voice_memo_extract_tasks">Extract Tasks</string>
     <string name="voice_memo_save_docs">Save to /docs</string>
     <string name="voice_memo_saved_toast">Saved voice note to /docs: %1$s (%2$d chunks)</string>
+    <string name="ui_audio_and_voice_models">Audio &amp; Voice Models</string>
+    <string name="ui_audio_voice">Voice &amp; Audio</string>
+    <string name="ui_audio_models_recommendation_title">Recommended for Voice Input &amp; Memos</string>
+    <string name="ui_audio_models_recommendation_body">If you want to use your voice to dictate notes, summarize recordings, or extract tasks, we recommend downloading an Audio &amp; Voice model below.</string>
 </resources>

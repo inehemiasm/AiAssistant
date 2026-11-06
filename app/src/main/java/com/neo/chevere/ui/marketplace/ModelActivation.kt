@@ -18,6 +18,12 @@ internal fun InstalledModel.activationCategory(): ModelActivationCategory =
         ModelActivationCategory.CHAT
     }
 
+internal fun InstalledModel.isAudioCapable(): Boolean {
+    if (ModelCapability.AUDIO in capabilities) return true
+    val lower = "$displayName $fileName".lowercase()
+    return "audio" in lower || "whisper" in lower || "omni" in lower || "speech" in lower || "parakeet" in lower
+}
+
 internal fun ModelEntry.activationCategory(): ModelActivationCategory {
     return if (isImageGenerationModel) {
         ModelActivationCategory.IMAGE_GENERATION
