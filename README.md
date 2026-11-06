@@ -232,3 +232,7 @@ This project is licensed under custom terms. It is free to clone, modify, and ru
 Pull requests run one lightweight Python job for localization and release-ledger checks. Superseded runs are cancelled and evidence artifacts expire after seven days. These checks do not compile or test Android code. Run the relevant Gradle checks locally before merging.
 
 Screenshot recording and Firebase App Distribution are manual workflows in GitHub Actions. Run screenshot recording on the intended branch; it commits updated screenshots there. Run distribution when a tester build is needed; it still validates release lint and native alignment before uploading. Neither expensive workflow runs automatically on merge. Maestro stays local/on-device.
+
+### Play internal testing
+
+The manual [Play internal testing workflow](.github/workflows/play-internal.yml) builds signed AABs and can upload drafts or release to internal testers using Google’s official API and short-lived OIDC credentials. Visible versions start at `0.1.0` in `version.properties`; CI generates the independent integer build code. First Console setup, signing verification and API access are documented in [the setup guide](docs/play-internal-testing.md). No production publishing or automatic builds are added.

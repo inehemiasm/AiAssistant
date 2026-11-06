@@ -20,7 +20,7 @@
     {
       "id": "play_console",
       "status": "blocked",
-      "evidence": "Owner last reported verification pending. Console completion, content rating, audience and service declarations are not verified."
+      "evidence": "Owner confirmed developer-account verification complete on 2026-11-02. Owner has not created the Play app or uploaded an initial AAB. App signing, content rating, audience and service declarations remain unverified."
     },
     {
       "id": "privacy_publication",
@@ -78,5 +78,9 @@
     "https://support.google.com/googleplay/android-developer/answer/13985936",
     "https://support.google.com/googleplay/android-developer/answer/10144311",
     "https://developer.android.com/guide/practices/page-sizes"
-  ]
+  ],
+  "playAccountVerification": {
+    "status": "owner_confirmed",
+    "date": "2026-11-02"
+  }
 }
