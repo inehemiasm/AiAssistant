@@ -133,6 +133,22 @@ class MarketplaceViewModel @Inject constructor(
             MarketplaceIntent.ExpandModelGuidance -> setState { copy(modelGuidance = ModelGuidanceState.Expanded) }
             MarketplaceIntent.CollapseModelGuidance -> setState { copy(modelGuidance = ModelGuidanceState.Compact) }
             MarketplaceIntent.DismissModelGuidance -> setState { copy(modelGuidance = ModelGuidanceState.Dismissed) }
+            is MarketplaceIntent.ToggleDiscoverSection -> setState {
+                val updated = if (intent.category in expandedDiscoverSections) {
+                    expandedDiscoverSections - intent.category
+                } else {
+                    expandedDiscoverSections + intent.category
+                }
+                copy(expandedDiscoverSections = updated)
+            }
+            is MarketplaceIntent.ToggleInstalledSection -> setState {
+                val updated = if (intent.category in expandedInstalledSections) {
+                    expandedInstalledSections - intent.category
+                } else {
+                    expandedInstalledSections + intent.category
+                }
+                copy(expandedInstalledSections = updated)
+            }
             MarketplaceIntent.FetchModels -> fetchRemoteModels()
             is MarketplaceIntent.DownloadModel -> {
                 val fileName = intent.model.effectiveFileName

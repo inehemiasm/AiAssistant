@@ -783,4 +783,8 @@
     <string name="ui_audio_voice">Voix et audio</string>
     <string name="ui_audio_models_recommendation_title">Recommandé pour la saisie et les notes vocales</string>
     <string name="ui_audio_models_recommendation_body">Si vous souhaitez utiliser votre voix pour dicter des notes, résumer des enregistrements ou extraire des tâches, nous vous recommandons de télécharger un modèle audio et vocal ci-dessous.</string>
+    <string name="ui_vision_and_multimodal_models">Modèles de vision et multimodaux</string>
+    <string name="ui_vision_models_section_subtitle">Analysez les photos jointes, les captures d’écran et les questions visuelles avec le chat texte.</string>
+    <string name="ui_chat_and_text_models">Modèles de chat et de code</string>
+    <string name="ui_chat_models_section_subtitle">Conversation locale rapide, raisonnement, aide au codage et outils d’agent.</string>
 </resources>

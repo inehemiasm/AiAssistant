@@ -33,6 +33,8 @@ import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.FileDownloadDone
 import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.Mic
@@ -301,6 +303,15 @@ fun ModelMarketplaceContent(
     }
 }
 
+private data class ExpandableModelSection<T>(
+    val category: ModelSectionCategory,
+    val title: String,
+    val subtitle: String,
+    val icon: androidx.compose.ui.graphics.vector.ImageVector,
+    val models: List<T>,
+    val highlightAccent: Boolean = false
+)
+
 @Composable
 fun DiscoverModelsList(
     state: MarketplaceState,
@@ -309,60 +320,85 @@ fun DiscoverModelsList(
     onModelClick: (String) -> Unit
 ) {
     val textResources = LocalResources.current
+    val hapticView = LocalView.current
     if (state.catalogState is CatalogState.Loading) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
         }
     } else {
+        val sections = listOf(
+            ExpandableModelSection(
+                category = ModelSectionCategory.AUDIO_VOICE,
+                title = textResources.getString(R.string.ui_audio_and_voice_models),
+                subtitle = textResources.getString(R.string.ui_audio_models_recommendation_body),
+                icon = Icons.Default.Mic,
+                models = state.audioRemoteModels,
+                highlightAccent = true
+            ),
+            ExpandableModelSection(
+                category = ModelSectionCategory.VISION,
+                title = textResources.getString(R.string.ui_vision_and_multimodal_models),
+                subtitle = textResources.getString(R.string.ui_vision_models_section_subtitle),
+                icon = Icons.Default.Visibility,
+                models = state.visionRemoteModels
+            ),
+            ExpandableModelSection(
+                category = ModelSectionCategory.CHAT,
+                title = textResources.getString(R.string.ui_chat_and_text_models),
+                subtitle = textResources.getString(R.string.ui_chat_models_section_subtitle),
+                icon = Icons.Default.Memory,
+                models = state.textOnlyRemoteModels
+            )
+        ).filter { it.models.isNotEmpty() }
+
         LazyColumn(
             contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            val groups = listOf(
-                Triple(
-                    textResources.getString(R.string.ui_audio_and_voice_models),
-                    state.audioRemoteModels,
-                    true
-                ),
-                Triple(
-                    textResources.getString(R.string.ui_chat_and_vision_models),
-                    state.textVisionRemoteModels,
-                    false
-                )
-            ).filter { (_, models, _) -> models.isNotEmpty() }
-
-            groups.forEach { (title, models, isAudioSection) ->
-                item {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        ModelSectionHeader(title)
-                        if (isAudioSection) {
-                            AudioModelRecommendationCard()
+            sections.forEach { section ->
+                val isExpanded = section.category in state.expandedDiscoverSections
+                item(key = "discover_header_${section.category.name}") {
+                    ExpandableSectionHeaderCard(
+                        title = section.title,
+                        subtitle = section.subtitle,
+                        icon = section.icon,
+                        count = section.models.size,
+                        isExpanded = isExpanded,
+                        highlightAccent = section.highlightAccent,
+                        onClick = {
+                            hapticView.performChevereHaptic(ChevereHaptic.Selection)
+                            onIntent(MarketplaceIntent.ToggleDiscoverSection(section.category))
                         }
-                    }
+                    )
                 }
 
-                items(models) { model ->
-                    val installedVersion = state.localModels.find {
-                        it.fileName == model.effectiveFileName ||
-                                it.id == model.effectiveInstalledId ||
-                                it.fileName == model.effectiveInstalledId
-                    }
-                    val activeDownload = state.activeDownloads[model.effectiveFileName]
-                        ?: state.activeDownloads[model.effectiveInstalledId]
-                    val isDownloading = activeDownload is DownloadProgress.Progress
-                    val downloadProgress = (activeDownload as? DownloadProgress.Progress)?.percent
+                if (isExpanded) {
+                    items(
+                        items = section.models,
+                        key = { "discover_${section.category.name}_${it.effectiveFileName}" }
+                    ) { model ->
+                        val installedVersion = state.localModels.find {
+                            it.fileName == model.effectiveFileName ||
+                                    it.id == model.effectiveInstalledId ||
+                                    it.fileName == model.effectiveInstalledId
+                        }
+                        val activeDownload = state.activeDownloads[model.effectiveFileName]
+                            ?: state.activeDownloads[model.effectiveInstalledId]
+                        val isDownloading = activeDownload is DownloadProgress.Progress
+                        val downloadProgress = (activeDownload as? DownloadProgress.Progress)?.percent
 
-                    RemoteModelCard(
-                        model = model,
-                        installedModel = installedVersion,
-                        isDownloading = isDownloading,
-                        downloadProgress = downloadProgress,
-                        deviceTotalRamGb = state.deviceTotalRamGb,
-                        onDownload = {
-                            onIntent(MarketplaceIntent.DownloadModel(model, baseDir))
-                        },
-                        onClick = { onModelClick(model.effectiveFileName) }
-                    )
+                        RemoteModelCard(
+                            model = model,
+                            installedModel = installedVersion,
+                            isDownloading = isDownloading,
+                            downloadProgress = downloadProgress,
+                            deviceTotalRamGb = state.deviceTotalRamGb,
+                            onDownload = {
+                                onIntent(MarketplaceIntent.DownloadModel(model, baseDir))
+                            },
+                            onClick = { onModelClick(model.effectiveFileName) }
+                        )
+                    }
                 }
             }
         }
@@ -376,6 +412,7 @@ fun InstalledModelsList(
     onModelClick: (String) -> Unit
 ) {
     val textResources = LocalResources.current
+    val hapticView = LocalView.current
     if (state.chatLocalModels.isEmpty()) {
         Box(
             Modifier
@@ -389,56 +426,80 @@ fun InstalledModelsList(
             )
         }
     } else {
+        val installedSections = listOf(
+            ExpandableModelSection(
+                category = ModelSectionCategory.AUDIO_VOICE,
+                title = textResources.getString(R.string.ui_audio_and_voice_models),
+                subtitle = textResources.getString(R.string.ui_audio_models_recommendation_body),
+                icon = Icons.Default.Mic,
+                models = state.audioLocalModels,
+                highlightAccent = true
+            ),
+            ExpandableModelSection(
+                category = ModelSectionCategory.VISION,
+                title = textResources.getString(R.string.ui_vision_and_multimodal_models),
+                subtitle = textResources.getString(R.string.ui_vision_models_section_subtitle),
+                icon = Icons.Default.Visibility,
+                models = state.visionLocalModels
+            ),
+            ExpandableModelSection(
+                category = ModelSectionCategory.CHAT,
+                title = textResources.getString(R.string.ui_chat_and_text_models),
+                subtitle = textResources.getString(R.string.ui_chat_models_section_subtitle),
+                icon = Icons.Default.Memory,
+                models = state.textOnlyLocalModels
+            )
+        ).filter { it.models.isNotEmpty() }
+
         Column(modifier = Modifier.fillMaxSize()) {
             LazyColumn(
                 modifier = Modifier.weight(1f),
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                val installedGroups = listOf(
-                    Triple(
-                        textResources.getString(R.string.ui_audio_and_voice_models),
-                        state.audioLocalModels,
-                        true
-                    ),
-                    Triple(
-                        textResources.getString(R.string.ui_chat_and_vision_models),
-                        state.textVisionLocalModels,
-                        false
-                    )
-                ).filter { (_, models, _) -> models.isNotEmpty() }
-
-                installedGroups.forEach { (title, groupModels, isAudioSection) ->
-                    item {
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            ModelSectionHeader(title)
-                            if (isAudioSection) {
-                                AudioModelRecommendationCard()
+                installedSections.forEach { section ->
+                    val isExpanded = section.category in state.expandedInstalledSections
+                    item(key = "installed_header_${section.category.name}") {
+                        ExpandableSectionHeaderCard(
+                            title = section.title,
+                            subtitle = section.subtitle,
+                            icon = section.icon,
+                            count = section.models.size,
+                            isExpanded = isExpanded,
+                            highlightAccent = section.highlightAccent,
+                            onClick = {
+                                hapticView.performChevereHaptic(ChevereHaptic.Selection)
+                                onIntent(MarketplaceIntent.ToggleInstalledSection(section.category))
                             }
-                        }
+                        )
                     }
 
-                    items(groupModels) { model ->
-                    val isActive = state.activeModelId == model.id
-                    val isPending = state.pendingModelId == model.id
-                    val isSwitching =
-                        (state.switchState as? ModelSwitchState.Switching)?.toModelId == model.id ||
-                                (state.switchState as? ModelSwitchState.WarmingUp)?.modelId == model.id
-                    val activeDownload = state.activeDownloads[model.id]
-                        ?: state.activeDownloads[model.fileName]
-                    val downloadProgress = (activeDownload as? DownloadProgress.Progress)?.percent
+                    if (isExpanded) {
+                        items(
+                            items = section.models,
+                            key = { "installed_${section.category.name}_${it.id}" }
+                        ) { model ->
+                            val isActive = state.activeModelId == model.id
+                            val isPending = state.pendingModelId == model.id
+                            val isSwitching =
+                                (state.switchState as? ModelSwitchState.Switching)?.toModelId == model.id ||
+                                        (state.switchState as? ModelSwitchState.WarmingUp)?.modelId == model.id
+                            val activeDownload = state.activeDownloads[model.id]
+                                ?: state.activeDownloads[model.fileName]
+                            val downloadProgress = (activeDownload as? DownloadProgress.Progress)?.percent
 
-                    LocalModelCard(
-                        model = model,
-                        isActive = isActive,
-                        isPending = isPending,
-                        isSwitching = isSwitching,
-                        warmupStatus = if (isSwitching) (state.switchState as? ModelSwitchState.WarmingUp)?.progress else null,
-                        downloadProgress = downloadProgress,
-                        onSelect = { onIntent(MarketplaceIntent.SelectModel(model.id)) },
-                        onDelete = { onIntent(MarketplaceIntent.DeleteModel(model.id)) },
-                        onClick = { onModelClick(model.id) }
-                    )
+                            LocalModelCard(
+                                model = model,
+                                isActive = isActive,
+                                isPending = isPending,
+                                isSwitching = isSwitching,
+                                warmupStatus = if (isSwitching) (state.switchState as? ModelSwitchState.WarmingUp)?.progress else null,
+                                downloadProgress = downloadProgress,
+                                onSelect = { onIntent(MarketplaceIntent.SelectModel(model.id)) },
+                                onDelete = { onIntent(MarketplaceIntent.DeleteModel(model.id)) },
+                                onClick = { onModelClick(model.id) }
+                            )
+                        }
                     }
                 }
             }
@@ -496,50 +557,93 @@ fun InstalledModelsList(
 }
 
 @Composable
-private fun ModelSectionHeader(title: String) {
-    Text(
-        text = title.uppercase(),
-        style = Typography.labelLarge,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp)
-    )
-}
+private fun ExpandableSectionHeaderCard(
+    title: String,
+    subtitle: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    count: Int,
+    isExpanded: Boolean,
+    highlightAccent: Boolean,
+    onClick: () -> Unit
+) {
+    val borderColor = when {
+        isExpanded -> MaterialTheme.colorScheme.primary.copy(alpha = 0.45f)
+        highlightAccent -> MaterialTheme.colorScheme.primary.copy(alpha = 0.28f)
+        else -> MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.24f)
+    }
+    val containerColor = when {
+        isExpanded -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.22f)
+        highlightAccent -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.14f)
+        else -> MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.65f)
+    }
 
-@Composable
-private fun AudioModelRecommendationCard() {
-    val textResources = LocalResources.current
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.28f)),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.18f)
-        )
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(14.dp),
+        border = BorderStroke(1.dp, borderColor),
+        colors = CardDefaults.cardColors(containerColor = containerColor)
     ) {
         Row(
-            modifier = Modifier.padding(14.dp),
-            verticalAlignment = Alignment.Top,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Icon(
-                imageVector = Icons.Default.Mic,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(20.dp)
-            )
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(
-                    text = textResources.getString(R.string.ui_audio_models_recommendation_title),
-                    style = Typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = textResources.getString(R.string.ui_audio_models_recommendation_body),
-                    style = Typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .background(
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
+                        RoundedCornerShape(10.dp)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
                 )
             }
+
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(3.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = title.uppercase(),
+                        style = Typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.8.sp
+                    )
+                    Badge(
+                        text = count.toString(),
+                        containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
+                        contentColor = MaterialTheme.colorScheme.primary
+                    )
+                }
+                Text(
+                    text = subtitle,
+                    style = Typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = if (isExpanded) 3 else 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            Icon(
+                imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary
+            )
         }
     }
 }

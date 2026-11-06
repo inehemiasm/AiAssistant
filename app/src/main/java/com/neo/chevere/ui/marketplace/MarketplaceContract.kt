@@ -3,11 +3,21 @@ package com.neo.chevere.ui.marketplace
 import com.neo.chevere.core.UiEffect
 import com.neo.chevere.core.UiIntent
 import com.neo.chevere.core.UiState
+import com.neo.chevere.domain.DownloadProgress
 import com.neo.chevere.domain.InitializationStatus
 import com.neo.chevere.domain.InstalledModel
+import com.neo.chevere.domain.ModelCapability
 import com.neo.chevere.domain.ModelEntry
-import com.neo.chevere.domain.DownloadProgress
 import com.neo.chevere.ui.common.CatalogState
+
+/**
+ * Expandable section categories in the AI Models Marketplace.
+ */
+enum class ModelSectionCategory {
+    AUDIO_VOICE,
+    VISION,
+    CHAT
+}
 
 /**
  * Represents the various states during a model switch operation.
@@ -48,7 +58,9 @@ data class MarketplaceState(
     val pendingModelId: String? = null,
     val switchState: ModelSwitchState = ModelSwitchState.Idle,
     val deviceTotalRamGb: Double = 0.0,
-    val modelGuidance: ModelGuidanceState = ModelGuidanceState.Compact
+    val modelGuidance: ModelGuidanceState = ModelGuidanceState.Compact,
+    val expandedDiscoverSections: Set<ModelSectionCategory> = emptySet(),
+    val expandedInstalledSections: Set<ModelSectionCategory> = ModelSectionCategory.entries.toSet()
 ) : UiState {
     val isDownloading: Boolean get() = activeDownloads.isNotEmpty()
     val isSwitching: Boolean get() = switchState is ModelSwitchState.Switching || switchState is ModelSwitchState.WarmingUp
@@ -56,11 +68,14 @@ data class MarketplaceState(
     val chatRemoteModels: List<ModelEntry>
         get() = remoteModels.filter { it.activationCategory() == ModelActivationCategory.CHAT }
 
-    val textVisionRemoteModels: List<ModelEntry>
-        get() = chatRemoteModels.filterNot { it.isAudioModel }
-
     val audioRemoteModels: List<ModelEntry>
         get() = chatRemoteModels.filter { it.isAudioModel }
+
+    val visionRemoteModels: List<ModelEntry>
+        get() = chatRemoteModels.filter { !it.isAudioModel && it.supportsVision }
+
+    val textOnlyRemoteModels: List<ModelEntry>
+        get() = chatRemoteModels.filter { !it.isAudioModel && !it.supportsVision }
 
     val imageRemoteModels: List<ModelEntry>
         get() = remoteModels.filter { it.activationCategory() == ModelActivationCategory.IMAGE_GENERATION }
@@ -68,11 +83,14 @@ data class MarketplaceState(
     val chatLocalModels: List<InstalledModel>
         get() = localModels.filter { it.activationCategory() == ModelActivationCategory.CHAT }
 
-    val textVisionLocalModels: List<InstalledModel>
-        get() = chatLocalModels.filterNot { it.isAudioCapable() }
-
     val audioLocalModels: List<InstalledModel>
         get() = chatLocalModels.filter { it.isAudioCapable() }
+
+    val visionLocalModels: List<InstalledModel>
+        get() = chatLocalModels.filter { !it.isAudioCapable() && ModelCapability.VISION in it.capabilities }
+
+    val textOnlyLocalModels: List<InstalledModel>
+        get() = chatLocalModels.filter { !it.isAudioCapable() && ModelCapability.VISION !in it.capabilities }
 
     val imageLocalModels: List<InstalledModel>
         get() = localModels.filter { it.activationCategory() == ModelActivationCategory.IMAGE_GENERATION }
@@ -82,6 +100,8 @@ sealed class MarketplaceIntent : UiIntent {
     data object ExpandModelGuidance : MarketplaceIntent()
     data object CollapseModelGuidance : MarketplaceIntent()
     data object DismissModelGuidance : MarketplaceIntent()
+    data class ToggleDiscoverSection(val category: ModelSectionCategory) : MarketplaceIntent()
+    data class ToggleInstalledSection(val category: ModelSectionCategory) : MarketplaceIntent()
     data object FetchModels : MarketplaceIntent()
     data class DownloadModel(val model: ModelEntry, val baseDir: String) : MarketplaceIntent()
     data class DeleteModel(val modelId: String) : MarketplaceIntent()

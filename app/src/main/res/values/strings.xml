@@ -813,4 +813,8 @@
     <string name="ui_audio_voice">Voice &amp; Audio</string>
     <string name="ui_audio_models_recommendation_title">Recommended for Voice Input &amp; Memos</string>
     <string name="ui_audio_models_recommendation_body">If you want to use your voice to dictate notes, summarize recordings, or extract tasks, we recommend downloading an Audio &amp; Voice model below.</string>
+    <string name="ui_vision_and_multimodal_models">Vision &amp; Multimodal Models</string>
+    <string name="ui_vision_models_section_subtitle">Analyze attached photos, screenshots, and visual questions alongside text chat.</string>
+    <string name="ui_chat_and_text_models">Chat &amp; Coding Models</string>
+    <string name="ui_chat_models_section_subtitle">Fast on-device conversation, reasoning, coding assistance, and local agent tools.</string>
 </resources>
