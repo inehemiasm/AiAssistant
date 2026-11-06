@@ -49,13 +49,6 @@ android {
         versionName = appVersionName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-
-        val serperApiKey: String = project.findProperty("SERPER_API_KEY")?.toString() ?: ""
-        val webSearchProxyUrl: String = System.getenv("WEB_SEARCH_PROXY_URL")
-            ?: project.findProperty("WEB_SEARCH_PROXY_URL")?.toString()
-            ?: ""
-        buildConfigField("String", "SERPER_API_KEY", "\"$serperApiKey\"")
-        buildConfigField("String", "WEB_SEARCH_PROXY_URL", "\"$webSearchProxyUrl\"")
     }
 
     externalNativeBuild {
@@ -82,8 +75,6 @@ android {
 
     buildTypes {
         release {
-            // Never embed raw third-party API keys in release client binaries.
-            buildConfigField("String", "SERPER_API_KEY", "\"\"")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
@@ -177,6 +168,9 @@ dependencies {
 
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.analytics)
+    implementation(libs.firebase.appcheck)
+    implementation(libs.firebase.appcheck.playintegrity)
+    debugImplementation(libs.firebase.appcheck.debug)
     implementation(libs.firebase.crashlytics)
     implementation(libs.firebase.firestore)
     implementation(libs.kotlinx.coroutines.play.services)

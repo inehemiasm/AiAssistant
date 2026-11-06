@@ -34,7 +34,6 @@ import com.neo.chevere.data.agent.tools.ShareTextTool
 import com.neo.chevere.data.agent.tools.SummarizeTextTool
 import com.neo.chevere.data.agent.tools.TaskRegistryTool
 import com.neo.chevere.data.agent.tools.WeatherTool
-import com.neo.chevere.data.agent.tools.WebSearchTool
 import com.neo.chevere.data.chat.RoutingCategory
 import com.neo.chevere.data.datasource.local.DocumentChunkDao
 import com.neo.chevere.data.datasource.local.SearchCacheDao
@@ -89,7 +88,6 @@ class ToolRegistryTest {
         // Recreate all tools defined in AgentModule (and any other files in the codebase)
         productionTools = setOf(
             SummarizeTextTool(),
-            WebSearchTool(mockContext, mockHttpClient, mockSearchCacheDao),
             WeatherTool(mockHttpClient, mockPreferenceManager, mock(), mockContext),
             ListModelsTool(mockInstalledModelRegistry, mockPreferenceManager),
             GetActiveModelTool(mockInstalledModelRegistry, mockPreferenceManager),
@@ -123,11 +121,10 @@ class ToolRegistryTest {
     }
 
     @Test
-    fun getTool_returnsCorrectTool() {
+    fun getTool_webSearchIsUnavailable() {
         val registry = ToolRegistry(productionTools)
         val tool = registry.getTool("web_search")
-        assertNotNull(tool)
-        assertEquals("web_search", tool?.name)
+        assertNull(tool)
     }
 
     @Test
@@ -203,7 +200,7 @@ class ToolRegistryTest {
         val systemPrompt = registry.getToolsSystemPrompt(RoutingCategory.LIVE_INFORMATION)
 
         assertTrue(systemPrompt.contains("get_weather"))
-        assertTrue(systemPrompt.contains("web_search"))
+        assertTrue(!systemPrompt.contains("web_search"))
         assertTrue(!systemPrompt.contains("read_sensors"))
         assertTrue(!systemPrompt.contains("sensor-radar"))
     }
@@ -221,7 +218,7 @@ class ToolRegistryTest {
     }
     @Test fun executionPolicyMatchesPromptCategories() {
         val registry = ToolRegistry(productionTools)
-        assertEquals(setOf("get_weather", "web_search"), registry.allowedToolNames(RoutingCategory.LIVE_INFORMATION))
+        assertEquals(setOf("get_weather"), registry.allowedToolNames(RoutingCategory.LIVE_INFORMATION))
         assertTrue(registry.allowedToolNames(RoutingCategory.DIRECT_CHAT).isEmpty())
         assertEquals(setOf("mcp"), registry.allowedToolNames(RoutingCategory.MCP))
     }

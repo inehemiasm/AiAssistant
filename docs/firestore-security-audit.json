@@ -1,24 +1,24 @@
 {
-  "score": 2,
-  "summary": "The previous report-create rule validated fields but permitted unauthenticated intake. The new database is closed, and local report writes are now denied pending a protected intake design. This prevents public abuse but does not provide working production reporting.",
+  "score": 4,
+  "summary": "Prototype security rules enforce read-only access on the public model catalog and strict create-only schema/length/timestamp/90-day-TTL validation on AI content reports, paired with Firebase App Check (Play Integrity in release, Debug provider in debug). All client reads, updates, and deletes on reports and unknown collections are denied.",
   "findings": [
     {
       "check": "Identity and abuse controls",
-      "severity": "major",
-      "issue": "The prior schema-only create rule could be invoked outside the app by any caller. Length limits do not authenticate or rate-limit submissions.",
-      "recommendation": "Keep report writes closed until app verification or a protected, rate-limited intake endpoint is configured and tested. Do not restore open writes just to make the client succeed."
+      "severity": "minor",
+      "issue": "App reports do not require user sign-in (to allow frictionless safety reporting), so rules rely on Firebase App Check (Play Integrity) enforcement at the Firestore service layer plus strict field/size/timestamp validation in rules.",
+      "recommendation": "Register the release Play Integrity SHA-256 certificate in Firebase Console > App Check and enable App Check enforcement for Cloud Firestore once tested."
     },
     {
       "check": "Read and mutation isolation",
       "severity": "minor",
-      "issue": "Client report reads, updates and deletes are denied, which protects report contents. Administrator review/deletion must use restricted IAM access; that operational workflow has not been verified.",
-      "recommendation": "Assign a least-privilege reviewer and verify authorized review and deletion without granting general clients report-list access."
+      "issue": "Client report reads, updates, and deletes are strictly denied (`allow read, update, delete: if false;`), preventing the Update Bypass and PII leaks. Administrator review uses IAM-authenticated console/admin access.",
+      "recommendation": "Keep client read/update/delete denied on `ai_content_reports`."
     },
     {
       "check": "Retention and deletion",
-      "severity": "moderate",
-      "issue": "No retention period or deletion automation has been approved or verified.",
-      "recommendation": "Choose a period, implement deletion, account for billing requirements and verify it before making a public privacy promise."
+      "severity": "minor",
+      "issue": "Every created report must include an `expiresAt` timestamp strictly between 89 and 91 days after `request.time`. Server-side automatic deletion requires the Firestore TTL policy on `ai_content_reports.expiresAt` to be active in Google Cloud / Firebase.",
+      "recommendation": "Ensure the Firestore TTL policy on collection group `ai_content_reports` field `expiresAt` is enabled in Google Cloud."
     }
   ]
 }

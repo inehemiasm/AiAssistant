@@ -37,4 +37,18 @@ class DocumentImportTest {
         assertTrue(repository.importDocument("/sdcard/private.txt") is DocumentImportResult.Failed)
         verifyNoInteractions(dao)
     }
+
+    @Test fun voiceMemoTextIsChunkedAndSavedUnderVoiceMemoNamespace() = runTest {
+        val dao = mock<DocumentChunkDao>()
+        val repository = LocalDocumentRepository(RuntimeEnvironment.getApplication(), dao)
+        val transcript = "Follow up on the release checklist and verify icons. ".repeat(30)
+        val result = repository.saveTextDocument("voice-note-101.md", transcript)
+        assertTrue(result is DocumentImportResult.Imported)
+        val imported = result as DocumentImportResult.Imported
+        assertEquals("voice-note-101.md", imported.name)
+        val chunks = argumentCaptor<List<DocumentChunkEntity>>()
+        verify(dao).replaceDocument(eq("voice-memo://voice-note-101.md"), chunks.capture())
+        assertTrue(chunks.firstValue.size >= 2)
+        assertEquals("voice-note-101.md", chunks.firstValue.first().fileName)
+    }
 }

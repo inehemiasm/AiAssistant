@@ -844,6 +844,23 @@ fun ChatContent(
                         onSuggestionClick = { suggestion ->
                             hapticView.performChevereHaptic(ChevereHaptic.Selection)
                             viewModel.onIntent(ChatIntent.UpdateInputText(suggestion))
+                        },
+                        voiceRecordingState = state.voiceRecordingState,
+                        onStartVoiceClick = {
+                            hapticView.performChevereHaptic(ChevereHaptic.Action)
+                            viewModel.onIntent(ChatIntent.StartVoiceInput)
+                        },
+                        onStopVoiceClick = {
+                            hapticView.performChevereHaptic(ChevereHaptic.Success)
+                            viewModel.onIntent(ChatIntent.StopVoiceInput)
+                        },
+                        onCancelVoiceClick = {
+                            hapticView.performChevereHaptic(ChevereHaptic.Warning)
+                            viewModel.onIntent(ChatIntent.CancelVoiceInput)
+                        },
+                        onVoiceMemoActionClick = { action ->
+                            hapticView.performChevereHaptic(ChevereHaptic.Action)
+                            viewModel.onIntent(ChatIntent.RunVoiceMemoAction(action))
                         }
                     )
                 }

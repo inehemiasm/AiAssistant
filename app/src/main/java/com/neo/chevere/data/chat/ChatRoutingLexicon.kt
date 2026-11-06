@@ -147,18 +147,6 @@ internal object ChatRoutingLexicon {
     )
 
     val liveInformationWeatherTerms = setOf("weather", "forecast", "temperature")
-    val freshInformationPhrases = setOf(
-        "search the web",
-        "look up",
-        "latest",
-        "current news",
-        "today's news",
-        "right now",
-        "breaking news",
-        "current price",
-        "stock price"
-    )
-
     val deviceActionVerbs = setOf(
         "copy",
         "share",

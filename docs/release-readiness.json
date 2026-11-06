@@ -9,43 +9,43 @@
   "gates": [
     {
       "id": "publisher_identity",
-      "status": "blocked",
-      "evidence": "Owner intends to publish personally; exact verified legal name still needs confirmation."
+      "status": "verified",
+      "evidence": "Verified personal Play Console developer account under Nehemias Miranda, operating Chevere AI, recorded in public/privacy.html and docs/consumer-terms-draft.md."
     },
     {
       "id": "target_audience",
-      "status": "blocked",
-      "evidence": "Owner explicitly chose to keep the intended audience undecided on 2026-11-01. No adults-only claim has been adopted."
+      "status": "verified",
+      "evidence": "Owner selected 18+ target audience on 2026-11-02; disclosed in public/privacy.html and docs/consumer-terms-draft.md."
     },
     {
       "id": "play_console",
       "status": "blocked",
-      "evidence": "Owner confirmed developer-account verification complete on 2026-11-02. Owner has not created the Play app or uploaded an initial AAB. App signing, content rating, audience and service declarations remain unverified."
+      "evidence": "Owner confirmed developer-account verification complete on 2026-11-02. First manual AAB upload, Play App Signing enrollment, content rating, audience, and service declarations in Play Console are next."
     },
     {
       "id": "privacy_publication",
-      "status": "blocked",
-      "evidence": "Policy and terms remain drafts. Publisher/audience and operational reporting choices must match the deployed public pages."
+      "status": "verified",
+      "evidence": "Updated public/privacy.html deployed live to https://aiassistant-88f75.web.app/privacy.html on 2026-11-02 with verified publisher identity (Nehemias Miranda / Chevere AI), 18+ audience, 90-day report retention, and Play Integrity disclosures."
     },
     {
       "id": "protected_reporting",
       "status": "blocked",
-      "evidence": "Standard (default) Firestore in aiassistant-88f75/us-central1 verified read-only. Client report writes stay denied; protected intake, abuse controls and delivery are not verified."
+      "evidence": "Firebase App Check (Play Integrity in release, Debug provider in debug) integrated in client and schema/90-day-TTL-validated create rule deployed to aiassistant-88f75. Registering the Play Integrity SHA-256 certificate and enabling App Check enforcement in Firebase Console remain required."
     },
     {
       "id": "report_operations",
       "status": "blocked",
-      "evidence": "Report reviewer, retention duration and verified deletion operations are not chosen or deployed."
+      "evidence": "90-day retention chosen and enforced on report creation via expiresAt timestamp; enabling the Firestore TTL auto-deletion policy on ai_content_reports.expiresAt in Cloud Console remains required."
     },
     {
       "id": "data_safety",
       "status": "blocked",
-      "evidence": "Play Data Safety declarations and actual SDK/network collection review require verification, including Analytics, Crashlytics, voice providers and optional tools."
+      "evidence": "Play Data Safety declarations and actual SDK/network collection review require submission in Play Console using docs/data-safety-draft.md."
     },
     {
       "id": "license_review",
       "status": "blocked",
-      "evidence": "Fresh release inventory: 327 components, 22 without local POM license metadata. Exact dependency/model/conversion/asset LICENSE and NOTICE review is still required; metadata is not legal clearance. Experimental MiniCPM adds a pinned MIT native fork, image decoder and Apache-2.0 model bundle; native/transitive notices and conversion provenance remain part of this open review."
+      "evidence": "Fresh release inventory: 327 components, 22 without local POM license metadata. Exact dependency/model/conversion/asset LICENSE and NOTICE review is still required; metadata is not legal clearance."
     },
     {
       "id": "safety_evaluation",
@@ -55,17 +55,17 @@
     {
       "id": "release_signing",
       "status": "blocked",
-      "evidence": "Signed release APK verified locally. SHA-256 certificate fingerprint c2000cd5ecbc1a4668f58bf737db0ca6719fb2d9e7e79b54fa9b628cb38c312e. Play upload-certificate comparison remains unverified."
+      "evidence": "Signed release APK and AAB verified locally with SHA-256 certificate fingerprint c2000cd5ecbc1a4668f58bf737db0ca6719fb2d9e7e79b54fa9b628cb38c312e. Play upload-certificate comparison in Play Console remains pending first AAB upload."
     },
     {
       "id": "release_artifact",
       "status": "blocked",
-      "evidence": "Historical November 1 artifacts and hashes remain in release-evidence.json. MiniCPM changes native code: current APK alignment and device results must be checked separately; AAB/pre-launch review and Play approval remain unverified."
+      "evidence": "Signed release AAB and APK built and verified for 16 KB ELF alignment across all 8 native libraries on 2026-11-02; Play Console upload and pre-launch report review remain pending."
     },
     {
       "id": "device_matrix",
       "status": "blocked",
-      "evidence": "Connected-device checks cover selected scenarios. Fresh install, interruptions, low RAM/storage, and current-model inference on a 16 KB device still require a disposable test environment."
+      "evidence": "Connected-device checks and Maestro release privacy/OSS-license flow passed on SBAIOC585325EHL and 16 KB emulator. Fresh install, interruptions, low RAM/storage, and full model inference on a 16 KB device still require a disposable test environment."
     },
     {
       "id": "target_api",

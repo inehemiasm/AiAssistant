@@ -59,3 +59,8 @@
 
 # JNI entry point names must remain stable.
 -keep class com.neo.chevere.data.inference.minicpm.MiniCpmNative { *; }
+
+# LiteRT-LM JNI callbacks, configs, and model wrappers (invoked from liblitertlm_jni.so)
+-keep class com.google.ai.edge.litertlm.** { *; }
+-keep interface com.google.ai.edge.litertlm.** { *; }
+-keep class * implements com.google.ai.edge.litertlm.** { *; }

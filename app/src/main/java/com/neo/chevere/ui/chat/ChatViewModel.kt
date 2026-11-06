@@ -94,6 +94,7 @@ class ChatViewModel @Inject constructor(
     private var initJob: Job? = null
     private var imageGenerationJob: Job? = null
     private var responseJob: Job? = null
+    private var voiceTimerJob: Job? = null
     private var lastUserMessage: String? = null
     /** ID of the currently active Room session; null until the first message is sent. */
     private var currentSessionId: Long? = null
@@ -161,11 +162,52 @@ class ChatViewModel @Inject constructor(
             voiceInputManager.results.collect { result ->
                 when (result) {
                     is VoiceResult.Partial -> setState { copy(inputText = result.text) }
+                    is VoiceResult.Amplitude -> {
+                        setState {
+                            val currentListening = voiceRecordingState as? VoiceRecordingState.Listening
+                            if (currentListening != null) {
+                                copy(voiceRecordingState = currentListening.copy(amplitude = result.normalized))
+                            } else {
+                                this
+                            }
+                        }
+                    }
                     is VoiceResult.Final -> {
-                        setState { copy(inputText = result.text, isListening = false) }
+                        voiceTimerJob?.cancel()
+                        voiceTimerJob = null
+                        val clean = result.text.trim()
+                        setState {
+                            copy(
+                                inputText = clean,
+                                isListening = false,
+                                voiceRecordingState = if (clean.isNotBlank()) {
+                                    VoiceRecordingState.Recorded(clean)
+                                } else {
+                                    VoiceRecordingState.Idle
+                                }
+                            )
+                        }
+                    }
+                    is VoiceResult.Cancelled -> {
+                        voiceTimerJob?.cancel()
+                        voiceTimerJob = null
+                        setState {
+                            copy(
+                                inputText = "",
+                                isListening = false,
+                                voiceRecordingState = VoiceRecordingState.Idle
+                            )
+                        }
                     }
                     is VoiceResult.Error -> {
-                        setState { copy(isListening = false) }
+                        voiceTimerJob?.cancel()
+                        voiceTimerJob = null
+                        setState {
+                            copy(
+                                isListening = false,
+                                voiceRecordingState = VoiceRecordingState.Idle
+                            )
+                        }
                         if (result.message.isNotBlank()) {
                             sendEffect { ChatEffect.ShowVoiceError(result.message) }
                         }
@@ -288,7 +330,16 @@ class ChatViewModel @Inject constructor(
                 }
 
                 ChatIntent.ClearConversation -> clearConversation()
-                is ChatIntent.UpdateInputText -> setState { copy(inputText = intent.text) }
+                is ChatIntent.UpdateInputText -> setState {
+                    copy(
+                        inputText = intent.text,
+                        voiceRecordingState = if (intent.text.isBlank() && voiceRecordingState is VoiceRecordingState.Recorded) {
+                            VoiceRecordingState.Idle
+                        } else {
+                            voiceRecordingState
+                        }
+                    )
+                }
                 is ChatIntent.ToggleDocumentExcerpt -> {
                     val evidence = currentState.messages.getOrNull(intent.messageIndex)?.documentEvidence as? com.neo.chevere.domain.DocumentEvidence.Matches
                     if (evidence?.excerpts?.getOrNull(intent.excerptIndex) != null) {
@@ -368,9 +419,24 @@ class ChatViewModel @Inject constructor(
 
                 ChatIntent.StartVoiceInput -> startVoiceInput()
                 ChatIntent.StopVoiceInput -> stopVoiceInput()
+                ChatIntent.CancelVoiceInput -> cancelVoiceInput()
                 is ChatIntent.VoiceInputResult -> {
-                    setState { copy(inputText = intent.text, isListening = false) }
+                    voiceTimerJob?.cancel()
+                    voiceTimerJob = null
+                    val clean = intent.text.trim()
+                    setState {
+                        copy(
+                            inputText = clean,
+                            isListening = false,
+                            voiceRecordingState = if (clean.isNotBlank()) {
+                                VoiceRecordingState.Recorded(clean)
+                            } else {
+                                VoiceRecordingState.Idle
+                            }
+                        )
+                    }
                 }
+                is ChatIntent.RunVoiceMemoAction -> runVoiceMemoAction(intent.action)
                 // ── Chat History ─────────────────────────────────────────────
                 ChatIntent.NewConversation -> newConversation()
                 is ChatIntent.LoadSession -> loadSession(intent.sessionId)
@@ -579,6 +645,7 @@ class ChatViewModel @Inject constructor(
                 sendState = SendState.Sending,
                 inputText = "",
                 selectedImageUri = null,
+                voiceRecordingState = VoiceRecordingState.Idle,
                 suggestions = emptyList()
             )
         }
@@ -599,6 +666,11 @@ class ChatViewModel @Inject constructor(
 
         // Sensor slash commands → navigate to Sensor Radar screen in the requested mode
         val trimmedLower = promptText.trim().lowercase()
+        if (trimmedLower == "/voice" || trimmedLower == "/memo") {
+            setState { copy(messages = messages.dropLast(1), sendState = SendState.Idle, inputText = "") }
+            startVoiceInput()
+            return
+        }
         val sensorMode: String? = when {
             trimmedLower == "/sensors" || trimmedLower.startsWith("/sensors ") -> "all"
             trimmedLower == "/stud" || trimmedLower.startsWith("/stud ")   -> "stud"
@@ -823,17 +895,102 @@ class ChatViewModel @Inject constructor(
             return
         }
 
+        voiceTimerJob?.cancel()
         viewModelScope.launch(dispatcherProvider.main) {
-            setState { copy(isListening = true, inputText = "") }
+            setState {
+                copy(
+                    isListening = true,
+                    inputText = "",
+                    voiceRecordingState = VoiceRecordingState.Listening(amplitude = 0.12f, elapsedSeconds = 0)
+                )
+            }
             voiceInputManager.startListening()
+        }
+        voiceTimerJob = viewModelScope.launch(dispatcherProvider.main) {
+            var seconds = 0
+            while (true) {
+                kotlinx.coroutines.delay(1000L)
+                seconds += 1
+                val listening = currentState.voiceRecordingState as? VoiceRecordingState.Listening ?: break
+                setState {
+                    copy(voiceRecordingState = listening.copy(elapsedSeconds = seconds))
+                }
+            }
         }
     }
 
-    /** Stops any active voice input session. */
+    /** Stops any active voice input session and commits the transcript. */
     private fun stopVoiceInput() {
+        voiceTimerJob?.cancel()
+        voiceTimerJob = null
         viewModelScope.launch(dispatcherProvider.main) {
             voiceInputManager.stopListening()
-            setState { copy(isListening = false) }
+            val clean = currentState.inputText.trim()
+            setState {
+                copy(
+                    isListening = false,
+                    voiceRecordingState = if (clean.isNotBlank()) {
+                        VoiceRecordingState.Recorded(clean)
+                    } else {
+                        VoiceRecordingState.Idle
+                    }
+                )
+            }
+        }
+    }
+
+    /** Cancels the active voice input session and discards any partial transcript. */
+    private fun cancelVoiceInput() {
+        voiceTimerJob?.cancel()
+        voiceTimerJob = null
+        viewModelScope.launch(dispatcherProvider.main) {
+            voiceInputManager.cancelListening()
+            setState {
+                copy(
+                    isListening = false,
+                    inputText = "",
+                    voiceRecordingState = VoiceRecordingState.Idle
+                )
+            }
+        }
+    }
+
+    /** Executes a one-tap Whisper-style action on the captured voice memo. */
+    private suspend fun runVoiceMemoAction(action: VoiceMemoAction) {
+        val transcript = currentState.inputText.trim().ifBlank {
+            (currentState.voiceRecordingState as? VoiceRecordingState.Recorded)?.transcript.orEmpty().trim()
+        }
+        if (transcript.isBlank()) {
+            setState { copy(voiceRecordingState = VoiceRecordingState.Idle) }
+            return
+        }
+
+        setState { copy(voiceRecordingState = VoiceRecordingState.Idle) }
+        when (action) {
+            VoiceMemoAction.SUMMARIZE -> {
+                if (currentState.isLoading) return
+                sendMessage("Summarize this voice note clearly:\n\n$transcript", null)
+            }
+            VoiceMemoAction.EXTRACT_TASKS -> {
+                if (currentState.isLoading) return
+                sendMessage("Extract actionable tasks from this voice note:\n\n$transcript", null)
+            }
+            VoiceMemoAction.SAVE_TO_DOCS -> {
+                val noteName = "voice-note-${System.currentTimeMillis()}.md"
+                when (val result = documentRepository.saveTextDocument(noteName, transcript)) {
+                    is com.neo.chevere.domain.DocumentImportResult.Imported -> {
+                        setState { copy(inputText = "/docs Summarize ${result.name}") }
+                        sendEffect {
+                            ChatEffect.ShowToast(
+                                application.getString(R.string.voice_memo_saved_toast, result.name, result.chunks)
+                            )
+                        }
+                    }
+                    is com.neo.chevere.domain.DocumentImportResult.Failed -> {
+                        sendEffect { ChatEffect.ShowToast(result.reason) }
+                    }
+                }
+            }
         }
     }
 

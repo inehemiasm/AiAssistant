@@ -115,7 +115,7 @@ class ToolRegistry @Inject constructor(
 
     private fun RoutingCategory.toolNamesForCategory(): Set<String> = when (this) {
         RoutingCategory.IMAGE_GENERATION -> setOf(Constants.Agent.IMAGE_GENERATION_TOOL_NAME)
-        RoutingCategory.LIVE_INFORMATION -> setOf("get_weather", "web_search")
+        RoutingCategory.LIVE_INFORMATION -> setOf("get_weather")
         RoutingCategory.DEVICE_ACTION -> setOf(
             "control_device",
             "copy_to_clipboard",

@@ -228,8 +228,7 @@ class ChatRequestRouter @Inject constructor() {
 
     private fun looksLikeLiveInformationRequest(text: String): Boolean {
         val asksForWeather = ChatRoutingLexicon.liveInformationWeatherTerms.any { it in text }
-        val asksForFreshInfo = ChatRoutingLexicon.freshInformationPhrases.any { it in text }
-        return asksForWeather || asksForFreshInfo
+        return asksForWeather
     }
 
     private fun looksLikeDeviceActionRequest(text: String): Boolean {

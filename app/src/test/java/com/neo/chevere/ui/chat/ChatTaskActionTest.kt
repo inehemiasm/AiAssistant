@@ -39,6 +39,7 @@ class ChatTaskActionTest {
     private val repository = mock<ChatRepository>()
     private val reportRepository = mock<com.neo.chevere.data.report.AiContentReportRepository>()
     private val suggestionRepository = mock<ChatSuggestionRepository>()
+    private val documentRepository = mock<DocumentRepository>()
     private val documentFolders = mock<DocumentFolderRepository>()
     private val initialization = MutableStateFlow<InitializationStatus>(InitializationStatus.Uninitialized)
     private val agentState = MutableStateFlow<AgentState>(AgentState.Idle)
@@ -69,7 +70,7 @@ class ChatTaskActionTest {
         }
         viewModel = ChatViewModel(RuntimeEnvironment.getApplication(), repository,
             mock<InitializeChatUseCase>(), mock<SendMessageUseCase>(), preferences,
-            dispatchers, mock<AppTelemetry>(), voice, history, taskRepository, reportRepository, mock(), suggestionRepository, documentFolders)
+            dispatchers, mock<AppTelemetry>(), voice, history, taskRepository, reportRepository, documentRepository, suggestionRepository, documentFolders)
         store.put("chat", viewModel)
         advanceUntilIdle()
         viewModel.onIntent(ChatIntent.LoadSession(5))
@@ -160,5 +161,23 @@ class ChatTaskActionTest {
         assertEquals(TaskCompletionUiState.Pending, state.tasks.single().completion)
         assertTrue(state.updatingIds.isEmpty())
         assertTrue(viewModel.effect.filterIsInstance<ChatEffect.ShowToast>().first().message.isNotBlank())
+    }
+
+    @Test fun voiceMemoSaveToDocs_indexesTranscriptAndPrefillsDocsPrompt() = runTest(dispatcher) {
+        whenever(documentRepository.saveTextDocument(any(), eq("Discuss Q4 roadmap and ship voice memo feature"))).thenReturn(
+            DocumentImportResult.Imported("voice-note-test.md", 1)
+        )
+        viewModel.onIntent(ChatIntent.VoiceInputResult("Discuss Q4 roadmap and ship voice memo feature"))
+        advanceUntilIdle()
+        assertEquals(
+            VoiceRecordingState.Recorded("Discuss Q4 roadmap and ship voice memo feature"),
+            viewModel.currentState.voiceRecordingState
+        )
+
+        viewModel.onIntent(ChatIntent.RunVoiceMemoAction(VoiceMemoAction.SAVE_TO_DOCS))
+        advanceUntilIdle()
+        assertEquals(VoiceRecordingState.Idle, viewModel.currentState.voiceRecordingState)
+        assertEquals("/docs Summarize voice-note-test.md", viewModel.currentState.inputText)
+        verify(documentRepository).saveTextDocument(any(), eq("Discuss Q4 roadmap and ship voice memo feature"))
     }
 }

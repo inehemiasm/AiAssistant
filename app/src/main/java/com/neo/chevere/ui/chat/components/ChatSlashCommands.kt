@@ -12,6 +12,7 @@ internal data class SlashCommand(
 
 /** User-visible autocomplete belongs to presentation; command tokens remain locale-independent. */
 internal val chatSlashCommands = listOf(
+    SlashCommand("/voice", R.string.slash_voice_title, R.string.slash_voice_description),
     SlashCommand("/sensors", R.string.slash_sensors_title, R.string.slash_sensors_description),
     SlashCommand("/stud", R.string.slash_stud_title, R.string.slash_stud_description),
     SlashCommand("/level", R.string.slash_level_title, R.string.slash_level_description),
