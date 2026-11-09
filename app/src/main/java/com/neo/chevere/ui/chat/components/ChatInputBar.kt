@@ -39,6 +39,7 @@ import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Description
@@ -88,6 +89,7 @@ import com.neo.chevere.core.Constants
 import com.neo.chevere.ui.chat.ComposerActionButtonState
 import com.neo.chevere.ui.chat.VoiceMemoAction
 import com.neo.chevere.ui.chat.VoiceRecordingState
+import com.neo.chevere.ui.chat.HandsFreeState
 import com.neo.chevere.ui.designsystem.Typography
 import java.util.Locale
 import kotlin.math.sin
@@ -118,6 +120,9 @@ fun ChatInputBar(
     onStopVoiceClick: () -> Unit = {},
     onCancelVoiceClick: () -> Unit = {},
     onVoiceMemoActionClick: (VoiceMemoAction) -> Unit = {},
+    handsFreeState: HandsFreeState = HandsFreeState.Off,
+    onStartHandsFreeClick: () -> Unit = {},
+    onStopHandsFreeClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var showAttachmentMenu by remember { mutableStateOf(false) }
@@ -171,6 +176,18 @@ fun ChatInputBar(
             )
         }
 
+        // Hands-free conversation mode banner with live status and waveform
+        AnimatedVisibility(
+            visible = handsFreeState.isActive,
+            enter = expandVertically(expandFrom = Alignment.Bottom) + fadeIn(tween(160)),
+            exit = shrinkVertically(shrinkTowards = Alignment.Bottom) + fadeOut(tween(120))
+        ) {
+            HandsFreeConversationBanner(
+                state = handsFreeState,
+                onEnd = onStopHandsFreeClick
+            )
+        }
+
         if (suggestions.isNotEmpty() && !isBusy && slashSuggestions.isEmpty() && voiceRecordingState is VoiceRecordingState.Idle) {
             LazyRow(
                 modifier = Modifier
@@ -200,6 +217,9 @@ fun ChatInputBar(
                     if (command == "/voice") {
                         onTextChange("")
                         onStartVoiceClick()
+                    } else if (command == "/conversation") {
+                        onTextChange("")
+                        onStartHandsFreeClick()
                     } else {
                         onTextChange("$command ")
                     }
@@ -279,7 +299,8 @@ fun ChatInputBar(
             ComposerActionButton(
                 state = buttonState,
                 onSend = onSend,
-                onStop = onStop
+                onStop = onStop,
+                onHandsFree = onStartHandsFreeClick
             )
         }
     }
@@ -733,16 +754,24 @@ private fun AttachmentButton(
 private fun ComposerActionButton(
     state: ComposerActionButtonState,
     onSend: () -> Unit,
-    onStop: () -> Unit
+    onStop: () -> Unit,
+    onHandsFree: () -> Unit = {}
 ) {
     val actionEnabled = state !is ComposerActionButtonState.Disabled
     val isBusy = state is ComposerActionButtonState.Stop
+    val isHandsFree = state is ComposerActionButtonState.HandsFree
     Surface(
-        color = if (actionEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHigh,
-        contentColor = if (actionEnabled) {
-            MaterialTheme.colorScheme.onPrimary
-        } else {
-            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f)
+        color = when {
+            isBusy -> MaterialTheme.colorScheme.errorContainer
+            isHandsFree -> MaterialTheme.colorScheme.primaryContainer
+            actionEnabled -> MaterialTheme.colorScheme.primary
+            else -> MaterialTheme.colorScheme.surfaceContainerHigh
+        },
+        contentColor = when {
+            isBusy -> MaterialTheme.colorScheme.onErrorContainer
+            isHandsFree -> MaterialTheme.colorScheme.primary
+            actionEnabled -> MaterialTheme.colorScheme.onPrimary
+            else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f)
         },
         shape = CircleShape,
         modifier = Modifier
@@ -755,16 +784,129 @@ private fun ComposerActionButton(
                 when (state) {
                     ComposerActionButtonState.Stop -> onStop()
                     ComposerActionButtonState.Send -> onSend()
+                    ComposerActionButtonState.HandsFree -> onHandsFree()
                     ComposerActionButtonState.Disabled -> {}
                 }
             },
             enabled = actionEnabled
         ) {
             Icon(
-                if (isBusy) Icons.Default.Stop else Icons.AutoMirrored.Filled.Send,
-                stringResource(if (isBusy) R.string.stop_response else R.string.send),
+                when {
+                    isBusy -> Icons.Default.Stop
+                    isHandsFree -> Icons.Default.GraphicEq
+                    else -> Icons.AutoMirrored.Filled.Send
+                },
+                stringResource(
+                    when {
+                        isBusy -> R.string.stop_response
+                        isHandsFree -> R.string.hands_free_start
+                        else -> R.string.send
+                    }
+                ),
                 modifier = Modifier.size(22.dp)
             )
+        }
+    }
+}
+
+@Composable
+private fun HandsFreeConversationBanner(
+    state: HandsFreeState,
+    onEnd: () -> Unit
+) {
+    val statusText = when (state) {
+        is HandsFreeState.Listening -> stringResource(R.string.hands_free_listening)
+        is HandsFreeState.Thinking -> stringResource(R.string.hands_free_thinking)
+        is HandsFreeState.Speaking -> stringResource(R.string.hands_free_speaking)
+        else -> stringResource(R.string.hands_free_mode_title)
+    }
+
+    val amplitude = when (state) {
+        is HandsFreeState.Listening -> state.amplitude
+        is HandsFreeState.Speaking -> 0.45f
+        is HandsFreeState.Thinking -> 0.15f
+        else -> 0.1f
+    }
+
+    val accentColor = when (state) {
+        is HandsFreeState.Listening -> MaterialTheme.colorScheme.primary
+        is HandsFreeState.Thinking -> MaterialTheme.colorScheme.tertiary
+        is HandsFreeState.Speaking -> MaterialTheme.colorScheme.secondary
+        else -> MaterialTheme.colorScheme.primary
+    }
+
+    Surface(
+        shape = RoundedCornerShape(22.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.96f),
+        border = BorderStroke(1.5.dp, accentColor.copy(alpha = 0.6f)),
+        shadowElevation = 10.dp,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 10.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(10.dp)
+                            .background(accentColor, CircleShape)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = statusText.uppercase(Locale.getDefault()),
+                        style = Typography.labelSmall.copy(
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.sp
+                        ),
+                        color = accentColor
+                    )
+                    Spacer(Modifier.weight(1f))
+                    Text(
+                        text = stringResource(R.string.hands_free_mode_title),
+                        style = Typography.labelSmall.copy(fontSize = 10.sp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                Spacer(Modifier.height(8.dp))
+
+                VoiceWaveformBars(
+                    amplitude = amplitude,
+                    tick = if (state is HandsFreeState.Speaking || state is HandsFreeState.Thinking) 1 else 0
+                )
+
+                Spacer(Modifier.height(4.dp))
+
+                Text(
+                    text = stringResource(R.string.hands_free_hint),
+                    style = Typography.bodySmall.copy(fontSize = 10.sp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f)
+                )
+            }
+
+            Spacer(Modifier.width(12.dp))
+
+            IconButton(
+                onClick = onEnd,
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.35f))
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = stringResource(R.string.hands_free_end),
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
         }
     }
 }

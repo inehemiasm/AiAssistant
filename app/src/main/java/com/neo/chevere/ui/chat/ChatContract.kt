@@ -41,6 +41,32 @@ sealed interface ComposerActionButtonState {
     data object Disabled : ComposerActionButtonState
     data object Send : ComposerActionButtonState
     data object Stop : ComposerActionButtonState
+    /** Composer is empty and a model is ready: the button starts hands-free conversation mode. */
+    data object HandsFree : ComposerActionButtonState
+}
+
+/**
+ * Hands-free conversation loop: listen → think → speak → listen again, until the user says an
+ * exit phrase, taps End, leaves the screen, or stays silent for several turns.
+ */
+sealed interface HandsFreeState {
+    /** Hands-free mode is not running. */
+    data object Off : HandsFreeState
+
+    /** Waiting for the user to grant microphone access before the loop can start. */
+    data object AwaitingPermission : HandsFreeState
+
+    /** Microphone is open for the user's next utterance. */
+    data class Listening(val amplitude: Float = 0.1f) : HandsFreeState
+
+    /** The utterance was submitted and the assistant is generating a reply. */
+    data object Thinking : HandsFreeState
+
+    /** The assistant reply is being read aloud. */
+    data object Speaking : HandsFreeState
+
+    /** True while the conversation loop is running (excludes [Off] and [AwaitingPermission]). */
+    val isActive: Boolean get() = this is Listening || this is Thinking || this is Speaking
 }
 
 /**
@@ -84,10 +110,10 @@ data class ChatState(
     val tempCameraUri: Uri? = null,
     val ageVerificationRequest: AgeVerificationRequest? = null,
     val streamingText: String = "",
-    /** True while the microphone is actively recording for speech-to-text. */
-    val isListening: Boolean = false,
     /** Explicit state for the continuous voice listener and post-recording memo actions. */
     val voiceRecordingState: VoiceRecordingState = VoiceRecordingState.Idle,
+    /** Hands-free conversation loop state; see [HandsFreeState]. */
+    val handsFree: HandsFreeState = HandsFreeState.Off,
     /** The ID of the currently active persisted session, or null for a brand-new unsaved session. */
     val currentSessionId: Long? = null,
     /** History sessions shown in the history bottom sheet. */
@@ -122,6 +148,12 @@ data class ChatState(
 
     val isReady: Boolean get() = runtimeState is RuntimeState.Ready
 
+    /**
+     * True while the microphone is actively recording for speech-to-text. Derived from
+     * [voiceRecordingState] so the listening flag can never drift from the visible voice UI.
+     */
+    val isListening: Boolean get() = voiceRecordingState is VoiceRecordingState.Listening
+
     val isLoading: Boolean
         get() = runtimeState is RuntimeState.Initializing ||
                 sendState is SendState.Sending ||
@@ -138,7 +170,10 @@ data class ChatState(
         get() = when {
             isWaitingForConfirmation -> ComposerActionButtonState.Disabled
             isAiBusy -> ComposerActionButtonState.Stop
+            handsFree.isActive -> ComposerActionButtonState.Disabled
             isReady && !isLoading && (inputText.isNotBlank() || selectedImageUri != null) -> ComposerActionButtonState.Send
+            isReady && !isLoading && !isListening && voiceRecordingState is VoiceRecordingState.Idle ->
+                ComposerActionButtonState.HandsFree
             else -> ComposerActionButtonState.Disabled
         }
 
@@ -212,6 +247,10 @@ sealed class ChatIntent : UiIntent {
     data class VoiceInputResult(val text: String) : ChatIntent()
     /** Execute a one-tap post-recording action on the captured voice memo. */
     data class RunVoiceMemoAction(val action: VoiceMemoAction) : ChatIntent()
+    /** Start the hands-free listen → answer aloud → listen loop. */
+    data object StartHandsFree : ChatIntent()
+    /** End hands-free mode, stopping the microphone and any speech playback. */
+    data object StopHandsFree : ChatIntent()
     // ── Chat History ─────────────────────────────────────────────────────────
     /** Starts a fresh, unsaved conversation (the current session is kept in history). */
     data object NewConversation : ChatIntent()

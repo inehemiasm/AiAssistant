@@ -7,11 +7,13 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navDeepLink
+import com.neo.chevere.BuildConfig
 import com.neo.chevere.ui.chat.ChatScreen
 import com.neo.chevere.ui.chat.ChatViewModel
 import com.neo.chevere.ui.marketplace.MarketplaceViewModel
 import com.neo.chevere.ui.marketplace.ModelMarketplaceScreen
 import com.neo.chevere.ui.marketplace.details.ModelDetailsScreen
+import com.neo.chevere.ui.purchases.PurchaseSandboxScreen
 import com.neo.chevere.ui.radar.SensorsRadarScreen
 import com.neo.chevere.ui.settings.BenchmarkScreen
 import com.neo.chevere.ui.settings.SettingsScreen
@@ -23,6 +25,7 @@ fun ChevereNavHost(
     chatViewModel: ChatViewModel,
     modifier: Modifier = Modifier
 ) {
+    val purchaseSandboxEnabled = BuildConfig.DEBUG && BuildConfig.REVENUECAT_SDK_KEY.startsWith("test_")
     NavHost(
         navController = navController,
         startDestination = Route.Chat,
@@ -41,8 +44,17 @@ fun ChevereNavHost(
             SettingsScreen(
                 onBackClick = { navController.popBackStack() },
                 onBenchmarkClick = { navController.navigate(Route.Benchmark) },
-                onRadarClick = { navController.navigate(Route.SensorRadar(mode = "all")) }
+                onRadarClick = { navController.navigate(Route.SensorRadar(mode = "all")) },
+                onPurchaseSandboxClick = if (purchaseSandboxEnabled) {
+                    { navController.navigate(Route.PurchaseSandbox) }
+                } else {
+                    null
+                }
             )
+        }
+
+        composable<Route.PurchaseSandbox> {
+            PurchaseSandboxScreen(onBack = { navController.popBackStack() })
         }
 
         composable<Route.ModelMarketplace> {

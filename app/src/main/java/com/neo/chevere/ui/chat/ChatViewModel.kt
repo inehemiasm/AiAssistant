@@ -26,6 +26,10 @@ import com.neo.chevere.data.telemetry.AppTelemetry
 import com.neo.chevere.data.telemetry.TelemetryConstants
 import com.neo.chevere.data.voice.VoiceInputManager
 import com.neo.chevere.data.voice.VoiceResult
+import com.neo.chevere.data.voice.ListeningMode
+import com.neo.chevere.domain.HandsFreeSpeechPolicy
+import com.neo.chevere.domain.SpeechOutcome
+import com.neo.chevere.domain.SpeechSynthesizer
 import com.neo.chevere.data.agent.AgentState
 import com.neo.chevere.domain.ChatHistoryRepository
 import com.neo.chevere.domain.ChatMessage
@@ -81,6 +85,7 @@ class ChatViewModel @Inject constructor(
     private val documentRepository: com.neo.chevere.domain.DocumentRepository,
     private val suggestionRepository: com.neo.chevere.domain.ChatSuggestionRepository,
     private val documentFolderRepository: com.neo.chevere.domain.DocumentFolderRepository,
+    private val speechSynthesizer: SpeechSynthesizer,
 ) : BaseViewModel<ChatState, ChatIntent, ChatEffect>(application, ChatState()) {
 
     private val explicitImagePromptPolicy = ExplicitImagePromptPolicy()
@@ -95,6 +100,8 @@ class ChatViewModel @Inject constructor(
     private var imageGenerationJob: Job? = null
     private var responseJob: Job? = null
     private var voiceTimerJob: Job? = null
+    private var handsFreeJob: Job? = null
+    private var consecutiveSilentTurns: Int = 0
     private var lastUserMessage: String? = null
     /** ID of the currently active Room session; null until the first message is sent. */
     private var currentSessionId: Long? = null
@@ -161,14 +168,28 @@ class ChatViewModel @Inject constructor(
         viewModelScope.launch(dispatcherProvider.main) {
             voiceInputManager.results.collect { result ->
                 when (result) {
-                    is VoiceResult.Partial -> setState { copy(inputText = result.text) }
+                    is VoiceResult.Partial -> {
+                        if (currentState.handsFree.isActive) {
+                            if (currentState.handsFree is HandsFreeState.Listening) {
+                                setState { copy(inputText = result.text) }
+                            }
+                        } else {
+                            setState { copy(inputText = result.text) }
+                        }
+                    }
                     is VoiceResult.Amplitude -> {
-                        setState {
-                            val currentListening = voiceRecordingState as? VoiceRecordingState.Listening
-                            if (currentListening != null) {
-                                copy(voiceRecordingState = currentListening.copy(amplitude = result.normalized))
-                            } else {
-                                this
+                        if (currentState.handsFree.isActive) {
+                            if (currentState.handsFree is HandsFreeState.Listening) {
+                                setState { copy(handsFree = HandsFreeState.Listening(amplitude = result.normalized)) }
+                            }
+                        } else {
+                            setState {
+                                val currentListening = voiceRecordingState as? VoiceRecordingState.Listening
+                                if (currentListening != null) {
+                                    copy(voiceRecordingState = currentListening.copy(amplitude = result.normalized))
+                                } else {
+                                    this
+                                }
                             }
                         }
                     }
@@ -176,40 +197,57 @@ class ChatViewModel @Inject constructor(
                         voiceTimerJob?.cancel()
                         voiceTimerJob = null
                         val clean = result.text.trim()
-                        setState {
-                            copy(
-                                inputText = clean,
-                                isListening = false,
-                                voiceRecordingState = if (clean.isNotBlank()) {
-                                    VoiceRecordingState.Recorded(clean)
-                                } else {
-                                    VoiceRecordingState.Idle
-                                }
-                            )
+                        if (currentState.handsFree.isActive) {
+                            handleHandsFreeFinalUtterance(clean)
+                        } else {
+                            setState {
+                                copy(
+                                    inputText = clean,
+                                    voiceRecordingState = if (clean.isNotBlank()) {
+                                        VoiceRecordingState.Recorded(clean)
+                                    } else {
+                                        VoiceRecordingState.Idle
+                                    }
+                                )
+                            }
                         }
                     }
                     is VoiceResult.Cancelled -> {
                         voiceTimerJob?.cancel()
                         voiceTimerJob = null
-                        setState {
-                            copy(
-                                inputText = "",
-                                isListening = false,
-                                voiceRecordingState = VoiceRecordingState.Idle
-                            )
+                        if (currentState.handsFree.isActive) {
+                            stopHandsFree(userInitiated = true, speakGoodbye = false)
+                        } else {
+                            setState {
+                                copy(
+                                    inputText = "",
+                                    voiceRecordingState = VoiceRecordingState.Idle
+                                )
+                            }
                         }
                     }
                     is VoiceResult.Error -> {
                         voiceTimerJob?.cancel()
                         voiceTimerJob = null
-                        setState {
-                            copy(
-                                isListening = false,
-                                voiceRecordingState = VoiceRecordingState.Idle
-                            )
-                        }
-                        if (result.message.isNotBlank()) {
-                            sendEffect { ChatEffect.ShowVoiceError(result.message) }
+                        if (currentState.handsFree.isActive) {
+                            consecutiveSilentTurns++
+                            if (consecutiveSilentTurns >= HandsFreeSpeechPolicy.MAX_SILENT_TURNS) {
+                                stopHandsFree(userInitiated = false, speakGoodbye = false)
+                                if (result.message.isNotBlank()) {
+                                    sendEffect { ChatEffect.ShowVoiceError(result.message) }
+                                }
+                            } else {
+                                listenNextHandsFreeTurn()
+                            }
+                        } else {
+                            setState {
+                                copy(
+                                    voiceRecordingState = VoiceRecordingState.Idle
+                                )
+                            }
+                            if (result.message.isNotBlank()) {
+                                sendEffect { ChatEffect.ShowVoiceError(result.message) }
+                            }
                         }
                     }
                 }
@@ -296,6 +334,10 @@ class ChatViewModel @Inject constructor(
     override suspend fun handleIntent(intent: ChatIntent) {
         if (intent is ChatIntent.CancelGeneration || intent is ChatIntent.StopResponse) {
             stopActiveResponse()
+            return
+        }
+        if (intent is ChatIntent.StopHandsFree) {
+            stopHandsFree(userInitiated = true, speakGoodbye = false)
             return
         }
 
@@ -427,7 +469,6 @@ class ChatViewModel @Inject constructor(
                     setState {
                         copy(
                             inputText = clean,
-                            isListening = false,
                             voiceRecordingState = if (clean.isNotBlank()) {
                                 VoiceRecordingState.Recorded(clean)
                             } else {
@@ -437,6 +478,8 @@ class ChatViewModel @Inject constructor(
                     }
                 }
                 is ChatIntent.RunVoiceMemoAction -> runVoiceMemoAction(intent.action)
+                ChatIntent.StartHandsFree -> startHandsFree()
+                ChatIntent.StopHandsFree -> stopHandsFree(userInitiated = true, speakGoodbye = false)
                 // ── Chat History ─────────────────────────────────────────────
                 ChatIntent.NewConversation -> newConversation()
                 is ChatIntent.LoadSession -> loadSession(intent.sessionId)
@@ -635,6 +678,11 @@ class ChatViewModel @Inject constructor(
             if (imageUri != null) getApplication<android.app.Application>().getString(R.string.suggestion_describe_image) else text
         }
         lastUserMessage = promptText
+        if (currentState.isListening) {
+            voiceTimerJob?.cancel()
+            voiceTimerJob = null
+            withContext(dispatcherProvider.main) { voiceInputManager.cancelListening() }
+        }
         val userMsg = ChatMessage(promptText, isUser = true, imageUri = imageUri?.toString())
         // Ensure a Room session exists and persist the user message before dispatching
         ensureSessionCreated(promptText)
@@ -669,6 +717,11 @@ class ChatViewModel @Inject constructor(
         if (trimmedLower == "/voice" || trimmedLower == "/memo") {
             setState { copy(messages = messages.dropLast(1), sendState = SendState.Idle, inputText = "") }
             startVoiceInput()
+            return
+        }
+        if (trimmedLower == "/conversation" || trimmedLower == "/handsfree") {
+            setState { copy(messages = messages.dropLast(1), sendState = SendState.Idle, inputText = "") }
+            startHandsFree()
             return
         }
         val sensorMode: String? = when {
@@ -863,6 +916,12 @@ class ChatViewModel @Inject constructor(
     private suspend fun stopActiveResponse() {
         val hadActiveWork = responseJob?.isActive == true || imageGenerationJob?.isActive == true
         telemetry.logStopRequested(hadActiveWork)
+        speechSynthesizer.stop()
+        handsFreeJob?.cancel()
+        handsFreeJob = null
+        if (currentState.handsFree.isActive) {
+            setState { copy(handsFree = HandsFreeState.Off) }
+        }
         responseJob?.cancelAndJoin()
         responseJob = null
         imageGenerationJob?.cancel()
@@ -899,7 +958,6 @@ class ChatViewModel @Inject constructor(
         viewModelScope.launch(dispatcherProvider.main) {
             setState {
                 copy(
-                    isListening = true,
                     inputText = "",
                     voiceRecordingState = VoiceRecordingState.Listening(amplitude = 0.12f, elapsedSeconds = 0)
                 )
@@ -928,7 +986,6 @@ class ChatViewModel @Inject constructor(
             val clean = currentState.inputText.trim()
             setState {
                 copy(
-                    isListening = false,
                     voiceRecordingState = if (clean.isNotBlank()) {
                         VoiceRecordingState.Recorded(clean)
                     } else {
@@ -947,10 +1004,117 @@ class ChatViewModel @Inject constructor(
             voiceInputManager.cancelListening()
             setState {
                 copy(
-                    isListening = false,
                     inputText = "",
                     voiceRecordingState = VoiceRecordingState.Idle
                 )
+            }
+        }
+    }
+
+    /** Releases the shared singleton recognizer and speech synthesizer so a destroyed screen cannot leave audio running. */
+    override fun onCleared() {
+        speechSynthesizer.stop()
+        handsFreeJob?.cancel()
+        if (currentState.isListening) voiceInputManager.cancelListening()
+        super.onCleared()
+    }
+
+    private fun startHandsFree() {
+        if (currentState.isLoading) return
+        if (ContextCompat.checkSelfPermission(
+                application,
+                Manifest.permission.RECORD_AUDIO
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            setState { copy(handsFree = HandsFreeState.AwaitingPermission) }
+            viewModelScope.launch {
+                sendEffect { ChatEffect.RequestMicPermission }
+            }
+            return
+        }
+
+        voiceTimerJob?.cancel()
+        voiceTimerJob = null
+        speechSynthesizer.stop()
+        handsFreeJob?.cancel()
+        consecutiveSilentTurns = 0
+        viewModelScope.launch(dispatcherProvider.main) {
+            setState {
+                copy(
+                    inputText = "",
+                    voiceRecordingState = VoiceRecordingState.Idle,
+                    handsFree = HandsFreeState.Listening()
+                )
+            }
+            voiceInputManager.startListening(ListeningMode.SINGLE_UTTERANCE)
+        }
+    }
+
+    private fun stopHandsFree(userInitiated: Boolean, speakGoodbye: Boolean = false) {
+        handsFreeJob?.cancel()
+        handsFreeJob = null
+        consecutiveSilentTurns = 0
+        val wasActive = currentState.handsFree.isActive
+        setState { copy(handsFree = HandsFreeState.Off, inputText = if (wasActive) "" else inputText) }
+        viewModelScope.launch(dispatcherProvider.main) {
+            voiceInputManager.cancelListening()
+        }
+        speechSynthesizer.stop()
+        if (speakGoodbye) {
+            viewModelScope.launch {
+                speechSynthesizer.speak(application.getString(R.string.hands_free_goodbye))
+            }
+        }
+    }
+
+    private fun listenNextHandsFreeTurn() {
+        if (!currentState.handsFree.isActive) return
+        setState { copy(handsFree = HandsFreeState.Listening(), inputText = "") }
+        viewModelScope.launch(dispatcherProvider.main) {
+            voiceInputManager.startListening(ListeningMode.SINGLE_UTTERANCE)
+        }
+    }
+
+    private fun handleHandsFreeFinalUtterance(text: String) {
+        if (!currentState.handsFree.isActive) return
+        if (text.isBlank()) {
+            consecutiveSilentTurns++
+            if (consecutiveSilentTurns >= HandsFreeSpeechPolicy.MAX_SILENT_TURNS) {
+                stopHandsFree(userInitiated = false, speakGoodbye = true)
+            } else {
+                listenNextHandsFreeTurn()
+            }
+            return
+        }
+
+        consecutiveSilentTurns = 0
+        if (HandsFreeSpeechPolicy.isStopCommand(text)) {
+            stopHandsFree(userInitiated = true, speakGoodbye = true)
+            return
+        }
+
+        setState { copy(handsFree = HandsFreeState.Thinking, inputText = "") }
+        viewModelScope.launch {
+            sendMessage(text, null)
+        }
+    }
+
+    private fun speakAssistantResponseAndContinueHandsFree(text: String) {
+        handsFreeJob?.cancel()
+        handsFreeJob = viewModelScope.launch {
+            val speakable = HandsFreeSpeechPolicy.toSpeakableText(text)
+            if (speakable.isBlank() || !currentState.handsFree.isActive) {
+                if (currentState.handsFree.isActive) {
+                    listenNextHandsFreeTurn()
+                }
+                return@launch
+            }
+            setState { copy(handsFree = HandsFreeState.Speaking) }
+            val outcome = speechSynthesizer.speak(speakable)
+            if (currentState.handsFree.isActive) {
+                if (outcome is SpeechOutcome.Completed || outcome is SpeechOutcome.Unavailable) {
+                    listenNextHandsFreeTurn()
+                }
             }
         }
     }
@@ -1079,6 +1243,8 @@ class ChatViewModel @Inject constructor(
 
         viewModelScope.launch {
             sendEffect { ChatEffect.ReadMessageAloud(messageIndex, message.text) }
+            val speakable = HandsFreeSpeechPolicy.toSpeakableText(message.text)
+            speechSynthesizer.speak(speakable)
         }
     }
 
@@ -1171,6 +1337,9 @@ class ChatViewModel @Inject constructor(
                 setState { copy(messages = messages + aiMsg, sendState = SendState.Error(errorMsg)) }
                 persistMessage(aiMsg)
                 sendEffect { ChatEffect.ScrollToBottom }
+                if (currentState.handsFree.isActive) {
+                    speakAssistantResponseAndContinueHandsFree(errorMsg)
+                }
                 return
             }
             ?.getOrNull()
@@ -1202,6 +1371,9 @@ class ChatViewModel @Inject constructor(
         setState { copy(messages = messages + aiMsg, sendState = SendState.Idle, streamingText = "") }
         persistMessage(aiMsg)
         sendEffect { ChatEffect.ScrollToBottom }
+        if (currentState.handsFree.isActive) {
+            speakAssistantResponseAndContinueHandsFree(aiMsg.text)
+        }
     }
 
     /** Revalidates task membership at the MVI boundary and updates only its status in Room. */

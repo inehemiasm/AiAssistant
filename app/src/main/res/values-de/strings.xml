@@ -787,4 +787,27 @@
     <string name="ui_vision_models_section_subtitle">Analysiere angehängte Fotos, Screenshots und visuelle Fragen zusammen mit dem Text-Chat.</string>
     <string name="ui_chat_and_text_models">Chat- &amp; Coding-Modelle</string>
     <string name="ui_chat_models_section_subtitle">Schnelle Unterhaltung auf dem Gerät, Schlussfolgern, Programmierhilfe und lokale Werkzeuge.</string>
+    <string name="hands_free_goodbye">Auf Wiedersehen!</string>
+    <string name="hands_free_mode_title">Konversationsmodus</string>
+    <string name="hands_free_listening">Zuhören...</string>
+    <string name="hands_free_thinking">Nachdenken...</string>
+    <string name="hands_free_speaking">Sprechen...</string>
+    <string name="hands_free_end">Unterhaltung beenden</string>
+    <string name="hands_free_start">Konversationsmodus starten</string>
+    <string name="hands_free_hint">Sagen Sie „Stopp“ oder tippen Sie auf Beenden</string>
+    <string name="sandbox_title">Testkäufe</string>
+    <string name="sandbox_badge">REVENUECAT-TESTSHOP</string>
+    <string name="sandbox_intro">Probiere einen Kauf aus, ohne dafür zu bezahlen.</string>
+    <string name="sandbox_entitlements">Aktive Zugriffsrechte</string>
+    <string name="sandbox_no_entitlements">Keine aktiven Zugriffsrechte</string>
+    <string name="sandbox_no_products">Füge dem aktuellen Angebot in RevenueCat ein Testpaket hinzu und aktualisiere die Ansicht.</string>
+    <string name="sandbox_load_failed">Der Testshop konnte nicht geladen werden. Prüfe die Verbindung und die RevenueCat-Konfiguration und aktualisiere die Ansicht.</string>
+    <string name="sandbox_buy">Kauf simulieren</string>
+    <string name="sandbox_refresh">Testshop aktualisieren</string>
+    <string name="sandbox_purchasing">Warten auf den Kaufabschluss…</string>
+    <string name="sandbox_completed">Testkauf abgeschlossen</string>
+    <string name="sandbox_cancelled">Testkauf abgebrochen</string>
+    <string name="sandbox_purchase_failed">Der Testkauf ist fehlgeschlagen. Versuche es erneut.</string>
+    <string name="sandbox_purchased_plan">Im Testshop gekauft: %1$s</string>
+    <string name="sandbox_active_plan">Aktives Abo</string>
 </resources>
