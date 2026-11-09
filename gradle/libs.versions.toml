@@ -1,4 +1,5 @@
 [versions]
+revenuecat = "10.15.1"
 a2ui = "1.0.0-alpha02"
 agp = "9.1.1"
 coreKtx = "1.19.1"
@@ -46,6 +47,7 @@ macrobenchmark = "1.5.0"
 
 
 [libraries]
+revenuecat-purchases = { module = "com.revenuecat.purchases:purchases", version.ref = "revenuecat" }
 androidx-a2ui-compose-ui = { module = "androidx.a2ui.compose:compose-ui", version.ref = "a2ui" }
 androidx-a2ui-compose-runtime = { module = "androidx.a2ui.compose:compose-runtime", version.ref = "a2ui" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }

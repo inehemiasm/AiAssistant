@@ -34,6 +34,12 @@ val appVersionCode = providers.gradleProperty("playVersionCode").map { value ->
         ?: error("playVersionCode must be a positive integer")
 }.getOrElse(((System.currentTimeMillis() / 1000L) - 1767225600L).toInt().coerceIn(1, 2_100_000_000))
 
+// Accept only public Android SDK keys before embedding the value in BuildConfig.
+val revenueCatKey = providers.environmentVariable("REV_CAT").orNull.orEmpty().trim()
+require(revenueCatKey.isEmpty() || revenueCatKey.matches(Regex("(goog|test)_[A-Za-z0-9]+"))) {
+    "REV_CAT must be a RevenueCat public Google Play or Test Store SDK key."
+}
+
 android {
     namespace = "com.neo.chevere"
     compileSdk = 37
@@ -75,6 +81,8 @@ android {
 
     buildTypes {
         release {
+            val googlePlayKey = revenueCatKey.takeIf { it.startsWith("goog_") }.orEmpty()
+            buildConfigField("String", "REVENUECAT_SDK_KEY", "\"$googlePlayKey\"")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
@@ -91,6 +99,7 @@ android {
             }
         }
         debug {
+            buildConfigField("String", "REVENUECAT_SDK_KEY", "\"$revenueCatKey\"")
             signingConfig = signingConfigs.getByName("debug")
             firebaseAppDistribution {
                 artifactType = "APK"
@@ -132,6 +141,7 @@ android {
 }
 
 dependencies {
+    implementation(libs.revenuecat.purchases)
     implementation("com.google.android.gms:play-services-oss-licenses:17.5.3")
 
 

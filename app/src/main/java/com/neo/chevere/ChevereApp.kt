@@ -8,6 +8,8 @@ import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.neo.chevere.data.inference.ImageGenerationManager
 import com.neo.chevere.data.inference.InferenceManager
 import com.neo.chevere.data.security.AppCheckInitializer
+import com.revenuecat.purchases.Purchases
+import com.revenuecat.purchases.PurchasesConfiguration
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -43,7 +45,16 @@ class ChevereApp : Application(), Configuration.Provider {
         }
 
         AppCheckInitializer.initialize(this)
+        configurePurchases()
         registerBackgroundLifecycleTracker()
+    }
+
+    /** Initializes RevenueCat once when the build includes a public SDK key. */
+    private fun configurePurchases() {
+        val sdkKey = BuildConfig.REVENUECAT_SDK_KEY
+        if (sdkKey.isNotEmpty()) {
+            Purchases.configure(PurchasesConfiguration.Builder(this, sdkKey).build())
+        }
     }
 
     private fun registerBackgroundLifecycleTracker() {
