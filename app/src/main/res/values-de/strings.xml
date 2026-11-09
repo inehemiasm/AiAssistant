@@ -787,6 +787,14 @@
     <string name="ui_vision_models_section_subtitle">Analysiere angehängte Fotos, Screenshots und visuelle Fragen zusammen mit dem Text-Chat.</string>
     <string name="ui_chat_and_text_models">Chat- &amp; Coding-Modelle</string>
     <string name="ui_chat_models_section_subtitle">Schnelle Unterhaltung auf dem Gerät, Schlussfolgern, Programmierhilfe und lokale Werkzeuge.</string>
+    <string name="hands_free_goodbye">Auf Wiedersehen!</string>
+    <string name="hands_free_mode_title">Konversationsmodus</string>
+    <string name="hands_free_listening">Zuhören...</string>
+    <string name="hands_free_thinking">Nachdenken...</string>
+    <string name="hands_free_speaking">Sprechen...</string>
+    <string name="hands_free_end">Unterhaltung beenden</string>
+    <string name="hands_free_start">Konversationsmodus starten</string>
+    <string name="hands_free_hint">Sagen Sie „Stopp“ oder tippen Sie auf Beenden</string>
     <string name="sandbox_title">Testkäufe</string>
     <string name="sandbox_badge">REVENUECAT-TESTSHOP</string>
     <string name="sandbox_intro">Probiere einen Kauf aus, ohne dafür zu bezahlen.</string>

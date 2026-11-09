@@ -787,6 +787,14 @@
     <string name="ui_vision_models_section_subtitle">Analysez les photos jointes, les captures d’écran et les questions visuelles avec le chat texte.</string>
     <string name="ui_chat_and_text_models">Modèles de chat et de code</string>
     <string name="ui_chat_models_section_subtitle">Conversation locale rapide, raisonnement, aide au codage et outils d’agent.</string>
+    <string name="hands_free_goodbye">Au revoir !</string>
+    <string name="hands_free_mode_title">Mode conversation</string>
+    <string name="hands_free_listening">Écoute en cours...</string>
+    <string name="hands_free_thinking">Réflexion...</string>
+    <string name="hands_free_speaking">Parole en cours...</string>
+    <string name="hands_free_end">Terminer la conversation</string>
+    <string name="hands_free_start">Démarrer le mode conversation</string>
+    <string name="hands_free_hint">Dites « stop » ou appuyez sur Terminer</string>
     <string name="sandbox_title">Achats de test</string>
     <string name="sandbox_badge">BOUTIQUE DE TEST REVENUECAT</string>
     <string name="sandbox_intro">Essayez un achat sans être débité.</string>

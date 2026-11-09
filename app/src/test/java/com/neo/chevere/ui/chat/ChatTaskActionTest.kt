@@ -70,7 +70,7 @@ class ChatTaskActionTest {
         }
         viewModel = ChatViewModel(RuntimeEnvironment.getApplication(), repository,
             mock<InitializeChatUseCase>(), mock<SendMessageUseCase>(), preferences,
-            dispatchers, mock<AppTelemetry>(), voice, history, taskRepository, reportRepository, documentRepository, suggestionRepository, documentFolders)
+            dispatchers, mock<AppTelemetry>(), voice, history, taskRepository, reportRepository, documentRepository, suggestionRepository, documentFolders, mock<SpeechSynthesizer>())
         store.put("chat", viewModel)
         advanceUntilIdle()
         viewModel.onIntent(ChatIntent.LoadSession(5))

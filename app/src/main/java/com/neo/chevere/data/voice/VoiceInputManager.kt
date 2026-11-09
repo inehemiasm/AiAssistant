@@ -3,6 +3,8 @@ package com.neo.chevere.data.voice
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
@@ -16,6 +18,8 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 private const val TAG = "VoiceInputManager"
+private const val MAX_TRANSIENT_RETRIES = 3
+private const val RETRY_DELAY_MS = 250L
 
 /** Results emitted by [VoiceInputManager.results]. */
 sealed class VoiceResult {
@@ -29,6 +33,20 @@ sealed class VoiceResult {
     data object Cancelled : VoiceResult()
     /** An error occurred during speech recognition. */
     data class Error(val message: String) : VoiceResult()
+}
+
+/**
+ * How a [VoiceInputManager] session ends.
+ */
+enum class ListeningMode {
+    /** Voice memo: keeps chaining segments across pauses until explicitly stopped. */
+    CONTINUOUS,
+
+    /**
+     * Conversational turn: ends after the first finished utterance (or silence) and emits a
+     * single [VoiceResult.Final], which may be blank when nothing was heard.
+     */
+    SINGLE_UTTERANCE
 }
 
 /**
@@ -53,16 +71,22 @@ class VoiceInputManager @Inject constructor(
     private var isSessionActive: Boolean = false
     private val committedSegments = mutableListOf<String>()
     private var latestSegmentPartial: String = ""
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private var transientRetries = 0
+    private var mode: ListeningMode = ListeningMode.CONTINUOUS
+    private val restartSegment = Runnable { startRecognizerSegment() }
 
     /**
-     * Starts a new continuous voice listening session.
+     * Starts a new voice listening session in the given [mode].
      *
      * Must be called from the **main thread** (Android SpeechRecognizer requirement).
      */
-    fun startListening() {
+    fun startListening(mode: ListeningMode = ListeningMode.CONTINUOUS) {
         stopAndDestroyRecognizer()
+        this.mode = mode
         committedSegments.clear()
         latestSegmentPartial = ""
+        transientRetries = 0
 
         if (!SpeechRecognizer.isRecognitionAvailable(context)) {
             isSessionActive = false
@@ -124,6 +148,7 @@ class VoiceInputManager @Inject constructor(
         recognizer = SpeechRecognizer.createSpeechRecognizer(context).also { sr ->
             sr.setRecognitionListener(object : RecognitionListener {
                 override fun onReadyForSpeech(params: Bundle?) {
+                    transientRetries = 0
                     Timber.tag(TAG).d("Ready for speech segment")
                 }
 
@@ -153,8 +178,28 @@ class VoiceInputManager @Inject constructor(
                     if (error == SpeechRecognizer.ERROR_NO_MATCH ||
                         error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT
                     ) {
+                        if (mode == ListeningMode.SINGLE_UTTERANCE) {
+                            // A conversational turn ends on silence; report whatever was heard
+                            // (possibly nothing) so the caller decides whether to listen again.
+                            finishSession(buildFullTranscript(latestSegmentPartial))
+                            return
+                        }
                         Timber.tag(TAG).d("Pause detected ($error); continuing listening session")
                         startRecognizerSegment()
+                        return
+                    }
+
+                    // The recognition service may still be releasing the previous session
+                    // (common right after a prior memo finished). Retry briefly instead of
+                    // ending the new session with a "busy" error.
+                    if ((error == SpeechRecognizer.ERROR_RECOGNIZER_BUSY ||
+                            error == SpeechRecognizer.ERROR_CLIENT) &&
+                        transientRetries < MAX_TRANSIENT_RETRIES
+                    ) {
+                        transientRetries += 1
+                        Timber.tag(TAG).d("Transient recognizer error ($error); retry $transientRetries")
+                        stopAndDestroyRecognizer()
+                        mainHandler.postDelayed(restartSegment, RETRY_DELAY_MS * transientRetries)
                         return
                     }
 
@@ -182,6 +227,10 @@ class VoiceInputManager @Inject constructor(
                         committedSegments.add(segment)
                     }
                     latestSegmentPartial = ""
+                    if (mode == ListeningMode.SINGLE_UTTERANCE && isSessionActive) {
+                        finishSession(buildFullTranscript(""))
+                        return
+                    }
                     val full = buildFullTranscript("")
                     if (full.isNotBlank()) {
                         _results.trySend(VoiceResult.Partial(full))
@@ -216,14 +265,27 @@ class VoiceInputManager @Inject constructor(
                 putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
                 putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
                 putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
-                putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 2500L)
+                val (completeSilenceMs, possiblyCompleteMs) = when (mode) {
+                    ListeningMode.CONTINUOUS -> 2500L to 2000L
+                    ListeningMode.SINGLE_UTTERANCE -> 1500L to 1200L
+                }
+                putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, completeSilenceMs)
                 putExtra(
                     RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS,
-                    2000L
+                    possiblyCompleteMs
                 )
             }
             sr.startListening(intent)
         }
+    }
+
+    /** Ends a single-utterance session and emits its transcript as [VoiceResult.Final]. */
+    private fun finishSession(transcript: String) {
+        isSessionActive = false
+        committedSegments.clear()
+        latestSegmentPartial = ""
+        stopAndDestroyRecognizer()
+        _results.trySend(VoiceResult.Final(transcript))
     }
 
     private fun buildFullTranscript(currentPartial: String): String {
@@ -237,6 +299,7 @@ class VoiceInputManager @Inject constructor(
     }
 
     private fun stopAndDestroyRecognizer() {
+        mainHandler.removeCallbacks(restartSegment)
         try {
             recognizer?.destroy()
         } catch (_: Exception) {

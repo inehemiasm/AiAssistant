@@ -817,6 +817,14 @@
     <string name="ui_vision_models_section_subtitle">Analyze attached photos, screenshots, and visual questions alongside text chat.</string>
     <string name="ui_chat_and_text_models">Chat &amp; Coding Models</string>
     <string name="ui_chat_models_section_subtitle">Fast on-device conversation, reasoning, coding assistance, and local agent tools.</string>
+    <string name="hands_free_goodbye">Goodbye!</string>
+    <string name="hands_free_mode_title">Conversation Mode</string>
+    <string name="hands_free_listening">Listening...</string>
+    <string name="hands_free_thinking">Thinking...</string>
+    <string name="hands_free_speaking">Speaking...</string>
+    <string name="hands_free_end">End conversation</string>
+    <string name="hands_free_start">Start conversation mode</string>
+    <string name="hands_free_hint">Say \"stop\" or tap End to exit</string>
     <string name="sandbox_title">Purchase sandbox</string>
     <string name="sandbox_badge">REVENUECAT TEST STORE</string>
     <string name="sandbox_intro">Try a purchase without being charged.</string>

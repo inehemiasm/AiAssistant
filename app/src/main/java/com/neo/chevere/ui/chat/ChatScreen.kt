@@ -441,6 +441,8 @@ fun ChatContent(
                 lastMessage.text.contains(textResources.getString(R.string.ui_microphone_permission_is_required_to_measure_the_ambient_sound_l))
             if (isAmbientSoundPermission) {
                 viewModel.onIntent(ChatIntent.RetryLastMessage)
+            } else if (currentState.handsFree is HandsFreeState.AwaitingPermission) {
+                viewModel.onIntent(ChatIntent.StartHandsFree)
             } else {
                 viewModel.onIntent(ChatIntent.StartVoiceInput)
             }
@@ -872,6 +874,15 @@ fun ChatContent(
                         onVoiceMemoActionClick = { action ->
                             hapticView.performChevereHaptic(ChevereHaptic.Action)
                             viewModel.onIntent(ChatIntent.RunVoiceMemoAction(action))
+                        },
+                        handsFreeState = state.handsFree,
+                        onStartHandsFreeClick = {
+                            hapticView.performChevereHaptic(ChevereHaptic.Action)
+                            viewModel.onIntent(ChatIntent.StartHandsFree)
+                        },
+                        onStopHandsFreeClick = {
+                            hapticView.performChevereHaptic(ChevereHaptic.Warning)
+                            viewModel.onIntent(ChatIntent.StopHandsFree)
                         }
                     )
                 }
@@ -968,7 +979,9 @@ fun ChatContent(
                 ChatEffect.RequestMicPermission -> {
                     pendingPermissionDisclosure = PermissionType.MICROPHONE
                 }
-                is ChatEffect.ShowVoiceError -> Unit
+                is ChatEffect.ShowVoiceError -> {
+                    Toast.makeText(context, PiiUtils.scrub(effect.message), Toast.LENGTH_SHORT).show()
+                }
                 is ChatEffect.NavigateToRadar -> {
                     onRadarClick(effect.mode)
                 }

@@ -787,6 +787,14 @@
     <string name="ui_vision_models_section_subtitle">Analiza fotos adjuntas, capturas de pantalla y preguntas visuales junto con el chat de texto.</string>
     <string name="ui_chat_and_text_models">Modelos de chat y programación</string>
     <string name="ui_chat_models_section_subtitle">Conversación rápida en el dispositivo, razonamiento, programación y herramientas locales.</string>
+    <string name="hands_free_goodbye">¡Hasta luego!</string>
+    <string name="hands_free_mode_title">Modo conversación</string>
+    <string name="hands_free_listening">Escuchando...</string>
+    <string name="hands_free_thinking">Pensando...</string>
+    <string name="hands_free_speaking">Hablando...</string>
+    <string name="hands_free_end">Terminar conversación</string>
+    <string name="hands_free_start">Iniciar modo conversación</string>
+    <string name="hands_free_hint">Di «para» o toca Terminar para salir</string>
     <string name="sandbox_title">Pruebas de compra</string>
     <string name="sandbox_badge">TIENDA DE PRUEBAS DE REVENUECAT</string>
     <string name="sandbox_intro">Prueba una compra sin que se te cobre.</string>
