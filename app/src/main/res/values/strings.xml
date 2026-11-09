@@ -817,4 +817,19 @@
     <string name="ui_vision_models_section_subtitle">Analyze attached photos, screenshots, and visual questions alongside text chat.</string>
     <string name="ui_chat_and_text_models">Chat &amp; Coding Models</string>
     <string name="ui_chat_models_section_subtitle">Fast on-device conversation, reasoning, coding assistance, and local agent tools.</string>
+    <string name="sandbox_title">Purchase sandbox</string>
+    <string name="sandbox_badge">REVENUECAT TEST STORE</string>
+    <string name="sandbox_intro">Try a purchase without being charged.</string>
+    <string name="sandbox_entitlements">Active entitlements</string>
+    <string name="sandbox_no_entitlements">No active entitlements</string>
+    <string name="sandbox_no_products">Add a Test Store package to the current offering in RevenueCat, then refresh.</string>
+    <string name="sandbox_load_failed">Couldn’t load the Test Store. Check your connection and RevenueCat setup, then refresh.</string>
+    <string name="sandbox_buy">Simulate purchase</string>
+    <string name="sandbox_refresh">Refresh Test Store</string>
+    <string name="sandbox_purchasing">Waiting for checkout…</string>
+    <string name="sandbox_completed">Test purchase completed</string>
+    <string name="sandbox_cancelled">Test purchase cancelled</string>
+    <string name="sandbox_purchase_failed">Test purchase failed. Try again.</string>
+    <string name="sandbox_purchased_plan">Purchased in Test Store: %1$s</string>
+    <string name="sandbox_active_plan">Active subscription</string>
 </resources>

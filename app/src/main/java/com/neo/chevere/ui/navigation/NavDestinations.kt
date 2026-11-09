@@ -19,6 +19,9 @@ sealed interface Route {
     data object Settings : Route
 
     @Serializable
+    data object PurchaseSandbox : Route
+
+    @Serializable
     data object ModelMarketplace : Route
 
     @Serializable

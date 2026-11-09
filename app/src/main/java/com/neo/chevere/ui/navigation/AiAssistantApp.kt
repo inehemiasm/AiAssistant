@@ -94,7 +94,8 @@ fun ChevereApp(
     }
 
     Scaffold(
-        bottomBar = {
+        bottomBar = bottomBar@{
+            if (currentDestination?.hasRoute(Route.PurchaseSandbox::class) == true) return@bottomBar
             NavigationBar(
                 containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
                 contentColor = MaterialTheme.colorScheme.primary,

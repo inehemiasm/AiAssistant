@@ -787,4 +787,19 @@
     <string name="ui_vision_models_section_subtitle">Analiza fotos adjuntas, capturas de pantalla y preguntas visuales junto con el chat de texto.</string>
     <string name="ui_chat_and_text_models">Modelos de chat y programación</string>
     <string name="ui_chat_models_section_subtitle">Conversación rápida en el dispositivo, razonamiento, programación y herramientas locales.</string>
+    <string name="sandbox_title">Pruebas de compra</string>
+    <string name="sandbox_badge">TIENDA DE PRUEBAS DE REVENUECAT</string>
+    <string name="sandbox_intro">Prueba una compra sin que se te cobre.</string>
+    <string name="sandbox_entitlements">Derechos de acceso activos</string>
+    <string name="sandbox_no_entitlements">No hay derechos de acceso activos</string>
+    <string name="sandbox_no_products">Añade un paquete de prueba a la oferta actual en RevenueCat y actualiza la pantalla.</string>
+    <string name="sandbox_load_failed">No se pudo cargar la tienda de pruebas. Comprueba la conexión y la configuración de RevenueCat y vuelve a actualizar.</string>
+    <string name="sandbox_buy">Simular compra</string>
+    <string name="sandbox_refresh">Actualizar tienda de pruebas</string>
+    <string name="sandbox_purchasing">Esperando el resultado de la compra…</string>
+    <string name="sandbox_completed">Compra de prueba completada</string>
+    <string name="sandbox_cancelled">Compra de prueba cancelada</string>
+    <string name="sandbox_purchase_failed">La compra de prueba falló. Inténtalo de nuevo.</string>
+    <string name="sandbox_purchased_plan">Compra en la tienda de pruebas: %1$s</string>
+    <string name="sandbox_active_plan">Suscripción activa</string>
 </resources>

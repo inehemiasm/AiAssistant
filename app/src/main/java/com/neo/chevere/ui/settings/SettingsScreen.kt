@@ -80,7 +80,8 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
     onBackClick: () -> Unit,
     onBenchmarkClick: () -> Unit,
-    onRadarClick: () -> Unit
+    onRadarClick: () -> Unit,
+    onPurchaseSandboxClick: (() -> Unit)? = null
 ) {
     val state by viewModel.uiState.collectAsState()
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -97,7 +98,8 @@ fun SettingsScreen(
         onIntent = { viewModel.onIntent(it) },
         onBackClick = onBackClick,
         onBenchmarkClick = onBenchmarkClick,
-        onRadarClick = onRadarClick
+        onRadarClick = onRadarClick,
+        onPurchaseSandboxClick = onPurchaseSandboxClick
     )
 }
 
@@ -108,7 +110,8 @@ fun SettingsContent(
     onIntent: (SettingsIntent) -> Unit,
     onBackClick: () -> Unit,
     onBenchmarkClick: () -> Unit,
-    onRadarClick: () -> Unit
+    onRadarClick: () -> Unit,
+    onPurchaseSandboxClick: (() -> Unit)? = null
 ) {
     val textResources = LocalResources.current
     val viewModel = remember(onIntent) {
@@ -164,6 +167,14 @@ fun SettingsContent(
                     .padding(24.dp)
                     .verticalScroll(rememberScrollState())
             ) {
+                onPurchaseSandboxClick?.let { openSandbox ->
+                    androidx.compose.material3.FilledTonalButton(
+                        onClick = openSandbox,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    ) {
+                        Text(stringResource(R.string.sandbox_title))
+                    }
+                }
                 Text(
                     stringResource(R.string.interface_configuration),
                     style = Typography.labelSmall,

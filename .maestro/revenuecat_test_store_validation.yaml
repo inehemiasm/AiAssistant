@@ -1,0 +1,22 @@
+# Requires a debug APK configured with a Test Store key and a current offering.
+appId: dev.neo.chevereai
+name: RevenueCat Test Store checkout
+---
+- launchApp:
+    clearState: false
+- tapOn: "Settings"
+- tapOn: "Purchase sandbox"
+- assertVisible: "Try a purchase without being charged."
+- extendedWaitUntil:
+    visible: "Simulate purchase"
+    timeout: 30000
+- tapOn:
+    text: "Simulate purchase"
+    index: 0
+- tapOn: "TEST VALID PURCHASE"
+- extendedWaitUntil:
+    visible: "Test purchase completed"
+    timeout: 30000
+- assertVisible: "Active entitlements"
+- assertVisible: "Purchased in Test Store: .*"
+- assertNotVisible: "No active entitlements"
